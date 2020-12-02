@@ -153,22 +153,22 @@ final class PostboxTransaction {
         if !self.currentUpdatedPendingPeerNotificationSettings.isEmpty {
             return false
         }
-        if replacedAdditionalChatListItems != nil {
+        if self.replacedAdditionalChatListItems != nil {
             return false
         }
-        if !updatedNoticeEntryKeys.isEmpty {
+        if !self.updatedNoticeEntryKeys.isEmpty {
             return false
         }
-        if !updatedCacheEntryKeys.isEmpty {
+        if !self.updatedCacheEntryKeys.isEmpty {
             return false
         }
-        if !updatedFailedMessagePeerIds.isEmpty {
+        if !self.updatedFailedMessagePeerIds.isEmpty {
             return false
         }
-        if !updatedFailedMessageIds.isEmpty {
+        if !self.updatedFailedMessageIds.isEmpty {
             return false
         }
-        if updatedGlobalNotificationSettings {
+        if self.updatedGlobalNotificationSettings {
             return false
         }
         return true

@@ -27,6 +27,7 @@ final class ComposeControllerNode: ASDisplayNode {
     
     var openCreateNewGroup: (() -> Void)?
     var openCreateNewSecretChat: (() -> Void)?
+    var openCreateContact: (() -> Void)?
     var openCreateNewChannel: (() -> Void)?
     
     private var presentationData: PresentationData
@@ -39,14 +40,15 @@ final class ComposeControllerNode: ASDisplayNode {
         
         var openCreateNewGroupImpl: (() -> Void)?
         var openCreateNewSecretChatImpl: (() -> Void)?
+        var openCreateContactImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
         self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: [
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: .generic(UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")!), action: {
                 openCreateNewGroupImpl?()
             }),
-            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewEncryptedChat, icon: .generic(UIImage(bundleImageName: "Contact List/CreateSecretChatActionIcon")!), action: {
-                openCreateNewSecretChatImpl?()
+            ContactListAdditionalOption(title: self.presentationData.strings.NewContact_Title, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
+                openCreateContactImpl?()
             }),
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: .generic(UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")!), action: {
                 openCreateNewChannelImpl?()
@@ -68,6 +70,10 @@ final class ComposeControllerNode: ASDisplayNode {
         }
         openCreateNewSecretChatImpl = { [weak self] in
             self?.openCreateNewSecretChat?()
+        }
+        openCreateContactImpl = { [weak self] in
+            self?.contactListNode.listNode.clearHighlightAnimated(true)
+            self?.openCreateContact?()
         }
         openCreateNewChannelImpl = { [weak self] in
             self?.openCreateNewChannel?()
@@ -118,7 +124,7 @@ final class ComposeControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global], addContact: nil, openPeer: { [weak self] peer in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch, case let .peer(peer, _, _) = peer {
                 requestOpenPeerFromSearch(peer.id)
             }

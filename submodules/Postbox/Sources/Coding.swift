@@ -896,7 +896,7 @@ public final class PostboxDecoder {
             self.offset += 8
             return value
         } else {
-            return 0
+            return nil
         }
     }
     

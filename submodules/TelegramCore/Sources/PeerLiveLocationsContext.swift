@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import TelegramApi
 
 import SyncCore
 
@@ -9,7 +10,7 @@ public func topPeerActiveLiveLocationMessages(viewTracker: AccountViewTracker, a
     |> map { (view, _, _) -> (Peer?, [Message]) in
         var accountPeer: Peer?
         for entry in view.additionalData {
-            if case let .peer(id, peer) = entry {
+            if case let .peer(_, peer) = entry {
                 accountPeer = peer
                 break
             }

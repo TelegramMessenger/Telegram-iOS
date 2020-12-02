@@ -410,7 +410,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
             case let .about(theme, peer, text, value):
                 var enabledEntityTypes: EnabledEntityTypes = []
                 if let peer = peer as? TelegramUser, let _ = peer.botInfo {
-                    enabledEntityTypes = [.url, .mention, .hashtag]
+                    enabledEntityTypes = [.allUrl, .mention, .hashtag]
                 }
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: enabledEntityTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayAboutContextMenu(value)

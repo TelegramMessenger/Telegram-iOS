@@ -165,7 +165,13 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                         }
                         updatedParticipant = .member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
                     } else if let currentParticipant = currentParticipant, case .creator = currentParticipant {
-                        updatedParticipant = .creator(id: adminId, rank: rank)
+                        let adminInfo: ChannelParticipantAdminInfo?
+                        if !rights.flags.isEmpty {
+                            adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: account.peerId, canBeEditedByAccountPeer: true)
+                        } else {
+                            adminInfo = nil
+                        }
+                        updatedParticipant = .creator(id: adminId, adminInfo: adminInfo, rank: rank)
                     } else {
                         let adminInfo: ChannelParticipantAdminInfo?
                         if !rights.flags.isEmpty {

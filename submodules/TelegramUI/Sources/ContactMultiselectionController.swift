@@ -18,6 +18,8 @@ import CounterContollerTitleView
 private func peerTokenTitle(accountPeerId: PeerId, peer: Peer, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
     if peer.id == accountPeerId {
         return strings.DialogList_SavedMessages
+    } else if peer.id.isReplies {
+        return strings.DialogList_Replies
     } else {
         return peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
     }

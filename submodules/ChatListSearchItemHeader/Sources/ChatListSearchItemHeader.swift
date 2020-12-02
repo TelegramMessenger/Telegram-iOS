@@ -4,7 +4,7 @@ import Display
 import TelegramPresentationData
 import ListSectionHeaderNode
 
-public enum ChatListSearchItemHeaderType: Int32 {
+public enum ChatListSearchItemHeaderType {
     case localPeers
     case members
     case contacts
@@ -13,7 +13,6 @@ public enum ChatListSearchItemHeaderType: Int32 {
     case globalPeers
     case deviceContacts
     case recentPeers
-    case messages
     case phoneNumber
     case exceptions
     case addToExceptions
@@ -22,6 +21,109 @@ public enum ChatListSearchItemHeaderType: Int32 {
     case chats
     case chatTypes
     case faq
+    case messages
+    
+    fileprivate func title(strings: PresentationStrings) -> String {
+        switch self {
+            case .localPeers:
+                return strings.DialogList_SearchSectionDialogs
+            case .members:
+                return strings.Channel_Info_Members
+            case .contacts:
+                return strings.Contacts_TopSection
+            case .bots:
+                return strings.MemberSearch_BotSection
+            case .admins:
+                return strings.Channel_Management_Title
+            case .globalPeers:
+                return strings.DialogList_SearchSectionGlobal
+            case .deviceContacts:
+                return strings.Contacts_NotRegisteredSection
+            case .recentPeers:
+                return strings.DialogList_SearchSectionRecent
+            case .phoneNumber:
+                return strings.Contacts_PhoneNumber
+            case .exceptions:
+                return strings.GroupInfo_Permissions_Exceptions
+            case .addToExceptions:
+                return strings.Exceptions_AddToExceptions
+            case .mapAddress:
+                return strings.Map_AddressOnMap
+            case .nearbyVenues:
+                return strings.Map_PlacesNearby
+            case .chats:
+                return strings.Cache_ByPeerHeader
+            case .chatTypes:
+                return strings.ChatList_ChatTypesSection
+            case .faq:
+                return strings.Settings_FrequentlyAskedQuestions
+            case let .messages:
+                return strings.DialogList_SearchSectionMessages
+        }
+    }
+    
+    fileprivate var id: ChatListSearchItemHeaderId {
+        switch self {
+            case .localPeers:
+                return .localPeers
+            case .members:
+                return .members
+            case .contacts:
+                return .contacts
+            case .bots:
+                return .bots
+            case .admins:
+                return .admins
+            case .globalPeers:
+                return .globalPeers
+            case .deviceContacts:
+                return .deviceContacts
+            case .recentPeers:
+                return .recentPeers
+            case .phoneNumber:
+                return .phoneNumber
+            case .exceptions:
+                return .exceptions
+            case .addToExceptions:
+                return .addToExceptions
+            case .mapAddress:
+                return .mapAddress
+            case .nearbyVenues:
+                return .nearbyVenues
+            case .chats:
+                return .chats
+            case .chatTypes:
+                return .chatTypes
+            case .faq:
+                return .faq
+            case .messages:
+                return .messages
+        }
+    }
+}
+
+private enum ChatListSearchItemHeaderId: Int32 {
+    case localPeers
+    case members
+    case contacts
+    case bots
+    case admins
+    case globalPeers
+    case deviceContacts
+    case recentPeers
+    case phoneNumber
+    case exceptions
+    case addToExceptions
+    case mapAddress
+    case nearbyVenues
+    case chats
+    case chatTypes
+    case faq
+    case messages
+    case photos
+    case links
+    case files
+    case music
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
@@ -37,7 +139,7 @@ public final class ChatListSearchItemHeader: ListViewItemHeader {
     
     public init(type: ChatListSearchItemHeaderType, theme: PresentationTheme, strings: PresentationStrings, actionTitle: String? = nil, action: (() -> Void)? = nil) {
         self.type = type
-        self.id = Int64(self.type.rawValue)
+        self.id = Int64(self.type.id.rawValue)
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
@@ -75,43 +177,7 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         
         super.init()
         
-        switch type {
-        case .localPeers:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionDialogs.uppercased()
-        case .members:
-            self.sectionHeaderNode.title = strings.Channel_Info_Members.uppercased()
-        case .contacts:
-            self.sectionHeaderNode.title = strings.Contacts_TopSection.uppercased()
-        case .bots:
-            self.sectionHeaderNode.title = strings.MemberSearch_BotSection.uppercased()
-        case .admins:
-            self.sectionHeaderNode.title = strings.Channel_Management_Title.uppercased()
-        case .globalPeers:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionGlobal.uppercased()
-        case .deviceContacts:
-            self.sectionHeaderNode.title = strings.Contacts_NotRegisteredSection.uppercased()
-        case .messages:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionMessages.uppercased()
-        case .recentPeers:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionRecent.uppercased()
-        case .phoneNumber:
-            self.sectionHeaderNode.title = strings.Contacts_PhoneNumber.uppercased()
-        case .exceptions:
-            self.sectionHeaderNode.title = strings.GroupInfo_Permissions_Exceptions.uppercased()
-        case .addToExceptions:
-            self.sectionHeaderNode.title = strings.Exceptions_AddToExceptions.uppercased()
-        case .mapAddress:
-            self.sectionHeaderNode.title = strings.Map_AddressOnMap.uppercased()
-        case .nearbyVenues:
-            self.sectionHeaderNode.title = strings.Map_PlacesNearby.uppercased()
-        case .chats:
-            self.sectionHeaderNode.title = strings.Cache_ByPeerHeader.uppercased()
-        case .chatTypes:
-            self.sectionHeaderNode.title = strings.ChatList_ChatTypesSection.uppercased()
-        case .faq:
-            self.sectionHeaderNode.title = strings.Settings_FrequentlyAskedQuestions.uppercased()
-        }
-        
+        self.sectionHeaderNode.title = type.title(strings: strings).uppercased()
         self.sectionHeaderNode.action = actionTitle
         self.sectionHeaderNode.activateAction = action
         
@@ -127,43 +193,7 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         self.actionTitle = actionTitle
         self.action = action
         
-        switch type {
-        case .localPeers:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionDialogs.uppercased()
-        case .members:
-            self.sectionHeaderNode.title = strings.Channel_Info_Members.uppercased()
-        case .contacts:
-            self.sectionHeaderNode.title = strings.Contacts_TopSection.uppercased()
-        case .bots:
-            self.sectionHeaderNode.title = strings.MemberSearch_BotSection.uppercased()
-        case .admins:
-            self.sectionHeaderNode.title = strings.Channel_Management_Title.uppercased()
-        case .globalPeers:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionGlobal.uppercased()
-        case .deviceContacts:
-            self.sectionHeaderNode.title = strings.Contacts_NotRegisteredSection.uppercased()
-        case .messages:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionMessages.uppercased()
-        case .recentPeers:
-            self.sectionHeaderNode.title = strings.DialogList_SearchSectionRecent.uppercased()
-        case .phoneNumber:
-            self.sectionHeaderNode.title = strings.Contacts_PhoneNumber.uppercased()
-        case .exceptions:
-            self.sectionHeaderNode.title = strings.GroupInfo_Permissions_Exceptions.uppercased()
-        case .addToExceptions:
-            self.sectionHeaderNode.title = strings.Exceptions_AddToExceptions.uppercased()
-        case .mapAddress:
-            self.sectionHeaderNode.title = strings.Map_AddressOnMap.uppercased()
-        case .nearbyVenues:
-            self.sectionHeaderNode.title = strings.Map_PlacesNearby.uppercased()
-        case .chats:
-            self.sectionHeaderNode.title = strings.Cache_ByPeerHeader.uppercased()
-        case .chatTypes:
-            self.sectionHeaderNode.title = strings.ChatList_ChatTypesSection.uppercased()
-        case .faq:
-            self.sectionHeaderNode.title = strings.Settings_FrequentlyAskedQuestions.uppercased()
-        }
-        
+        self.sectionHeaderNode.title = type.title(strings: strings).uppercased()
         self.sectionHeaderNode.action = actionTitle
         self.sectionHeaderNode.activateAction = action
         

@@ -37,7 +37,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     required init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
-        self.labelNode.displaysAsynchronously = true
+        self.labelNode.displaysAsynchronously = false
         
         self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
         
@@ -124,7 +124,6 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
-        
         let backgroundLayout = self.filledBackgroundNode.asyncLayout()
         
         return { item, layoutConstants, _, _, _ in
@@ -202,7 +201,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.insertSubnode(imageNode, at: 0)
                                     strongSelf.insertSubnode(strongSelf.mediaBackgroundNode, at: 0)
                                 }
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloadsPeerType: nil).start())
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: image), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
                                 let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image), synchronousLoad: synchronousLoads)
 
                                 imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)

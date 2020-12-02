@@ -69,8 +69,45 @@ public enum ContainedViewLayoutTransition {
     }
 }
 
+public extension CGRect {
+    var ensuredValid: CGRect {
+        if !ASIsCGRectValidForLayout(CGRect(origin: CGPoint(), size: self.size)) {
+            return CGRect()
+        }
+        if !ASIsCGPositionValidForLayout(self.origin) {
+            return CGRect()
+        }
+        return self
+    }
+}
+
 public extension ContainedViewLayoutTransition {
     func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        if frame.origin.x.isNaN {
+            return
+        }
+        if frame.origin.y.isNaN {
+            return
+        }
+        if frame.size.width.isNaN {
+            return
+        }
+        if frame.size.width < 0.0 {
+            return
+        }
+        if frame.size.height.isNaN {
+            return
+        }
+        if frame.size.height < 0.0 {
+            return
+        }
+        if !ASIsCGRectValidForLayout(CGRect(origin: CGPoint(), size: frame.size)) {
+            return
+        }
+        if !ASIsCGPositionValidForLayout(frame.origin) {
+            return
+        }
+        
         if node.frame.equalTo(frame) && !force {
             completion?(true)
         } else {
@@ -276,8 +313,8 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func animatePosition(node: ASDisplayNode, to position: CGPoint, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
-        if node.position.equalTo(position) {
+    func animatePosition(node: ASDisplayNode, to position: CGPoint, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if !additive && node.position.equalTo(position) {
             completion?(true)
         } else {
             switch self {
@@ -286,7 +323,7 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                node.layer.animatePosition(from: node.position, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
+                node.layer.animatePosition(from: additive ? CGPoint() : node.position, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }

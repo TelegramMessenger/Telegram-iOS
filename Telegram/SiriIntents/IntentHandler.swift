@@ -13,10 +13,10 @@ private var accountCache: Account?
 
 private var installedSharedLogger = false
 
-private func setupSharedLogger(_ path: String) {
+private func setupSharedLogger(rootPath: String, path: String) {
     if !installedSharedLogger {
         installedSharedLogger = true
-        Logger.setSharedLogger(Logger(basePath: path))
+        Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: path))
     }
 }
 
@@ -50,7 +50,7 @@ enum IntentHandlingError {
     case generic
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
 public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
     private let accountPromise = Promise<Account?>()
@@ -68,7 +68,6 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         }
         
         let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-        
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
         
         let apiId: Int32 = buildConfig.apiId
@@ -92,7 +91,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let logsPath = rootPath + "/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
-        setupSharedLogger(logsPath)
+        setupSharedLogger(rootPath: rootPath, path: logsPath)
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
@@ -151,7 +150,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         case noResult
         case skip
         
-        @available(iOSApplicationExtension 11.0, *)
+        @available(iOSApplicationExtension 11.0, iOS 11.0, *)
         var sendMessageRecipientResulutionResult: INSendMessageRecipientResolutionResult {
             switch self {
                 case let .success(person):
@@ -204,7 +203,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 filteredPersons.append(person)
             }
             
-            if #available(iOSApplicationExtension 10.3, *) {
+            if #available(iOSApplicationExtension 10.3, iOS 10.3, *) {
                 if let siriMatches = person.siriMatches {
                     for match in siriMatches {
                         if let contactIdentifier = match.contactIdentifier, !contactIdentifier.isEmpty {
@@ -237,7 +236,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             if let contactIdentifier = person.contactIdentifier {
                 return contactIdentifier
             }
-            if #available(iOSApplicationExtension 10.3, *) {
+            if #available(iOSApplicationExtension 10.3, iOS 10.3, *) {
                 if let siriMatches = person.siriMatches {
                     for match in siriMatches {
                         if let contactIdentifier = match.contactIdentifier, !contactIdentifier.isEmpty {
@@ -289,7 +288,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         })
     }
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void) {
         if let appGroupUrl = self.appGroupUrl {
             let rootPath = rootPathForBasePath(appGroupUrl.path)
@@ -598,7 +597,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         })
     }
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func resolveDestinationType(for intent: INStartAudioCallIntent, with completion: @escaping (INCallDestinationTypeResolutionResult) -> Void) {
         completion(.success(with: .normal))
     }
@@ -647,7 +646,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     
     // MARK: - INSearchCallHistoryIntentHandling
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func resolveCallTypes(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeOptionsResolutionResult) -> Void) {
         completion(.success(with: .missed))
     }
@@ -685,7 +684,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         |> deliverOnMainQueue).start(next: { calls in
             let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
             let response: INSearchCallHistoryIntentResponse
-            if #available(iOSApplicationExtension 11.0, *) {
+            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 response = INSearchCallHistoryIntentResponse(code: .success, userActivity: userActivity)
                 response.callRecords = calls.map { $0.intentCall }
             } else {

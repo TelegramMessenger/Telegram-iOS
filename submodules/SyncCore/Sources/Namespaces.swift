@@ -72,6 +72,7 @@ public struct Namespaces {
         public static let cachedThemesConfiguration: Int8 = 8
         public static let cachedPollResults: Int8 = 9
         public static let cachedContextResults: Int8 = 10
+        public static let proximityNotificationStoredState: Int8 = 11
     }
     
     public struct UnorderedItemList {
@@ -98,8 +99,9 @@ public extension MessageTags {
     static let gif = MessageTags(rawValue: 1 << 7)
     static let photo = MessageTags(rawValue: 1 << 8)
     static let video = MessageTags(rawValue: 1 << 9)
+    static let pinned = MessageTags(rawValue: 1 << 10)
     
-    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video]
+    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video, .pinned]
 }
 
 public extension GlobalMessageTags {

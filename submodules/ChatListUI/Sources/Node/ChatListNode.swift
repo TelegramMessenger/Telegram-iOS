@@ -403,7 +403,7 @@ public enum ChatListNodeScrollPosition {
 
 public enum ChatListNodeEmptyState: Equatable {
     case notEmpty(containsChats: Bool)
-    case empty(isLoading: Bool)
+    case empty(isLoading: Bool, hasArchiveInfo: Bool)
 }
 
 public final class ChatListNode: ListView {
@@ -442,6 +442,13 @@ public final class ChatListNode: ListView {
     
     private let viewProcessingQueue = Queue()
     private var chatListView: ChatListNodeView?
+    var entriesCount: Int {
+        if let chatListView = self.chatListView {
+            return chatListView.filteredEntries.count
+        } else {
+            return 0
+        }
+    }
     private var interaction: ChatListNodeInteraction?
     
     private var dequeuedInitialTransitionOnLayout = false
@@ -735,6 +742,7 @@ public final class ChatListNode: ListView {
                             return true
                         case let .peers(filter, _, _, _):
                             guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
+                            guard !filter.contains(.excludeSavedMessages) || !peer.peerId.isReplies else { return false }
                             guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
                             guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
 
@@ -985,6 +993,9 @@ public final class ChatListNode: ListView {
             var cachedResult: [PeerId: [(Peer, PeerInputActivity)]] = [:]
             previousPeerCache.with { dict -> Void in
                 for (chatPeerId, activities) in activitiesByPeerId {
+                    if chatPeerId.threadId != nil {
+                        continue
+                    }
                     var cachedChatResult: [(Peer, PeerInputActivity)] = []
                     for (peerId, activity) in activities {
                         if let peer = dict[peerId] {
@@ -993,7 +1004,7 @@ public final class ChatListNode: ListView {
                             foundAllPeers = false
                             break
                         }
-                        cachedResult[chatPeerId] = cachedChatResult
+                        cachedResult[chatPeerId.peerId] = cachedChatResult
                     }
                 }
             }
@@ -1004,6 +1015,9 @@ public final class ChatListNode: ListView {
                     var result: [PeerId: [(Peer, PeerInputActivity)]] = [:]
                     var peerCache: [PeerId: Peer] = [:]
                     for (chatPeerId, activities) in activitiesByPeerId {
+                        if chatPeerId.threadId != nil {
+                            continue
+                        }
                         var chatResult: [(Peer, PeerInputActivity)] = []
                         
                         for (peerId, activity) in activities {
@@ -1013,7 +1027,7 @@ public final class ChatListNode: ListView {
                             }
                         }
                         
-                        result[chatPeerId] = chatResult
+                        result[chatPeerId.peerId] = chatResult
                     }
                     let _ = previousPeerCache.swap(peerCache)
                     return result
@@ -1397,6 +1411,7 @@ public final class ChatListNode: ListView {
                     
                     var isEmpty = false
                     var isLoading = false
+                    var hasArchiveInfo = false
                     if transition.chatListView.filteredEntries.isEmpty {
                         isEmpty = true
                     } else {
@@ -1407,6 +1422,9 @@ public final class ChatListNode: ListView {
                                 case .GroupReferenceEntry, .HeaderEntry, .HoleEntry:
                                     break
                                 default:
+                                    if case .ArchiveIntro = entry {
+                                        hasArchiveInfo = true
+                                    }
                                     isEmpty = false
                                     break loop1
                                 }
@@ -1427,14 +1445,21 @@ public final class ChatListNode: ListView {
                             if !hasHoles {
                                 isLoading = false
                             }
+                        } else {
+                            for entry in transition.chatListView.filteredEntries.reversed().prefix(2) {
+                                if case .ArchiveIntro = entry {
+                                    hasArchiveInfo = true
+                                    break
+                                }
+                            }
                         }
                     }
                 
                     let isEmptyState: ChatListNodeEmptyState
                     if transition.chatListView.isLoading {
-                        isEmptyState = .empty(isLoading: true)
+                        isEmptyState = .empty(isLoading: true, hasArchiveInfo: hasArchiveInfo)
                     } else if isEmpty {
-                        isEmptyState = .empty(isLoading: isLoading)
+                        isEmptyState = .empty(isLoading: isLoading, hasArchiveInfo: false)
                     } else {
                         var containsChats = false
                         loop: for entry in transition.chatListView.filteredEntries {
@@ -1839,7 +1864,9 @@ private func statusStringForPeerType(accountPeerId: PeerId, strings: Presentatio
         }
     }
     
-    if let user = peer as? TelegramUser {
+    if peer.id.isReplies {
+        return nil
+    } else if let user = peer as? TelegramUser {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
             return (strings.ChatList_PeerTypeBot, false)
         } else if isContact {

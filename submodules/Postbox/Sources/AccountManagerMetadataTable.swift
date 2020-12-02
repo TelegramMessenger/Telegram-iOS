@@ -12,7 +12,12 @@ public struct AccessChallengeAttempts: Equatable {
     }
 }
 
-public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Hashable {
+public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable, Hashable {
+    enum CodingKeys: String, CodingKey {
+        case numericalPassword
+        case plaintextPassword
+    }
+    
     case none
     case numericalPassword(value: String)
     case plaintextPassword(value: String)
@@ -41,6 +46,29 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Hashable {
             case let .plaintextPassword(text):
                 encoder.encodeInt32(2, forKey: "r")
                 encoder.encodeString(text, forKey: "t")
+        }
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let value = try? container.decode(String.self, forKey: .numericalPassword) {
+            self = .numericalPassword(value: value)
+        } else if let value = try? container.decode(String.self, forKey: .plaintextPassword) {
+            self = .plaintextPassword(value: value)
+        } else {
+            self = .none
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .none:
+            break
+        case let .numericalPassword(value):
+            try container.encode(value, forKey: .numericalPassword)
+        case let .plaintextPassword(value):
+            try container.encode(value, forKey: .plaintextPassword)
         }
     }
     

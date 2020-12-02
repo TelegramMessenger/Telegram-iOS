@@ -114,7 +114,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         
         self.onlineNode = PeerOnlineMarkerNode()
         
@@ -149,6 +149,9 @@ public final class SelectablePeerNode: ASDisplayNode {
         if peer.peerId == context.account.peerId {
             text = strings.DialogList_SavedMessages
             overrideImage = .savedMessagesIcon
+        } else if peer.peerId.isReplies {
+            text = strings.DialogList_Replies
+            overrideImage = .repliesIcon
         } else {
             text = mainPeer.compactDisplayTitle
             if mainPeer.isDeleted {

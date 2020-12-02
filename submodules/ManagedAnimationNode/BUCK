@@ -10,6 +10,7 @@ static_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Postbox:Postbox#shared",
+	"//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/GZip:GZip",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/AppBundle:AppBundle",

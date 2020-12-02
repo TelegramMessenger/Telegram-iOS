@@ -6,6 +6,7 @@ import SyncCore
 import WidgetItems
 import TelegramPresentationData
 import NotificationsPresentationData
+import WidgetKit
 
 final class WidgetDataContext {
     private var currentAccount: Account?
@@ -58,11 +59,17 @@ final class WidgetDataContext {
             } else {
                 let _ = try? FileManager.default.removeItem(atPath: path)
             }
+            
+            if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+                #if arch(arm64) || arch(i386) || arch(x86_64)
+                WidgetCenter.shared.reloadAllTimelines()
+                #endif
+            }
         })
         
         self.widgetPresentationDataDisposable = (presentationData
         |> map { presentationData -> WidgetPresentationData in
-            return WidgetPresentationData(applicationLockedString: presentationData.strings.Widget_ApplicationLocked, applicationStartRequiredString: presentationData.strings.Widget_ApplicationStartRequired)
+            return WidgetPresentationData(applicationLockedString: presentationData.strings.Widget_ApplicationLocked, applicationStartRequiredString: presentationData.strings.Widget_ApplicationStartRequired, widgetGalleryTitle: presentationData.strings.Widget_GalleryTitle, widgetGalleryDescription: presentationData.strings.Widget_GalleryDescription)
         }
         |> distinctUntilChanged).start(next: { value in
             let path = widgetPresentationDataPath(rootPath: basePath)
@@ -70,6 +77,12 @@ final class WidgetDataContext {
                 let _ = try? data.write(to: URL(fileURLWithPath: path), options: [.atomic])
             } else {
                 let _ = try? FileManager.default.removeItem(atPath: path)
+            }
+            
+            if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+                #if arch(arm64) || arch(i386) || arch(x86_64)
+                WidgetCenter.shared.reloadAllTimelines()
+                #endif
             }
         })
         

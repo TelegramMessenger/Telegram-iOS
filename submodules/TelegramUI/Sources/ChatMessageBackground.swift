@@ -5,7 +5,7 @@ import Display
 import TelegramPresentationData
 
 enum ChatMessageBackgroundMergeType: Equatable {
-    case None, Side, Top(side: Bool), Bottom, Both
+    case None, Side, Top(side: Bool), Bottom, Both, Extracted
     
     init(top: Bool, bottom: Bool, side: Bool) {
         if top && bottom {
@@ -131,6 +131,8 @@ class ChatMessageBackground: ASDisplayNode {
                     image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBothHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBothImage
                 case .Side:
                     image = highlighted ? graphics.chatMessageBackgroundIncomingMergedSideHighlightedImage : graphics.chatMessageBackgroundIncomingMergedSideImage
+                case .Extracted:
+                    image = graphics.chatMessageBackgroundIncomingExtractedImage
                 }
             }
         case let .outgoing(mergeType):
@@ -152,6 +154,8 @@ class ChatMessageBackground: ASDisplayNode {
                     image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBothHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBothImage
                 case .Side:
                     image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedSideHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedSideImage
+                case .Extracted:
+                    image = graphics.chatMessageBackgroundOutgoingExtractedImage
                 }
             }
         }
@@ -178,6 +182,8 @@ class ChatMessageBackground: ASDisplayNode {
                     outlineImage = graphics.chatMessageBackgroundIncomingMergedBothOutlineImage
                 case .Side:
                     outlineImage = graphics.chatMessageBackgroundIncomingMergedSideOutlineImage
+                case .Extracted:
+                    outlineImage = graphics.chatMessageBackgroundIncomingExtractedOutlineImage
                 }
             case let .outgoing(mergeType):
                 switch mergeType {
@@ -195,6 +201,8 @@ class ChatMessageBackground: ASDisplayNode {
                     outlineImage = graphics.chatMessageBackgroundOutgoingMergedBothOutlineImage
                 case .Side:
                     outlineImage = graphics.chatMessageBackgroundOutgoingMergedSideOutlineImage
+                case .Extracted:
+                    outlineImage = graphics.chatMessageBackgroundOutgoingExtractedOutlineImage
                 }
             }
         } else {
@@ -269,6 +277,8 @@ final class ChatMessageShadowNode: ASDisplayNode {
                     shadowImage = graphics.chatMessageBackgroundIncomingMergedBothShadowImage
                 case .Side:
                     shadowImage = graphics.chatMessageBackgroundIncomingMergedSideShadowImage
+                case .Extracted:
+                    shadowImage = nil
                 }
             case let .outgoing(mergeType):
                 switch mergeType {
@@ -286,6 +296,8 @@ final class ChatMessageShadowNode: ASDisplayNode {
                     shadowImage = graphics.chatMessageBackgroundOutgoingMergedBothShadowImage
                 case .Side:
                     shadowImage = graphics.chatMessageBackgroundOutgoingMergedSideShadowImage
+                case .Extracted:
+                    shadowImage = nil
                 }
             }
         } else {

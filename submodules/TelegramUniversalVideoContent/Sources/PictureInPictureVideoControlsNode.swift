@@ -37,7 +37,7 @@ final class PictureInPictureVideoControlsNode: ASDisplayNode {
                             case .playing:
                                 self.playButton.isHidden = true
                                 self.pauseButton.isHidden = false
-                            case let .buffering(_, whilePlaying, _):
+                            case let .buffering(_, whilePlaying, _, _):
                                 if whilePlaying {
                                     self.playButton.isHidden = true
                                     self.pauseButton.isHidden = false

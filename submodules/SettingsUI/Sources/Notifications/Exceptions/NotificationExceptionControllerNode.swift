@@ -1157,6 +1157,10 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
     private let updateNotificationsDisposable = MetaDisposable()
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
+    public override var hasDim: Bool {
+        return true
+    }
+    
     init(context: AccountContext, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -1330,7 +1334,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight, left: layout.safeInsets.left, bottom: layout.insets(options: [.input]).bottom, right: layout.safeInsets.right), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !self.hasValidLayout {
             self.hasValidLayout = true

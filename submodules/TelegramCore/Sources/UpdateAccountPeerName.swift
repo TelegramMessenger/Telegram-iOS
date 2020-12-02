@@ -17,8 +17,9 @@ public func updateAccountPeerName(account: Account, firstName: String, lastName:
         |> mapToSignal { result -> Signal<Void, NoError> in
             return account.postbox.transaction { transaction -> Void in
                 if let result = result {
-                    let peer = TelegramUser(user: result)
-                    updatePeers(transaction: transaction, peers: [peer], update: { $1 })
+                    if let peer = TelegramUser.merge(transaction.getPeer(result.peerId) as? TelegramUser, rhs: result) {
+                        updatePeers(transaction: transaction, peers: [peer], update: { $1 })
+                    }
                 }
             }
         }
@@ -43,6 +44,7 @@ public func updateAbout(account: Account, about: String?) -> Signal<Void, Update
                         return current
                     }
                 })
-                } |> mapError { _ -> UpdateAboutError in return .generic }
+            }
+            |> castError(UpdateAboutError.self)
     }
 }

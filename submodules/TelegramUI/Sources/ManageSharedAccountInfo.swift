@@ -22,7 +22,7 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
     var datacenters: [Int32: AccountDatacenterInfo] = [:]
     for nId in context.knownDatacenterIds() {
         if let id = nId as? Int {
-            if let authInfo = context.authInfoForDatacenter(withId: id), let authKey = authInfo.authKey {
+            if let authInfo = context.authInfoForDatacenter(withId: id, selector: .persistent), let authKey = authInfo.authKey {
                 let transportScheme = context.chooseTransportSchemeForConnection(toDatacenterId: id, schemes: context.transportSchemesForDatacenter(withId: id, media: true, enforceMedia: false, isProxy: false))
                 var addressList: [AccountDatacenterAddress] = []
                 if let transportScheme = transportScheme, let address = transportScheme.address, let host = address.host {

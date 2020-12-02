@@ -315,7 +315,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
                self.isBuffering = false
             }
             if self.isBuffering {
-                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0)
+                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0, display: true)
             } else {
                 status = isPlaying ? .playing : .paused
             }
@@ -326,7 +326,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
             let status: MediaPlayerPlaybackStatus
             self.isBuffering = true
             if self.isBuffering {
-                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0)
+                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0, display: true)
             } else {
                 status = isPlaying ? .playing : .paused
             }
@@ -337,7 +337,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
             let status: MediaPlayerPlaybackStatus
             self.isBuffering = false
             if self.isBuffering {
-                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0)
+                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0, display: true)
             } else {
                 status = isPlaying ? .playing : .paused
             }
@@ -381,7 +381,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     func play() {
         assert(Queue.mainQueue().isCurrent())
         if !self.initializedStatus {
-            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true, progress: 0.0), soundEnabled: true))
+            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true, progress: 0.0, display: true), soundEnabled: true))
         }
         if !self.hasAudioSession {
             self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play, activate: { [weak self] _ in
@@ -447,5 +447,8 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     }
     
     func fetchControl(_ control: UniversalVideoNodeFetchControl) {
+    }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {
     }
 }

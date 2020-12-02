@@ -37,8 +37,6 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
 }
 
 private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
-    print("getCoveringViewSnaphot")
-    
     let scale: CGFloat = 0.5
     let unscaledSize = window.hostView.containerView.frame.size
     return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in

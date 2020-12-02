@@ -34,7 +34,10 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
     }
     
     private let deviceLocationDisposable = MetaDisposable()
+    private let updateCoordinateDisposable = MetaDisposable()
     private var messagesDisposable: Disposable?
+    
+    private var deviceLocationPromise = Promise<(CLLocation, Double?)>()
     
     private var broadcastToMessageIds: [MessageId: Int32] = [:]
     private var stopMessageIds = Set<MessageId>()
@@ -106,22 +109,36 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         |> deliverOn(self.queue)).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    let queue = strongSelf.queue
-                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { coordinate in
-                        queue.async {
-                            self?.updateDeviceCoordinate(coordinate)
-                        }
+                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { [weak self] location, heading in
+                        self?.deviceLocationPromise.set(.single((location, heading)))
                     }))
                 } else {
                     strongSelf.deviceLocationDisposable.set(nil)
                 }
             }
         })
+        
+        let throttledDeviceLocation = self.deviceLocationPromise.get()
+        |> mapToThrottled { next -> Signal<(CLLocation, Double?), NoError> in
+            return .single(next) |> then(.complete() |> delay(4.0, queue: Queue.concurrentDefaultQueue()))
+        }
+        
+        self.updateCoordinateDisposable.set((throttledDeviceLocation
+        |> deliverOn(self.queue)).start(next: { [weak self] location, heading in
+            if let strongSelf = self {
+                var effectiveHeading = heading ?? location.course
+                if location.speed > 1.0 {
+                    effectiveHeading = location.course
+                }
+                strongSelf.updateDeviceCoordinate(location.coordinate, accuracyRadius: location.horizontalAccuracy, heading: effectiveHeading)
+            }
+        }))
     }
     
     deinit {
         self.requiredLocationTypeDisposable?.dispose()
         self.deviceLocationDisposable.dispose()
+        self.updateCoordinateDisposable.dispose()
         self.messagesDisposable?.dispose()
         self.editMessageDisposables.dispose()
         self.invalidationTimer?.0.invalidate()
@@ -158,7 +175,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let addedStopped = stopMessageIds.subtracting(self.stopMessageIds)
         self.stopMessageIds = stopMessageIds
         for id in addedStopped {
-            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, coordinate: nil)
+            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, stop: true, coordinate: nil, heading: nil, proximityNotificationRadius: nil)
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -207,13 +224,13 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         self.update(broadcastToMessageIds: updatedBroadcastToMessageIds, stopMessageIds: updatedStopMessageIds)
     }
     
-    private func updateDeviceCoordinate(_ coordinate: CLLocationCoordinate2D) {
+    private func updateDeviceCoordinate(_ coordinate: CLLocationCoordinate2D, accuracyRadius: Double, heading: Double?) {
         assert(self.queue.isCurrent())
         
         let ids = self.broadcastToMessageIds
         let remainingIds = Atomic<Set<MessageId>>(value: Set(ids.keys))
         for id in ids.keys {
-            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))
+            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil)
             |> deliverOn(self.queue)).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -247,10 +264,10 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                         for i in 0 ..< updatedMedia.count {
                             if let media = updatedMedia[i] as? TelegramMediaMap, let _ = media.liveBroadcastingTimeout {
-                                updatedMedia[i] = TelegramMediaMap(latitude: media.latitude, longitude: media.longitude, geoPlace: media.geoPlace, venue: media.venue, liveBroadcastingTimeout: max(0, timestamp - currentMessage.timestamp - 1))
+                                updatedMedia[i] = TelegramMediaMap(latitude: media.latitude, longitude: media.longitude, heading: media.heading, accuracyRadius: media.accuracyRadius, geoPlace: media.geoPlace, venue: media.venue, liveBroadcastingTimeout: max(0, timestamp - currentMessage.timestamp - 1), liveProximityNotificationRadius: nil)
                             }
                         }
-                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
                     })
                 }
             }).start()

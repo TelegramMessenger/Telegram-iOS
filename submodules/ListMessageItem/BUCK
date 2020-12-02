@@ -1,0 +1,36 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ListMessageItem",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/UrlHandling:UrlHandling",
+        "//submodules/UrlWhitelist:UrlWhitelist",
+        "//submodules/WebsiteType:WebsiteType",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/RadialStatusNode:RadialStatusNode",
+        "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/MusicAlbumArtResources:MusicAlbumArtResources",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/FileMediaResourceStatus:FileMediaResourceStatus",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

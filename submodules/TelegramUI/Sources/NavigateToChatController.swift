@@ -20,7 +20,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let updateTextInputState = params.updateTextInputState {
                     controller.updateTextInputState(updateTextInputState)
                 }
-                if let subject = params.subject, case let .message(messageId) = subject {
+                if let subject = params.subject, case let .message(messageId, _) = subject {
                     let navigationController = params.navigationController
                     let animated = params.animated
                     controller.navigateToMessage(messageLocation: .id(messageId), animated: isFirst, completion: { [weak navigationController, weak controller] in
@@ -67,7 +67,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 })
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {
@@ -123,6 +123,10 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                         switch params.chatLocation {
                             case let .peer(peerId):
                                 if message.id.peerId == peerId {
+                                    return true
+                                }
+                            case let .replyThread(replyThreadMessage):
+                                if message.id.peerId == replyThreadMessage.messageId.peerId {
                                     return true
                                 }
                         }

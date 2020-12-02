@@ -29,6 +29,7 @@ public protocol UniversalVideoContentNode: class {
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(_ index: Int)
     func fetchControl(_ control: UniversalVideoNodeFetchControl)
+    func notifyPlaybackControlsHidden(_ hidden: Bool)
 }
 
 public protocol UniversalVideoContent {
@@ -315,6 +316,14 @@ public final class UniversalVideoNode: ASDisplayNode {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
                 contentNode.fetchControl(control)
+            }
+        })
+    }
+    
+    public func notifyPlaybackControlsHidden(_ hidden: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.notifyPlaybackControlsHidden(hidden)
             }
         })
     }

@@ -1228,7 +1228,15 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let map = media.media as? TelegramMediaMap {
-            let controller = legacyLocationController(message: nil, mapMedia: map, context: self.context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: { }, openUrl: { _ in })
+            let controllerParams = LocationViewParams(sendLiveLocation: { _ in
+            }, stopLiveLocation: { _ in
+            }, openUrl: { _ in }, openPeer: { _ in
+            }, showAll: false)
+            
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+            
+            let controller = LocationViewController(context: self.context, subject: message, params: controllerParams)
             self.pushController(controller)
             return
         }

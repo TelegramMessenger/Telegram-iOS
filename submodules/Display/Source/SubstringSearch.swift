@@ -43,7 +43,7 @@ public func findSubstringRanges(in string: String, query: String) -> ([Range<Str
                     if length > 0 {
                         let difference = abs(length - Double(count))
                         let rating = difference / length
-                        if rating < 0.33 {
+                        if rating < 0.37 {
                             var range = range
                             if hasLeadingSymbol && range.lowerBound > searchRange.lowerBound {
                                 range = text.index(before: range.lowerBound)..<range.upperBound

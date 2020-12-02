@@ -69,7 +69,7 @@
 
 + (UIImage *)paintIcon
 {
-    return TGTintedImage([UIImage imageNamed:@"Editor/Drawing"], [self toolbarIconColor]);
+    return TGTintedImage([UIImage imageNamed:@"Editor/BrushSelectedPen"], [self toolbarIconColor]);
 }
 
 + (UIImage *)stickerIcon

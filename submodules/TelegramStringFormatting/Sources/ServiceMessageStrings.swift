@@ -217,7 +217,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                     let textWithRanges: (String, [(Int, NSRange)])
                     if clippedText.isEmpty {
-                        textWithRanges = strings.PUSH_PINNED_NOTEXT(authorName)
+                        textWithRanges = strings.Message_PinnedGenericMessage(authorName)
                     } else {
                         textWithRanges = strings.Notification_PinnedTextMessage(authorName, clippedText)
                     }
@@ -250,7 +250,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedQuizMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }
                 case .deleted:
-                    attributedString = addAttributesToStringWithRanges(strings.PUSH_PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    attributedString = addAttributesToStringWithRanges(strings.Message_PinnedGenericMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 }
             case .joinedByLink:
                 attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
@@ -442,6 +442,15 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = addAttributesToStringWithRanges(strings.Notification_Joined(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
             case .phoneNumberRequest:
                 attributedString = nil
+            case let .geoProximityReached(fromId, toId, distance):
+                let distanceString = stringForDistance(strings: strings, distance: Double(distance))
+                if fromId == accountPeerId {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityYouReached(distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(1, toId)]))
+                } else if toId == accountPeerId {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReachedYou(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId)]))
+                } else {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReached(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId), (2, toId)]))
+                }
             case .unknown:
                 attributedString = nil
             }

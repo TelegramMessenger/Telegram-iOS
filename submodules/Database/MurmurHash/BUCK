@@ -13,6 +13,7 @@ static_library(
         "Sources/**/*.h",
     ]),
     deps = [
+        "//submodules/Database/MurmurHash/Impl:MurMurHashObjC",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -1,7 +1,7 @@
 #ifndef WEBRTC_IOS
 #import "OngoingCallThreadLocalContext.h"
 #else
-#import <TgVoip/OngoingCallThreadLocalContext.h>
+#import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
 #endif
 
 
@@ -328,7 +328,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P allowTCP:(BOOL)allowTCP enableStunMarking:(BOOL)enableStunMarking logPath:(NSString * _Nonnull)logPath statsLogPath:(NSString * _Nonnull)statsLogPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec {
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P allowTCP:(BOOL)allowTCP enableStunMarking:(BOOL)enableStunMarking logPath:(NSString * _Nonnull)logPath statsLogPath:(NSString * _Nonnull)statsLogPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec audioInputDeviceId: (NSString * _Nonnull)audioInputDeviceId {
     self = [super init];
     if (self != nil) {
         _version = version;
@@ -427,6 +427,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
         });
+        
+        
+        
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
             .config = config,
             .persistentState = (tgcalls::PersistentState){ derivedStateValue },
@@ -435,6 +438,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .rtcServers = parsedRtcServers,
             .initialNetworkType = callControllerNetworkTypeForType(networkType),
             .encryptionKey = encryptionKey,
+            .mediaDevicesConfig = tgcalls::MediaDevicesConfig {
+                .audioInputId = [audioInputDeviceId UTF8String],
+                .audioOutputId = [@"" UTF8String]
+            },
             .videoCapture = [_videoCapturer getInterface],
             .stateUpdated = [weakSelf, queue](tgcalls::State state) {
                 [queue dispatch:^{

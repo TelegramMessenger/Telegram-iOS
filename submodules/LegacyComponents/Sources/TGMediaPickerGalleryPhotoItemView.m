@@ -256,7 +256,11 @@
                 NSString *fileSize = [TGStringUtils stringForFileSize:next.fileSize precision:2];
                 NSString *dimensions = [NSString stringWithFormat:@"%dx%d", (int)next.dimensions.width, (int)next.dimensions.height];
                 
-                strongSelf->_fileInfoLabel.text = [NSString stringWithFormat:@"%@ • %@ • %@", extension, fileSize, dimensions];
+                if (next.fileSize > 0) {
+                    strongSelf->_fileInfoLabel.text = [NSString stringWithFormat:@"%@ • %@ • %@", extension, fileSize, dimensions];
+                } else {
+                    strongSelf->_fileInfoLabel.text = dimensions;
+                }
             }]];
         }
     }

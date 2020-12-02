@@ -106,6 +106,12 @@
             }
                 break;
                 
+            case TGCheckButtonStyleCompact:
+            {
+                insideInset = 6.0f;
+            }
+                break;
+                
             default:
             {
                 insideInset = 5.0f;
@@ -182,13 +188,18 @@
                     
                 default:
                 {
+                    CGFloat lineWidth = 1.0f;
+                    if (style == TGCheckButtonStyleCompact) {
+                        lineWidth = 1.5f;
+                    }
+                    
                     CGRect rect = CGRectMake(0, 0, size.width, size.height);
                     UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
                     CGContextRef context = UIGraphicsGetCurrentContext();
-                    CGContextSetLineWidth(context, 1.0f);
+                    CGContextSetLineWidth(context, lineWidth);
                     
                     CGContextSetStrokeColorWithColor(context, borderColor.CGColor);
-                    CGContextStrokeEllipseInRect(context, CGRectInset(rect, insideInset + 0.5f, insideInset + 0.5f));
+                    CGContextStrokeEllipseInRect(context, CGRectInset(rect, insideInset + lineWidth / 2.0, insideInset + lineWidth / 2.0));
                     
                     backgroundImage = UIGraphicsGetImageFromCurrentImageContext();
                     UIGraphicsEndImageContext();
@@ -234,7 +245,7 @@
                                         
                     UIColor *color = style == TGCheckButtonStyleDefaultBlue ? blueColor : greenColor;
                     CGContextSetFillColorWithColor(context, color.CGColor);
-                    CGFloat inset = (style == TGCheckButtonStyleDefault || style == TGCheckButtonStyleDefaultBlue) ? 0.0f : 1.2f;
+                    CGFloat inset = (style == TGCheckButtonStyleDefault || style == TGCheckButtonStyleDefaultBlue || style == TGCheckButtonStyleCompact) ? 0.0f : 1.2f;
                     CGContextFillEllipseInRect(context, CGRectInset(rect, insideInset + inset, insideInset + inset));
                     
                     fillImage = UIGraphicsGetImageFromCurrentImageContext();

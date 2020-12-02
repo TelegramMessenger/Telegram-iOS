@@ -143,6 +143,8 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
                         let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
                         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes))
                 }
+            case let .photoPathSize(_, data):
+                immediateThumbnailData = data.makeData()
             case let .photoStrippedSize(_, data):
                 immediateThumbnailData = data.makeData()
             case .photoSizeEmpty:
@@ -155,7 +157,9 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
 func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
     switch document {
         case let .document(_, id, accessHash, fileReference, _, mimeType, size, thumbs, videoThumbs, dcId, attributes):
-            let parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
+            var parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
+            parsedAttributes.append(.hintIsValidated)
+            
             let (immediateThumbnail, previewRepresentations) = telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: dcId, documentId: id, accessHash: accessHash, fileReference: fileReference.makeData(), sizes: thumbs ?? [])
             
             var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []

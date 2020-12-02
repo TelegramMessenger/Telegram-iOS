@@ -85,6 +85,9 @@ open class GalleryItemNode: ASDisplayNode {
     open func controlsVisibilityUpdated(isVisible: Bool) {
     }
     
+    open func adjustForPreviewing() {
+    }
+    
     open func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
     }
     

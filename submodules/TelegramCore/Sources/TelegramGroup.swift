@@ -3,6 +3,10 @@ import Postbox
 
 import SyncCore
 
+// Incuding at least one Objective-C class in a swift file ensures that it doesn't get stripped by the linker
+private final class LinkHelperClass: NSObject {
+}
+
 public extension TelegramGroup {
     func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> Bool {
         switch self.role {

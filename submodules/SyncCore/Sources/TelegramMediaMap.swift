@@ -133,32 +133,51 @@ public final class MapVenue: PostboxCoding, Equatable {
 public final class TelegramMediaMap: Media {
     public let latitude: Double
     public let longitude: Double
+    public let heading: Int32?
+    public let accuracyRadius: Double?
     public let geoPlace: NamedGeoPlace?
     public let venue: MapVenue?
     public let liveBroadcastingTimeout: Int32?
+    public let liveProximityNotificationRadius: Int32?
     
     public let id: MediaId? = nil
     public let peerIds: [PeerId] = []
     
-    public init(latitude: Double, longitude: Double, geoPlace: NamedGeoPlace?, venue: MapVenue?, liveBroadcastingTimeout: Int32?) {
+    public init(latitude: Double, longitude: Double, heading: Int32?, accuracyRadius: Double?, geoPlace: NamedGeoPlace?, venue: MapVenue?, liveBroadcastingTimeout: Int32?, liveProximityNotificationRadius: Int32?) {
         self.latitude = latitude
         self.longitude = longitude
+        self.heading = heading
+        self.accuracyRadius = accuracyRadius
         self.geoPlace = geoPlace
         self.venue = venue
         self.liveBroadcastingTimeout = liveBroadcastingTimeout
+        self.liveProximityNotificationRadius = liveProximityNotificationRadius
     }
     
     public init(decoder: PostboxDecoder) {
         self.latitude = decoder.decodeDoubleForKey("la", orElse: 0.0)
         self.longitude = decoder.decodeDoubleForKey("lo", orElse: 0.0)
+        self.heading = decoder.decodeOptionalInt32ForKey("hdg")
+        self.accuracyRadius = decoder.decodeOptionalDoubleForKey("acc")
         self.geoPlace = decoder.decodeObjectForKey("gp", decoder: { NamedGeoPlace(decoder: $0) }) as? NamedGeoPlace
         self.venue = decoder.decodeObjectForKey("ve", decoder: { MapVenue(decoder: $0) }) as? MapVenue
         self.liveBroadcastingTimeout = decoder.decodeOptionalInt32ForKey("bt")
+        self.liveProximityNotificationRadius = decoder.decodeOptionalInt32ForKey("pnr")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeDouble(self.latitude, forKey: "la")
         encoder.encodeDouble(self.longitude, forKey: "lo")
+        if let heading = self.heading {
+            encoder.encodeInt32(heading, forKey: "hdg")
+        } else {
+            encoder.encodeNil(forKey: "hdg")
+        }
+        if let accuracyRadius = self.accuracyRadius {
+            encoder.encodeDouble(accuracyRadius, forKey: "acc")
+        } else {
+            encoder.encodeNil(forKey: "acc")
+        }
         if let geoPlace = self.geoPlace {
             encoder.encodeObject(geoPlace, forKey: "gp")
         } else {
@@ -174,11 +193,22 @@ public final class TelegramMediaMap: Media {
         } else {
             encoder.encodeNil(forKey: "bt")
         }
+        if let liveProximityNotificationRadius = self.liveProximityNotificationRadius {
+            encoder.encodeInt32(liveProximityNotificationRadius, forKey: "pnr")
+        } else {
+            encoder.encodeNil(forKey: "pnr")
+        }
     }
     
     public func isEqual(to other: Media) -> Bool {
         if let other = other as? TelegramMediaMap {
             if self.latitude != other.latitude || self.longitude != other.longitude {
+                return false
+            }
+            if self.heading != other.heading {
+                return false
+            }
+            if self.accuracyRadius != other.accuracyRadius {
                 return false
             }
             if self.geoPlace != other.geoPlace {
@@ -188,6 +218,9 @@ public final class TelegramMediaMap: Media {
                 return false
             }
             if self.liveBroadcastingTimeout != other.liveBroadcastingTimeout {
+                return false
+            }
+            if self.liveProximityNotificationRadius != other.liveProximityNotificationRadius {
                 return false
             }
             return true

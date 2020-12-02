@@ -102,7 +102,17 @@ final class AccountManagerImpl {
             for record in self.legacyRecordTable.getRecords() {
                 legacyRecordDict[record.id] = record
             }
-            self.currentAtomicState = AccountManagerAtomicState(records: legacyRecordDict, currentRecordId: self.legacyMetadataTable.getCurrentAccountId(), currentAuthRecord: self.legacyMetadataTable.getCurrentAuthAccount())
+            self.currentAtomicState = AccountManagerAtomicState(records: legacyRecordDict, currentRecordId: self.legacyMetadataTable.getCurrentAccountId(), currentAuthRecord: self.legacyMetadataTable.getCurrentAuthAccount(), accessChallengeData: self.legacyMetadataTable.getAccessChallengeData())
+            self.syncAtomicStateToFile()
+        }
+        
+        let tableAccessChallengeData = self.legacyMetadataTable.getAccessChallengeData()
+        if self.currentAtomicState.accessChallengeData != .none {
+            if tableAccessChallengeData == .none {
+                self.legacyMetadataTable.setAccessChallengeData(self.currentAtomicState.accessChallengeData)
+            }
+        } else if tableAccessChallengeData != .none {
+            self.currentAtomicState.accessChallengeData = tableAccessChallengeData
             self.syncAtomicStateToFile()
         }
         
@@ -208,7 +218,9 @@ final class AccountManagerImpl {
                     return self.legacyMetadataTable.getAccessChallengeData()
                 }, setAccessChallengeData: { data in
                     self.currentUpdatedAccessChallengeData = data
+                    self.currentAtomicStateUpdated = true
                     self.legacyMetadataTable.setAccessChallengeData(data)
+                    self.currentAtomicState.accessChallengeData = data
                 }, getVersion: {
                     return self.legacyMetadataTable.getVersion()
                 }, setVersion: { version in

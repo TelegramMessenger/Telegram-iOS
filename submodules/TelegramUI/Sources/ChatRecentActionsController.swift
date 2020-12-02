@@ -58,6 +58,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
         }, reportMessages: { _, _ in
+        }, blockMessageAuthor: { _, _ in
         }, deleteMessages: { _, _, f in
             f(.default)
         }, forwardSelectedMessages: {
@@ -75,7 +76,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, navigateMessageSearch: { _ in
         }, openCalendarSearch: {
         }, toggleMembersSearch: { _ in
-        }, navigateToMessage: { _ in
+        }, navigateToMessage: { _, _, _ in
         }, navigateToChat: { _ in
         }, navigateToProfile: { _ in
         }, openPeerInfo: {
@@ -90,7 +91,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, stopMediaRecording: {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
-        }, sendRecordedMedia: {
+        }, sendRecordedMedia: { _ in
         }, displayRestrictedInfo: { _, _ in
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
@@ -98,8 +99,10 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, sendSticker: { _, _, _ in
             return false
         }, unblockPeer: {
-        }, pinMessage: { _ in
-        }, unpinMessage: {
+        }, pinMessage: { _, _ in
+        }, unpinMessage: { _, _, _ in
+        }, unpinAllMessages: {
+        }, openPinnedList: { _ in
         }, shareAccountContact: {
         }, reportPeer: {
         }, presentPeerContact: {
@@ -125,7 +128,11 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, unarchivePeer: {}, statuses: nil)
+        }, unarchivePeer: {
+        }, scrollToTop: {
+        }, viewReplies: { _, _ in
+        }, activatePinnedListPreview: { _, _ in
+        }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         
