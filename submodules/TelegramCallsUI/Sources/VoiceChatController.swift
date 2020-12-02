@@ -172,6 +172,7 @@ public final class VoiceChatController: ViewController {
             var state: State
             var muteState: GroupCallParticipantsContext.Participant.MuteState?
             var revealed: Bool?
+            var canManageCall: Bool
             
             var stableId: PeerId {
                 return self.peer.id
@@ -194,6 +195,9 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.revealed != rhs.revealed {
+                    return false
+                }
+                if lhs.canManageCall != rhs.canManageCall {
                     return false
                 }
                 return true
@@ -312,7 +316,7 @@ public final class VoiceChatController: ViewController {
                             interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
                         }, action: {
                             interaction.openPeer(peer.id)
-                        }, contextAction: peer.id == context.account.peerId ? nil : { node, gesture in
+                        }, contextAction: peer.id == context.account.peerId || !peerEntry.canManageCall ? nil : { node, gesture in
                             interaction.peerContextAction(peerEntry, node, gesture)
                         })
                 }
@@ -796,7 +800,7 @@ public final class VoiceChatController: ViewController {
                 }
                 return true
             }
-            self.view.addGestureRecognizer(panRecognizer)
+            self.backgroundNode.view.addGestureRecognizer(panRecognizer)
         }
         
         @objc private func optionsPressed() {
@@ -1244,7 +1248,8 @@ public final class VoiceChatController: ViewController {
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: memberState,
-                    muteState: memberMuteState
+                    muteState: memberMuteState,
+                    canManageCall: callState?.canManageCall ?? false
                 )))
                 index += 1
             }
@@ -1255,7 +1260,8 @@ public final class VoiceChatController: ViewController {
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: .listening,
-                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
+                    canManageCall: callState?.canManageCall ?? false
                 )))
             }
             
@@ -1277,7 +1283,7 @@ public final class VoiceChatController: ViewController {
                     self.contentContainer.bounds = bounds
                 case .cancelled, .ended:
                     let velocity = recognizer.velocity(in: self.view).y
-                    if abs(velocity) < 200.0 {
+                    if velocity < 200.0 {
                         var bounds = self.contentContainer.bounds
                         let previous = bounds
                         bounds.origin = CGPoint()
