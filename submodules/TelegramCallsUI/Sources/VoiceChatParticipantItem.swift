@@ -65,6 +65,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
     let text: ParticipantText
     let icon: Icon
     let enabled: Bool
+    public let selectable: Bool
     let getAudioLevel: (() -> Signal<Float, NoError>)?
     let revealOptions: [RevealOption]
     let revealed: Bool?
@@ -72,7 +73,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
     let action: (() -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -82,6 +83,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
         self.text = text
         self.icon = icon
         self.enabled = enabled
+        self.selectable = selectable
         self.getAudioLevel = getAudioLevel
         self.revealOptions = revealOptions
         self.revealed = revealed
@@ -89,9 +91,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
         self.action = action
         self.contextAction = contextAction
     }
-    
-    public var selectable: Bool = true
-    
+        
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = VoiceChatParticipantItemNode()

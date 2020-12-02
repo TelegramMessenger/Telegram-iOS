@@ -640,6 +640,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         if let call = call {
                             mainWindow.hostView.containerView.endEditing(true)
                             let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                            groupCallController.parentNavigationController = mainWindow.viewController as? NavigationController
                             strongSelf.groupCallController = groupCallController
                             strongSelf.mainWindow?.present(groupCallController, on: .calls)
                             strongSelf.hasOngoingCall.set(true)

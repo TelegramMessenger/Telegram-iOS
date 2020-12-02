@@ -202,6 +202,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var audioLevelsDisposable = MetaDisposable()
     
     private let speakingParticipantsContext = SpeakingParticipantsContext()
+    private var speakingParticipantsReportTimestamp: [PeerId: Double] = [:]
     public var speakingAudioLevels: Signal<[(PeerId, Float)], NoError> {
         return self.speakingParticipantsContext.getAudioLevels()
     }
@@ -396,7 +397,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     removedSsrc.append(participantUpdate.ssrc)
                                     
                                     if participantUpdate.peerId == strongSelf.accountContext.account.peerId {
-                                        strongSelf._canBeRemoved.set(.single(true))
+                                        if case let .estabilished(_, _, ssrc, _) = strongSelf.internalState, ssrc == participantUpdate.ssrc {
+                                            strongSelf._canBeRemoved.set(.single(true))
+                                        }
                                     }
                                 } else if participantUpdate.peerId == strongSelf.accountContext.account.peerId {
                                     if case let .estabilished(_, _, ssrc, _) = strongSelf.internalState, ssrc != participantUpdate.ssrc {
@@ -616,14 +619,35 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.participantsContext = participantsContext
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
-                    participantsContext.numberOfActiveSpeakers,
-                    self.speakingParticipantsContext.get()
+                    participantsContext.numberOfActiveSpeakers |> deliverOnMainQueue,
+                    self.speakingParticipantsContext.get() |> deliverOnMainQueue
                 ).start(next: { [weak self] state, numberOfActiveSpeakers, speakingParticipants in
                     guard let strongSelf = self else {
                         return
                     }
                     
                     var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                    
+                    var reportSpeakingParticipants: [PeerId] = []
+                    let timestamp = CACurrentMediaTime()
+                    for peerId in speakingParticipants {
+                        let shouldReport: Bool
+                        if let previousTimestamp = strongSelf.speakingParticipantsReportTimestamp[peerId] {
+                            shouldReport = previousTimestamp + 1.0 < timestamp
+                        } else {
+                            shouldReport = true
+                        }
+                        if shouldReport {
+                            strongSelf.speakingParticipantsReportTimestamp[peerId] = timestamp
+                            reportSpeakingParticipants.append(peerId)
+                        }
+                    }
+                    
+                    if !reportSpeakingParticipants.isEmpty {
+                        Queue.mainQueue().justDispatch {
+                            self?.participantsContext?.reportSpeakingParticipants(ids: reportSpeakingParticipants)
+                        }
+                    }
                     
                     var members = PresentationGroupCallMembers(
                         participants: [],

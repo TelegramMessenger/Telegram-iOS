@@ -314,11 +314,11 @@ public final class VoiceChatController: ViewController {
                         
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: peerEntry.presence, text: text, icon: icon, enabled: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: peer.id != context.account.peerId, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                             interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
                         }, action: {
                             interaction.openPeer(peer.id)
-                        }, contextAction: { node, gesture in
+                        }, contextAction: peer.id == context.account.peerId ? nil : { node, gesture in
                             interaction.peerContextAction(peerEntry, node, gesture)
                         })
                 }
@@ -443,7 +443,8 @@ public final class VoiceChatController: ViewController {
                 updateIsMuted: { [weak self] peerId, isMuted in
                     self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
             }, openPeer: { [weak self] peerId in
-                if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                if let strongSelf = self, let navigationController = strongSelf.controller?.parentNavigationController {
+                    strongSelf.controller?.dismiss()
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
                 }
             }, openInvite: {
@@ -1190,17 +1191,19 @@ public final class VoiceChatController: ViewController {
         }
         
         private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, groupMembers: [RenderedChannelParticipant], callMembers: [GroupCallParticipantsContext.Participant], speakingPeers: Set<PeerId>) {
-            var callMembers = callMembers
-            callMembers.sort()
+            var sortedCallMembers = callMembers
+            sortedCallMembers.sort()
             
-            for i in 0 ..< callMembers.count {
-                if callMembers[i].peer.id == self.context.account.peerId {
-                    let member = callMembers[i]
-                    callMembers.remove(at: i)
-                    callMembers.insert(member, at: 0)
+            /*for i in 0 ..< sortedCallMembers.count {
+                if sortedCallMembers[i].peer.id == self.context.account.peerId {
+                    let member = sortedCallMembers[i]
+                    sortedCallMembers.remove(at: i)
+                    sortedCallMembers.insert(member, at: 0)
                     break
                 }
-            }
+            }*/
+            
+            //assert(sortedCallMembers == callMembers)
             
             self.currentGroupMembers = groupMembers
             self.currentCallMembers = callMembers
@@ -1214,7 +1217,7 @@ public final class VoiceChatController: ViewController {
             var processedPeerIds = Set<PeerId>()
             
             entries.append(.invite(self.presentationData.theme, self.presentationData.strings, "Invite Member"))
-            
+
             for member in callMembers {
                 if processedPeerIds.contains(member.peer.id) {
                     continue
@@ -1300,6 +1303,7 @@ public final class VoiceChatController: ViewController {
     private let sharedContext: SharedAccountContext
     public let call: PresentationGroupCall
     private let presentationData: PresentationData
+    public var parentNavigationController: NavigationController?
         
     fileprivate let contentsReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     fileprivate let dataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
