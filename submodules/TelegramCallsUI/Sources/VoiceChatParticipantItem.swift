@@ -90,7 +90,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
         self.contextAction = contextAction
     }
     
-    public var selectable: Bool = false
+    public var selectable: Bool = true
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
@@ -170,11 +170,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (VoiceChatParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
-        
-    override public var canBeSelected: Bool {
-        return false
-    }
-    
+            
     public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -586,13 +582,13 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     let avatarScale: CGFloat
                                     if value > 0.0 {
                                         audioLevelView.startAnimating()
-                                        avatarScale = 1.03 + level * 0.1
+                                        avatarScale = 1.03 + level * 0.07
                                     } else {
                                         audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
                                     }
                                     
-                                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .spring)
+                                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
                                     transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
                                 }
                             }))

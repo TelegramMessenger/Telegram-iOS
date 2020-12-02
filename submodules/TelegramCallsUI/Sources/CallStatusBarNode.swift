@@ -125,8 +125,7 @@ private final class Curve {
         self.minOffset = minOffset
         self.maxOffset = maxOffset
 
-        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
-        self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
+        self.smoothness = 0.35
 
         self.currentOffset = minOffset
         
@@ -169,7 +168,13 @@ private final class Curve {
         let timestamp = CACurrentMediaTime()
 
         if let (startTime, duration) = self.transitionArguments, duration > 0.0 {
-            self.transition = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
+            var t = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
+            if t < 0.5 {
+                t = 2 * t * t
+            } else {
+                t = -1 + (4 - 2 * t) * t
+            }
+            self.transition = t
             if self.transition < 1.0 {
             } else {
                 if self.loop {
@@ -187,12 +192,12 @@ private final class Curve {
     private func generateNextCurve(for size: CGSize) -> [CGPoint] {
         let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
         return curve(pointsCount: pointsCount, randomness: randomness).map {
-            return CGPoint(x: $0.x * CGFloat(size.width), y: size.height - 17.0 + $0.y * 12.0)
+            return CGPoint(x: $0.x * CGFloat(size.width), y: size.height - 18.0 + $0.y * 12.0)
         }
     }
 
     private func curve(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
-        let segment = 1.0 / CGFloat(pointsCount)
+        let segment = 1.0 / CGFloat(pointsCount - 1)
 
         let rgen = { () -> CGFloat in
             let accuracy: UInt32 = 1000
@@ -204,7 +209,7 @@ private final class Curve {
         let points = (0 ..< pointsCount).map { i -> CGPoint in
             let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
             let segmentRandomness: CGFloat = randomness
-
+            
             let pointX: CGFloat
             let pointY: CGFloat
             let randomXDelta: CGFloat
@@ -218,9 +223,10 @@ private final class Curve {
                 randomXDelta = 0.0
             } else {
                 pointX = segment * CGFloat(i)
-                pointY = cos(segment * CGFloat(i)) * ((segmentRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - segmentRandomness * 0.5) * randPointOffset
+                pointY = ((segmentRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - segmentRandomness * 0.5) * randPointOffset
                 randomXDelta = segment - segment * randPointOffset
             }
+
             return CGPoint(x: pointX + randomXDelta, y: pointY)
         }
 
@@ -264,9 +270,9 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         let bigCurveRange: CurveRange = (0.1, 1.0)
         
         let size = CGSize(width: 375.0, height: 44.0)
-        let smallCurve = Curve(size: size, alpha: 1.0, pointsCount: 6, minRandomness: 1, maxRandomness: 1, minSpeed: 2.5, maxSpeed: 7, minOffset: smallCurveRange.min, maxOffset: smallCurveRange.max)
-        let mediumCurve = Curve(size: size, alpha: 0.55, pointsCount: 6, minRandomness: 1, maxRandomness: 2, minSpeed: 2.5, maxSpeed: 7, minOffset: mediumCurveRange.min, maxOffset: mediumCurveRange.max)
-        let largeCurve = Curve(size: size, alpha: 0.35, pointsCount: 6, minRandomness: 1, maxRandomness: 2, minSpeed: 2.5, maxSpeed: 7, minOffset: bigCurveRange.min, maxOffset: bigCurveRange.max)
+        let smallCurve = Curve(size: size, alpha: 1.0, pointsCount: 7, minRandomness: 1, maxRandomness: 1.3, minSpeed: 1.0, maxSpeed: 3.5, minOffset: smallCurveRange.min, maxOffset: smallCurveRange.max)
+        let mediumCurve = Curve(size: size, alpha: 0.55, pointsCount: 7, minRandomness: 1.2, maxRandomness: 1.5, minSpeed: 1.0, maxSpeed: 4.5, minOffset: mediumCurveRange.min, maxOffset: mediumCurveRange.max)
+        let largeCurve = Curve(size: size, alpha: 0.35, pointsCount: 7, minRandomness: 1.2, maxRandomness: 1.7, minSpeed: 1.0, maxSpeed: 6.0, minOffset: bigCurveRange.min, maxOffset: bigCurveRange.max)
 
         self.curves = [smallCurve, mediumCurve, largeCurve]
         
@@ -314,7 +320,6 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             animator = ConstantDisplayLinkAnimator(update: { [weak self] in
                 self?.updateAnimations()
             })
-            animator.frameInterval = 2
             self.animator = animator
         }
         animator.isPaused = false
@@ -526,12 +531,14 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             if let currentPeer = self.currentPeer {
                 title = currentPeer.displayTitle(strings: strings, displayOrder: self.nameDisplayOrder)
             }
+            var membersCount: Int32?
             if let groupCallState = self.currentGroupCallState {
-                if groupCallState.numberOfActiveSpeakers != 0 {
-                    subtitle = strings.VoiceChat_Panel_MembersSpeaking(Int32(groupCallState.numberOfActiveSpeakers))
-                } else {
-                    subtitle = strings.VoiceChat_Panel_Members(Int32(max(1, groupCallState.participantCount)))
-                }
+                membersCount = Int32(max(1, groupCallState.participantCount))
+            } else if let content = self.currentContent, case .groupCall = content {
+                membersCount = 1
+            }
+            if let membersCount = membersCount {
+                subtitle = strings.VoiceChat_Panel_Members(membersCount)
             }
         }
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white)
@@ -556,6 +563,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.subtitleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize)
         
         self.backgroundNode.speaking = !self.currentIsMuted
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 17.0))
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
     }
 }

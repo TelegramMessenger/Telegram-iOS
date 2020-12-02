@@ -3,809 +3,43 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import LegacyComponents
 
 private let titleFont = Font.regular(17.0)
 private let subtitleFont = Font.regular(13.0)
 
+private let white = UIColor(rgb: 0xffffff)
+private let greyColor = UIColor(rgb: 0x1c1c1e)
 private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
 
-private let deviceScale = UIScreen.main.scale
-private let colorSpace = CGColorSpaceCreateDeviceRGB()
-
-private let radialMaskImage = generateImage(CGSize(width: 200.0, height: 200.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    var locations: [CGFloat] = [0.0, 1.0]
-        
-    let maskColors: [CGColor] = [UIColor(rgb: 0xffffff, alpha: 0.75).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
-    let maskGradient = CGGradient(colorsSpace: colorSpace, colors: maskColors as CFArray, locations: &locations)!
-    let maskGradientCenter = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-
-    context.drawRadialGradient(maskGradient, startCenter: maskGradientCenter, startRadius: 0.0, endCenter: maskGradientCenter, endRadius: size.width / 2.0, options: .drawsAfterEndLocation)
-}, opaque: false, scale: 1.0)!
-
-enum VoiceChatActionButtonState {
-    enum ActiveState {
-        case cantSpeak
-        case muted
-        case on
-    }
-
-    case connecting
-    case active(state: ActiveState)
-}
-
-private enum VoiceChatActionButtonBackgroundNodeType {
-    case connecting
-    case disabled
-    case blob
-}
-
-private protocol VoiceChatActionButtonBackgroundNodeContext {
-    var type: VoiceChatActionButtonBackgroundNodeType { get }
-    var frameInterval: Int { get }
-    var isAnimating: Bool { get }
-    
-    func updateAnimations()
-    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState
-}
-
-private protocol VoiceChatActionButtonBackgroundNodeState: NSObjectProtocol {
-
-}
-
-private final class VoiceChatActionButtonBackgroundNodeConnectingContext: VoiceChatActionButtonBackgroundNodeContext {
-    var isAnimating: Bool {
-        return true
-    }
-    
-    var frameInterval: Int {
-        return 1
-    }
-    
-    var type: VoiceChatActionButtonBackgroundNodeType {
-        return .connecting
-    }
-    
-    func updateAnimations() {
-    }
-    
-    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState {
-        return VoiceChatActionButtonBackgroundNodeConnectingState()
-    }
-}
-
-private final class VoiceChatActionButtonBackgroundNodeConnectingState: NSObject, VoiceChatActionButtonBackgroundNodeState {
-
-}
-
-private final class VoiceChatActionButtonBackgroundNodeDisabledContext: VoiceChatActionButtonBackgroundNodeContext {
-    var isAnimating: Bool {
-        return false
-    }
-    
-    var frameInterval: Int {
-        return 1
-    }
-    
-    var type: VoiceChatActionButtonBackgroundNodeType {
-        return .disabled
-    }
-    
-    func updateAnimations() {
-    }
-    
-    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState {
-        return VoiceChatActionButtonBackgroundNodeDisabledState()
-    }
-}
-
-private final class VoiceChatActionButtonBackgroundNodeDisabledState: NSObject, VoiceChatActionButtonBackgroundNodeState {
-
-}
-
-private final class Blob {
-    let size: CGSize
-    let alpha: CGFloat
-    
-    let pointsCount: Int
-    let smoothness: CGFloat
-
-    let minRandomness: CGFloat
-    let maxRandomness: CGFloat
-
-    let minSpeed: CGFloat
-    let maxSpeed: CGFloat
-
-    var currentScale: CGFloat = 1.0
-    var minScale: CGFloat
-    var maxScale: CGFloat
-    
-    private var speedLevel: CGFloat = 0.0
-    private var lastSpeedLevel: CGFloat = 0.0
-
-    private var fromPoints: [CGPoint]?
-    private var toPoints: [CGPoint]?
-    
-    private var currentPoints: [CGPoint]? {
-        guard let fromPoints = self.fromPoints, let toPoints = self.toPoints else { return nil }
-
-        return fromPoints.enumerated().map { offset, fromPoint in
-            let toPoint = toPoints[offset]
-            return CGPoint(x: fromPoint.x + (toPoint.x - fromPoint.x) * transition, y: fromPoint.y + (toPoint.y - fromPoint.y) * transition)
-        }
-    }
-
-    var currentShape: UIBezierPath?
-    private var transition: CGFloat = 0 {
-        didSet {
-            if let currentPoints = self.currentPoints {
-                self.currentShape = UIBezierPath.smoothCurve(through: currentPoints, length: size.width, smoothness: smoothness)
-            }
-        }
-    }
-    
-    var level: CGFloat = 0.0 {
-        didSet {
-            self.currentScale = self.minScale + (self.maxScale - self.minScale) * self.level
-        }
-    }
-    
-    private var transitionArguments: (startTime: Double, duration: Double)?
-    
-    var loop: Bool = true {
-        didSet {
-            if let _ = transitionArguments {
-            } else {
-                self.animateToNewShape()
-            }
-        }
-    }
-    
-    init(
-        size: CGSize,
-        alpha: CGFloat,
-        pointsCount: Int,
-        minRandomness: CGFloat,
-        maxRandomness: CGFloat,
-        minSpeed: CGFloat,
-        maxSpeed: CGFloat,
-        minScale: CGFloat,
-        maxScale: CGFloat
-    ) {
-        self.size = size
-        self.alpha = alpha
-        self.pointsCount = pointsCount
-        self.minRandomness = minRandomness
-        self.maxRandomness = maxRandomness
-        self.minSpeed = minSpeed
-        self.maxSpeed = maxSpeed
-        self.minScale = minScale
-        self.maxScale = maxScale
-
-        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
-        self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
-
-        self.currentScale = minScale
-        
-        self.animateToNewShape()
-    }
-    
-    func updateSpeedLevel(to newSpeedLevel: CGFloat) {
-        self.speedLevel = max(self.speedLevel, newSpeedLevel)
-
-        if abs(lastSpeedLevel - newSpeedLevel) > 0.3 {
-            animateToNewShape()
-        }
-    }
-    
-    private func animateToNewShape() {
-        if let _ = self.transitionArguments {
-            self.fromPoints = self.currentPoints
-            self.toPoints = nil
-            self.transition = 0.0
-            self.transitionArguments = nil
-        }
-
-        if self.fromPoints == nil {
-            self.fromPoints = generateNextBlob(for: self.size)
-        }
-        if self.toPoints == nil {
-            self.toPoints = generateNextBlob(for: self.size)
-        }
-
-        let duration: Double = 1.0 / Double(minSpeed + (maxSpeed - minSpeed) * speedLevel)
-        self.transitionArguments = (CACurrentMediaTime(), duration)
-
-        self.lastSpeedLevel = self.speedLevel
-        self.speedLevel = 0
-
-        self.updateAnimations()
-    }
-    
-    func updateAnimations() {
-        let timestamp = CACurrentMediaTime()
-        if let (startTime, duration) = self.transitionArguments, duration > 0.0 {
-            self.transition = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
-            if self.transition < 1.0 {
-            } else {
-                if self.loop {
-                    self.animateToNewShape()
-                } else {
-                    self.fromPoints = self.currentPoints
-                    self.toPoints = nil
-                    self.transition = 0.0
-                    self.transitionArguments = nil
-                }
-            }
-        }
-    }
-    
-    private func generateNextBlob(for size: CGSize) -> [CGPoint] {
-        let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
-        return blob(pointsCount: pointsCount, randomness: randomness).map {
-            return CGPoint(x: size.width / 2.0 + $0.x * CGFloat(size.width), y: size.height / 2.0 + $0.y * CGFloat(size.height))
-        }
-    }
-
-    private func blob(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
-        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
-
-        let rgen = { () -> CGFloat in
-            let accuracy: UInt32 = 1000
-            let random = arc4random_uniform(accuracy)
-            return CGFloat(random) / CGFloat(accuracy)
-        }
-        let rangeStart: CGFloat = 1.0 / (1.0 + randomness / 10.0)
-
-        let startAngle = angle * CGFloat(arc4random_uniform(100)) / CGFloat(100)
-
-        let points = (0 ..< pointsCount).map { i -> CGPoint in
-            let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
-            let angleRandomness: CGFloat = angle * 0.1
-            let randAngle = angle + angle * ((angleRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - angleRandomness * 0.5)
-            let pointX = sin(startAngle + CGFloat(i) * randAngle)
-            let pointY = cos(startAngle + CGFloat(i) * randAngle)
-            return CGPoint(x: pointX * randPointOffset, y: pointY * randPointOffset)
-        }
-
-        return points
-    }
-}
-
-private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatActionButtonBackgroundNodeContext {
-    var isAnimating: Bool {
-        return true
-    }
-    
-    var frameInterval: Int {
-        return 2
-    }
-    
-    var type: VoiceChatActionButtonBackgroundNodeType {
-        return .blob
-    }
-    
-    let size: CGSize
-    var active: Bool
-    var activeTransitionArguments: (startTime: Double, duration: Double)?
-    
-    typealias BlobRange = (min: CGFloat, max: CGFloat)
-    let blobs: [Blob]
-    
-    init(size: CGSize, active: Bool) {
-        self.size = size
-        self.active = active
-
-        let mediumBlobRange: BlobRange = (0.69, 0.87)
-        let bigBlobRange: BlobRange = (0.71, 1.00)
-        
-        let mediumBlob = Blob(size: size, alpha: 0.55, pointsCount: 8, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minScale: mediumBlobRange.min, maxScale: mediumBlobRange.max)
-        let largeBlob = Blob(size: size, alpha: 0.35, pointsCount: 8, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minScale: bigBlobRange.min, maxScale: bigBlobRange.max)
- 
-        self.blobs = [largeBlob, mediumBlob]
-    }
-    
-    func update(with state: VoiceChatActionButtonBackgroundNodeBlobContext) {
-        if self.active != state.active {
-            self.active = state.active
-            
-            self.activeTransitionArguments = (CACurrentMediaTime(), 0.3)
-        }
-    }
-    
-    func updateAnimations() {
-        let timestamp = CACurrentMediaTime()
-        
-        if let (startTime, duration) = self.activeTransitionArguments, duration > 0.0 {
-            let transition = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
-            if transition < 1.0 {
-            } else {
-                self.activeTransitionArguments = nil
-            }
-        }
-        
-        for blob in self.blobs {
-            blob.updateAnimations()
-        }
-    }
-    
-    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState {
-        var blobs: [BlobDrawingState] = []
-        for blob in self.blobs {
-            if let path = blob.currentShape?.copy() as? UIBezierPath {
-                let size = CGSize(width: 300.0, height: 300.0)
-                var appearanceProgress: CGFloat = 1.0
-                if let transition = transition, transition.previousState == .connecting || transition.previousState == .disabled {
-                    appearanceProgress = transition.transition
-                }
-                let offset = (size.width - blob.size.width) / 2.0
-                let toOrigin = CGAffineTransform(translationX: -size.width / 2.0 + offset, y: -size.height / 2.0 + offset)
-                let fromOrigin = CGAffineTransform(translationX: size.width / 2.0, y: size.height / 2.0)
-    
-                path.apply(toOrigin)
-                path.apply(CGAffineTransform(scaleX: blob.currentScale * appearanceProgress, y: blob.currentScale * appearanceProgress))
-                path.apply(fromOrigin)
-
-                blobs.append(BlobDrawingState(size: blob.size, path: path.cgPath, scale: blob.currentScale, alpha: blob.alpha))
-            }
-        }
-        return VoiceChatActionButtonBackgroundNodeBlobState(size: self.size, active: self.active, activeTransitionArguments: self.activeTransitionArguments, blobs: blobs)
-    }
-}
-
-private class BlobDrawingState: NSObject {
-    let size: CGSize
-    let path: CGPath
-    let scale: CGFloat
-    let alpha: CGFloat
-    
-    init(size: CGSize, path: CGPath, scale: CGFloat, alpha: CGFloat) {
-        self.size = size
-        self.path = path
-        self.scale = scale
-        self.alpha = alpha
-    }
-}
-
-private final class VoiceChatActionButtonBackgroundNodeBlobState: NSObject, VoiceChatActionButtonBackgroundNodeState {
-    let active: Bool
-    let activeTransitionArguments: (startTime: Double, duration: Double)?
-    let blobs: [BlobDrawingState]
-    
-    init(size: CGSize, active: Bool, activeTransitionArguments: (startTime: Double, duration: Double)?, blobs: [BlobDrawingState]) {
-        self.active = active
-        self.activeTransitionArguments = activeTransitionArguments
-        self.blobs = blobs
-    }
-}
-
-private final class VoiceChatActionButtonBackgroundNodeTransitionState: NSObject {
-    let startTime: Double
-    let transition: CGFloat
-    let previousState: VoiceChatActionButtonBackgroundNodeType
-    
-    init(startTime: Double, transition: CGFloat, previousState: VoiceChatActionButtonBackgroundNodeType) {
-        self.startTime = startTime
-        self.transition = transition
-        self.previousState = previousState
-    }
-}
-
-
-private final class VoiceChatActionButtonBackgroundNodeTransitionContext {
-    let startTime: Double
-    let duration: Double
-    let previousState: VoiceChatActionButtonBackgroundNodeContext
-    
-    init(startTime: Double, duration: Double, previousState: VoiceChatActionButtonBackgroundNodeContext) {
-        self.startTime = startTime
-        self.duration = duration
-        self.previousState = previousState
-    }
-    
-    func progress(time: Double) -> CGFloat {
-        if duration > 0.0 {
-            return CGFloat(max(0.0, min(1.0, (time - startTime) / duration)))
-        } else {
-            return 0.0
-        }
-    }
-    
-    func transition(time: Double) -> CGFloat {
-        var transition = CGFloat(max(0.0, min(1.0, (time - startTime) / duration)))
-        if previousState.type == .connecting {
-            transition *= transition
-        }
-        return transition
-    }
-    
-    func drawingTransitionState(time: Double) -> VoiceChatActionButtonBackgroundNodeTransitionState {
-        return VoiceChatActionButtonBackgroundNodeTransitionState(startTime: self.startTime, transition: self.transition(time: time), previousState: previousState.type)
-    }
-}
-
-private class VoiceChatActionButtonBackgroundNodeDrawingState: NSObject {
-    let maskContext: Atomic<CGContext>
-    let timestamp: Double
-    let state: VoiceChatActionButtonBackgroundNodeState
-    let simplified: Bool
-    let gradientMovement: CGPoint
-    let transition: VoiceChatActionButtonBackgroundNodeTransitionState?
-    
-    init(maskContext: Atomic<CGContext>, timestamp: Double, state: VoiceChatActionButtonBackgroundNodeState, simplified: Bool, gradientMovement: CGPoint, transition: VoiceChatActionButtonBackgroundNodeTransitionState?) {
-        self.maskContext = maskContext
-        self.timestamp = timestamp
-        self.state = state
-        self.simplified = simplified
-        self.gradientMovement = gradientMovement
-        self.transition = transition
-    }
-}
-
-private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
-    private var state: VoiceChatActionButtonBackgroundNodeContext
-    private var hasState = false
-    private var transition: VoiceChatActionButtonBackgroundNodeTransitionContext?
-    private var simplified = false
-    
-    private let bitmapData: UnsafeMutablePointer<UInt8>
-    private let maskContext: Atomic<CGContext>
-    
-    private var gradientMovementArguments: (from: CGPoint, to: CGPoint, startTime: Double, duration: Double)?
-    private var gradientMovement = CGPoint()
-    
-    var audioLevel: CGFloat = 0.0  {
-        didSet {
-            if let blobsState = self.state as? VoiceChatActionButtonBackgroundNodeBlobContext {
-                for blob in blobsState.blobs {
-                    blob.loop = audioLevel.isZero
-                    blob.updateSpeedLevel(to: self.audioLevel)
-                }
-            }
-        }
-    }
-    private var presentationAudioLevel: CGFloat = 0.0
-    
-    private var animator: ConstantDisplayLinkAnimator?
-    
-    override init() {
-        self.state = VoiceChatActionButtonBackgroundNodeConnectingContext()
-        
-        let size = CGSize(width: 300.0, height: 300.0)
-        let width: Int = Int(size.width * deviceScale)
-        let height: Int = Int(size.height * deviceScale)
-        let bytesPerRow = width
-        let bitmapByteCount = width * height
-
-        self.bitmapData = .allocate(capacity: bitmapByteCount)
-        self.bitmapData.initialize(repeating: 0, count: bitmapByteCount)
-
-        let maskContext = CGContext(data: self.bitmapData, width: width, height: height, bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue)!
-        maskContext.interpolationQuality = .low
-        maskContext.scaleBy(x: CGFloat(width) / size.width, y: CGFloat(height) / size.height)
-        self.maskContext = Atomic(value: maskContext)
-        
-        super.init()
-        
-        self.isLayerBacked = true
-        self.isOpaque = false
-        self.displaysAsynchronously = true
-    }
-    
-    deinit {
-        self.bitmapData.deallocate()
-    }
-    
-    func update(state: VoiceChatActionButtonBackgroundNodeContext, simplified: Bool, animated: Bool) {
-        var animated = animated
-        var hadState = true
-        if !self.hasState {
-            hadState = false
-            self.hasState = true
-            animated = false
-        }
-        
-        self.simplified = simplified
-        
-        if state.type != self.state.type || !hadState {
-            if animated {
-                let duration: Double
-                if self.state.type == .connecting {
-                    duration = 0.7
-                } else if self.state.type == .disabled {
-                    duration = 0.3
-                } else {
-                    duration = 0.3
-                }
-                self.transition = VoiceChatActionButtonBackgroundNodeTransitionContext(startTime: CACurrentMediaTime(), duration: duration, previousState: self.state)
-            }
-            self.state = state
-        } else if let blobState = self.state as? VoiceChatActionButtonBackgroundNodeBlobContext, let nextState = state as? VoiceChatActionButtonBackgroundNodeBlobContext {
-            blobState.update(with: nextState)
-        }
-        
-        self.updateAnimations()
-    }
-    
-    var isCurrentlyInHierarchy = false
-    override func didEnterHierarchy() {
-        super.didEnterHierarchy()
-        
-        self.isCurrentlyInHierarchy = true
-        self.updateAnimations()
-    }
-    
-    override func didExitHierarchy() {
-        super.didExitHierarchy()
-        
-        self.isCurrentlyInHierarchy = false
-        self.updateAnimations()
-    }
-    
-    private func updateAnimations() {
-        var animate = false
-        let timestamp = CACurrentMediaTime()
-        
-        self.presentationAudioLevel = self.presentationAudioLevel * 0.9 + max(0.1, self.audioLevel) * 0.1
-        if let blobsState = self.state as? VoiceChatActionButtonBackgroundNodeBlobContext {
-            for blob in blobsState.blobs {
-                blob.level = self.presentationAudioLevel
-            }
-        }
-        
-        if let transition = self.transition {
-            if transition.startTime + transition.duration < timestamp {
-                self.transition = nil
-            } else {
-                animate = true
-            }
-        }
-        
-        if self.gradientMovementArguments == nil {
-            self.gradientMovementArguments = (CGPoint(), CGPoint(x: 0.25, y: 0.25), CACurrentMediaTime(), 1.5)
-        }
-        if let (from, to, startTime, duration) = self.gradientMovementArguments, duration > 0.0 {
-            let progress = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
-            self.gradientMovement = CGPoint(x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress)
-            
-            if progress < 1.0 {
-            } else {
-                var nextTo: CGPoint
-                if presentationAudioLevel > 0.3 {
-                    nextTo = CGPoint(x: CGFloat.random(in: 0.0 ..< 0.1), y: CGFloat.random(in: 0.0 ..< 0.9))
-                } else {
-                    if to.x > 0.5 {
-                        nextTo = CGPoint(x: CGFloat.random(in: 0.0 ..< 0.4), y: CGFloat.random(in: 0.0 ..< 0.6))
-                    } else {
-                        nextTo = CGPoint(x: CGFloat.random(in: 0.5 ..< 1.0), y: CGFloat.random(in: 0.0 ..< 0.7))
-                    }
-                }
-                self.gradientMovementArguments = (to, nextTo, timestamp, Double.random(in: 1.2 ..< 2.0))
-            }
-        }
-        
-        if self.state.isAnimating {
-            animate = true
-            self.state.updateAnimations()
-        }
-        
-        if !self.isCurrentlyInHierarchy {
-            animate = false
-        }
-                
-        if animate {
-            let animator: ConstantDisplayLinkAnimator
-            if let current = self.animator {
-                animator = current
-            } else {
-                animator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                    self?.updateAnimations()
-                })
-                self.animator = animator
-            }
-            animator.isPaused = false
-            if self.transition == nil || self.transition!.transition(time: timestamp) > 0.5 {
-                animator.frameInterval = state.frameInterval
-            }
-        } else {
-            self.animator?.isPaused = true
-        }
-        
-        self.setNeedsDisplay()
-    }
-    
-    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        let timestamp = CACurrentMediaTime()
-        let transitionState = self.transition?.drawingTransitionState(time: timestamp)
-        return VoiceChatActionButtonBackgroundNodeDrawingState(maskContext: self.maskContext, timestamp: timestamp, state: self.state.drawingState(transition: transitionState), simplified: self.simplified, gradientMovement: self.gradientMovement, transition: transitionState)
-    }
-
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        let context = UIGraphicsGetCurrentContext()!
-                
-        guard let parameters = parameters as? VoiceChatActionButtonBackgroundNodeDrawingState else {
-            return
-        }
-        
-        context.setBlendMode(.normal)
-        
-        let greyColor = UIColor(rgb: 0x1c1c1e)
-        let buttonSize = CGSize(width: 144.0, height: 144.0)
-        let radius = buttonSize.width / 2.0
-        
-        var gradientCenter = CGPoint(x: bounds.size.width, y: 50.0)
-        gradientCenter.x -= 90.0 * parameters.gradientMovement.x
-        gradientCenter.y += 120.0 * parameters.gradientMovement.y
-        
-        var gradientTransition: CGFloat = 0.0
-        var simpleColor: UIColor = blue
-        var firstColor = lightBlue
-        var secondColor = blue
-        
-        context.interpolationQuality = .low
-        
-        var appearanceProgress: CGFloat = 1.0
-        var glowScale: CGFloat = 0.75
-        if let transition = parameters.transition, transition.previousState == .connecting || transition.previousState == .disabled {
-            appearanceProgress = transition.transition
-        }
-                 
-        parameters.maskContext.with { maskContext in
-            maskContext.clear(bounds)
-        
-            var skipBlobs = false
-            if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState, let transition = parameters.transition, transition.previousState == .connecting, transition.transition < 0.5 {
-                skipBlobs = true
-            }
-            
-            var drawGradient = false
-            if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState, !skipBlobs {
-                gradientTransition = blobsState.active ? 1.0 : 0.0
-                if let transition = blobsState.activeTransitionArguments {
-                    gradientTransition = CGFloat((parameters.timestamp - transition.startTime) / transition.duration)
-                    if !blobsState.active {
-                        gradientTransition = 1.0 - gradientTransition
-                    }
-                }
-                glowScale += gradientTransition * 0.3
-                
-                simpleColor = blue.interpolateTo(green, fraction: gradientTransition)!
-                firstColor = firstColor.interpolateTo(blue, fraction: gradientTransition)!
-                secondColor = secondColor.interpolateTo(green, fraction: gradientTransition)!
-                
-                let progress = 1.0 - (appearanceProgress * glowScale)
-                let maskBounds = bounds.insetBy(dx: bounds.width / 3.0 * progress,  dy: bounds.width / 3.0 * progress)
-                if let radialMask = radialMaskImage.cgImage {
-                    maskContext.setBlendMode(.copy)
-                    maskContext.draw(radialMask, in: maskBounds)
-                    maskContext.setBlendMode(.normal)
-                }
-      
-                for blob in blobsState.blobs {
-                    maskContext.addPath(blob.path)
-                    maskContext.setFillColor(UIColor(rgb: 0xffffff, alpha: blob.alpha).cgColor)
-                    maskContext.fillPath()
-                }
-                drawGradient = true
-            }
-            
-            var skipProgressDrawing = true
-            let lineWidth = 3.0 + UIScreenPixel
-            if parameters.state is VoiceChatActionButtonBackgroundNodeConnectingState || parameters.transition?.previousState == .connecting {
-                skipProgressDrawing = false
-                
-                var globalAngle: CGFloat = CGFloat(parameters.timestamp.truncatingRemainder(dividingBy: Double.pi * 2.0))
-                globalAngle *= 4.0
-                globalAngle = CGFloat(globalAngle.truncatingRemainder(dividingBy: CGFloat.pi * 2.0))
-                
-                var timestamp = parameters.timestamp
-                if let transition = parameters.transition {
-                    timestamp = transition.startTime
-                }
-                
-                var progress = CGFloat(1.0 + timestamp.remainder(dividingBy: 2.0))
-                if let transition = parameters.transition {
-                    var transitionProgress = transition.transition
-                    if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState {
-                        transitionProgress = min(1.0, transitionProgress / 0.5)
-                        progress = progress + (2.0 - progress) * transitionProgress
-                        if transitionProgress >= 1.0 {
-                            skipProgressDrawing = true
-                        }
-                    } else if parameters.state is VoiceChatActionButtonBackgroundNodeDisabledState {
-                        progress = progress + (1.0 - progress) * transition.transition
-                        if transitionProgress >= 1.0 {
-                            skipProgressDrawing = true
-                        }
-                    }
-                }
-                
-                if !skipProgressDrawing {
-                    var startAngle = -CGFloat.pi / 2.0 + globalAngle
-                    var endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
-                    if progress > 1.0 {
-                        let tmp = startAngle
-                        startAngle = endAngle
-                        endAngle = 2.0 * CGFloat.pi + tmp
-                    }
-                    
-                    let path = CGMutablePath()
-                    path.addArc(center: CGPoint(x: bounds.width / 2.0, y: bounds.height / 2.0), radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
-
-                    let filledPath = path.copy(strokingWithWidth: lineWidth, lineCap: .round, lineJoin: .miter, miterLimit: 10)
-                    maskContext.addPath(filledPath)
-                    maskContext.setFillColor(UIColor(rgb: 0xffffff, alpha: 1.0).cgColor)
-                    maskContext.fillPath()
-                    
-                    drawGradient = true
-                }
-            }
-            
-            let buttonRect = bounds.insetBy(dx: (bounds.width - 144.0) / 2.0, dy: (bounds.height - 144.0) / 2.0)
-            
-            var clearInsideTransition: CGFloat?
-            if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState {
-                if skipProgressDrawing {
-                    maskContext.setFillColor(UIColor(rgb: 0xffffff).cgColor)
-                    maskContext.fillEllipse(in: buttonRect.insetBy(dx: -lineWidth / 2.0, dy: -lineWidth / 2.0))
-                }
-                
-                if let transition = parameters.transition {
-                    if transition.previousState == .connecting {
-                        clearInsideTransition = max(0.0, (transition.transition - 0.5) / 0.5)
-                    } else if transition.previousState == .disabled {
-                        clearInsideTransition = transition.transition
-                    }
-                }
-                
-                drawGradient = true
-            }
-            
-            context.setFillColor(greyColor.cgColor)
-            context.fillEllipse(in: buttonRect)
-
-            if drawGradient {
-                context.saveGState()
-                if let alphaMask = maskContext.makeImage() {
-                    context.clip(to: bounds, mask: alphaMask)
-                }
-
-                context.setBlendMode(.copy)
-                if parameters.simplified {
-                    context.setFillColor(simpleColor.cgColor)
-                    context.fill(bounds)
-                } else {
-                    var locations: [CGFloat] = [0.0, 1.0]
-                    let gradientStartRadius: CGFloat = 0.0
-                    let gradientEndRadius: CGFloat = 141.0
-
-                    let colors: [CGColor] = [firstColor.cgColor, secondColor.cgColor]
-                    let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-                    context.drawRadialGradient(gradient, startCenter: gradientCenter, startRadius: gradientStartRadius, endCenter: gradientCenter, endRadius: gradientEndRadius, options: .drawsAfterEndLocation)
-                }
-                context.restoreGState()
-            }
-
-            if let transition = clearInsideTransition {
-                context.setFillColor(greyColor.cgColor)
-                context.fillEllipse(in: buttonRect.insetBy(dx: lineWidth / 2.0 + transition * radius, dy: lineWidth / 2.0 + transition * radius))
-            }
-        }
-        
-//        print("drawn in \(CACurrentMediaTime() - start)")
-    }
-}
-
 final class VoiceChatActionButton: HighlightTrackingButtonNode {
+    enum State {
+        enum ActiveState {
+            case cantSpeak
+            case muted
+            case on
+        }
+
+        case connecting
+        case active(state: ActiveState)
+    }
+    
     private let containerNode: ASDisplayNode
-    private let backgroundNode: VoiceChatActionButtonBackgroundNode
-    let iconNode: VoiceChatMicrophoneNode
-    let titleLabel: ImmediateTextNode
-    let subtitleLabel: ImmediateTextNode
-        
-    private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButtonState, title: String, subtitle: String)?
+    private let backgroundNode: VoiceChatActionButtonBackgroundNewNode
+    private let iconNode: VoiceChatMicrophoneNode
+    private let titleLabel: ImmediateTextNode
+    private let subtitleLabel: ImmediateTextNode
+    
+    private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, simplified: Bool, title: String, subtitle: String)?
+    
+    private var activePromise = ValuePromise<Bool>(false)
+    private var outerColorPromise = ValuePromise<UIColor?>(nil)
+    var outerColor: Signal<UIColor?, NoError> {
+        return outerColorPromise.get()
+    }
+    var activeDisposable = MetaDisposable()
     
     var pressing: Bool = false {
         didSet {
@@ -821,7 +55,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
     init() {
         self.containerNode = ASDisplayNode()
-        self.backgroundNode = VoiceChatActionButtonBackgroundNode()
+        self.backgroundNode = VoiceChatActionButtonBackgroundNewNode()
         self.iconNode = VoiceChatMicrophoneNode()
         
         self.titleLabel = ImmediateTextNode()
@@ -847,6 +81,18 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 }
             }
         }
+        
+        self.backgroundNode.updatedActive = { [weak self] active in
+            self?.activePromise.set(active)
+        }
+        
+        self.backgroundNode.updatedOuterColor = { [weak self] color in
+            self?.outerColorPromise.set(color)
+        }
+    }
+    
+    deinit {
+        self.activeDisposable.dispose()
     }
     
     func updateLevel(_ level: CGFloat) {
@@ -856,37 +102,17 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.backgroundNode.audioLevel = normalizedLevel
     }
     
-    func update(size: CGSize, buttonSize: CGSize, state: VoiceChatActionButtonState, title: String, subtitle: String, simplified: Bool, animated: Bool = false) {
-        let updatedTitle = self.currentParams?.title != title
-        let updatedSubtitle = self.currentParams?.subtitle != subtitle
-
-        self.currentParams = (size, buttonSize, state, title, subtitle)
-
+    func applyParams(animated: Bool) {
+        guard let (size, _, state, simplified, title, subtitle) = self.currentParams else {
+            return
+        }
+        
+        let updatedTitle = self.titleLabel.attributedText?.string != title
+        let updatedSubtitle = self.subtitleLabel.attributedText?.string != title
+        
         self.titleLabel.attributedText = NSAttributedString(string: title, font: titleFont, textColor: .white)
         self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, font: subtitleFont, textColor: .white)
-
-        let blobSize: CGSize = CGSize(width: 244.0, height: 244.0)
-        
-        var iconMuted = true
-        var iconColor: UIColor = .white
-        var backgroundState: VoiceChatActionButtonBackgroundNodeContext
-        switch state {
-            case let .active(state):
-                switch state {
-                    case .on:
-                        iconMuted = false
-                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: true)
-                    case .muted:
-                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: false)
-                    case .cantSpeak:
-                        iconColor = UIColor(rgb: 0xff3b30)
-                        backgroundState = VoiceChatActionButtonBackgroundNodeDisabledContext()
-                }
-            case .connecting:
-                backgroundState = VoiceChatActionButtonBackgroundNodeConnectingContext()
-        }
-        self.backgroundNode.update(state: backgroundState, simplified: simplified, animated: true)
-
+                
         if animated {
             if let snapshotView = self.titleLabel.view.snapshotContentTree(), updatedTitle {
                 self.titleLabel.view.superview?.insertSubview(snapshotView, belowSubview: self.titleLabel.view)
@@ -925,13 +151,49 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         let iconSize = CGSize(width: 90.0, height: 90.0)
         self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
-
+    }
+    
+    func update(size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, title: String, subtitle: String, simplified: Bool, animated: Bool = false) {
+        let previousState = self.currentParams?.state
+        self.currentParams = (size, buttonSize, state, simplified, title, subtitle)
+        
+        var iconMuted = true
+        var iconColor: UIColor = .white
+        var backgroundState: VoiceChatActionButtonBackgroundNewNode.State
+        switch state {
+            case let .active(state):
+                switch state {
+                    case .on:
+                        iconMuted = false
+                        backgroundState = .blob(true)
+                    case .muted:
+                        backgroundState = .blob(false)
+                    case .cantSpeak:
+                        iconColor = UIColor(rgb: 0xff3b30)
+                        backgroundState = .disabled
+                }
+            case .connecting:
+                backgroundState = .connecting
+        }
+        self.backgroundNode.update(state: backgroundState, animated: true)
         self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, color: iconColor), animated: true)
+        
+        if case .active = state, let previousState = previousState, case .connecting = previousState, animated {
+            self.activeDisposable.set((self.activePromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] active in
+                if active {
+                    self?.activeDisposable.set(nil)
+                    self?.applyParams(animated: true)
+                }
+            }))
+        } else {
+            applyParams(animated: animated)
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         var hitRect = self.bounds
-        if let (_, buttonSize, _, _, _) = self.currentParams {
+        if let (_, buttonSize, _, _, _, _) = self.currentParams {
             hitRect = self.bounds.insetBy(dx: (self.bounds.width - buttonSize.width) / 2.0, dy: (self.bounds.height - buttonSize.height) / 2.0)
         }
         let result = super.hitTest(point, with: event)
@@ -1025,3 +287,786 @@ extension UIBezierPath {
         }
     }
 }
+
+private let progressLineWidth: CGFloat = 3.0 + UIScreenPixel
+private let buttonSize = CGSize(width: 144.0, height: 144.0)
+private let radius = buttonSize.width / 2.0
+
+private final class VoiceChatActionButtonBackgroundNewNode: ASDisplayNode {
+    enum State: Equatable {
+        case connecting
+        case disabled
+        case blob(Bool)
+    }
+    
+    private var state: State
+    private var hasState = false
+    private var transition: State?
+    
+    var audioLevel: CGFloat = 0.0  {
+        didSet {
+            self.maskBlobView.updateLevel(audioLevel)
+        }
+    }
+    
+    var updatedActive: ((Bool) -> Void)?
+    var updatedOuterColor: ((UIColor?) -> Void)?
+    
+    private let backgroundCircleLayer = CAShapeLayer()
+    private let foregroundCircleLayer = CAShapeLayer()
+    
+    private let foregroundView = UIView()
+    private let foregroundGradientLayer = CAGradientLayer()
+    
+    private let maskView = UIView()
+    private let maskGradientLayer = CAGradientLayer()
+    private let maskBlobView: VoiceBlobView
+    private let maskCircleLayer = CAShapeLayer()
+    
+    private let maskProgressLayer = CAShapeLayer()
+    
+    private let maskMediumBlobLayer = CAShapeLayer()
+    private let maskBigBlobLayer = CAShapeLayer()
+    
+    var isCurrentlyInHierarchy = false
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+        
+        self.isCurrentlyInHierarchy = true
+        self.updateAnimations()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.isCurrentlyInHierarchy = false
+        self.updateAnimations()
+    }
+    
+    override init() {
+        self.state = .connecting
+        
+        let whiteColor = UIColor(rgb: 0xffffff)
+        
+        let blobSize = CGSize(width: 244.0, height: 244.0)
+        self.maskBlobView = VoiceBlobView(frame: CGRect(origin: CGPoint(x: (300.0 - blobSize.width) / 2.0, y: (300.0 - blobSize.height) / 2.0), size: blobSize), maxLevel: 4.0, mediumBlobRange: (0.69, 0.87), bigBlobRange: (0.71, 1.0))
+        self.maskBlobView.setColor(UIColor(rgb: 0xffffff))
+        
+        super.init()
+        
+        let circlePath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: buttonSize)).cgPath
+        self.backgroundCircleLayer.fillColor = greyColor.cgColor
+        self.backgroundCircleLayer.path = circlePath
+        
+        let smallerCirclePath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width - progressLineWidth, height: buttonSize.height - progressLineWidth))).cgPath
+        self.foregroundCircleLayer.fillColor = greyColor.cgColor
+        self.foregroundCircleLayer.path = smallerCirclePath
+        self.foregroundCircleLayer.transform = CATransform3DMakeScale(0.0, 0.0, 1)
+        self.foregroundCircleLayer.isHidden = true
+        
+        self.foregroundGradientLayer.type = .radial
+        self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor]
+        self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
+        self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+        
+        self.maskView.backgroundColor = .clear
+        
+        self.maskGradientLayer.type = .radial
+        self.maskGradientLayer.colors = [UIColor(rgb: 0xffffff, alpha: 0.8).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
+        self.maskGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+        self.maskGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
+        self.maskGradientLayer.transform = CATransform3DMakeScale(0.3, 0.3, 1.0)
+        self.maskGradientLayer.isHidden = true
+        
+        let path = CGMutablePath()
+        path.addArc(center: CGPoint(x: (buttonSize.width + 6.0) / 2.0, y: (buttonSize.height + 6.0) / 2.0), radius: radius, startAngle: 0.0, endAngle: CGFloat.pi * 2.0, clockwise: true)
+        
+        self.maskProgressLayer.strokeColor = whiteColor.cgColor
+        self.maskProgressLayer.fillColor = UIColor.clear.cgColor
+        self.maskProgressLayer.lineWidth = progressLineWidth
+        self.maskProgressLayer.lineCap = .round
+        self.maskProgressLayer.path = path
+        
+        let largerCirclePath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width + progressLineWidth, height: buttonSize.height + progressLineWidth))).cgPath
+        self.maskCircleLayer.fillColor = whiteColor.cgColor
+        self.maskCircleLayer.path = largerCirclePath
+        self.maskCircleLayer.isHidden = true
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.layer.addSublayer(self.backgroundCircleLayer)
+        
+        self.view.addSubview(self.foregroundView)
+        self.layer.addSublayer(self.foregroundCircleLayer)
+        
+        self.foregroundView.mask = self.maskView
+        self.foregroundView.layer.addSublayer(self.foregroundGradientLayer)
+        
+        self.maskView.layer.addSublayer(self.maskGradientLayer)
+        
+        self.maskView.layer.addSublayer(self.maskProgressLayer)
+        
+        self.maskView.addSubview(self.maskBlobView)
+        self.maskView.layer.addSublayer(self.maskCircleLayer)
+    }
+        
+    private func setupGradientAnimations() {
+        if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
+        } else {
+            let previousValue = self.foregroundGradientLayer.startPoint
+            let newValue: CGPoint
+            if self.maskBlobView.presentationAudioLevel > 0.1 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.0 ..< 0.45))
+            } else {
+                newValue = CGPoint(x: CGFloat.random(in: 0.7 ..< 0.9), y: CGFloat.random(in: 0.0 ..< 0.45))
+            }
+            self.foregroundGradientLayer.startPoint = newValue
+            
+            CATransaction.begin()
+            
+            let animation = CABasicAnimation(keyPath: "startPoint")
+            animation.duration = Double.random(in: 0.8 ..< 1.4)
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            
+            CATransaction.setCompletionBlock { [weak self] in
+                self?.setupGradientAnimations()
+            }
+            
+            self.foregroundGradientLayer.add(animation, forKey: "movement")
+            CATransaction.commit()
+        }
+    }
+    
+    private func setupProgressAnimations() {
+        if let _ = self.maskProgressLayer.animation(forKey: "progressRotation") {
+        } else {
+            let animation = CABasicAnimation(keyPath: "transform.rotation.z")
+            animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+            animation.duration = 1.5
+            animation.fromValue = NSNumber(value: Float(0.0))
+            animation.toValue = NSNumber(value: Float.pi * 2.0)
+            animation.repeatCount = Float.infinity
+            animation.beginTime = 0.0
+            self.maskProgressLayer.add(animation, forKey: "progressRotation")
+            
+            let shrinkAnimation = CABasicAnimation(keyPath: "strokeEnd")
+            shrinkAnimation.fromValue = 1.0
+            shrinkAnimation.toValue = 0.0
+            shrinkAnimation.duration = 1.0
+            shrinkAnimation.beginTime = 0.0
+            
+            let growthAnimation = CABasicAnimation(keyPath: "strokeEnd")
+            growthAnimation.fromValue = 0.0
+            growthAnimation.toValue = 1.0
+            growthAnimation.duration = 1.0
+            growthAnimation.beginTime = 1.0
+            
+            let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+            rotateAnimation.fromValue = 0.0
+            rotateAnimation.toValue = CGFloat.pi * 2
+            rotateAnimation.isAdditive = true
+            rotateAnimation.duration = 1.0
+            rotateAnimation.beginTime = 1.0
+            
+            let groupAnimation = CAAnimationGroup()
+            groupAnimation.repeatCount = Float.infinity
+            groupAnimation.animations = [shrinkAnimation, growthAnimation, rotateAnimation]
+            groupAnimation.duration = 2.0
+            
+            self.maskProgressLayer.add(groupAnimation, forKey: "progressGrowth")
+        }
+    }
+    
+    func updateGlowAndGradientAnimations(active: Bool?, previousActive: Bool? = nil) {
+        let effectivePreviousActive = previousActive ?? false
+        
+        let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (effectivePreviousActive ? 0.95 : 0.8))
+        let initialColors = self.foregroundGradientLayer.colors
+        
+        let outerColor: UIColor?
+        let targetColors: [CGColor]
+        let targetScale: CGFloat
+        if let active = active {
+            if active {
+                targetColors = [blue.cgColor, green.cgColor]
+                targetScale = 0.95
+                outerColor = UIColor(rgb: 0x005720)
+            } else {
+                targetColors = [lightBlue.cgColor, blue.cgColor]
+                targetScale = 0.8
+                outerColor = UIColor(rgb: 0x00274d)
+            }
+        } else {
+            targetColors = [lightBlue.cgColor, blue.cgColor]
+            targetScale = 0.35
+            outerColor = nil
+        }
+        self.updatedOuterColor?(outerColor)
+        
+        self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
+        if let _ = previousActive {
+            self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
+        } else {
+            self.maskGradientLayer.animateSpring(from: initialScale as NSNumber, to: targetScale as NSNumber, keyPath: "transform.scale", duration: 0.45)
+        }
+        
+        self.foregroundGradientLayer.colors = targetColors
+        self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+    }
+        
+    private func playConnectionAnimation(active: Bool, completion: @escaping () -> Void) {
+        CATransaction.begin()
+        let initialRotation: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.transform.rotation.z") as? NSNumber)?.floatValue ?? 0.0)
+        let initialStrokeEnd: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.strokeEnd") as? NSNumber)?.floatValue ?? 1.0)
+        
+        self.maskProgressLayer.removeAnimation(forKey: "progressGrowth")
+        self.maskProgressLayer.removeAnimation(forKey: "progressRotation")
+        
+        let duration: Double = (1.0 - Double(initialStrokeEnd)) * 0.3
+        
+        let growthAnimation = CABasicAnimation(keyPath: "strokeEnd")
+        growthAnimation.fromValue = initialStrokeEnd
+        growthAnimation.toValue = 1.0
+        growthAnimation.duration = duration
+        growthAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+        
+        let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+        rotateAnimation.fromValue = initialRotation
+        rotateAnimation.toValue = initialRotation + CGFloat.pi * 2
+        rotateAnimation.isAdditive = true
+        rotateAnimation.duration = duration
+        rotateAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+        
+        let groupAnimation = CAAnimationGroup()
+        groupAnimation.animations = [growthAnimation, rotateAnimation]
+        groupAnimation.duration = duration
+        
+        CATransaction.setCompletionBlock {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.foregroundCircleLayer.isHidden = false
+            self.maskCircleLayer.isHidden = false
+            self.maskProgressLayer.isHidden = true
+            self.maskGradientLayer.isHidden = false
+            CATransaction.commit()
+            
+            completion()
+            
+            self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
+            
+            self.maskBlobView.startAnimating()
+            self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+            
+            self.updatedActive?(true)
+            
+            CATransaction.begin()
+            let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
+            shrinkAnimation.fromValue = 1.0
+            shrinkAnimation.toValue = 0.0
+            shrinkAnimation.duration = 0.15
+            shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+            
+            CATransaction.setCompletionBlock {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                self.foregroundCircleLayer.isHidden = true
+                CATransaction.commit()
+            }
+            
+            self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
+            CATransaction.commit()
+        }
+
+        self.maskProgressLayer.add(groupAnimation, forKey: "progressCompletion")
+        CATransaction.commit()
+    }
+    
+    func updateAnimations() {
+        self.setupGradientAnimations()
+        
+        switch self.state {
+            case .connecting:
+                self.updatedActive?(false)
+                self.setupProgressAnimations()
+            case let .blob(newActive):
+                if let transition = self.transition {
+                    if transition == .connecting {
+                        self.playConnectionAnimation(active: newActive) { [weak self] in
+                            self?.transition = nil
+                        }
+                    } else if transition == .disabled {
+                        
+                    } else if case let .blob(previousActive) = transition {
+                        updateGlowAndGradientAnimations(active: newActive, previousActive: previousActive)
+                    }
+                } else {
+                    self.maskBlobView.startAnimating()
+                }
+            case .disabled:
+                break
+        }
+    }
+    
+    func update(state: State, animated: Bool) {
+        var animated = animated
+        var hadState = true
+        if !self.hasState {
+            hadState = false
+            self.hasState = true
+            animated = false
+        }
+        
+        if state != self.state || !hadState {
+            if animated {
+                self.transition = self.state
+            }
+            self.state = state
+        }
+        
+        self.updateAnimations()
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        let center = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+        
+        let circleFrame = CGRect(origin: CGPoint(x: (self.bounds.width - buttonSize.width) / 2.0, y: (self.bounds.height - buttonSize.height) / 2.0), size: buttonSize)
+        self.backgroundCircleLayer.frame = circleFrame
+        self.foregroundCircleLayer.position = center
+        self.foregroundCircleLayer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: circleFrame.width - progressLineWidth, height: circleFrame.height - progressLineWidth))
+        self.maskCircleLayer.frame = circleFrame.insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+        self.maskProgressLayer.frame = circleFrame.insetBy(dx: -3.0, dy: -3.0)
+        self.foregroundView.frame = self.bounds
+        self.foregroundGradientLayer.frame = self.bounds
+        self.maskGradientLayer.position = center
+        self.maskGradientLayer.bounds = self.bounds
+        self.maskView.frame = self.bounds
+    }
+}
+
+private final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
+    private let mediumBlob: BlobView
+    private let bigBlob: BlobView
+    
+    private let maxLevel: CGFloat
+    
+    private var displayLinkAnimator: ConstantDisplayLinkAnimator?
+    
+    private var audioLevel: CGFloat = 0.0
+    var presentationAudioLevel: CGFloat = 0.0
+    
+    private(set) var isAnimating = false
+    
+    public typealias BlobRange = (min: CGFloat, max: CGFloat)
+    
+    public init(
+        frame: CGRect,
+        maxLevel: CGFloat,
+        mediumBlobRange: BlobRange,
+        bigBlobRange: BlobRange
+    ) {
+        self.maxLevel = maxLevel
+        
+        self.mediumBlob = BlobView(
+            pointsCount: 8,
+            minRandomness: 1,
+            maxRandomness: 1,
+            minSpeed: 0.85,
+            maxSpeed: 7,
+            minScale: mediumBlobRange.min,
+            maxScale: mediumBlobRange.max,
+            scaleSpeed: 0.2,
+            isCircle: false
+        )
+        self.bigBlob = BlobView(
+            pointsCount: 8,
+            minRandomness: 1,
+            maxRandomness: 1,
+            minSpeed: 0.85,
+            maxSpeed: 7,
+            minScale: bigBlobRange.min,
+            maxScale: bigBlobRange.max,
+            scaleSpeed: 0.2,
+            isCircle: false
+        )
+        
+        super.init(frame: frame)
+        
+        addSubview(bigBlob)
+        addSubview(mediumBlob)
+        
+        displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
+            
+            strongSelf.mediumBlob.level = strongSelf.presentationAudioLevel
+            strongSelf.bigBlob.level = strongSelf.presentationAudioLevel
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    public func setColor(_ color: UIColor) {
+        mediumBlob.setColor(color.withAlphaComponent(0.55))
+        bigBlob.setColor(color.withAlphaComponent(0.35))
+    }
+    
+    public func updateLevel(_ level: CGFloat) {
+        let normalizedLevel = min(1, max(level / maxLevel, 0))
+        
+        mediumBlob.updateSpeedLevel(to: normalizedLevel)
+        bigBlob.updateSpeedLevel(to: normalizedLevel)
+        
+        audioLevel = normalizedLevel
+    }
+    
+    public func startAnimating() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        
+        updateBlobsState()
+        
+        displayLinkAnimator?.isPaused = false
+    }
+    
+    public func stopAnimating() {
+        self.stopAnimating(duration: 0.15)
+    }
+    
+    public func stopAnimating(duration: Double) {
+        guard isAnimating else { return }
+        isAnimating = false
+        
+        updateBlobsState()
+        
+        displayLinkAnimator?.isPaused = true
+    }
+    
+    private func updateBlobsState() {
+        if isAnimating {
+            if mediumBlob.frame.size != .zero {
+                mediumBlob.startAnimating()
+                bigBlob.startAnimating()
+            }
+        } else {
+            mediumBlob.stopAnimating()
+            bigBlob.stopAnimating()
+        }
+    }
+    
+    override public func layoutSubviews() {
+        super.layoutSubviews()
+        
+        mediumBlob.frame = bounds
+        bigBlob.frame = bounds
+        
+        updateBlobsState()
+    }
+}
+
+final class BlobView: UIView {
+    let pointsCount: Int
+    let smoothness: CGFloat
+    
+    let minRandomness: CGFloat
+    let maxRandomness: CGFloat
+    
+    let minSpeed: CGFloat
+    let maxSpeed: CGFloat
+    
+    let minScale: CGFloat
+    let maxScale: CGFloat
+    let scaleSpeed: CGFloat
+    
+    var scaleLevelsToBalance = [CGFloat]()
+    
+    let isCircle: Bool
+    
+    var level: CGFloat = 0 {
+        didSet {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let lv = minScale + (maxScale - minScale) * level
+            shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+            CATransaction.commit()
+        }
+    }
+    
+    private var speedLevel: CGFloat = 0
+    private var scaleLevel: CGFloat = 0
+    
+    private var lastSpeedLevel: CGFloat = 0
+    private var lastScaleLevel: CGFloat = 0
+    
+    private let shapeLayer: CAShapeLayer = {
+        let layer = CAShapeLayer()
+        layer.strokeColor = nil
+        return layer
+    }()
+    
+    private var transition: CGFloat = 0 {
+        didSet {
+            guard let currentPoints = currentPoints else { return }
+            
+            shapeLayer.path = UIBezierPath.smoothCurve(through: currentPoints, length: bounds.width, smoothness: smoothness).cgPath
+        }
+    }
+    
+    private var fromPoints: [CGPoint]?
+    private var toPoints: [CGPoint]?
+    
+    private var currentPoints: [CGPoint]? {
+        guard let fromPoints = fromPoints, let toPoints = toPoints else { return nil }
+        
+        return fromPoints.enumerated().map { offset, fromPoint in
+            let toPoint = toPoints[offset]
+            return CGPoint(
+                x: fromPoint.x + (toPoint.x - fromPoint.x) * transition,
+                y: fromPoint.y + (toPoint.y - fromPoint.y) * transition
+            )
+        }
+    }
+    
+    init(
+        pointsCount: Int,
+        minRandomness: CGFloat,
+        maxRandomness: CGFloat,
+        minSpeed: CGFloat,
+        maxSpeed: CGFloat,
+        minScale: CGFloat,
+        maxScale: CGFloat,
+        scaleSpeed: CGFloat,
+        isCircle: Bool
+    ) {
+        self.pointsCount = pointsCount
+        self.minRandomness = minRandomness
+        self.maxRandomness = maxRandomness
+        self.minSpeed = minSpeed
+        self.maxSpeed = maxSpeed
+        self.minScale = minScale
+        self.maxScale = maxScale
+        self.scaleSpeed = scaleSpeed
+        self.isCircle = isCircle
+        
+        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
+        self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
+        
+        super.init(frame: .zero)
+        
+        layer.addSublayer(shapeLayer)
+        
+        shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func setColor(_ color: UIColor) {
+        shapeLayer.fillColor = color.cgColor
+    }
+    
+    func updateSpeedLevel(to newSpeedLevel: CGFloat) {
+        speedLevel = max(speedLevel, newSpeedLevel)
+        
+        if abs(lastSpeedLevel - newSpeedLevel) > 0.5 {
+            animateToNewShape()
+        }
+    }
+    
+    func startAnimating() {
+        animateToNewShape()
+    }
+    
+    func stopAnimating() {
+        fromPoints = currentPoints
+        toPoints = nil
+        pop_removeAnimation(forKey: "blob")
+    }
+    
+    private func animateToNewShape() {
+        guard !isCircle else { return }
+        
+        if pop_animation(forKey: "blob") != nil {
+            fromPoints = currentPoints
+            toPoints = nil
+            pop_removeAnimation(forKey: "blob")
+        }
+        
+        if fromPoints == nil {
+            fromPoints = generateNextBlob(for: bounds.size)
+        }
+        if toPoints == nil {
+            toPoints = generateNextBlob(for: bounds.size)
+        }
+        
+        let animation = POPBasicAnimation()
+        animation.property = POPAnimatableProperty.property(withName: "blob.transition", initializer: { property in
+            property?.readBlock = { blobView, values in
+                guard let blobView = blobView as? BlobView, let values = values else { return }
+                
+                values.pointee = blobView.transition
+            }
+            property?.writeBlock = { blobView, values in
+                guard let blobView = blobView as? BlobView, let values = values else { return }
+                
+                blobView.transition = values.pointee
+            }
+        })  as? POPAnimatableProperty
+        animation.completionBlock = { [weak self] animation, finished in
+            if finished {
+                self?.fromPoints = self?.currentPoints
+                self?.toPoints = nil
+                self?.animateToNewShape()
+            }
+        }
+        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.fromValue = 0
+        animation.toValue = 1
+        pop_add(animation, forKey: "blob")
+        
+        lastSpeedLevel = speedLevel
+        speedLevel = 0
+    }
+    
+    // MARK: Helpers
+    
+    private func generateNextBlob(for size: CGSize) -> [CGPoint] {
+        let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
+        return blob(pointsCount: pointsCount, randomness: randomness)
+            .map {
+                return CGPoint(
+                    x: $0.x * CGFloat(size.width),
+                    y: $0.y * CGFloat(size.height)
+                )
+            }
+    }
+    
+    func blob(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
+        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
+        
+        let rgen = { () -> CGFloat in
+            let accuracy: UInt32 = 1000
+            let random = arc4random_uniform(accuracy)
+            return CGFloat(random) / CGFloat(accuracy)
+        }
+        let rangeStart: CGFloat = 1 / (1 + randomness / 10)
+        
+        let startAngle = angle * CGFloat(arc4random_uniform(100)) / CGFloat(100)
+        
+        let points = (0 ..< pointsCount).map { i -> CGPoint in
+            let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
+            let angleRandomness: CGFloat = angle * 0.1
+            let randAngle = angle + angle * ((angleRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - angleRandomness * 0.5)
+            let pointX = sin(startAngle + CGFloat(i) * randAngle)
+            let pointY = cos(startAngle + CGFloat(i) * randAngle)
+            return CGPoint(
+                x: pointX * randPointOffset,
+                y: pointY * randPointOffset
+            )
+        }
+        
+        return points
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        if isCircle {
+            let halfWidth = bounds.width * 0.5
+            shapeLayer.path = UIBezierPath(
+                roundedRect: bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
+                cornerRadius: halfWidth
+            ).cgPath
+        }
+        CATransaction.commit()
+    }
+}
+
+
+
+
+
+
+//private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
+//    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+//        let context = UIGraphicsGetCurrentContext()!
+//
+//        guard let parameters = parameters as? VoiceChatActionButtonBackgroundNodeDrawingState else {
+//            return
+//        }
+//
+//        context.setBlendMode(.normal)
+//
+//        let buttonSize = CGSize(width: 144.0, height: 144.0)
+//        let radius = buttonSize.width / 2.0
+//
+//        var gradientCenter = CGPoint(x: bounds.size.width, y: 50.0)
+//        gradientCenter.x -= 90.0 * parameters.gradientMovement.x
+//        gradientCenter.y += 120.0 * parameters.gradientMovement.y
+//
+//        var gradientTransition: CGFloat = 0.0
+//        var simpleColor: UIColor = blue
+//        var firstColor = lightBlue
+//        var secondColor = blue
+//
+//        context.interpolationQuality = .low
+//
+//        var appearanceProgress: CGFloat = 1.0
+//        var glowScale: CGFloat = 0.75
+//        if let transition = parameters.transition, transition.previousState == .connecting || transition.previousState == .disabled {
+//            appearanceProgress = transition.transition
+//        }
+//
+//        parameters.maskContext.with { maskContext in
+//            maskContext.clear(bounds)
+//
+//            var skipBlobs = false
+//            if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState, let transition = parameters.transition, transition.previousState == .connecting, transition.transition < 0.5 {
+//                skipBlobs = true
+//            }
+//
+//            var drawGradient = false
+//            if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState, !skipBlobs {
+//                gradientTransition = blobsState.active ? 1.0 : 0.0
+//                if let transition = blobsState.activeTransitionArguments {
+//                    gradientTransition = CGFloat((parameters.timestamp - transition.startTime) / transition.duration)
+//                    if !blobsState.active {
+//                        gradientTransition = 1.0 - gradientTransition
+//                    }
+//                }
+//                glowScale += gradientTransition * 0.3
+//
+//                simpleColor = blue.interpolateTo(green, fraction: gradientTransition)!
+//                firstColor = firstColor.interpolateTo(blue, fraction: gradientTransition)!
+//                secondColor = secondColor.interpolateTo(green, fraction: gradientTransition)!
+//
+//                let progress = 1.0 - (appearanceProgress * glowScale)
+//                let maskBounds = bounds.insetBy(dx: bounds.width / 3.0 * progress,  dy: bounds.width / 3.0 * progress)
+//                if let radialMask = radialMaskImage.cgImage {
+//                    maskContext.setBlendMode(.copy)
+//                    maskContext.draw(radialMask, in: maskBounds)
+//                    maskContext.setBlendMode(.normal)
+//                }
+//
+//                for blob in blobsState.blobs {
+//                    maskContext.addPath(blob.path)
+//                    maskContext.setFillColor(UIColor(rgb: 0xffffff, alpha: blob.alpha).cgColor)
+//                    maskContext.fillPath()
+//                }
+//                drawGradient = true
+//            }
+//        }
+//    }
+//}

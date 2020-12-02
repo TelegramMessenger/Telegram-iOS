@@ -108,7 +108,8 @@ public final class VoiceChatController: ViewController {
         
         private final class Interaction {
             let updateIsMuted: (PeerId, Bool) -> Void
-            let invitePeer: (Peer) -> Void
+            let openPeer: (PeerId) -> Void
+            let openInvite: () -> Void
             let peerContextAction: (PeerEntry, ASDisplayNode, ContextGesture?) -> Void
             let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
             
@@ -116,12 +117,14 @@ public final class VoiceChatController: ViewController {
             
             init(
                 updateIsMuted: @escaping (PeerId, Bool) -> Void,
-                invitePeer: @escaping (Peer) -> Void,
+                openPeer: @escaping (PeerId) -> Void,
+                openInvite: @escaping () -> Void,
                 peerContextAction: @escaping (PeerEntry, ASDisplayNode, ContextGesture?) -> Void,
                 setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void
             ) {
                 self.updateIsMuted = updateIsMuted
-                self.invitePeer = invitePeer
+                self.openPeer = openPeer
+                self.openInvite = openInvite
                 self.peerContextAction = peerContextAction
                 self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
             }
@@ -141,17 +144,21 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            func updateAudioLevels(_ levels: [(PeerId, Float)], ignore: Set<PeerId> = Set()) {
+            func updateAudioLevels(_ levels: [(PeerId, Float)], accountPeerId: PeerId, updateAll: Bool) {
                 var updated = Set<PeerId>()
                 for (peerId, level) in levels {
                     if let pipe = self.audioLevels[peerId] {
-                        pipe.putNext(max(0.001, level))
+                        var level = level
+                        if peerId != accountPeerId {
+                            level = max(0.001, level)
+                        }
+                        pipe.putNext(level)
                         updated.insert(peerId)
                     }
                 }
-                if !ignore.isEmpty {
+                if updateAll {
                     for (peerId, pipe) in self.audioLevels {
-                        if !updated.contains(peerId) && !ignore.contains(peerId) {
+                        if !updated.contains(peerId) && peerId != accountPeerId {
                             pipe.putNext(0.0)
                         }
                     }
@@ -161,7 +168,6 @@ public final class VoiceChatController: ViewController {
         
         private struct PeerEntry: Comparable, Identifiable {
             enum State {
-                case inactive
                 case listening
                 case speaking
             }
@@ -171,7 +177,6 @@ public final class VoiceChatController: ViewController {
             var activityTimestamp: Int32
             var state: State
             var muteState: GroupCallParticipantsContext.Participant.MuteState?
-            var invited: Bool
             var revealed: Bool?
             
             var stableId: PeerId {
@@ -194,9 +199,6 @@ public final class VoiceChatController: ViewController {
                 if lhs.muteState != rhs.muteState {
                     return false
                 }
-                if lhs.invited != rhs.invited {
-                    return false
-                }
                 if lhs.revealed != rhs.revealed {
                     return false
                 }
@@ -209,43 +211,121 @@ public final class VoiceChatController: ViewController {
                 }
                 return lhs.peer.id < rhs.peer.id
             }
+        }
+        
+        private enum EntryId: Hashable {
+            case invite
+            case peerId(PeerId)
             
-            func item(context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListViewItem {
-                let peer = self.peer
-                
-                let text: VoiceChatParticipantItem.ParticipantText
-                let icon: VoiceChatParticipantItem.Icon
-                switch self.state {
-                case .inactive:
-                    text = .presence
-                    icon = .invite(self.invited)
-                case .listening:
-                    text = .text(presentationData.strings.VoiceChat_StatusListening, .accent)
-                    let microphoneColor: UIColor
-                    if let muteState = self.muteState, !muteState.canUnmute {
-                        microphoneColor = UIColor(rgb: 0xff3b30)
-                    } else {
-                        microphoneColor = UIColor(rgb: 0x979797)
-                    }
-                    icon = .microphone(self.muteState != nil, microphoneColor)
-                case .speaking:
-                    text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
-                    icon = .microphone(false, UIColor(rgb: 0x34c759))
+            static func <(lhs: EntryId, rhs: EntryId) -> Bool {
+                return lhs.hashValue < rhs.hashValue
+            }
+            
+            static func ==(lhs: EntryId, rhs: EntryId) -> Bool {
+                switch lhs {
+                    case .invite:
+                        switch rhs {
+                            case .invite:
+                                return true
+                            default:
+                                return false
+                        }
+                    case let .peerId(lhsId):
+                        switch rhs {
+                            case let .peerId(rhsId):
+                                return lhsId == rhsId
+                            default:
+                                return false
+                        }
                 }
-                
-                let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
-                
-                return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: self.presence, text: text, icon: icon, enabled: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, revealOptions: revealOptions, revealed: self.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
-                    interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
-                }, action: {
-                    interaction.invitePeer(peer)
-                }, contextAction: { node, gesture in
-                    interaction.peerContextAction(self, node, gesture)
-                })
             }
         }
         
-        private func preparedTransition(from fromEntries: [PeerEntry], to toEntries: [PeerEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
+        private enum ListEntry: Comparable, Identifiable {
+            case invite(PresentationTheme, PresentationStrings, String)
+            case peer(PeerEntry)
+            
+            var stableId: EntryId {
+                switch self {
+                    case .invite:
+                        return .invite
+                    case let .peer(peerEntry):
+                        return .peerId(peerEntry.peer.id)
+                }
+            }
+            
+            static func ==(lhs: ListEntry, rhs: ListEntry) -> Bool {
+                switch lhs {
+                    case let .invite(lhsTheme, lhsStrings, lhsText):
+                        if case let .invite(rhsTheme, rhsStrings, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText {
+                            return true
+                        } else {
+                            return false
+                        }
+                    case let .peer(lhsPeerEntry):
+                        switch rhs {
+                            case let .peer(rhsPeerEntry):
+                                return lhsPeerEntry == rhsPeerEntry
+                            default:
+                                return false
+                        }
+                }
+            }
+
+            static func <(lhs: ListEntry, rhs: ListEntry) -> Bool {
+                switch lhs {
+                    case .invite:
+                        return true
+                    case let .peer(lhsPeerEntry):
+                        switch rhs {
+                            case .invite:
+                                return false
+                            case let .peer(rhsPeerEntry):
+                                return lhsPeerEntry < rhsPeerEntry
+                        }
+                }
+            }
+            
+            func item(context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListViewItem {
+                switch self {
+                    case let .invite(_, _, text):
+                        return VoiceChatActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .generic(UIImage(bundleImageName: "Chat/Context Menu/AddUser")!), action: {
+                            
+                        })
+                    case let .peer(peerEntry):
+                        let peer = peerEntry.peer
+                        
+                        let text: VoiceChatParticipantItem.ParticipantText
+                        let icon: VoiceChatParticipantItem.Icon
+                        switch peerEntry.state {
+                        case .listening:
+                            text = .text(presentationData.strings.VoiceChat_StatusListening, .accent)
+                            let microphoneColor: UIColor
+                            if let muteState = peerEntry.muteState, !muteState.canUnmute {
+                                microphoneColor = UIColor(rgb: 0xff3b30)
+                            } else {
+                                microphoneColor = UIColor(rgb: 0x979797)
+                            }
+                            icon = .microphone(peerEntry.muteState != nil, microphoneColor)
+                        case .speaking:
+                            text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
+                            icon = .microphone(false, UIColor(rgb: 0x34c759))
+                        }
+                        
+                        let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
+                        
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: peerEntry.presence, text: text, icon: icon, enabled: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+                            interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
+                        }, action: {
+                            interaction.openPeer(peer.id)
+                        }, contextAction: { node, gesture in
+                            interaction.peerContextAction(peerEntry, node, gesture)
+                        })
+                }
+            }
+        }
+        
+        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
             let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
             
             let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -263,11 +343,17 @@ public final class VoiceChatController: ViewController {
         private var darkTheme: PresentationTheme
         
         private let optionsButton: VoiceChatOptionsButton
+        private let closeButton: HighlightableButtonNode
+        
+        private let dimNode: ASDisplayNode
         private let contentContainer: ASDisplayNode
+        private let backgroundNode: ASDisplayNode
         private let listNode: ListView
         private let audioOutputNode: CallControllerButtonItemNode
         private let leaveNode: CallControllerButtonItemNode
         private let actionButton: VoiceChatActionButton
+        
+        private let titleView: VoiceChatControllerTitleView
         
         private var enqueuedTransitions: [ListTransition] = []
         private var maxListHeight: CGFloat?
@@ -279,10 +365,9 @@ public final class VoiceChatController: ViewController {
         private var currentGroupMembers: [RenderedChannelParticipant]?
         private var currentCallMembers: [GroupCallParticipantsContext.Participant]?
         private var currentSpeakingPeers: Set<PeerId>?
-        private var currentInvitedPeers: Set<PeerId>?
+        private var accountPeer: Peer?
         
-        private var currentEntries: [PeerEntry] = []
-        private var peersDisposable: Disposable?
+        private var currentEntries: [ListEntry] = []
         
         private var peerViewDisposable: Disposable?
         private let leaveDisposable = MetaDisposable()
@@ -309,7 +394,6 @@ public final class VoiceChatController: ViewController {
         private var audioLevelsDisposable: Disposable?
         private var myAudioLevelDisposable: Disposable?
         private var memberStatesDisposable: Disposable?
-        private var invitedPeersDisposable: Disposable?
         
         private var itemInteraction: Interaction?
         
@@ -323,20 +407,30 @@ public final class VoiceChatController: ViewController {
             self.darkTheme = defaultDarkColorPresentationTheme
             
             self.optionsButton = VoiceChatOptionsButton()
+            self.closeButton = HighlightableButtonNode()
+            
+            self.dimNode = ASDisplayNode()
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
             
             self.contentContainer = ASDisplayNode()
-            self.contentContainer.backgroundColor = .black
+            
+            self.backgroundNode = ASDisplayNode()
+            self.backgroundNode.backgroundColor = UIColor(rgb: 0x000000)
+            self.backgroundNode.cornerRadius = 12.0
             
             self.listNode = ListView()
             self.listNode.backgroundColor = self.darkTheme.list.itemBlocksBackgroundColor
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
             self.listNode.clipsToBounds = true
-            self.listNode.cornerRadius = 16.0
+            self.listNode.cornerRadius = 12.0
             
             self.audioOutputNode = CallControllerButtonItemNode()
             self.leaveNode = CallControllerButtonItemNode()
             self.actionButton = VoiceChatActionButton()
                         
+            self.titleView = VoiceChatControllerTitleView(theme: self.presentationData.theme)
+            self.titleView.set(title: self.presentationData.strings.VoiceChat_Title, subtitle: self.presentationData.strings.SocksProxySetup_ProxyStatusConnecting)
+            
             super.init()
             
             let statePromise = ValuePromise(State(), ignoreRepeated: true)
@@ -345,38 +439,15 @@ public final class VoiceChatController: ViewController {
                 statePromise.set(stateValue.modify { f($0) })
             }
             
-            let invitePeer: (Peer) -> Void = { [weak self] peer in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                if let invitedPeers = strongSelf.currentInvitedPeers, invitedPeers.contains(peer.id) {
-                    return
-                }
-                
-                strongSelf.controller?.present(
-                    UndoOverlayController(
-                        presentationData: strongSelf.presentationData,
-                        content: .invitedToVoiceChat(
-                            context: strongSelf.context,
-                            peer: peer,
-                            text: strongSelf.presentationData.strings.VoiceChat_UserInvited(peer.compactDisplayTitle).0
-                        ),
-                        elevatedLayout: false,
-                        action: { action in
-                            return true
-                        }
-                    ),
-                    in: .current
-                )
-                strongSelf.call.invitePeer(peer.id)
-            }
-            
             self.itemInteraction = Interaction(
                 updateIsMuted: { [weak self] peerId, isMuted in
                     self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
-            }, invitePeer: { peer in
-                invitePeer(peer)
+            }, openPeer: { [weak self] peerId in
+                if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
+                }
+            }, openInvite: {
+                
             }, peerContextAction: { [weak self] entry, sourceNode, gesture in
                 guard let strongSelf = self, let controller = strongSelf.controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
                     return
@@ -385,77 +456,65 @@ public final class VoiceChatController: ViewController {
                 let peer = entry.peer
    
                 var items: [ContextMenuItem] = []
-                switch entry.state {
-                case .inactive:
-                    if let invitedPeers = strongSelf.currentInvitedPeers, invitedPeers.contains(peer.id) {
-                    } else {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_InvitePeer, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            invitePeer(peer)
-                            f(.default)
-                        })))
-                    }
-                default:
-                    if peer.id != strongSelf.context.account.peerId {
-                        if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)), !callState.adminIds.contains(peer.id) {
-                            if let muteState = entry.muteState, !muteState.canUnmute {
-                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
-                                }, action: { _, f in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    
-                                    strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
-                                    f(.default)
-                                })))
-                            } else {
-                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
-                                }, action: { _, f in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    
-                                    strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
-                                    f(.default)
-                                })))
-                            }
-                        }
-                    
-                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id)) {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
-                            }, action: { [weak self] _, f in
-                                f(.dismissWithoutContent)
-                                
+
+                if peer.id != strongSelf.context.account.peerId {
+                    if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)), !callState.adminIds.contains(peer.id) {
+                        if let muteState = entry.muteState, !muteState.canUnmute {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
                                 guard let strongSelf = self else {
                                     return
                                 }
-
-                                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
-                                var items: [ActionSheetItem] = []
-
-                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
-
-                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    
-                                    
-                                }))
-
-                                actionSheet.setItemGroups([
-                                    ActionSheetItemGroup(items: items),
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                        })
-                                    ])
-                                ])
-                                strongSelf.controller?.present(actionSheet, in: .window(.root))
+                                
+                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
+                                f(.default)
+                            })))
+                        } else {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
+                                f(.default)
                             })))
                         }
+                    }
+                
+                    if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id)) {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            guard let strongSelf = self else {
+                                return
+                            }
+
+                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
+                            var items: [ActionSheetItem] = []
+
+                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                
+                                
+                            }))
+
+                            actionSheet.setItemGroups([
+                                ActionSheetItemGroup(items: items),
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                    })
+                                ])
+                            ])
+                            strongSelf.controller?.present(actionSheet, in: .window(.root))
+                        })))
                     }
                 }
                 
@@ -473,49 +532,31 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.contentContainer.addSubnode(self.listNode)
-            self.contentContainer.addSubnode(self.audioOutputNode)
-            self.contentContainer.addSubnode(self.leaveNode)
-            self.contentContainer.addSubnode(self.actionButton)
+            self.backgroundNode.addSubnode(self.listNode)
+            self.backgroundNode.addSubnode(self.audioOutputNode)
+            self.backgroundNode.addSubnode(self.leaveNode)
+            self.backgroundNode.addSubnode(self.actionButton)
+            self.backgroundNode.view.addSubview(self.titleView)
+            self.backgroundNode.addSubnode(self.optionsButton)
+            self.backgroundNode.addSubnode(self.closeButton)
             
+            self.addSubnode(self.dimNode)
             self.addSubnode(self.contentContainer)
-            
-            let (disposable, loadMoreControl) = self.context.peerChannelMemberCategoriesContextsManager.recent(postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: self.context.account.peerId, peerId: self.call.peerId, updated: { [weak self] state in
-                Queue.mainQueue().async {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: state.list, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
-                }
-            })
-            
+            self.contentContainer.addSubnode(self.backgroundNode)
+                        
             self.memberStatesDisposable = (self.call.members
             |> deliverOnMainQueue).start(next: { [weak self] callMembers in
                 guard let strongSelf = self, let callMembers = callMembers else {
                     return
                 }
                 if let groupMembers = strongSelf.currentGroupMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants)
                 } else {
                     strongSelf.currentCallMembers = callMembers.participants
                 }
                 
                 let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers.totalCount)))
-                if let titleView = strongSelf.controller?.navigationItem.titleView as? VoiceChatControllerTitleView {
-                    titleView.set(title: strongSelf.presentationData.strings.VoiceChat_Title, subtitle: subtitle)
-                }
-            })
-            
-            self.invitedPeersDisposable = (self.call.invitedPeers
-            |> deliverOnMainQueue).start(next: { [weak self] invitedPeers in
-                guard let strongSelf = self else {
-                    return
-                }
-                if let groupMembers = strongSelf.currentGroupMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: invitedPeers)
-                } else {
-                    strongSelf.currentInvitedPeers = invitedPeers
-                }
+                strongSelf.titleView.set(title: strongSelf.presentationData.strings.VoiceChat_Title, subtitle: subtitle)
             })
             
             self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
@@ -523,19 +564,19 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if case let .known(value) = offset, value < 40.0 {
-                    strongSelf.context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: strongSelf.call.peerId, control: loadMoreControl)
                 }
             }
             
-            self.peersDisposable = disposable
-            
-            self.peerViewDisposable = (self.context.account.viewTracker.peerView(self.call.peerId)
-            |> deliverOnMainQueue).start(next: { [weak self] view in
+            self.peerViewDisposable = (combineLatest(self.context.account.viewTracker.peerView(self.call.peerId), self.context.account.postbox.loadedPeerWithId(self.context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] view, accountPeer in
                 guard let strongSelf = self else {
                     return
                 }
-                
+                                
                 if !strongSelf.didSetDataReady {
+                    strongSelf.accountPeer = accountPeer
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: [], callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
+                    
                     if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
                         let addressName = channel.addressName ?? ""
                         if !addressName.isEmpty || (channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers)) {
@@ -572,7 +613,7 @@ public final class VoiceChatController: ViewController {
                     }
                     
                     if wasMuted != (state.muteState != nil), let groupMembers = strongSelf.currentGroupMembers {
-                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
                     }
                     
                     if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -597,7 +638,7 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.itemInteraction?.updateAudioLevels(levels, ignore: Set([strongSelf.context.account.peerId]))
+                strongSelf.itemInteraction?.updateAudioLevels(levels, accountPeerId: strongSelf.context.account.peerId, updateAll: true)
             })
             
             self.myAudioLevelDisposable = (call.myAudioLevel
@@ -606,10 +647,10 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 var effectiveLevel: Float = 0.0
-                if let state = strongSelf.callState, state.muteState == nil {
+                if let state = strongSelf.callState, state.muteState == nil || strongSelf.pushingToTalk {
                     effectiveLevel = level
                 }
-                strongSelf.itemInteraction?.updateAudioLevels([(strongSelf.context.account.peerId, effectiveLevel)])
+                strongSelf.itemInteraction?.updateAudioLevels([(strongSelf.context.account.peerId, effectiveLevel)], accountPeerId: strongSelf.context.account.peerId, updateAll: false)
                 strongSelf.actionButton.updateLevel(CGFloat(effectiveLevel))
             })
             
@@ -726,31 +767,26 @@ public final class VoiceChatController: ViewController {
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: strongOptionsButton.extractedContainerNode, keepInPlace: true)), items: .single(items), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
-            let optionsButtonItem = UIBarButtonItem(customDisplayNode: self.optionsButton)!
-            optionsButtonItem.target = self
-            optionsButtonItem.action = #selector(self.rightNavigationButtonAction)
-            self.controller?.navigationItem.setRightBarButton(optionsButtonItem, animated: false)
+            
+            self.closeButton.setImage(closeButtonImage(), for: [.normal])
+            self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: .touchUpInside)
+            
+            self.optionsButton.addTarget(self, action: #selector(self.optionsPressed), forControlEvents: .touchUpInside)
         }
         
         deinit {
-            self.peersDisposable?.dispose()
             self.peerViewDisposable?.dispose()
             self.leaveDisposable.dispose()
             self.isMutedDisposable?.dispose()
             self.callStateDisposable?.dispose()
             self.audioOutputStateDisposable?.dispose()
             self.memberStatesDisposable?.dispose()
-            self.invitedPeersDisposable?.dispose()
             self.audioLevelsDisposable?.dispose()
             self.myAudioLevelDisposable?.dispose()
         }
         
         override func didLoad() {
             super.didLoad()
-            
-            let titleView = VoiceChatControllerTitleView(theme: self.presentationData.theme)
-            titleView.set(title: self.presentationData.strings.VoiceChat_Title, subtitle: self.presentationData.strings.SocksProxySetup_ProxyStatusConnecting)
-            self.controller?.navigationItem.titleView = titleView
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
             longTapRecognizer.minimumPressDuration = 0.001
@@ -767,13 +803,19 @@ public final class VoiceChatController: ViewController {
             self.view.addGestureRecognizer(panRecognizer)
         }
         
-        @objc private func rightNavigationButtonAction() {
+        @objc private func optionsPressed() {
             if self.optionsButton.isUserInteractionEnabled {
                 self.optionsButton.contextAction?(self.optionsButton.containerNode, nil)
             }
         }
         
+        @objc private func closePressed() {
+            self.controller?.dismiss()
+        }
+        
         @objc private func leavePressed() {
+            self.hapticFeedback.impact(.veryLight)
+            
             self.leaveDisposable.set((self.call.leave(terminateIfPossible: false)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?.controller?.dismiss()
@@ -812,7 +854,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
-                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), invitedPeers: self.currentInvitedPeers ?? Set())
+                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 case .ended, .cancelled:
                     self.hapticFeedback.impact(.veryLight)
                     
@@ -827,7 +869,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
-                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), invitedPeers: self.currentInvitedPeers ?? Set())
+                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 default:
                     break
             }
@@ -844,6 +886,8 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func audioOutputPressed() {
+            self.hapticFeedback.impact(.veryLight)
+            
             guard let (availableOutputs, currentOutput) = self.audioOutputState else {
                 return
             }
@@ -909,15 +953,23 @@ public final class VoiceChatController: ViewController {
             let isFirstTime = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
             
+            transition.updateFrame(view: self.titleView, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: CGSize(width: layout.size.width, height: 44.0)))
+            transition.updateFrame(node: self.optionsButton, frame: CGRect(origin: CGPoint(x: 20.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
+            transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: layout.size.width - 20.0 - 28.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
+            
+            transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+            
+            let contentHeight: CGFloat = layout.size.height - 240.0
+            
             transition.updateFrame(node: self.contentContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - contentHeight), size: CGSize(width: layout.size.width, height: contentHeight + 1000.0)))
             
             let bottomAreaHeight: CGFloat = 290.0
+            let listOrigin = CGPoint(x: 16.0, y: 64.0)
             
-            let listOrigin = CGPoint(x: 16.0, y: navigationHeight + 10.0)
-            
-            var listHeight: CGFloat = 56.0
+            var listHeight: CGFloat = 44.0 + 56.0
             if let maxListHeight = self.maxListHeight {
-                listHeight = min(max(1.0, layout.size.height - bottomAreaHeight - listOrigin.y - layout.intrinsicInsets.bottom + 25.0), maxListHeight)
+                listHeight = min(max(1.0, contentHeight - bottomAreaHeight - listOrigin.y - layout.intrinsicInsets.bottom + 25.0), maxListHeight + 44.0)
             }
             
             let listFrame = CGRect(origin: listOrigin, size: CGSize(width: layout.size.width - 16.0 * 2.0, height: listHeight))
@@ -931,9 +983,9 @@ public final class VoiceChatController: ViewController {
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
             let centralButtonSize = CGSize(width: 300.0, height: 300.0)
                         
-            let actionButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - centralButtonSize.width) / 2.0), y: layout.size.height - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - centralButtonSize.width) / 2.0), y: contentHeight - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
             
-            let actionButtonState: VoiceChatActionButtonState
+            let actionButtonState: VoiceChatActionButton.State
             let actionButtonTitle: String
             let actionButtonSubtitle: String
             let audioButtonAppearance: CallControllerButtonItemNode.Content.Appearance
@@ -1014,7 +1066,7 @@ public final class VoiceChatController: ViewController {
                 soundImage = .speaker
             case .speaker:
                 soundImage = .speaker
-                soundAppearance = .blurred(isFilled: true)
+//                soundAppearance = .blurred(isFilled: true)
             case .headphones:
                 soundImage = .bluetooth
             case let .bluetooth(type):
@@ -1028,7 +1080,7 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: self.presentationData.strings.VoiceChat_Audio, transition: .animated(duration: 0.4, curve: .linear))
+            self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: self.presentationData.strings.VoiceChat_Audio, transition: .animated(duration: 0.3, curve: .linear))
             
             self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0x4d120e)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
             
@@ -1036,8 +1088,8 @@ public final class VoiceChatController: ViewController {
             let sideButtonOffset = min(36.0, floor((((layout.size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))
             let sideButtonOrigin = max(sideButtonMinimalInset, floor((layout.size.width - 144.0) / 2.0) - sideButtonOffset - sideButtonSize.width)
             
-            transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonOrigin, y: layout.size.height - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
-            transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: layout.size.width - sideButtonOrigin - sideButtonSize.width, y: layout.size.height - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+            transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonOrigin, y: contentHeight - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+            transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: layout.size.width - sideButtonOrigin - sideButtonSize.width, y: contentHeight - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
             
             if isFirstTime {
                 while !self.enqueuedTransitions.isEmpty {
@@ -1046,116 +1098,48 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        func animateIn(sourcePanel: ASDisplayNode?) {
-            self.alpha = 1.0
-            
+        func animateIn() {
             guard let (layout, _) = self.validLayout else {
                 return
             }
             
-            if let sourcePanel = sourcePanel as? GroupCallNavigationAccessoryPanel {
-                let sourceFrame = sourcePanel.view.convert(sourcePanel.bounds, to: self.view)
-                self.contentContainer.clipsToBounds = true
-                     
-                let duration: Double = 0.4
-                if let titleView = self.controller?.navigationItem.titleView as? VoiceChatControllerTitleView {
-                    titleView.animateIn(duration: duration)
-                    
-                    self.controller?.navigationBar?.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-                    
-                    if let panelTitleView = sourcePanel.titleNode.view.snapshotContentTree() {
-                        let frame = sourcePanel.titleNode.view.convert(sourcePanel.titleNode.bounds, to: self.view)
-                        panelTitleView.frame = frame
-                        self.view.addSubview(panelTitleView)
-                        
-                        panelTitleView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -49.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                        panelTitleView.layer.animateScale(from: 1.0, to: 1.13, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                        panelTitleView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak panelTitleView] _ in
-                            panelTitleView?.removeFromSuperview()
-                        })
-                    }
-                    if let panelTextView = sourcePanel.textNode.view.snapshotContentTree() {
-                        let frame = sourcePanel.textNode.view.convert(sourcePanel.textNode.bounds, to: self.view)
-                        panelTextView.frame = frame
-                        self.view.addSubview(panelTextView)
-                        
-                        panelTextView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -49.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                        panelTextView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak panelTextView] _ in
-                            panelTextView?.removeFromSuperview()
-                        })
-                    }
-                }
-                
-                if let (backgroundView, foregroundView) = sourcePanel.rightButtonSnapshotViews(), self.optionsButton.isUserInteractionEnabled {
-                    self.view.addSubview(backgroundView)
-                    self.view.addSubview(foregroundView)
-                    
-                    self.optionsButton.isHidden = true
-                    let optionsFrame = self.optionsButton.view.convert(self.optionsButton.bounds, to: self.view)
-                    
-                    let dotsView = UIImageView(image: optionsButtonImage())
-                    dotsView.center = foregroundView.center
-                    self.view.addSubview(dotsView)
-                    
-                    backgroundView.layer.animateBounds(from: backgroundView.bounds, to: CGRect(origin: CGPoint(), size: CGSize(width: backgroundView.bounds.height, height: backgroundView.bounds.height)), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    backgroundView.layer.animatePosition(from: backgroundView.center, to: CGPoint(x: optionsFrame.midX, y: optionsFrame.midY), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    backgroundView.layer.animateScale(from: 1.0, to: optionsFrame.height / backgroundView.frame.height, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    foregroundView.layer.animatePosition(from: foregroundView.center, to: CGPoint(x: optionsFrame.midX, y: optionsFrame.midY), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    
-                    backgroundView.layer.animate(from: backgroundView.backgroundColor!.cgColor, to: UIColor(rgb: 0x1c1c1e).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration - 0.1, removeOnCompletion: false)
-                    foregroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration - 0.1, removeOnCompletion: false, completion: { [weak self, weak foregroundView, weak backgroundView, weak dotsView] _ in
-                        backgroundView?.removeFromSuperview()
-                        foregroundView?.removeFromSuperview()
-                        dotsView?.removeFromSuperview()
-                        
-                        self?.optionsButton.isHidden = false
-                    })
-                    
-                    foregroundView.layer.animateScale(from: 1.0, to: 0.3, duration: duration - 0.1, timingFunction: kCAMediaTimingFunctionSpring)
-                    
-                    dotsView.layer.animatePosition(from: dotsView.center, to: CGPoint(x: optionsFrame.midX, y: optionsFrame.midY), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    dotsView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration - 0.1, removeOnCompletion: false)
-                }
-                
-                self.contentContainer.layer.animateFrame(from: sourceFrame, to: self.contentContainer.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-                self.contentContainer.layer.animate(from: 0.0 as NSNumber, to: layout.deviceMetrics.screenCornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: duration, removeOnCompletion: true, completion: { [weak self] value in
-                    if value {
-                        self?.contentContainer.clipsToBounds = false
-                    }
-                })
-                
-                self.contentContainer.layer.animate(from: self.presentationData.theme.rootController.navigationBar.backgroundColor.cgColor, to: UIColor.black.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration - 0.25)
-                
-                self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-                self.actionButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                self.audioOutputNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                self.leaveNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                self.actionButton.titleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-                self.actionButton.subtitleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-                self.audioOutputNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-                self.leaveNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-            } else {
-                self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                self.actionButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                self.audioOutputNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                self.leaveNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                self.actionButton.titleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-                self.actionButton.subtitleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-                self.audioOutputNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-                self.leaveNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-                self.contentContainer.layer.animateBoundsOriginYAdditive(from: 80.0, to: 0.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            }
+            self.isHidden = false
+            
+            self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+            
+            let offset: CGFloat = layout.size.height - 240.0
+            self.contentContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true, completion: { _ in
+            })
         }
         
         func animateOut(completion: (() -> Void)?) {
-            self.alpha = 0.0
-            self.layer.allowsGroupOpacity = true
-            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] _ in
-                completion?()
-                self?.layer.allowsGroupOpacity = false
+            guard let (layout, _) = self.validLayout else {
+                return
+            }
+            
+            var dimCompleted = false
+            var offsetCompleted = false
+            
+            let internalCompletion: () -> Void = { [weak self] in
+                if dimCompleted && offsetCompleted {
+                    if let strongSelf = self {
+                        strongSelf.dimNode.layer.removeAllAnimations()
+                        strongSelf.contentContainer.layer.removeAllAnimations()
+                    }
+                    completion?()
+                }
+            }
+            
+            self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                dimCompleted = true
+                internalCompletion()
             })
-            self.contentContainer.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3)
+            
+            let offset: CGFloat = layout.size.height - 240.0
+            self.contentContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
+                offsetCompleted = true
+                internalCompletion()
+            })
         }
         
         private func enqueueTransition(_ transition: ListTransition) {
@@ -1197,7 +1181,7 @@ public final class VoiceChatController: ViewController {
                             itemHeight = node.frame.height
                         }
                     }
-                    strongSelf.maxListHeight = CGFloat(transition.count) * itemHeight
+                    strongSelf.maxListHeight = CGFloat(transition.count - 1) * itemHeight
                     if let (layout, navigationHeight) = strongSelf.validLayout {
                         strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
@@ -1205,31 +1189,8 @@ public final class VoiceChatController: ViewController {
             })
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, groupMembers: [RenderedChannelParticipant], callMembers: [GroupCallParticipantsContext.Participant], speakingPeers: Set<PeerId>, invitedPeers: Set<PeerId>) {
-            var groupMembers = groupMembers
-            groupMembers.sort(by: { lhs, rhs in
-                if lhs.peer.id == self.context.account.peerId {
-                    return true
-                } else if rhs.peer.id == self.context.account.peerId {
-                    return false
-                }
-                
-                let lhsPresence = lhs.presences[lhs.peer.id]
-                let rhsPresence = lhs.presences[lhs.peer.id]
-                
-                if let lhsPresence = lhsPresence as? TelegramUserPresence, let rhsPresence = rhsPresence as? TelegramUserPresence {
-                    return lhsPresence.status > rhsPresence.status
-                } else if let _ = lhsPresence as? TelegramUserPresence {
-                    return true
-                } else if let _ = rhsPresence as? TelegramUserPresence {
-                    return false
-                }
-                
-                return lhs.peer.id < rhs.peer.id
-            })
-            
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, groupMembers: [RenderedChannelParticipant], callMembers: [GroupCallParticipantsContext.Participant], speakingPeers: Set<PeerId>) {
             var callMembers = callMembers
-            
             callMembers.sort()
             
             for i in 0 ..< callMembers.count {
@@ -1244,14 +1205,15 @@ public final class VoiceChatController: ViewController {
             self.currentGroupMembers = groupMembers
             self.currentCallMembers = callMembers
             self.currentSpeakingPeers = speakingPeers
-            self.currentInvitedPeers = invitedPeers
             
             let previousEntries = self.currentEntries
-            var entries: [PeerEntry] = []
+            var entries: [ListEntry] = []
             
             var index: Int32 = 0
             
             var processedPeerIds = Set<PeerId>()
+            
+            entries.append(.invite(self.presentationData.theme, self.presentationData.strings, "Invite Member"))
             
             for member in callMembers {
                 if processedPeerIds.contains(member.peer.id) {
@@ -1273,48 +1235,24 @@ public final class VoiceChatController: ViewController {
                     memberMuteState = member.muteState
                 }
                 
-                entries.append(PeerEntry(
+                entries.append(.peer(PeerEntry(
                     peer: member.peer,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: memberState,
-                    muteState: memberMuteState,
-                    invited: false
-                ))
+                    muteState: memberMuteState
+                )))
                 index += 1
             }
             
-            for member in groupMembers {
-                if processedPeerIds.contains(member.peer.id) {
-                    continue
-                }
-                processedPeerIds.insert(member.peer.id)
-                
-                if let user = member.peer as? TelegramUser, user.botInfo != nil || user.isDeleted {
-                    continue
-                }
-                
-                let memberState: PeerEntry.State
-                var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
-                if member.peer.id == self.context.account.peerId {
-                    if muteState == nil {
-                        memberState = .speaking
-                    } else {
-                        memberState = .listening
-                    }
-                } else {
-                    memberState = .inactive
-                }
-                
-                entries.append(PeerEntry(
-                    peer: member.peer,
-                    presence: member.presences[member.peer.id] as? TelegramUserPresence,
+            if callMembers.isEmpty, let accountPeer = self.accountPeer {
+                entries.append(.peer(PeerEntry(
+                    peer: accountPeer,
+                    presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
-                    state: memberState,
-                    muteState: memberMuteState,
-                    invited: invitedPeers.contains(member.peer.id)
-                ))
-                index += 1
+                    state: .listening,
+                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                )))
             }
             
             self.currentEntries = entries
@@ -1327,46 +1265,30 @@ public final class VoiceChatController: ViewController {
         @objc private func panGesture(_ recognizer: CallPanGestureRecognizer) {
             switch recognizer.state {
                 case .began:
-                    guard let (layout, _) = self.validLayout else {
-                        return
-                    }
                     self.contentContainer.clipsToBounds = true
-                    self.contentContainer.cornerRadius = layout.deviceMetrics.screenCornerRadius
                 case .changed:
                     let offset = recognizer.translation(in: self.view).y
-                    var bounds = self.bounds
+                    var bounds = self.contentContainer.bounds
                     bounds.origin.y = -offset
-                    
-                    let transition = offset / bounds.height
-                    if transition > 0.02 {
-                        self.controller?.statusBar.statusBarStyle = .Ignore
-                    } else {
-                        self.controller?.statusBar.statusBarStyle = .White
-                    }
-                    self.bounds = bounds
+                    self.contentContainer.bounds = bounds
                 case .cancelled, .ended:
                     let velocity = recognizer.velocity(in: self.view).y
                     if abs(velocity) < 200.0 {
-                        var bounds = self.bounds
+                        var bounds = self.contentContainer.bounds
                         let previous = bounds
                         bounds.origin = CGPoint()
-                        self.bounds = bounds
-                        self.layer.animateBounds(from: previous, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
-                            self.contentContainer.cornerRadius = 0.0
-                        })
-                        self.controller?.statusBar.statusBarStyle = .White
+                        self.contentContainer.bounds = bounds
+                        self.contentContainer.layer.animateBounds(from: previous, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     } else {
-                        var bounds = self.bounds
+                        var bounds = self.contentContainer.bounds
                         let previous = bounds
                         bounds.origin = CGPoint(x: 0.0, y: velocity > 0.0 ? -bounds.height: bounds.height)
-                        self.bounds = bounds
-                        self.layer.animateBounds(from: previous, to: bounds, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
+                        self.contentContainer.bounds = bounds
+                        self.contentContainer.layer.animateBounds(from: previous, to: bounds, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
                             self?.controller?.dismissInteractively()
                             var initialBounds = bounds
                             initialBounds.origin = CGPoint()
-                            self?.bounds = initialBounds
-                            self?.controller?.statusBar.statusBarStyle = .White
-                            self?.contentContainer.cornerRadius = 0.0
+                            self?.contentContainer.bounds = initialBounds
                         })
                     }
                 default:
@@ -1378,9 +1300,7 @@ public final class VoiceChatController: ViewController {
     private let sharedContext: SharedAccountContext
     public let call: PresentationGroupCall
     private let presentationData: PresentationData
-    
-    public weak var sourcePanel: ASDisplayNode?
-    
+        
     fileprivate let contentsReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     fileprivate let dataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let _ready = Promise<Bool>(false)
@@ -1395,21 +1315,18 @@ public final class VoiceChatController: ViewController {
         return self.displayNode as! Node
     }
     
+    private let idleTimerExtensionDisposable = MetaDisposable()
+    
     public init(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) {
         self.sharedContext = sharedContext
         self.call = call
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
-        let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: .clear, separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
-        
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        super.init(navigationBarPresentationData: nil)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-         
-        let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.VoiceChat_BackTitle, target: self, action: #selector(self.closePressed))
-        self.navigationItem.leftBarButtonItem = backItem
-        
-        self.statusBar.statusBarStyle = .White
+                 
+        self.statusBar.statusBarStyle = .Ignore
         
         self._ready.set(combineLatest([
             self.contentsReady.get(),
@@ -1430,8 +1347,8 @@ public final class VoiceChatController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    @objc private func closePressed() {
-        self.dismiss()
+    deinit {
+        self.idleTimerExtensionDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -1448,9 +1365,16 @@ public final class VoiceChatController: ViewController {
         if !self.didAppearOnce {
             self.didAppearOnce = true
             
-            self.controllerNode.animateIn(sourcePanel: self.sourcePanel)
-            self.sourcePanel = nil
+            self.controllerNode.animateIn()
+            
+            self.idleTimerExtensionDisposable.set(self.sharedContext.applicationBindings.pushIdleTimerExtension())
         }
+    }
+    
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.idleTimerExtensionDisposable.set(nil)
     }
     
     func dismissInteractively(completion: (() -> Void)? = nil) {

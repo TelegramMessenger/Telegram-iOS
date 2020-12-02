@@ -282,17 +282,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     
                     let membersText: String
                     let membersTextIsActive: Bool
-                    if summaryState.numberOfActiveSpeakers != 0 {
-                        membersText = strongSelf.strings.VoiceChat_Panel_MembersSpeaking(Int32(summaryState.numberOfActiveSpeakers))
-                        membersTextIsActive = true
+                    if summaryState.participantCount == 0 {
+                        membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
                     } else {
-                        if summaryState.participantCount == 0 {
-                            membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
-                        } else {
-                            membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
-                        }
-                        membersTextIsActive = false
+                        membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                     }
+                    membersTextIsActive = false
                     
                     if strongSelf.textIsActive != membersTextIsActive {
                         strongSelf.textIsActive = membersTextIsActive
@@ -373,17 +368,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             
             let membersText: String
             let membersTextIsActive: Bool
-            if data.numberOfActiveSpeakers != 0 {
-                membersText = self.strings.VoiceChat_Panel_MembersSpeaking(Int32(data.numberOfActiveSpeakers))
-                membersTextIsActive = true
+            if data.participantCount == 0 {
+                membersText = self.strings.VoiceChat_Panel_TapToJoin
             } else {
-                if data.participantCount == 0 {
-                    membersText = self.strings.VoiceChat_Panel_TapToJoin
-                } else {
-                    membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
-                }
-                membersTextIsActive = false
+                membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
+            membersTextIsActive = false
             
             if self.textIsActive != membersTextIsActive {
                 self.textIsActive = membersTextIsActive

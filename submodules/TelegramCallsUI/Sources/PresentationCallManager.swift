@@ -709,7 +709,6 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 peerId: peerId,
                 peer: nil
             )
-            call.sourcePanel = sourcePanel
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))
             strongSelf.hasActiveGroupCallsPromise.set(true)
