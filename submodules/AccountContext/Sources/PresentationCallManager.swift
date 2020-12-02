@@ -230,6 +230,15 @@ public struct PresentationGroupCallMemberState: Equatable {
 public enum PresentationGroupCallMuteAction: Equatable {
     case muted(isPushToTalkActive: Bool)
     case unmuted
+    
+    public var isEffectivelyMuted: Bool {
+        switch self {
+            case let .muted(isPushToTalkActive):
+                return !isPushToTalkActive
+            case .unmuted:
+                return false
+        }
+    }
 }
 
 public struct PresentationGroupCallMembers: Equatable {
@@ -265,7 +274,6 @@ public protocol PresentationGroupCall: class {
     var members: Signal<PresentationGroupCallMembers?, NoError> { get }
     var audioLevels: Signal<[(PeerId, Float)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
-    var speakingAudioLevels: Signal<[(PeerId, Float)], NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
     
     func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>

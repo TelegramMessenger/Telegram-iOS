@@ -8,401 +8,128 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import LegacyComponents
 
-private let colorSpace = CGColorSpaceCreateDeviceRGB()
-
-private class CurveDrawingState: NSObject {
-    let path: UIBezierPath
-    let offset: CGFloat
-    let alpha: CGFloat
-    
-    init(path: UIBezierPath, offset: CGFloat, alpha: CGFloat) {
-        self.path = path
-        self.offset = offset
-        self.alpha = alpha
-    }
-}
-
-private class CallStatusBarBackgroundNodeDrawingState: NSObject {
-    let timestamp: Double
-    let curves: [CurveDrawingState]
-    let speaking: Bool
-    let gradientTransition: CGFloat
-    let gradientMovement: CGFloat
-    
-    init(timestamp: Double, curves: [CurveDrawingState], speaking: Bool, gradientTransition: CGFloat, gradientMovement: CGFloat) {
-        self.timestamp = timestamp
-        self.curves = curves
-        self.speaking = speaking
-        self.gradientTransition = gradientTransition
-        self.gradientMovement = gradientMovement
-    }
-}
-
-private final class Curve {
-    let pointsCount: Int
-    let smoothness: CGFloat
-
-    let minRandomness: CGFloat
-    let maxRandomness: CGFloat
-
-    let minSpeed: CGFloat
-    let maxSpeed: CGFloat
-
-    var size: CGSize {
-        didSet {
-            if self.size != oldValue {
-                self.fromPoints = nil
-                self.toPoints = nil
-                self.animateToNewShape()
-            }
-        }
-    }
-    let alpha: CGFloat
-    var currentOffset: CGFloat = 1.0
-    var minOffset: CGFloat = 0.0
-    var maxOffset: CGFloat = 2.0
-    
-    private var speedLevel: CGFloat = 0.0
-    private var lastSpeedLevel: CGFloat = 0.0
-
-    private var fromPoints: [CGPoint]?
-    private var toPoints: [CGPoint]?
-    
-    private var currentPoints: [CGPoint]? {
-        guard let fromPoints = self.fromPoints, let toPoints = self.toPoints else { return nil }
-
-        return fromPoints.enumerated().map { offset, fromPoint in
-            let toPoint = toPoints[offset]
-            return CGPoint(x: fromPoint.x + (toPoint.x - fromPoint.x) * transition, y: fromPoint.y + (toPoint.y - fromPoint.y) * transition)
-        }
-    }
-
-    var currentShape: UIBezierPath?
-    private var transition: CGFloat = 0 {
-        didSet {
-            if let currentPoints = self.currentPoints {
-                self.currentShape = UIBezierPath.smoothCurve(through: currentPoints, length: size.width, smoothness: smoothness, curve: true)
-            }
-        }
-    }
-    
-    var level: CGFloat = 0.0 {
-        didSet {
-            self.currentOffset = min(self.maxOffset, max(self.minOffset, self.minOffset + (self.maxOffset - self.minOffset) * self.level))
-        }
-    }
-    
-    private var transitionArguments: (startTime: Double, duration: Double)?
-    
-    var loop: Bool = true {
-        didSet {
-            if let _ = transitionArguments {
-            } else {
-                self.animateToNewShape()
-            }
-        }
-    }
-    
-    init(
-        size: CGSize,
-        alpha: CGFloat,
-        pointsCount: Int,
-        minRandomness: CGFloat,
-        maxRandomness: CGFloat,
-        minSpeed: CGFloat,
-        maxSpeed: CGFloat,
-        minOffset: CGFloat,
-        maxOffset: CGFloat
-    ) {
-        self.size = size
-        self.alpha = alpha
-        self.pointsCount = pointsCount
-        self.minRandomness = minRandomness
-        self.maxRandomness = maxRandomness
-        self.minSpeed = minSpeed
-        self.maxSpeed = maxSpeed
-        self.minOffset = minOffset
-        self.maxOffset = maxOffset
-
-        self.smoothness = 0.35
-
-        self.currentOffset = minOffset
-        
-        self.animateToNewShape()
-    }
-    
-    func updateSpeedLevel(to newSpeedLevel: CGFloat) {
-        self.speedLevel = max(self.speedLevel, newSpeedLevel)
-
-        if abs(lastSpeedLevel - newSpeedLevel) > 0.3 {
-            animateToNewShape()
-        }
-    }
-    
-    private func animateToNewShape() {
-        if let _ = self.transitionArguments {
-            self.fromPoints = self.currentPoints
-            self.toPoints = nil
-            self.transition = 0.0
-            self.transitionArguments = nil
-        }
-
-        if self.fromPoints == nil {
-            self.fromPoints = generateNextCurve(for: self.size)
-        }
-        if self.toPoints == nil {
-            self.toPoints = generateNextCurve(for: self.size)
-        }
-
-        let duration: Double = 1.0 / Double(minSpeed + (maxSpeed - minSpeed) * speedLevel)
-        self.transitionArguments = (CACurrentMediaTime(), duration)
-
-        self.lastSpeedLevel = self.speedLevel
-        self.speedLevel = 0
-
-        self.updateAnimations()
-    }
-    
-    func updateAnimations() {
-        let timestamp = CACurrentMediaTime()
-
-        if let (startTime, duration) = self.transitionArguments, duration > 0.0 {
-            var t = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
-            if t < 0.5 {
-                t = 2 * t * t
-            } else {
-                t = -1 + (4 - 2 * t) * t
-            }
-            self.transition = t
-            if self.transition < 1.0 {
-            } else {
-                if self.loop {
-                    self.animateToNewShape()
-                } else {
-                    self.fromPoints = self.currentPoints
-                    self.toPoints = nil
-                    self.transition = 0.0
-                    self.transitionArguments = nil
-                }
-            }
-        }
-    }
-    
-    private func generateNextCurve(for size: CGSize) -> [CGPoint] {
-        let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
-        return curve(pointsCount: pointsCount, randomness: randomness).map {
-            return CGPoint(x: $0.x * CGFloat(size.width), y: size.height - 18.0 + $0.y * 12.0)
-        }
-    }
-
-    private func curve(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
-        let segment = 1.0 / CGFloat(pointsCount - 1)
-
-        let rgen = { () -> CGFloat in
-            let accuracy: UInt32 = 1000
-            let random = arc4random_uniform(accuracy)
-            return CGFloat(random) / CGFloat(accuracy)
-        }
-        let rangeStart: CGFloat = 1.0 / (1.0 + randomness / 10.0)
-
-        let points = (0 ..< pointsCount).map { i -> CGPoint in
-            let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
-            let segmentRandomness: CGFloat = randomness
-            
-            let pointX: CGFloat
-            let pointY: CGFloat
-            let randomXDelta: CGFloat
-            if i == 0 {
-                pointX = 0.0
-                pointY = 0.0
-                randomXDelta = 0.0
-            } else if i == pointsCount - 1 {
-                pointX = 1.0
-                pointY = 0.0
-                randomXDelta = 0.0
-            } else {
-                pointX = segment * CGFloat(i)
-                pointY = ((segmentRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - segmentRandomness * 0.5) * randPointOffset
-                randomXDelta = segment - segment * randPointOffset
-            }
-
-            return CGPoint(x: pointX + randomXDelta, y: pointY)
-        }
-
-        return points
-    }
-}
+private let blue = UIColor(rgb: 0x0078ff)
+private let lightBlue = UIColor(rgb: 0x59c7f8)
+private let green = UIColor(rgb: 0x33c659)
 
 private class CallStatusBarBackgroundNode: ASDisplayNode {
-    var muted = true
+    private let foregroundView: UIView
+    private let foregroundGradientLayer: CAGradientLayer
+    private let maskCurveView: VoiceCurveView
     
-    var audioLevel: Float = 0.0 {
+    var audioLevel: Float = 0.0  {
         didSet {
-            for curve in self.curves {
-                curve.loop = audioLevel.isZero
-                curve.updateSpeedLevel(to: CGFloat(self.audioLevel))
-            }
+            self.maskCurveView.updateLevel(CGFloat(audioLevel))
         }
     }
-    var presentationAudioLevel: CGFloat = 0.0
     
-    typealias CurveRange = (min: CGFloat, max: CGFloat)
-    let curves: [Curve]
-    
-    private var gradientMovementArguments: (from: CGFloat, to: CGFloat, startTime: Double, duration: Double)?
-    private var gradientMovement: CGFloat = 0.0
-    
-    var transitionArguments: (startTime: Double, duration: Double)?
     var speaking = false {
         didSet {
             if self.speaking != oldValue {
-                self.transitionArguments = (CACurrentMediaTime(), 0.3)
+                let initialColors = self.foregroundGradientLayer.colors
+                let targetColors: [CGColor]
+                if speaking {
+                    targetColors = [green.cgColor, blue.cgColor]
+                } else {
+                    targetColors = [blue.cgColor, lightBlue.cgColor]
+                }
+                self.foregroundGradientLayer.colors = targetColors
+                self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
             }
         }
     }
     
-    private var animator: ConstantDisplayLinkAnimator?
+    var isCurrentlyInHierarchy = false
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+        
+        self.isCurrentlyInHierarchy = true
+        self.updateAnimations()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.isCurrentlyInHierarchy = false
+        self.updateAnimations()
+    }
     
     override init() {
-        let smallCurveRange: CurveRange = (0.0, 0.0)
-        let mediumCurveRange: CurveRange = (0.1, 0.55)
-        let bigCurveRange: CurveRange = (0.1, 1.0)
-        
-        let size = CGSize(width: 375.0, height: 44.0)
-        let smallCurve = Curve(size: size, alpha: 1.0, pointsCount: 7, minRandomness: 1, maxRandomness: 1.3, minSpeed: 1.0, maxSpeed: 3.5, minOffset: smallCurveRange.min, maxOffset: smallCurveRange.max)
-        let mediumCurve = Curve(size: size, alpha: 0.55, pointsCount: 7, minRandomness: 1.2, maxRandomness: 1.5, minSpeed: 1.0, maxSpeed: 4.5, minOffset: mediumCurveRange.min, maxOffset: mediumCurveRange.max)
-        let largeCurve = Curve(size: size, alpha: 0.35, pointsCount: 7, minRandomness: 1.2, maxRandomness: 1.7, minSpeed: 1.0, maxSpeed: 6.0, minOffset: bigCurveRange.min, maxOffset: bigCurveRange.max)
-
-        self.curves = [smallCurve, mediumCurve, largeCurve]
+        self.foregroundView = UIView()
+        self.foregroundGradientLayer = CAGradientLayer()
+        self.maskCurveView = VoiceCurveView(frame: CGRect(), maxLevel: 2.5, smallCurveRange: (0.0, 0.0), mediumCurveRange: (0.1, 0.55), bigCurveRange: (0.1, 1.0))
+        self.maskCurveView.setColor(UIColor(rgb: 0xffffff))
         
         super.init()
+        
+        self.foregroundGradientLayer.colors = [blue.cgColor, lightBlue.cgColor]
+        self.foregroundGradientLayer.startPoint = CGPoint(x: 0.0, y: 0.5)
+        self.foregroundGradientLayer.endPoint = CGPoint(x: 2.0, y: 0.5)
+        
+        self.foregroundView.mask = self.maskCurveView
         
         self.isOpaque = false
         
         self.updateAnimations()
     }
     
-    func updateAnimations() {
-        self.presentationAudioLevel = self.presentationAudioLevel * 0.9 + max(0.1, CGFloat(self.audioLevel)) * 0.1
-        for curve in self.curves {
-            curve.level = self.presentationAudioLevel
-        }
+    override func didLoad() {
+        super.didLoad()
         
-        if self.gradientMovementArguments == nil {
-            self.gradientMovementArguments = (0.0, 0.7, CACurrentMediaTime(), 1.0)
-        }
+        self.view.addSubview(self.foregroundView)
+        self.foregroundView.layer.addSublayer(self.foregroundGradientLayer)
+    }
+    
+    override func layout() {
+        super.layout()
         
-        let timestamp = CACurrentMediaTime()
-        if let (from, to, startTime, duration) = self.gradientMovementArguments, duration > 0.0 {
-            let progress = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
-            self.gradientMovement = from + (to - from) * progress
-            if progress < 1.0 {
-            } else {
-                var nextTo: CGFloat
-                if to > 0.5 {
-                    nextTo = CGFloat.random(in: 0.0 ..< 0.3)
-                } else {
-                    if self.presentationAudioLevel > 0.3 {
-                        nextTo = CGFloat.random(in: 0.75 ..< 1.0)
-                    } else {
-                        nextTo = CGFloat.random(in: 0.5 ..< 1.0)
-                    }
-                }
-                self.gradientMovementArguments = (to, nextTo, timestamp, Double.random(in: 0.8 ..< 1.5))
-            }
-        }
-        
-        let animator: ConstantDisplayLinkAnimator
-        if let current = self.animator {
-            animator = current
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.foregroundView.frame = self.bounds
+        self.foregroundGradientLayer.frame = self.bounds
+        self.maskCurveView.frame = self.bounds
+        CATransaction.commit()
+    }
+    
+    private func setupGradientAnimations() {
+        return
+        if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
         } else {
-            animator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                self?.updateAnimations()
-            })
-            self.animator = animator
+            let previousValue = self.foregroundGradientLayer.startPoint
+            let newValue: CGPoint
+            if self.maskCurveView.presentationAudioLevel > 0.1 {
+                newValue = CGPoint(x: CGFloat.random(in: 1.0 ..< 1.3), y: 0.5)
+            } else {
+                newValue = CGPoint(x: CGFloat.random(in: 0.85 ..< 1.2), y: 0.5)
+            }
+            self.foregroundGradientLayer.startPoint = newValue
+            
+            CATransaction.begin()
+            
+            let animation = CABasicAnimation(keyPath: "endPoint")
+            animation.duration = Double.random(in: 0.8 ..< 1.4)
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            
+            CATransaction.setCompletionBlock { [weak self] in
+                self?.setupGradientAnimations()
+            }
+            
+            self.foregroundGradientLayer.add(animation, forKey: "movement")
+            CATransaction.commit()
         }
-        animator.isPaused = false
-        
-        for curve in self.curves {
-            curve.updateAnimations()
-        }
-        
-        self.setNeedsDisplay()
     }
     
-    override var frame: CGRect {
-        didSet {
-            for curve in self.curves {
-                curve.size = self.frame.size
-            }
-        }
-    }
-    
-    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        let timestamp = CACurrentMediaTime()
-        
-        var gradientTransition: CGFloat = 0.0
-        gradientTransition = self.speaking ? 1.0 : 0.0
-        if let transition = self.transitionArguments {
-            gradientTransition = CGFloat((timestamp - transition.startTime) / transition.duration)
-            if !self.speaking {
-                gradientTransition = 1.0 - gradientTransition
-            }
-        }
-        
-        var curves: [CurveDrawingState] = []
-        for curve in self.curves {
-            if let path = curve.currentShape?.copy() as? UIBezierPath {
-                curves.append(CurveDrawingState(path: path, offset: curve.currentOffset, alpha: curve.alpha))
-            }
-        }
-        
-        return CallStatusBarBackgroundNodeDrawingState(timestamp: timestamp, curves: curves, speaking: self.speaking, gradientTransition: gradientTransition, gradientMovement: self.gradientMovement)
-    }
-
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        let context = UIGraphicsGetCurrentContext()!
-        
-        if !isRasterizing {
-            context.setBlendMode(.copy)
-            context.setFillColor(UIColor.clear.cgColor)
-            context.fill(bounds)
-        }
-
-        guard let parameters = parameters as? CallStatusBarBackgroundNodeDrawingState else {
+    func updateAnimations() {
+        if !isCurrentlyInHierarchy {
+            self.foregroundGradientLayer.removeAllAnimations()
+            self.maskCurveView.stopAnimating()
             return
         }
-        
-        context.interpolationQuality = .low
-        context.setBlendMode(.normal)
-        
-        var locations: [CGFloat] = [0.0, 1.0]
-        let leftColor = UIColor(rgb: 0x007fff).interpolateTo(UIColor(rgb: 0x2bb76b), fraction: parameters.gradientTransition)!
-        let rightColor = UIColor(rgb: 0x00afff).interpolateTo(UIColor(rgb: 0x007fff), fraction: parameters.gradientTransition)!
-        let colors: [CGColor] = [leftColor.cgColor, rightColor.cgColor]
-        
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-       
-        var i = 0
-        for curve in parameters.curves.reversed() {
-            context.saveGState()
-            
-            let path = curve.path
-            if i < 2 {
-                let transform = CGAffineTransform(translationX: 0.0, y: min(1.0, curve.offset) * 16.0)
-                path.apply(transform)
-            }
-            
-            context.addPath(path.cgPath)
-            context.clip()
-            
-            context.setAlpha(curve.alpha)
-            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: bounds.width + parameters.gradientMovement * bounds.width, y: 0.0), options: CGGradientDrawingOptions())
-            
-            context.restoreGState()
-            i += 1
-        }
+        self.setupGradientAnimations()
+        self.maskCurveView.startAnimating()
     }
 }
 
@@ -511,12 +238,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             return
                         }
                         var effectiveLevel: Float = 0.0
-                        let maxLevel: Float = 3.0
                         if !strongSelf.currentIsMuted {
-                            effectiveLevel = min(1.0, max(myAudioLevel / maxLevel, 0))
+                            effectiveLevel = myAudioLevel
                         } else {
-                            let level = audioLevels.map { $0.1 }.max() ?? 0.0
-                            effectiveLevel = min(1.0, max(level / maxLevel, 0))
+                            effectiveLevel = audioLevels.map { $0.1 }.max() ?? 0.0
                         }
                         strongSelf.backgroundNode.audioLevel = effectiveLevel
                     }))
@@ -564,5 +289,358 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         
         self.backgroundNode.speaking = !self.currentIsMuted
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
+    }
+}
+
+private final class VoiceCurveView: UIView {
+    private let smallCurve: CurveView
+    private let mediumCurve: CurveView
+    private let bigCurve: CurveView
+    
+    private let maxLevel: CGFloat
+    
+    private var displayLinkAnimator: ConstantDisplayLinkAnimator?
+    
+    private var audioLevel: CGFloat = 0.0
+    var presentationAudioLevel: CGFloat = 0.0
+    
+    private(set) var isAnimating = false
+    
+    public typealias CurveRange = (min: CGFloat, max: CGFloat)
+    
+    public init(
+        frame: CGRect,
+        maxLevel: CGFloat,
+        smallCurveRange: CurveRange,
+        mediumCurveRange: CurveRange,
+        bigCurveRange: CurveRange
+    ) {
+        self.maxLevel = maxLevel
+        
+        self.smallCurve = CurveView(
+            pointsCount: 7,
+            minRandomness: 1,
+            maxRandomness: 1.3,
+            minSpeed: 0.9,
+            maxSpeed: 3.5,
+            minOffset: smallCurveRange.min,
+            maxOffset: smallCurveRange.max
+        )
+        self.mediumCurve = CurveView(
+            pointsCount: 7,
+            minRandomness: 1.2,
+            maxRandomness: 1.5,
+            minSpeed: 1.0,
+            maxSpeed: 4.5,
+            minOffset: mediumCurveRange.min,
+            maxOffset: mediumCurveRange.max
+        )
+        self.bigCurve = CurveView(
+            pointsCount: 7,
+            minRandomness: 1.2,
+            maxRandomness: 1.7,
+            minSpeed: 1.0,
+            maxSpeed: 6.0,
+            minOffset: bigCurveRange.min,
+            maxOffset: bigCurveRange.max
+        )
+        
+        super.init(frame: frame)
+        
+        addSubview(bigCurve)
+        addSubview(mediumCurve)
+        addSubview(smallCurve)
+        
+        displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
+            
+            strongSelf.smallCurve.level = strongSelf.presentationAudioLevel
+            strongSelf.mediumCurve.level = strongSelf.presentationAudioLevel
+            strongSelf.bigCurve.level = strongSelf.presentationAudioLevel
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    public func setColor(_ color: UIColor) {
+        smallCurve.setColor(color.withAlphaComponent(1.0))
+        mediumCurve.setColor(color.withAlphaComponent(0.55))
+        bigCurve.setColor(color.withAlphaComponent(0.35))
+    }
+    
+    public func updateLevel(_ level: CGFloat) {
+        let normalizedLevel = min(1, max(level / maxLevel, 0))
+        
+        smallCurve.updateSpeedLevel(to: normalizedLevel)
+        mediumCurve.updateSpeedLevel(to: normalizedLevel)
+        bigCurve.updateSpeedLevel(to: normalizedLevel)
+        
+        audioLevel = normalizedLevel
+    }
+    
+    public func startAnimating() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        
+        updateCurvesState()
+        
+        displayLinkAnimator?.isPaused = false
+    }
+    
+    public func stopAnimating() {
+        self.stopAnimating(duration: 0.15)
+    }
+    
+    public func stopAnimating(duration: Double) {
+        guard isAnimating else { return }
+        isAnimating = false
+        
+        updateCurvesState()
+        
+        displayLinkAnimator?.isPaused = true
+    }
+    
+    private func updateCurvesState() {
+        if isAnimating {
+            if smallCurve.frame.size != .zero {
+                smallCurve.startAnimating()
+                mediumCurve.startAnimating()
+                bigCurve.startAnimating()
+            }
+        } else {
+            smallCurve.stopAnimating()
+            mediumCurve.stopAnimating()
+            bigCurve.stopAnimating()
+        }
+    }
+    
+    override public func layoutSubviews() {
+        super.layoutSubviews()
+        
+        smallCurve.frame = bounds
+        mediumCurve.frame = bounds
+        bigCurve.frame = bounds
+        
+        updateCurvesState()
+    }
+}
+
+final class CurveView: UIView {
+    let pointsCount: Int
+    let smoothness: CGFloat
+    
+    let minRandomness: CGFloat
+    let maxRandomness: CGFloat
+    
+    let minSpeed: CGFloat
+    let maxSpeed: CGFloat
+    
+    let minOffset: CGFloat
+    let maxOffset: CGFloat
+        
+    var level: CGFloat = 0 {
+        didSet {
+            guard self.alpha == 1.0 else {
+                return
+            }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let lv = minOffset + (maxOffset - minOffset) * level
+            shapeLayer.transform = CATransform3DMakeTranslation(0.0, lv * 16.0, 0.0)
+            CATransaction.commit()
+        }
+    }
+    
+    private var speedLevel: CGFloat = 0
+    private var lastSpeedLevel: CGFloat = 0
+    
+    private let shapeLayer: CAShapeLayer = {
+        let layer = CAShapeLayer()
+        layer.strokeColor = nil
+        return layer
+    }()
+    
+    private var transition: CGFloat = 0 {
+        didSet {
+            guard let currentPoints = currentPoints else { return }
+            
+            shapeLayer.path = UIBezierPath.smoothCurve(through: currentPoints, length: bounds.width, smoothness: smoothness, curve: true).cgPath
+        }
+    }
+    
+    override var frame: CGRect {
+        didSet {
+            if self.frame != oldValue {
+                self.fromPoints = nil
+                self.toPoints = nil
+                self.animateToNewShape()
+            }
+        }
+    }
+    
+    private var fromPoints: [CGPoint]?
+    private var toPoints: [CGPoint]?
+    
+    private var currentPoints: [CGPoint]? {
+        guard let fromPoints = fromPoints, let toPoints = toPoints else { return nil }
+        
+        return fromPoints.enumerated().map { offset, fromPoint in
+            let toPoint = toPoints[offset]
+            return CGPoint(
+                x: fromPoint.x + (toPoint.x - fromPoint.x) * transition,
+                y: fromPoint.y + (toPoint.y - fromPoint.y) * transition
+            )
+        }
+    }
+    
+    init(
+        pointsCount: Int,
+        minRandomness: CGFloat,
+        maxRandomness: CGFloat,
+        minSpeed: CGFloat,
+        maxSpeed: CGFloat,
+        minOffset: CGFloat,
+        maxOffset: CGFloat
+    ) {
+        self.pointsCount = pointsCount
+        self.minRandomness = minRandomness
+        self.maxRandomness = maxRandomness
+        self.minSpeed = minSpeed
+        self.maxSpeed = maxSpeed
+        self.minOffset = minOffset
+        self.maxOffset = maxOffset
+        
+        self.smoothness = 0.35
+        
+        super.init(frame: .zero)
+        
+        layer.addSublayer(shapeLayer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func setColor(_ color: UIColor) {
+        shapeLayer.fillColor = color.cgColor
+    }
+    
+    func updateSpeedLevel(to newSpeedLevel: CGFloat) {
+        speedLevel = max(speedLevel, newSpeedLevel)
+        
+        if abs(lastSpeedLevel - newSpeedLevel) > 0.3 {
+            animateToNewShape()
+        }
+    }
+    
+    func startAnimating() {
+        animateToNewShape()
+    }
+    
+    func stopAnimating() {
+        fromPoints = currentPoints
+        toPoints = nil
+        pop_removeAnimation(forKey: "curve")
+    }
+    
+    private func animateToNewShape() {
+        if pop_animation(forKey: "curve") != nil {
+            fromPoints = currentPoints
+            toPoints = nil
+            pop_removeAnimation(forKey: "curve")
+        }
+        
+        if fromPoints == nil {
+            fromPoints = generateNextCurve(for: bounds.size)
+        }
+        if toPoints == nil {
+            toPoints = generateNextCurve(for: bounds.size)
+        }
+        
+        let animation = POPBasicAnimation()
+        animation.property = POPAnimatableProperty.property(withName: "curve.transition", initializer: { property in
+            property?.readBlock = { curveView, values in
+                guard let curveView = curveView as? CurveView, let values = values else { return }
+                
+                values.pointee = curveView.transition
+            }
+            property?.writeBlock = { curveView, values in
+                guard let curveView = curveView as? CurveView, let values = values else { return }
+                
+                curveView.transition = values.pointee
+            }
+        })  as? POPAnimatableProperty
+        animation.completionBlock = { [weak self] animation, finished in
+            if finished {
+                self?.fromPoints = self?.currentPoints
+                self?.toPoints = nil
+                self?.animateToNewShape()
+            }
+        }
+        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.fromValue = 0
+        animation.toValue = 1
+        pop_add(animation, forKey: "curve")
+        
+        lastSpeedLevel = speedLevel
+        speedLevel = 0
+    }
+    
+    private func generateNextCurve(for size: CGSize) -> [CGPoint] {
+        let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
+        return curve(pointsCount: pointsCount, randomness: randomness).map {
+            return CGPoint(x: $0.x * CGFloat(size.width), y: size.height - 18.0 + $0.y * 12.0)
+        }
+    }
+
+    private func curve(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
+        let segment = 1.0 / CGFloat(pointsCount - 1)
+
+        let rgen = { () -> CGFloat in
+            let accuracy: UInt32 = 1000
+            let random = arc4random_uniform(accuracy)
+            return CGFloat(random) / CGFloat(accuracy)
+        }
+        let rangeStart: CGFloat = 1.0 / (1.0 + randomness / 10.0)
+
+        let points = (0 ..< pointsCount).map { i -> CGPoint in
+            let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
+            let segmentRandomness: CGFloat = randomness
+            
+            let pointX: CGFloat
+            let pointY: CGFloat
+            let randomXDelta: CGFloat
+            if i == 0 {
+                pointX = 0.0
+                pointY = 0.0
+                randomXDelta = 0.0
+            } else if i == pointsCount - 1 {
+                pointX = 1.0
+                pointY = 0.0
+                randomXDelta = 0.0
+            } else {
+                pointX = segment * CGFloat(i)
+                pointY = ((segmentRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - segmentRandomness * 0.5) * randPointOffset
+                randomXDelta = segment - segment * randPointOffset
+            }
+
+            return CGPoint(x: pointX + randomXDelta, y: pointY)
+        }
+
+        return points
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        shapeLayer.frame = self.bounds
+        CATransaction.commit()
     }
 }

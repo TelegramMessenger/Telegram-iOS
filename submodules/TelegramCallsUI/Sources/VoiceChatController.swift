@@ -144,23 +144,17 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            func updateAudioLevels(_ levels: [(PeerId, Float)], accountPeerId: PeerId, updateAll: Bool) {
+            func updateAudioLevels(_ levels: [(PeerId, Float)]) {
                 var updated = Set<PeerId>()
                 for (peerId, level) in levels {
                     if let pipe = self.audioLevels[peerId] {
-                        var level = level
-                        if peerId != accountPeerId {
-                            level = max(0.001, level)
-                        }
-                        pipe.putNext(level)
+                        pipe.putNext(max(0.001, level))
                         updated.insert(peerId)
                     }
                 }
-                if updateAll {
-                    for (peerId, pipe) in self.audioLevels {
-                        if !updated.contains(peerId) && peerId != accountPeerId {
-                            pipe.putNext(0.0)
-                        }
+                for (peerId, pipe) in self.audioLevels {
+                    if !updated.contains(peerId) {
+                        pipe.putNext(0.0)
                     }
                 }
             }
@@ -634,12 +628,12 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.audioLevelsDisposable = (call.speakingAudioLevels
+            self.audioLevelsDisposable = (call.audioLevels
             |> deliverOnMainQueue).start(next: { [weak self] levels in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.itemInteraction?.updateAudioLevels(levels, accountPeerId: strongSelf.context.account.peerId, updateAll: true)
+                strongSelf.itemInteraction?.updateAudioLevels(levels)
             })
             
             self.myAudioLevelDisposable = (call.myAudioLevel
@@ -651,7 +645,6 @@ public final class VoiceChatController: ViewController {
                 if let state = strongSelf.callState, state.muteState == nil || strongSelf.pushingToTalk {
                     effectiveLevel = level
                 }
-                strongSelf.itemInteraction?.updateAudioLevels([(strongSelf.context.account.peerId, effectiveLevel)], accountPeerId: strongSelf.context.account.peerId, updateAll: false)
                 strongSelf.actionButton.updateLevel(CGFloat(effectiveLevel))
             })
             
@@ -789,6 +782,8 @@ public final class VoiceChatController: ViewController {
         override func didLoad() {
             super.didLoad()
             
+            self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+            
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
             longTapRecognizer.minimumPressDuration = 0.001
             longTapRecognizer.delegate = self
@@ -815,12 +810,18 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func leavePressed() {
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
             
             self.leaveDisposable.set((self.call.leave(terminateIfPossible: false)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?.controller?.dismiss()
             }))
+        }
+        
+        @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.controller?.dismiss()
+            }
         }
         
         private var actionButtonPressGestureStartTime: Double = 0.0
@@ -844,7 +845,7 @@ public final class VoiceChatController: ViewController {
             }
             switch gestureRecognizer.state {
                 case .began:
-                    self.hapticFeedback.impact(.veryLight)
+                    self.hapticFeedback.impact(.light)
                     
                     self.actionButtonPressGestureStartTime = CACurrentMediaTime()
                     self.actionButton.pressing = true
@@ -857,7 +858,7 @@ public final class VoiceChatController: ViewController {
                     }
                     self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 case .ended, .cancelled:
-                    self.hapticFeedback.impact(.veryLight)
+                    self.hapticFeedback.impact(.light)
                     
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
@@ -887,7 +888,7 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func audioOutputPressed() {
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
             
             guard let (availableOutputs, currentOutput) = self.audioOutputState else {
                 return
@@ -1067,7 +1068,7 @@ public final class VoiceChatController: ViewController {
                 soundImage = .speaker
             case .speaker:
                 soundImage = .speaker
-//                soundAppearance = .blurred(isFilled: true)
+                soundAppearance = .blurred(isFilled: true)
             case .headphones:
                 soundImage = .bluetooth
             case let .bluetooth(type):
@@ -1228,7 +1229,7 @@ public final class VoiceChatController: ViewController {
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
                 if member.peer.id == self.context.account.peerId {
                     if muteState == nil {
-                        memberState = .speaking
+                        memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
                     } else {
                         memberState = .listening
                         memberMuteState = member.muteState

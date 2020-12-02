@@ -195,15 +195,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.audioOutputStatePromise.get()
     }
     
-    private let audioLevelsPipe = ValuePipe<[(PeerId, Float)]>()
-    public var audioLevels: Signal<[(PeerId, Float)], NoError> {
-        return self.audioLevelsPipe.signal()
-    }
     private var audioLevelsDisposable = MetaDisposable()
     
     private let speakingParticipantsContext = SpeakingParticipantsContext()
     private var speakingParticipantsReportTimestamp: [PeerId: Double] = [:]
-    public var speakingAudioLevels: Signal<[(PeerId, Float)], NoError> {
+    public var audioLevels: Signal<[(PeerId, Float)], NoError> {
         return self.speakingParticipantsContext.getAudioLevels()
     }
     
@@ -569,9 +565,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             result.append((peerId, level))
                         }
                     }
-                    if !result.isEmpty {
-                        strongSelf.audioLevelsPipe.putNext(result)
-                    }
                     strongSelf.speakingParticipantsContext.update(levels: result)
                 }))
                 
@@ -585,6 +578,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     strongSelf.myAudioLevelPipe.putNext(mappedLevel)
                     strongSelf.processMyAudioLevel(level: mappedLevel)
+                    if !strongSelf.isMutedValue.isEffectivelyMuted {
+                        strongSelf.speakingParticipantsContext.update(levels: [(strongSelf.account.peerId, mappedLevel)])
+                    }
                 }))
             }
         }

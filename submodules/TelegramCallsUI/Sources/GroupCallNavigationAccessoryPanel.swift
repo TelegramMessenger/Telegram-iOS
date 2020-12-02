@@ -143,7 +143,6 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.contentNode.addSubnode(self.titleNode)
         self.contentNode.addSubnode(self.textNode)
-        self.contentNode.addSubnode(self.muteIconNode)
         
         self.contentNode.addSubnode(self.avatarsNode)
         
@@ -401,7 +400,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         if let avatarsContent = self.avatarsContent {
             let avatarsSize = self.avatarsNode.update(context: self.context, content: avatarsContent, itemSize: CGSize(width: 32.0, height: 32.0), animated: true, synchronousLoad: true)
-            transition.updateFrame(node: self.avatarsNode, frame: CGRect(origin: CGPoint(x: 7.0, y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize))
+            transition.updateFrame(node: self.avatarsNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarsSize.width) / 2.0), y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize))
         }
         
         let joinButtonTitleSize = self.joinButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
@@ -442,9 +441,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 9.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 9.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset + 16.0, y: titleFrame.maxY + 1.0), size: textSize))
         
         if let image = self.muteIconNode.image {
             transition.updateFrame(node: self.muteIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + 5.0), size: image.size))
