@@ -14,6 +14,9 @@ private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
 
+private let areaSize = CGSize(width: 370.0, height: 370.0)
+private let blobSize = CGSize(width: 244.0, height: 244.0)
+
 final class VoiceChatActionButton: HighlightTrackingButtonNode {
     enum State {
         enum ActiveState {
@@ -27,12 +30,12 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     
     private let containerNode: ASDisplayNode
-    private let backgroundNode: VoiceChatActionButtonBackgroundNewNode
+    private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatMicrophoneNode
     private let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     
-    private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, simplified: Bool, title: String, subtitle: String)?
+    private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, small: Bool, title: String, subtitle: String)?
     
     private var activePromise = ValuePromise<Bool>(false)
     private var outerColorPromise = ValuePromise<UIColor?>(nil)
@@ -55,7 +58,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
     init() {
         self.containerNode = ASDisplayNode()
-        self.backgroundNode = VoiceChatActionButtonBackgroundNewNode()
+        self.backgroundNode = VoiceChatActionButtonBackgroundNode()
         self.iconNode = VoiceChatMicrophoneNode()
         
         self.titleLabel = ImmediateTextNode()
@@ -100,7 +103,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     
     func applyParams(animated: Bool) {
-        guard let (size, _, _, simplified, title, subtitle) = self.currentParams else {
+        guard let (size, _, _, small, title, subtitle) = self.currentParams else {
             return
         }
         
@@ -133,14 +136,14 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height + 16.0 - totalHeight / 2.0) - 56.0), size: titleSize)
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 75.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         
         self.backgroundNode.bounds = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        if simplified {
+        if small {
             self.backgroundNode.transform = CATransform3DMakeScale(0.85, 0.85, 1.0)
         } else {
             self.backgroundNode.transform = CATransform3DIdentity
@@ -150,13 +153,13 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
     }
     
-    func update(size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, title: String, subtitle: String, simplified: Bool, animated: Bool = false) {
+    func update(size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, title: String, subtitle: String, small: Bool, animated: Bool = false) {
         let previousState = self.currentParams?.state
-        self.currentParams = (size, buttonSize, state, simplified, title, subtitle)
+        self.currentParams = (size, buttonSize, state, small, title, subtitle)
         
         var iconMuted = true
         var iconColor: UIColor = .white
-        var backgroundState: VoiceChatActionButtonBackgroundNewNode.State
+        var backgroundState: VoiceChatActionButtonBackgroundNode.State
         switch state {
             case let .active(state):
                 switch state {
@@ -289,7 +292,7 @@ private let progressLineWidth: CGFloat = 3.0 + UIScreenPixel
 private let buttonSize = CGSize(width: 144.0, height: 144.0)
 private let radius = buttonSize.width / 2.0
 
-private final class VoiceChatActionButtonBackgroundNewNode: ASDisplayNode {
+private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     enum State: Equatable {
         case connecting
         case disabled
@@ -325,31 +328,23 @@ private final class VoiceChatActionButtonBackgroundNewNode: ASDisplayNode {
     private let maskMediumBlobLayer = CAShapeLayer()
     private let maskBigBlobLayer = CAShapeLayer()
     
-    var isCurrentlyInHierarchy = false
-    override func didEnterHierarchy() {
-        super.didEnterHierarchy()
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = false
         
-        self.isCurrentlyInHierarchy = true
-        self.updateAnimations()
-    }
-    
-    override func didExitHierarchy() {
-        super.didExitHierarchy()
-        
-        self.isCurrentlyInHierarchy = false
-        self.updateAnimations()
-    }
-    
     override init() {
         self.state = .connecting
         
-        let whiteColor = UIColor(rgb: 0xffffff)
+        self.maskBlobView = VoiceBlobView(frame: CGRect(origin: CGPoint(x: (areaSize.width - blobSize.width) / 2.0, y: (areaSize.height - blobSize.height) / 2.0), size: blobSize), maxLevel: 2.5, mediumBlobRange: (0.69, 0.87), bigBlobRange: (0.71, 1.0))
+        self.maskBlobView.setColor(white)
         
-        let blobSize = CGSize(width: 244.0, height: 244.0)
-        self.maskBlobView = VoiceBlobView(frame: CGRect(origin: CGPoint(x: (300.0 - blobSize.width) / 2.0, y: (300.0 - blobSize.height) / 2.0), size: blobSize), maxLevel: 2.5, mediumBlobRange: (0.69, 0.87), bigBlobRange: (0.71, 1.0))
-        self.maskBlobView.setColor(UIColor(rgb: 0xffffff))
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
         super.init()
+        
+        self.addSubnode(self.hierarchyTrackingNode)
         
         let circlePath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: buttonSize)).cgPath
         self.backgroundCircleLayer.fillColor = greyColor.cgColor
@@ -369,7 +364,7 @@ private final class VoiceChatActionButtonBackgroundNewNode: ASDisplayNode {
         self.maskView.backgroundColor = .clear
         
         self.maskGradientLayer.type = .radial
-        self.maskGradientLayer.colors = [UIColor(rgb: 0xffffff, alpha: 0.8).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
+        self.maskGradientLayer.colors = [UIColor(rgb: 0xffffff, alpha: 0.7).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
         self.maskGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
         self.maskGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
         self.maskGradientLayer.transform = CATransform3DMakeScale(0.3, 0.3, 1.0)
@@ -378,16 +373,23 @@ private final class VoiceChatActionButtonBackgroundNewNode: ASDisplayNode {
         let path = CGMutablePath()
         path.addArc(center: CGPoint(x: (buttonSize.width + 6.0) / 2.0, y: (buttonSize.height + 6.0) / 2.0), radius: radius, startAngle: 0.0, endAngle: CGFloat.pi * 2.0, clockwise: true)
         
-        self.maskProgressLayer.strokeColor = whiteColor.cgColor
+        self.maskProgressLayer.strokeColor = white.cgColor
         self.maskProgressLayer.fillColor = UIColor.clear.cgColor
         self.maskProgressLayer.lineWidth = progressLineWidth
         self.maskProgressLayer.lineCap = .round
         self.maskProgressLayer.path = path
         
         let largerCirclePath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width + progressLineWidth, height: buttonSize.height + progressLineWidth))).cgPath
-        self.maskCircleLayer.fillColor = whiteColor.cgColor
+        self.maskCircleLayer.fillColor = white.cgColor
         self.maskCircleLayer.path = largerCirclePath
         self.maskCircleLayer.isHidden = true
+        
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                strongSelf.updateAnimations()
+            }
+        }
     }
     
     override func didLoad() {

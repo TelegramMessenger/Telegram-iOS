@@ -987,9 +987,9 @@ public final class VoiceChatController: ViewController {
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
-            let centralButtonSize = CGSize(width: 300.0, height: 300.0)
+            let centralButtonSize = CGSize(width: 370.0, height: 370.0)
                         
-            let actionButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - centralButtonSize.width) / 2.0), y: contentHeight - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - centralButtonSize.width) / 2.0), y: contentHeight - bottomAreaHeight - layout.intrinsicInsets.bottom + floorToScreenPixels((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
             
             let actionButtonState: VoiceChatActionButton.State
             let actionButtonTitle: String
@@ -1036,7 +1036,7 @@ public final class VoiceChatController: ViewController {
             }
             
             self.actionButton.isUserInteractionEnabled = actionButtonEnabled
-            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, simplified: layout.size.width < 330.0 || layout.deviceMetrics.type == .tablet, animated: true)
+            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, small: layout.size.width < 330.0, animated: true)
             transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
             
             var audioMode: CallControllerButtonsSpeakerMode = .none

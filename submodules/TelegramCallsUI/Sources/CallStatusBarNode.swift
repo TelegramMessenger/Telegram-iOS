@@ -41,28 +41,23 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         }
     }
     
-    var isCurrentlyInHierarchy = false
-    override func didEnterHierarchy() {
-        super.didEnterHierarchy()
-        
-        self.isCurrentlyInHierarchy = true
-        self.updateAnimations()
-    }
-    
-    override func didExitHierarchy() {
-        super.didExitHierarchy()
-        
-        self.isCurrentlyInHierarchy = false
-        self.updateAnimations()
-    }
-    
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = false
+
     override init() {
         self.foregroundView = UIView()
         self.foregroundGradientLayer = CAGradientLayer()
         self.maskCurveView = VoiceCurveView(frame: CGRect(), maxLevel: 2.5, smallCurveRange: (0.0, 0.0), mediumCurveRange: (0.1, 0.55), bigCurveRange: (0.1, 1.0))
         self.maskCurveView.setColor(UIColor(rgb: 0xffffff))
         
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+        
         super.init()
+        
+        self.addSubnode(self.hierarchyTrackingNode)
         
         self.foregroundGradientLayer.colors = [blue.cgColor, lightBlue.cgColor]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 0.0, y: 0.5)
@@ -73,6 +68,13 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         self.isOpaque = false
         
         self.updateAnimations()
+        
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                strongSelf.updateAnimations()
+            }
+        }
     }
     
     override func didLoad() {
@@ -444,7 +446,7 @@ final class CurveView: UIView {
         
     var level: CGFloat = 0 {
         didSet {
-            guard self.alpha == 1.0 else {
+            guard self.minOffset > 0.0 else {
                 return
             }
             CATransaction.begin()
