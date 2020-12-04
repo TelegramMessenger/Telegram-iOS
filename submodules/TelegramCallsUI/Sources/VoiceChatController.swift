@@ -1543,20 +1543,6 @@ public final class VoiceChatController: ViewController {
         }
         
         private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, groupMembers: [RenderedChannelParticipant], callMembers: [GroupCallParticipantsContext.Participant], invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
-            var sortedCallMembers = callMembers
-            sortedCallMembers.sort()
-            
-            /*for i in 0 ..< sortedCallMembers.count {
-                if sortedCallMembers[i].peer.id == self.context.account.peerId {
-                    let member = sortedCallMembers[i]
-                    sortedCallMembers.remove(at: i)
-                    sortedCallMembers.insert(member, at: 0)
-                    break
-                }
-            }*/
-            
-            //assert(sortedCallMembers == callMembers)
-            
             self.currentGroupMembers = groupMembers
             self.currentCallMembers = callMembers
             self.currentSpeakingPeers = speakingPeers

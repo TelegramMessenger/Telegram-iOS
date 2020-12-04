@@ -758,21 +758,25 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         return
                     }
                     var result: [(PeerId, Float)] = []
-                    for (ssrc, level) in levels {
-                        if let peerId = strongSelf.ssrcMapping[ssrc] {
+                    var myLevel: Float = 0.0
+                    for (ssrcKey, level) in levels {
+                        var peerId: PeerId?
+                        switch ssrcKey {
+                        case .local:
+                            peerId = strongSelf.accountContext.account.peerId
+                        case let .source(ssrc):
+                            peerId = strongSelf.ssrcMapping[ssrc]
+                        }
+                        if let peerId = peerId {
+                            if case .local = ssrcKey {
+                                myLevel = level
+                            }
                             result.append((peerId, level))
                         }
                     }
                     strongSelf.speakingParticipantsContext.update(levels: result)
-                }))
-                
-                self.myAudioLevelDisposable.set((callContext.myAudioLevel
-                |> deliverOnMainQueue).start(next: { [weak self] level in
-                    guard let strongSelf = self else {
-                        return
-                    }
                     
-                    let mappedLevel = level * 1.5
+                    let mappedLevel = myLevel * 1.5
                     
                     strongSelf.myAudioLevelPipe.putNext(mappedLevel)
                     strongSelf.processMyAudioLevel(level: mappedLevel)

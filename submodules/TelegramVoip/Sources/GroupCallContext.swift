@@ -32,6 +32,11 @@ public final class OngoingGroupCallContext {
         case connected
     }
     
+    public enum AudioLevelKey: Hashable {
+        case local
+        case source(UInt32)
+    }
+    
     private final class Impl {
         let queue: Queue
         let context: GroupCallThreadLocalContext
@@ -41,15 +46,13 @@ public final class OngoingGroupCallContext {
         let joinPayload = Promise<(String, UInt32)>()
         let networkState = ValuePromise<NetworkState>(.connecting, ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
-        let audioLevels = ValuePipe<[(UInt32, Float)]>()
-        let myAudioLevel = ValuePipe<Float>()
+        let audioLevels = ValuePipe<[(AudioLevelKey, Float)]>()
         
         init(queue: Queue, inputDeviceId: String, outputDeviceId: String) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
-            var myAudioLevelUpdatedImpl: ((Float) -> Void)?
             
             self.context = GroupCallThreadLocalContext(
                 queue: ContextQueueImpl(queue: queue),
@@ -58,9 +61,6 @@ public final class OngoingGroupCallContext {
                 },
                 audioLevelsUpdated: { levels in
                     audioLevelsUpdatedImpl?(levels)
-                },
-                myAudioLevelUpdated: { level in
-                    myAudioLevelUpdatedImpl?(level)
                 },
                 inputDeviceId: inputDeviceId,
                 outputDeviceId: outputDeviceId
@@ -88,21 +88,21 @@ public final class OngoingGroupCallContext {
             
             let audioLevels = self.audioLevels
             audioLevelsUpdatedImpl = { levels in
-                var mappedLevels: [(UInt32, Float)] = []
+                var mappedLevels: [(AudioLevelKey, Float)] = []
                 var i = 0
                 while i < levels.count {
-                    mappedLevels.append((levels[i].uint32Value, levels[i + 1].floatValue))
+                    let uintValue = levels[i].uint32Value
+                    let key: AudioLevelKey
+                    if uintValue == 0 {
+                        key = .local
+                    } else {
+                        key = .source(uintValue)
+                    }
+                    mappedLevels.append((key, levels[i + 1].floatValue))
                     i += 2
                 }
                 queue.async {
                     audioLevels.putNext(mappedLevels)
-                }
-            }
-            
-            let myAudioLevel = self.myAudioLevel
-            myAudioLevelUpdatedImpl = { level in
-                queue.async {
-                    myAudioLevel.putNext(level)
                 }
             }
             
@@ -177,23 +177,11 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public var audioLevels: Signal<[(UInt32, Float)], NoError> {
+    public var audioLevels: Signal<[(AudioLevelKey, Float)], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.audioLevels.signal().start(next: { value in
-                    subscriber.putNext(value)
-                }))
-            }
-            return disposable
-        }
-    }
-    
-    public var myAudioLevel: Signal<Float, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.myAudioLevel.signal().start(next: { value in
                     subscriber.putNext(value)
                 }))
             }
