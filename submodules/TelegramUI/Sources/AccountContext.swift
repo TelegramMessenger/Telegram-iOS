@@ -10,14 +10,11 @@ import TelegramPresentationData
 import AccountContext
 import LiveLocationManager
 import TemporaryCachedPeerDataManager
-#if ENABLE_WALLET
-import WalletCore
-import WalletUI
-#endif
 import PhoneNumberFormat
 import TelegramUIPreferences
 import TelegramVoip
 import TelegramCallsUI
+import TelegramBaseController
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -111,10 +108,6 @@ public final class AccountContextImpl: AccountContext {
     }
     public let account: Account
     
-    #if ENABLE_WALLET
-    public let tonContext: StoredTonContext?
-    #endif
-    
     public let fetchManager: FetchManager
     private let prefetchManager: PrefetchManager?
     
@@ -159,38 +152,12 @@ public final class AccountContextImpl: AccountContext {
     
     private var experimentalUISettingsDisposable: Disposable?
     
-    #if ENABLE_WALLET
-    public var hasWallets: Signal<Bool, NoError> {
-        return WalletStorageInterfaceImpl(postbox: self.account.postbox).getWalletRecords()
-        |> map { records in
-            return !records.isEmpty
-        }
-    }
-    
-    public var hasWalletAccess: Signal<Bool, NoError> {
-        return self.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        |> map { view -> Bool in
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
-                return false
-            }
-            let walletConfiguration = WalletConfiguration.with(appConfiguration: appConfiguration)
-            if walletConfiguration.config != nil && walletConfiguration.blockchainName != nil {
-                return true
-            } else {
-                return false
-            }
-        }
-        |> distinctUntilChanged
-    }
-    #endif
+    public let cachedGroupCallContexts: AccountGroupCallContextCache
     
     public init(sharedContext: SharedAccountContextImpl, account: Account, /*tonContext: StoredTonContext?, */limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
-        #if ENABLE_WALLET
-        self.tonContext = tonContext
-        #endif
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -215,6 +182,8 @@ public final class AccountContextImpl: AccountContext {
         } else {
             self.peersNearbyManager = nil
         }
+        
+        self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
         |> map { preferences -> LimitsConfiguration in

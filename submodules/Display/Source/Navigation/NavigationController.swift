@@ -608,7 +608,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             let effectiveModalTransition: CGFloat
-            if visibleModalCount == 0 {
+            if visibleModalCount == 0 || navigationLayout.modal[i].isFlat {
                 effectiveModalTransition = 0.0
             } else if visibleModalCount == 1 {
                 effectiveModalTransition = 1.0 - topModalDismissProgress
@@ -635,7 +635,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             if modalContainer.supernode != nil {
-                if !hasVisibleStandaloneModal && !isStandaloneModal {
+                if !hasVisibleStandaloneModal && !isStandaloneModal && !modalContainer.isFlat {
                     visibleModalCount += 1
                 }
                 if isStandaloneModal {

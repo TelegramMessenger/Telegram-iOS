@@ -36,6 +36,7 @@ swift_library(
         "//submodules/AudioBlob:AudioBlob",
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PeerInfoUI:PeerInfoUI",
     ],
     visibility = [
         "//visibility:public",

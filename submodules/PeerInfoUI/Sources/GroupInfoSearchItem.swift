@@ -87,7 +87,7 @@ private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
     init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode, searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void) {
-        self.containerNode = ChannelMembersSearchContainerNode(context: context, peerId: peerId, mode: searchMode, filters: [], searchContext: searchContext, openPeer: { peer, participant in
+        self.containerNode = ChannelMembersSearchContainerNode(context: context, forceTheme: nil, peerId: peerId, mode: searchMode, filters: [], searchContext: searchContext, openPeer: { peer, participant in
             openPeer(peer, participant)
         }, updateActivity: updateActivity, pushController: pushController)
         self.containerNode.cancel = {
