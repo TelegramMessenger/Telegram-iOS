@@ -556,6 +556,8 @@ public final class VoiceChatController: ViewController {
                         if let participant = participant {
                             strongSelf.call.invitePeer(participant.peer.id)
                             dismissController?()
+                            
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                         } else {
                             let selfController = strongSelf.controller
                             let inviteDisposable = strongSelf.inviteDisposable
@@ -593,6 +595,8 @@ public final class VoiceChatController: ViewController {
                                 }
                                 strongSelf.call.invitePeer(peer.id)
                                 dismissController?()
+                                
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                             }, error: { error in
                                 dismissController?()
                                 guard let strongSelf = self else {

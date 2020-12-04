@@ -5956,6 +5956,8 @@ Sorry for the inconvenience.";
 "Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";
 "Notification.VoiceChatInvitationForYou" = "%1$@ invited you to the voice chat";
 
+"VoiceChat.InvitedPeerText" = "You have invited %@ to the voice chat";
+
 "Notification.VoiceChatStarted" = "Voice chat started";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";
 
