@@ -5011,7 +5011,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 })
             }
         } else if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .members = currentPaneKey {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, contentNode: ChannelMembersSearchContainerNode(context: self.context, peerId: self.peerId, mode: .searchMembers, filters: [], searchContext: self.groupMembersSearchContext, openPeer: { [weak self] peer, participant in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, contentNode: ChannelMembersSearchContainerNode(context: self.context, forceTheme: nil, peerId: self.peerId, mode: .searchMembers, filters: [], searchContext: self.groupMembersSearchContext, openPeer: { [weak self] peer, participant in
                 self?.openPeer(peerId: peer.id, navigation: .info)
             }, updateActivity: { _ in
             }, pushController: { [weak self] c in
@@ -6017,6 +6017,7 @@ public final class PeerInfoScreen: ViewController {
 private final class SettingsTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -6261,6 +6262,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 private final class MessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let sourceNode: ContextExtractedContentContainingNode
     

@@ -2618,6 +2618,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
 private final class ChatListTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -2639,6 +2640,7 @@ private final class ChatListTabBarContextExtractedContentSource: ContextExtracte
 private final class ChatListHeaderBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode

@@ -402,11 +402,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch chatLocation {
             case let .peer(peerId):
                 locationBroadcastPanelSource = .peer(peerId)
-                groupCallPanelSource = .peer(peerId)
+                switch subject {
+                case .message, .none:
+                    groupCallPanelSource = .peer(peerId)
+                default:
+                    groupCallPanelSource = .none
+                }
                 self.chatLocationInfoData = .peer(Promise())
             case let .replyThread(replyThreadMessage):
                 locationBroadcastPanelSource = .none
-                groupCallPanelSource = .all
+                groupCallPanelSource = .none
                 let promise = Promise<Message?>()
                 let key = PostboxViewKey.messages([replyThreadMessage.messageId])
                 promise.set(context.account.postbox.combinedView(keys: [key])

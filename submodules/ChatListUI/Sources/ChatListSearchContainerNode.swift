@@ -956,6 +956,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
 private final class MessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let sourceNode: ContextExtractedContentContainingNode
     

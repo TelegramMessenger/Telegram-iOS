@@ -194,20 +194,20 @@ public struct PresentationGroupCallSummaryState: Equatable {
     public var participantCount: Int
     public var callState: PresentationGroupCallState
     public var topParticipants: [GroupCallParticipantsContext.Participant]
-    public var numberOfActiveSpeakers: Int
+    public var activeSpeakers: Set<PeerId>
     
     public init(
         info: GroupCallInfo,
         participantCount: Int,
         callState: PresentationGroupCallState,
         topParticipants: [GroupCallParticipantsContext.Participant],
-        numberOfActiveSpeakers: Int
+        activeSpeakers: Set<PeerId>
     ) {
         self.info = info
         self.participantCount = participantCount
         self.callState = callState
         self.topParticipants = topParticipants
-        self.numberOfActiveSpeakers = numberOfActiveSpeakers
+        self.activeSpeakers = activeSpeakers
     }
 }
 
@@ -286,7 +286,7 @@ public protocol PresentationGroupCall: class {
     func updateMuteState(peerId: PeerId, isMuted: Bool)
     
     func invitePeer(_ peerId: PeerId)
-    var invitedPeers: Signal<Set<PeerId>, NoError> { get }
+    var invitedPeers: Signal<[PeerId], NoError> { get }
     
     var sourcePanel: ASDisplayNode? { get set }
 }

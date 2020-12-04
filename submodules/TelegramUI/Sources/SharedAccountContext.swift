@@ -103,6 +103,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private let callState = Promise<PresentationCallState?>(nil)
     
     private var groupCallController: VoiceChatController?
+    private let hasGroupCallOnScreen = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var immediateHasOngoingCallValue = Atomic<Bool>(value: false)
     public var immediateHasOngoingCall: Bool {
@@ -637,12 +638,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         strongSelf.groupCallController = nil
                         strongSelf.hasOngoingCall.set(false)
                         
-                        if let call = call {
+                        if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
                             mainWindow.hostView.containerView.endEditing(true)
+                            strongSelf.hasGroupCallOnScreen.set(true)
                             let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
-                            groupCallController.parentNavigationController = mainWindow.viewController as? NavigationController
+                            groupCallController.onViewDidAppear = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.hasGroupCallOnScreen.set(true)
+                                }
+                            }
+                            groupCallController.onViewDidDisappear = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.hasGroupCallOnScreen.set(false)
+                                }
+                            }
+                            groupCallController.navigationPresentation = .flatModal
+                            groupCallController.parentNavigationController = navigationController
                             strongSelf.groupCallController = groupCallController
-                            strongSelf.mainWindow?.present(groupCallController, on: .calls)
+                            navigationController.pushViewController(groupCallController)
                             strongSelf.hasOngoingCall.set(true)
                         } else {
                             strongSelf.hasOngoingCall.set(false)
@@ -662,21 +675,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             self.callStateDisposable = combineLatest(queue: .mainQueue(),
                 callSignal,
-                groupCallSignal
-            ).start(next: { [weak self] call, groupCall in
+                groupCallSignal,
+                self.hasGroupCallOnScreen.get()
+            ).start(next: { [weak self] call, groupCall, hasGroupCallOnScreen in
                 if let strongSelf = self {
                     let statusBarContent: CallStatusBarNodeImpl.Content?
-                                        
                     if let call = call {
                         statusBarContent = .call(strongSelf, call.account, call)
-                    } else if let groupCall = groupCall {
+                    } else if let groupCall = groupCall, !hasGroupCallOnScreen {
                         statusBarContent = .groupCall(strongSelf, groupCall.account, groupCall)
                     } else {
                         statusBarContent = nil
                     }
                     
                     var resolvedCallStatusBarNode: CallStatusBarNodeImpl?
-                    
                     if let statusBarContent = statusBarContent {
                         if let current = strongSelf.currentCallStatusBarNode {
                             resolvedCallStatusBarNode = current
@@ -712,7 +724,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     if groupCallController.isNodeLoaded {
                         mainWindow.hostView.containerView.endEditing(true)
                         if groupCallController.view.superview == nil {
-                            mainWindow.present(groupCallController, on: .calls)
+                            (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
                         }
                     }
                 }
@@ -987,7 +999,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         } else if let groupCallController = self.groupCallController {
             if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
-                mainWindow.present(groupCallController, on: .calls)
+                (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
             }
         }
     }

@@ -256,6 +256,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
 public enum JoinGroupCallError {
     case generic
     case anonymousNotAllowed
+    case tooManyParticipants
 }
 
 public struct JoinGroupCallResult {
@@ -272,6 +273,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
     |> mapError { error -> JoinGroupCallError in
         if error.errorDescription == "GROUP_CALL_ANONYMOUS_FORBIDDEN" {
             return .anonymousNotAllowed
+        } else if error.errorDescription == "GROUPCALL_PARTICIPANTS_TOO_MUCH" {
+            return .tooManyParticipants
         }
         return .generic
     }
@@ -633,16 +636,16 @@ public final class GroupCallParticipantsContext {
         }
     }
     
-    private var numberOfActiveSpeakersValue: Int = 0 {
+    private var activeSpeakersValue: Set<PeerId> = Set() {
         didSet {
-            if self.numberOfActiveSpeakersValue != oldValue {
-                self.numberOfActiveSpeakersPromise.set(self.numberOfActiveSpeakersValue)
+            if self.activeSpeakersValue != oldValue {
+                self.activeSpeakersPromise.set(self.activeSpeakersValue)
             }
         }
     }
-    private let numberOfActiveSpeakersPromise = ValuePromise<Int>(0)
-    public var numberOfActiveSpeakers: Signal<Int, NoError> {
-        return self.numberOfActiveSpeakersPromise.get()
+    private let activeSpeakersPromise = ValuePromise<Set<PeerId>>(Set())
+    public var activeSpeakers: Signal<Set<PeerId>, NoError> {
+        return self.activeSpeakersPromise.get()
     }
     
     private var updateQueue: [Update.StateUpdate] = []
@@ -684,7 +687,9 @@ public final class GroupCallParticipantsContext {
                 return
             }
         
-            strongSelf.numberOfActiveSpeakersValue = activities.count
+            strongSelf.activeSpeakersValue = Set(activities.map { item -> PeerId in
+                item.0
+            })
             
             if !strongSelf.hasReceivedSpeackingParticipantsReport {
                 var updatedParticipants = strongSelf.stateValue.state.participants

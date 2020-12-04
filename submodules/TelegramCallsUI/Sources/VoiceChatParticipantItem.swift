@@ -139,7 +139,6 @@ public final class VoiceChatParticipantItem: ListViewItem {
 private let avatarFont = avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0))
 
 public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
-    private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -172,9 +171,6 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private var layoutParams: (VoiceChatParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
             
     public init() {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
         
@@ -470,7 +466,6 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                                         
@@ -517,20 +512,16 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     let _ = titleApply()
                     let _ = statusApply()
                                         
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
                     if strongSelf.topStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 0)
                     }
                     if strongSelf.bottomStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 1)
                     }
 
                     strongSelf.topStripeNode.isHidden = first
                     strongSelf.bottomStripeNode.isHidden = last
-                    
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height + -separatorHeight), size: CGSize(width: layoutSize.width - leftInset, height: separatorHeight)))
                     
@@ -665,7 +656,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.iconNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     strongSelf.animationNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     
-                    strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
+                    strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     
                     if let presence = item.presence as? TelegramUserPresence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)
@@ -681,14 +672,8 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     }
     
     var isHighlighted = false
-    
-    var reallyHighlighted: Bool {
-        var reallyHighlighted = self.isHighlighted
-        return reallyHighlighted
-    }
-    
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
-        if self.reallyHighlighted {
+        if self.isHighlighted {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 var anchorNode: ASDisplayNode?
@@ -696,8 +681,6 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     anchorNode = self.bottomStripeNode
                 } else if self.topStripeNode.supernode != nil {
                     anchorNode = self.topStripeNode
-                } else if self.backgroundNode.supernode != nil {
-                    anchorNode = self.backgroundNode
                 }
                 if let anchorNode = anchorNode {
                     self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
@@ -760,7 +743,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         super.updateRevealOffset(offset: offset, transition: transition)
         
         if let item = self.layoutParams?.0, let params = self.layoutParams?.1 {
-            var leftInset: CGFloat = 65.0 + params.leftInset
+            let leftInset: CGFloat = 65.0 + params.leftInset
                         
             var avatarFrame = self.avatarNode.frame
             avatarFrame.origin.x = offset + leftInset - 50.0

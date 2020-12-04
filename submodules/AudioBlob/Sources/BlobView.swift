@@ -153,7 +153,6 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
 }
 
 final class BlobView: UIView {
-    
     let pointsCount: Int
     let smoothness: CGFloat
     
@@ -169,7 +168,6 @@ final class BlobView: UIView {
     
     var scaleLevelsToBalance = [CGFloat]()
     
-    // If true ignores randomness and pointsCount
     let isCircle: Bool
     
     var level: CGFloat = 0 {

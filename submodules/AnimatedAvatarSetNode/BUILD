@@ -15,6 +15,7 @@ swift_library(
         "//submodules/SyncCore:SyncCore",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AvatarNode:AvatarNode",
+        "//submodules/AudioBlob:AudioBlob",
     ],
     visibility = [
         "//visibility:public",

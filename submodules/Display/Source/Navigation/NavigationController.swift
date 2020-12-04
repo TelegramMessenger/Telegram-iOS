@@ -405,7 +405,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             inCallStatusBar.callStatusBarNode?.update(size: inCallStatusBarFrame.size)
             inCallStatusBar.callStatusBarNode?.frame = inCallStatusBarFrame
             layout.statusBarHeight = inCallStatusBarFrame.height
-            self.inCallStatusBar?.frame = inCallStatusBarFrame
+            inCallStatusBar.frame = inCallStatusBarFrame
         }
         
         if let globalOverlayContainerParent = self.globalOverlayContainerParent {
@@ -553,9 +553,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.displayNode.insertSubnode(overlayContainer, belowSubnode: previousOverlayContainer)
                 } else if let globalScrollToTopNode = self.globalScrollToTopNode {
                     self.displayNode.insertSubnode(overlayContainer, belowSubnode: globalScrollToTopNode)
-                 } else if let globalOverlayContainerParent = self.globalOverlayContainerParent {
-                     self.displayNode.insertSubnode(overlayContainer, belowSubnode: globalOverlayContainerParent)
-                 }else {
+                } else if let globalOverlayContainerParent = self.globalOverlayContainerParent {
+                    self.displayNode.insertSubnode(overlayContainer, belowSubnode: globalOverlayContainerParent)
+                } else {
                     self.displayNode.addSubnode(overlayContainer)
                 }
                 overlayContainer.transitionIn()
@@ -608,7 +608,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             let effectiveModalTransition: CGFloat
-            if visibleModalCount == 0 {
+            if visibleModalCount == 0 || navigationLayout.modal[i].isFlat {
                 effectiveModalTransition = 0.0
             } else if visibleModalCount == 1 {
                 effectiveModalTransition = 1.0 - topModalDismissProgress
@@ -635,7 +635,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             if modalContainer.supernode != nil {
-                if !hasVisibleStandaloneModal && !isStandaloneModal {
+                if !hasVisibleStandaloneModal && !isStandaloneModal && !modalContainer.isFlat {
                     visibleModalCount += 1
                 }
                 if isStandaloneModal {
@@ -643,6 +643,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                     visibleModalCount = 0
                 }
                 if previousModalContainer == nil {
+                    topModalIsFlat = modalContainer.isFlat
+                    
                     topModalDismissProgress = modalContainer.dismissProgress
                     if case .compact = layout.metrics.widthClass {
                         modalContainer.keyboardViewManager = self.keyboardViewManager
@@ -665,8 +667,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
             }
-            
-            topModalIsFlat = modalContainer.isFlat
         }
         
         switch navigationLayout.root {
@@ -1357,7 +1357,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                 inCallStatusBar.inCallNavigate = { [weak self] in
                     self?.scrollToTop(.master)
                 }
-                inCallStatusBar.alpha = 0.0
                 self.inCallStatusBar = inCallStatusBar
                 
                 var bottomOverlayContainer: NavigationOverlayContainer?
@@ -1375,15 +1374,17 @@ open class NavigationController: UINavigationController, ContainableController, 
                 } else {
                     self.displayNode.addSubnode(inCallStatusBar)
                 }
-                transition.updateAlpha(node: inCallStatusBar, alpha: 1.0)
+                if case let .animated(duration, _) = transition {
+                    inCallStatusBar.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: duration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, additive: true)
+                }
             }
             if let layout = self.validLayout {
-                self.containerLayoutUpdated(layout, transition: transition)
                 inCallStatusBar.updateState(statusBar: nil, withSafeInsets: !layout.safeInsets.top.isZero, inCallNode: forceInCallStatusBar, animated: false)
+                self.containerLayoutUpdated(layout, transition: transition)
             }
         } else if let inCallStatusBar = self.inCallStatusBar {
             self.inCallStatusBar = nil
-            transition.updateAlpha(node: inCallStatusBar, alpha: 0.0, completion: { [weak inCallStatusBar] _ in
+            transition.updatePosition(node: inCallStatusBar, position: CGPoint(x: inCallStatusBar.position.x, y: -64.0), completion: { [weak inCallStatusBar] _ in
                 inCallStatusBar?.removeFromSupernode()
             })
             if let layout = self.validLayout {

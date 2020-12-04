@@ -8,7 +8,7 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
     private let centerLine: ASDisplayNode
     private let rightLine: ASDisplayNode
     
-    private var isCurrentlyInHierarchy = false
+    private var isCurrentlyInHierarchy = true
     private var shouldBeAnimating = false
     
     var color: UIColor = UIColor(rgb: 0xffffff) {
@@ -45,6 +45,8 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
         self.addSubnode(self.leftLine)
         self.addSubnode(self.centerLine)
         self.addSubnode(self.rightLine)
+        
+        self.updateAnimation()
     }
     
     override func didEnterHierarchy() {

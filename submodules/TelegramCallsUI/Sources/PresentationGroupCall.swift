@@ -58,16 +58,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private struct SummaryParticipantsState: Equatable {
         public var participantCount: Int
         public var topParticipants: [GroupCallParticipantsContext.Participant]
-        public var numberOfActiveSpeakers: Int
+        public var activeSpeakers: Set<PeerId>
         
         public init(
             participantCount: Int,
             topParticipants: [GroupCallParticipantsContext.Participant],
-            numberOfActiveSpeakers: Int
+            activeSpeakers: Set<PeerId>
         ) {
             self.participantCount = participantCount
             self.topParticipants = topParticipants
-            self.numberOfActiveSpeakers = numberOfActiveSpeakers
+            self.activeSpeakers = activeSpeakers
         }
     }
     
@@ -251,15 +251,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.membersPromise.get()
     }
     
-    private var invitedPeersValue: Set<PeerId> = Set() {
+    private var invitedPeersValue: [PeerId] = [] {
         didSet {
             if self.invitedPeersValue != oldValue {
                 self.inivitedPeersPromise.set(self.invitedPeersValue)
             }
         }
     }
-    private let inivitedPeersPromise = ValuePromise<Set<PeerId>>(Set())
-    public var invitedPeers: Signal<Set<PeerId>, NoError> {
+    private let inivitedPeersPromise = ValuePromise<[PeerId]>([])
+    public var invitedPeers: Signal<[PeerId], NoError> {
         return self.inivitedPeersPromise.get()
     }
     
@@ -433,7 +433,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 participantCount: participantsState.participantCount,
                 callState: callState,
                 topParticipants: participantsState.topParticipants,
-                numberOfActiveSpeakers: participantsState.numberOfActiveSpeakers
+                activeSpeakers: participantsState.activeSpeakers
             )
         })
         
@@ -518,6 +518,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         if case .anonymousNotAllowed = error {
                             let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
                             strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_AnonymousDisabledAlertText, actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                            ]), on: .root, blockInteraction: false, completion: {})
+                        } else if case .tooManyParticipants = error {
+                            let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
+                            strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_ChatFullAlertText, actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                             ]), on: .root, blockInteraction: false, completion: {})
                         }
@@ -615,9 +620,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.participantsContext = participantsContext
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
-                    participantsContext.numberOfActiveSpeakers |> deliverOnMainQueue,
+                    participantsContext.activeSpeakers |> deliverOnMainQueue,
                     self.speakingParticipantsContext.get() |> deliverOnMainQueue
-                ).start(next: { [weak self] state, numberOfActiveSpeakers, speakingParticipants in
+                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants in
                     guard let strongSelf = self else {
                         return
                     }
@@ -685,7 +690,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
                         participantCount: state.totalCount,
                         topParticipants: topParticipants,
-                        numberOfActiveSpeakers: numberOfActiveSpeakers
+                        activeSpeakers: activeSpeakers
                     )))
                 }))
                 
@@ -911,7 +916,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
 
         var updatedInvitedPeers = self.invitedPeersValue
-        updatedInvitedPeers.insert(peerId)
+        updatedInvitedPeers.insert(peerId, at: 0)
         self.invitedPeersValue = updatedInvitedPeers
         
         let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()

@@ -27,7 +27,7 @@ public final class GroupCallPanelData {
     public let info: GroupCallInfo
     public let topParticipants: [GroupCallParticipantsContext.Participant]
     public let participantCount: Int
-    public let numberOfActiveSpeakers: Int
+    public let activeSpeakers: Set<PeerId>
     public let groupCall: PresentationGroupCall?
     
     public init(
@@ -35,15 +35,41 @@ public final class GroupCallPanelData {
         info: GroupCallInfo,
         topParticipants: [GroupCallParticipantsContext.Participant],
         participantCount: Int,
-        numberOfActiveSpeakers: Int,
+        activeSpeakers: Set<PeerId>,
         groupCall: PresentationGroupCall?
     ) {
         self.peerId = peerId
         self.info = info
         self.topParticipants = topParticipants
         self.participantCount = participantCount
-        self.numberOfActiveSpeakers = numberOfActiveSpeakers
+        self.activeSpeakers = activeSpeakers
         self.groupCall = groupCall
+    }
+}
+
+private final class FakeAudioLevelGenerator {
+    private var previousTarget: Float = 0.0
+    private var nextTarget: Float = 0.0
+    private var nextTargetProgress: Float = 1.0
+    private var nextTargetProgressNorm: Float = 1.0
+    
+    func get() -> Float {
+        self.nextTargetProgress *= 0.82
+        if self.nextTargetProgress <= 0.01 {
+            self.previousTarget = self.nextTarget
+            if Int.random(in: 0 ... 4) <= 1 {
+                self.nextTarget = 0.0
+                self.nextTargetProgressNorm = Float.random(in: 0.1 ..< 0.3)
+            } else {
+                self.nextTarget = Float.random(in: 0.0 ..< 20.0)
+                self.nextTargetProgressNorm = Float.random(in: 0.2 ..< 0.7)
+            }
+            self.nextTargetProgress = self.nextTargetProgressNorm
+            return self.nextTarget
+        } else {
+            let value = self.nextTarget * max(0.0, self.nextTargetProgress / self.nextTargetProgressNorm)
+            return value
+        }
     }
 }
 
@@ -77,6 +103,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let avatarsContext: AnimatedAvatarSetContext
     private var avatarsContent: AnimatedAvatarSetContext.Content?
     private let avatarsNode: AnimatedAvatarSetNode
+    private var audioLevelGenerators: [PeerId: FakeAudioLevelGenerator] = [:]
+    private var audioLevelGeneratorTimer: SwiftSignalKit.Timer?
     
     private let separatorNode: ASDisplayNode
     
@@ -167,6 +195,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     deinit {
         self.membersDisposable.dispose()
         self.isMutedDisposable.dispose()
+        self.audioLevelGeneratorTimer?.invalidate()
     }
     
     public override func didLoad() {
@@ -255,6 +284,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         let previousData = self.currentData
         self.currentData = data
         
+        var updateAudioLevels = false
+        
         if previousData?.groupCall !== data.groupCall {
             let membersText: String
             if data.participantCount == 0 {
@@ -263,7 +294,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }.filter { $0.id != self.context.account.peerId }, animated: false)
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             
@@ -280,22 +311,15 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     }
                     
                     let membersText: String
-                    let membersTextIsActive: Bool
                     if summaryState.participantCount == 0 {
                         membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
                     } else {
                         membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                     }
-                    membersTextIsActive = false
+                                        
+                    strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                     
-                    if strongSelf.textIsActive != membersTextIsActive {
-                        strongSelf.textIsActive = membersTextIsActive
-                        strongSelf.animateTextChange()
-                    }
-                    
-                    strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? strongSelf.theme.chat.inputPanel.panelControlAccentColor : strongSelf.theme.chat.inputPanel.secondaryTextColor)
-                    
-                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }, animated: false)
+                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }.filter { $0.id != strongSelf.context.account.peerId }, animated: false)
                     
                     if let (size, leftInset, rightInset) = strongSelf.validLayout {
                         strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
@@ -366,27 +390,59 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self.audioLevelDisposable.set(nil)
             
             let membersText: String
-            let membersTextIsActive: Bool
             if data.participantCount == 0 {
                 membersText = self.strings.VoiceChat_Panel_TapToJoin
             } else {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
-            membersTextIsActive = false
             
-            if self.textIsActive != membersTextIsActive {
-                self.textIsActive = membersTextIsActive
-                self.animateTextChange()
-            }
+            self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
+
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }.filter { $0.id != self.context.account.peerId }, animated: false)
             
-            self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? self.theme.chat.inputPanel.panelControlAccentColor : self.theme.chat.inputPanel.secondaryTextColor)
-            
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            updateAudioLevels = true
         }
         
         if let (size, leftInset, rightInset) = self.validLayout {
             self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
         }
+        
+        if updateAudioLevels {
+            for peerId in data.activeSpeakers {
+                if self.audioLevelGenerators[peerId] == nil {
+                    self.audioLevelGenerators[peerId] = FakeAudioLevelGenerator()
+                }
+            }
+            var removeGenerators: [PeerId] = []
+            for peerId in self.audioLevelGenerators.keys {
+                if !data.activeSpeakers.contains(peerId) {
+                    removeGenerators.append(peerId)
+                }
+            }
+            for peerId in removeGenerators {
+                self.audioLevelGenerators.removeValue(forKey: peerId)
+            }
+            
+            if self.audioLevelGenerators.isEmpty {
+                self.audioLevelGeneratorTimer?.invalidate()
+                self.audioLevelGeneratorTimer = nil
+                self.avatarsNode.updateAudioLevels(color: self.theme.chat.inputPanel.actionControlFillColor, levels: [:])
+            } else if self.audioLevelGeneratorTimer == nil {
+                let audioLevelGeneratorTimer = SwiftSignalKit.Timer(timeout: 1.0 / 30.0, repeat: true, completion: { [weak self] in
+                    self?.sampleAudioGenerators()
+                }, queue: .mainQueue())
+                self.audioLevelGeneratorTimer = audioLevelGeneratorTimer
+                audioLevelGeneratorTimer.start()
+            }
+        }
+    }
+    
+    private func sampleAudioGenerators() {
+        var levels: [PeerId: Float] = [:]
+        for (peerId, generator) in self.audioLevelGenerators {
+            levels[peerId] = generator.get()
+        }
+        self.avatarsNode.updateAudioLevels(color: self.theme.chat.inputPanel.actionControlFillColor, levels: levels)
     }
     
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
