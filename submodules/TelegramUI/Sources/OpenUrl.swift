@@ -686,15 +686,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
-                let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
+                let settings = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings, ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData())
                 |> take(1)
-                |> map { sharedData -> WebBrowserSettings in
-                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings {
-                         return current
-                     } else {
-                         return WebBrowserSettings.defaultSettings
-                     }
-                 }
+                |> map { sharedData, accessChallengeData -> WebBrowserSettings in
+                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? PresentationPasscodeSettings.defaultSettings
+                    if accessChallengeData.data.isLockable {
+                        if passcodeSettings.autolockTimeout != nil {
+                            return WebBrowserSettings(defaultWebBrowser: "Safari")
+                        }
+                    }
+                    
+                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings {
+                        return current   
+                    } else {
+                        return WebBrowserSettings.defaultSettings
+                    }
+                }
 
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in
