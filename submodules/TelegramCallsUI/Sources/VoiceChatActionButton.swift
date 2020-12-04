@@ -411,6 +411,12 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.maskView.addSubview(self.maskBlobView)
         self.maskView.layer.addSublayer(self.maskCircleLayer)
+        
+        self.maskBlobView.scaleUpdated = { [weak self] scale in
+            if let strongSelf = self {
+                strongSelf.updateGlowScale(strongSelf.isActive ? scale : nil)
+            }
+        }
     }
         
     private func setupGradientAnimations() {
@@ -480,6 +486,18 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             groupAnimation.duration = 2.0
             
             self.maskProgressLayer.add(groupAnimation, forKey: "progressGrowth")
+        }
+    }
+    
+    func updateGlowScale(_ scale: CGFloat?) {
+        return
+        if let scale = scale {
+            self.maskGradientLayer.transform = CATransform3DMakeScale(0.89 + 0.11 * scale, 0.89 + 0.11 * scale, 1.0)
+        } else {
+//            let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (effectivePreviousActive ? 0.95 : 0.8))
+//            let targetScale: CGFloat = self.isActive ? 0.89 : 0.85
+//            self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
+//            self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
         }
     }
     
@@ -587,6 +605,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         CATransaction.commit()
     }
     
+    var isActive = false
     func updateAnimations() {
         if !self.isCurrentlyInHierarchy {
             self.foregroundGradientLayer.removeAllAnimations()
@@ -601,10 +620,12 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             case .connecting:
                 self.updatedActive?(false)
                 self.setupProgressAnimations()
+                self.isActive = false
             case let .blob(newActive):
                 if let transition = self.transition {
                     if transition == .connecting {
                         self.playConnectionAnimation(active: newActive) { [weak self] in
+                            self?.isActive = newActive
                             self?.transition = nil
                         }
                     } else if transition == .disabled {
@@ -612,11 +633,14 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                     } else if case let .blob(previousActive) = transition {
                         updateGlowAndGradientAnimations(active: newActive, previousActive: previousActive)
                         self.transition = nil
+                        self.isActive = newActive
                     }
                 } else {
                     self.maskBlobView.startAnimating()
                 }
             case .disabled:
+                self.isActive = false
+                self.updateGlowScale(nil)
                 break
         }
     }
@@ -683,6 +707,12 @@ private final class VoiceBlobView: UIView {
     
     private var audioLevel: CGFloat = 0.0
     var presentationAudioLevel: CGFloat = 0.0
+    
+    var scaleUpdated: ((CGFloat) -> Void)? {
+        didSet {
+            self.bigBlob.scaleUpdated = self.scaleUpdated
+        }
+    }
     
     private(set) var isAnimating = false
     
@@ -805,12 +835,15 @@ final class BlobView: UIView {
     let minScale: CGFloat
     let maxScale: CGFloat
     
+    var scaleUpdated: ((CGFloat) -> Void)?
+    
     var level: CGFloat = 0 {
         didSet {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             let lv = minScale + (maxScale - minScale) * level
             shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+            self.scaleUpdated?(level)
             CATransaction.commit()
         }
     }

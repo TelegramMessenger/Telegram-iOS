@@ -456,6 +456,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
             self.listNode.clipsToBounds = true
             self.listNode.stackFromBottom = true
+            self.listNode.keepMinimalScrollHeightWithTopInset = 0
             
             self.topPanelNode = ASDisplayNode()
             self.topPanelNode.backgroundColor = panelBackgroundColor
@@ -1360,7 +1361,7 @@ public final class VoiceChatController: ViewController {
                     actionButtonState = .connecting
                     actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
                     actionButtonSubtitle = ""
-                    audioButtonAppearance = .color(.custom(0x1c1c1e))
+                    audioButtonAppearance = .color(.custom(0x2c2c2e))
                     actionButtonEnabled = false
                 case .connected:
                     if let muteState = callState.muteState, !self.pushingToTalk {
@@ -1506,6 +1507,7 @@ public final class VoiceChatController: ViewController {
             }
         }
         
+        private var isFirstTime = true
         private func dequeueTransition() {
             guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
                 return
@@ -1522,7 +1524,14 @@ public final class VoiceChatController: ViewController {
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            
+            var scrollToItem: ListViewScrollToItem?
+            if self.isFirstTime {
+                self.isFirstTime = false
+                scrollToItem = ListViewScrollToItem(index: 0, position: .bottom(0), animated: false, curve: .Default(duration: nil), directionHint: .Up)
+            }
+            
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1638,7 +1647,6 @@ public final class VoiceChatController: ViewController {
                     if let gestureRecognizers = view.gestureRecognizers, view != self.view {
                         for gestureRecognizer in gestureRecognizers {
                             if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
-                                print(view)
                                 if panGestureRecognizer.state != .began {
                                     panGestureRecognizer.isEnabled = false
                                     panGestureRecognizer.isEnabled = true
@@ -1690,8 +1698,7 @@ public final class VoiceChatController: ViewController {
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
-            
-            print("actually hitting")
+
             if result === self.topPanelNode.view || result === self.bottomPanelNode.view {
                 return self.view
             }

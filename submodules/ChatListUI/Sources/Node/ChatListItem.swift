@@ -697,7 +697,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
             
             if let item = self.item {
-                self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted, voiceChat: self.onlineIsVoiceChat), color: nil)
+                self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted, voiceChat: self.onlineIsVoiceChat), color: nil, transition: transition)
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
@@ -717,7 +717,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 } else {
                     onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: self.onlineIsVoiceChat)
                 }
-                self.onlineNode.setImage(onlineIcon, color: nil)
+                self.onlineNode.setImage(onlineIcon, color: nil, transition: transition)
             }
         }
     }
@@ -1543,7 +1543,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: onlineIsVoiceChat)
                     }
-                    strongSelf.onlineNode.setImage(onlineIcon, color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                    strongSelf.onlineNode.setImage(onlineIcon, color: item.presentationData.theme.list.itemCheckColors.foregroundColor, transition: .immediate)
                                   
                     let _ = measureApply()
                     let _ = dateApply()
