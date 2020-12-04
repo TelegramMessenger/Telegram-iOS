@@ -1100,7 +1100,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
-        print("off \(offset)")
         if abs(offset) > CGFloat.ulpOfOne {
             self.didScrollWithOffset?(-offset, .immediate, nil)
             

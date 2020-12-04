@@ -31,31 +31,6 @@ open class CallStatusBarNode: ASDisplayNode {
     }
 }
 
-private func addInCallAnimation(_ layer: CALayer) {
-    let animation = CAKeyframeAnimation(keyPath: "opacity")
-    animation.keyTimes = [0.0 as NSNumber, 0.1 as NSNumber, 0.5 as NSNumber, 0.9 as NSNumber, 1.0 as NSNumber]
-    animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber, 1.0 as NSNumber, 1.0 as NSNumber]
-    animation.duration = 1.8
-    animation.autoreverses = true
-    animation.repeatCount = Float.infinity
-    animation.beginTime = 1.0
-    layer.add(animation, forKey: "blink")
-}
-
-private final class StatusBarLabelNode: ImmediateTextNode {
-    override func willEnterHierarchy() {
-        super.willEnterHierarchy()
-        
-        addInCallAnimation(self.layer)
-    }
-    
-    override func didExitHierarchy() {
-        super.didExitHierarchy()
-        
-        self.layer.removeAnimation(forKey: "blink")
-    }
-}
-
 private final class StatusBarView: UITracingLayerView {
     weak var node: StatusBar?
     
@@ -178,19 +153,9 @@ public final class StatusBar: ASDisplayNode {
         if (resolvedCallStatusBarNode != nil) != (self.callStatusBarNode != nil) {
             if let resolvedCallStatusBarNode = resolvedCallStatusBarNode {
                 self.addSubnode(resolvedCallStatusBarNode)
-                if animated {
-                    resolvedCallStatusBarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                }
             } else if let callStatusBarNode = self.callStatusBarNode {
                 self.callStatusBarNode = nil
-                
-                if animated {
-                    callStatusBarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak callStatusBarNode] _ in
-                        callStatusBarNode?.removeFromSupernode()
-                    })
-                } else {
-                    callStatusBarNode.removeFromSupernode()
-                }
+                callStatusBarNode.removeFromSupernode()
             }
         }
         

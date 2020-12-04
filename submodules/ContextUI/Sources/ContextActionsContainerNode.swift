@@ -66,7 +66,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         }
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void) {
+    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.presentationData = presentationData
         self.feedbackTap = feedbackTap
         
@@ -95,6 +95,9 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.cornerRadius = 14.0
         
         self.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+        if !blurBackground {
+            self.backgroundColor = self.backgroundColor?.withAlphaComponent(1.0)
+        }
         
         self.itemNodes.forEach({ itemNode in
             switch itemNode {
@@ -402,8 +405,8 @@ final class ContextActionsContainerNode: ASDisplayNode {
         }
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool) {
-        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap)
+    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool, blurBackground: Bool) {
+        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
         if displayTextSelectionTip {
             let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData)
             textSelectionTipNode.isUserInteractionEnabled = false

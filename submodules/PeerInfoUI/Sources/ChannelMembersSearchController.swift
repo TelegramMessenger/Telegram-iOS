@@ -9,17 +9,19 @@ import TelegramPresentationData
 import AccountContext
 import SearchUI
 
-enum ChannelMembersSearchControllerMode {
+public enum ChannelMembersSearchControllerMode {
     case promote
     case ban
+    case inviteToCall
 }
 
 public enum ChannelMembersSearchFilter {
     case exclude([PeerId])
     case disable([PeerId])
+    case excludeNonMembers
 }
 
-final class ChannelMembersSearchController: ViewController {
+public final class ChannelMembersSearchController: ViewController {
     private let queue = Queue()
     
     private let context: AccountContext
@@ -28,6 +30,7 @@ final class ChannelMembersSearchController: ViewController {
     private let filters: [ChannelMembersSearchFilter]
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     
+    private let forceTheme: PresentationTheme?
     private var presentationData: PresentationData
     
     private var didPlayPresentationAnimation = false
@@ -38,13 +41,17 @@ final class ChannelMembersSearchController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    public init(context: AccountContext, peerId: PeerId, forceTheme: PresentationTheme? = nil, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
         self.openPeer = openPeer
         self.filters = filters
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.forceTheme = forceTheme
+        if let forceTheme = forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
+        }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -74,8 +81,8 @@ final class ChannelMembersSearchController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func loadDisplayNode() {
-        self.displayNode = ChannelMembersSearchControllerNode(context: self.context, presentationData: self.presentationData, peerId: self.peerId, mode: self.mode, filters: self.filters)
+    override public func loadDisplayNode() {
+        self.displayNode = ChannelMembersSearchControllerNode(context: self.context, presentationData: self.presentationData, forceTheme: self.forceTheme, peerId: self.peerId, mode: self.mode, filters: self.filters)
         self.controllerNode.navigationBar = self.navigationBar
         self.controllerNode.requestActivateSearch = { [weak self] in
             self?.activateSearch()
@@ -105,7 +112,7 @@ final class ChannelMembersSearchController: ViewController {
         }
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
@@ -143,7 +150,7 @@ final class ChannelMembersSearchController: ViewController {
         }
     }
     
-    @objc func cancelPressed() {
+    @objc private func cancelPressed() {
         self.dismiss()
     }
 }

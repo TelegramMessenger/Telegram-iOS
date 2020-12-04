@@ -112,18 +112,23 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((Peer, RenderedChannelParticipant?) -> Void)?
     var pushController: ((ViewController) -> Void)?
     
+    private let forceTheme: PresentationTheme?
     var presentationData: PresentationData
 
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
+    init(context: AccountContext, presentationData: PresentationData, forceTheme: PresentationTheme?, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.context = context
         self.listNode = ListView()
         self.peerId = peerId
         self.mode = mode
         self.filters = filters
         self.presentationData = presentationData
+        self.forceTheme = forceTheme
+        if let forceTheme = forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
+        }
         
         super.init()
         
@@ -190,7 +195,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                         if ids.contains(peer.id) {
                                             continue
                                         }
-                                    case .disable:
+                                    case let .disable(ids):
+                                        if ids.contains(peer.id) {
+                                            enabled = false
+                                        }
+                                    case .excludeNonMembers:
                                         break
                                 }
                             }
@@ -204,13 +213,35 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                         if ids.contains(peer.id) {
                                             continue
                                         }
-                                    case .disable:
+                                    case let .disable(ids):
+                                        if ids.contains(peer.id) {
+                                            enabled = false
+                                        }
+                                    case .excludeNonMembers:
                                         break
                                 }
                             }
                             if case .creator = participant {
                                 label = strongSelf.presentationData.strings.Channel_Management_LabelOwner
                                 enabled = false
+                            }
+                        case .inviteToCall:
+                            if peer.id == context.account.peerId {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                    case let .exclude(ids):
+                                        if ids.contains(peer.id) {
+                                            continue
+                                        }
+                                    case let .disable(ids):
+                                        if ids.contains(peer.id) {
+                                            enabled = false
+                                        }
+                                    case .excludeNonMembers:
+                                        break
+                                }
                             }
                     }
                     let renderedParticipant: RenderedChannelParticipant
@@ -262,7 +293,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                     if ids.contains(participant.peer.id) {
                                         continue
                                     }
-                                case .disable:
+                                case let .disable(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        enabled = false
+                                    }
+                                case .excludeNonMembers:
                                     break
                                 }
                             }
@@ -276,13 +311,35 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                     if ids.contains(participant.peer.id) {
                                         continue
                                     }
-                                case .disable:
+                                case let .disable(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        enabled = false
+                                    }
+                                case .excludeNonMembers:
                                     break
                                 }
                             }
                             if case .creator = participant.participant {
                                 label = strongSelf.presentationData.strings.Channel_Management_LabelOwner
                                 enabled = false
+                            }
+                        case .inviteToCall:
+                            if participant.peer.id == context.account.peerId {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                case let .exclude(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        continue
+                                    }
+                                case let .disable(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        enabled = false
+                                    }
+                                case .excludeNonMembers:
+                                    break
+                                }
                             }
                     }
                     entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
@@ -316,7 +373,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
-        self.searchDisplayController?.updatePresentationData(presentationData)
+        if let forceTheme = forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
+        }
+        self.searchDisplayController?.updatePresentationData(self.presentationData)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -350,7 +410,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, openPeer: { [weak self] peer, participant in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, forceTheme: self.forceTheme, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, openPeer: { [weak self] peer, participant in
             self?.requestOpenPeerFromSearch?(peer, participant)
         }, updateActivity: { value in
             

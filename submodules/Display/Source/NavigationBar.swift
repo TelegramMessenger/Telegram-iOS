@@ -918,9 +918,10 @@ open class NavigationBar: ASDisplayNode {
                 }
             } else {
                 self.backButtonNode.alpha = 1.0
-                self.backButtonNode.frame = CGRect(origin: CGPoint(x: backButtonInset, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
+                transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: backButtonInset, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize))
+                
                 self.backButtonArrow.alpha = 1.0
-                self.backButtonArrow.frame = CGRect(origin: CGPoint(x: leftInset + 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
+                transition.updateFrame(node: self.backButtonArrow, frame: CGRect(origin: CGPoint(x: leftInset + 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0)))
                 self.badgeNode.alpha = 1.0
             }
         } else if self.leftButtonNode.supernode != nil {
@@ -928,18 +929,18 @@ open class NavigationBar: ASDisplayNode {
             leftTitleInset += leftButtonSize.width + leftButtonInset + 1.0
             
             self.leftButtonNode.alpha = 1.0
-            self.leftButtonNode.frame = CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize)
+            transition.updateFrame(node: self.leftButtonNode, frame: CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
         }
         
         let badgeSize = self.badgeNode.measure(CGSize(width: 200.0, height: 100.0))
         let backButtonArrowFrame = self.backButtonArrow.frame
-        self.badgeNode.frame = CGRect(origin: backButtonArrowFrame.origin.offsetBy(dx: 7.0, dy: -9.0), size: badgeSize)
+        transition.updateFrame(node: self.badgeNode, frame: CGRect(origin: backButtonArrowFrame.origin.offsetBy(dx: 7.0, dy: -9.0), size: badgeSize))
         
         if self.rightButtonNode.supernode != nil {
             let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)))
             rightTitleInset += rightButtonSize.width + leftButtonInset + 1.0
             self.rightButtonNode.alpha = 1.0
-            self.rightButtonNode.frame = CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize)
+            transition.updateFrame(node: self.rightButtonNode, frame: CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
         }
         
         if let transitionState = self.transitionState {
@@ -1000,18 +1001,18 @@ open class NavigationBar: ASDisplayNode {
                         let finalX: CGFloat = floor((size.width - titleSize.width) / 2.0)
                         
                         self.titleNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
-                    self.titleNode.alpha = progress * progress
+                        self.titleNode.alpha = progress * progress
                 }
             } else {
                 self.titleNode.alpha = 1.0
-                self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
+                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize))
             }
         }
         
         if let titleView = self.titleView {
             let titleSize = CGSize(width: max(1.0, size.width - max(leftTitleInset, rightTitleInset) * 2.0), height: nominalHeight)
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
-            titleView.frame = titleFrame
+            transition.updateFrame(view: titleView, frame: titleFrame)
             
             if let titleView = titleView as? NavigationBarTitleView {
                 let titleWidth = size.width - (leftTitleInset > 0.0 ? leftTitleInset : rightTitleInset) - (rightTitleInset > 0.0 ? rightTitleInset : leftTitleInset)
@@ -1048,7 +1049,7 @@ open class NavigationBar: ASDisplayNode {
                     }
                 }
                 titleView.alpha = 1.0
-                titleView.frame = titleFrame
+                transition.updateFrame(view: titleView, frame: titleFrame)
             }
         }
     }

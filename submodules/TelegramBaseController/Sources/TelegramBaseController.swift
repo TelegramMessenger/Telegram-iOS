@@ -26,6 +26,155 @@ public enum LocationBroadcastPanelSource {
     case peer(PeerId)
 }
 
+final class AccountGroupCallContextImpl: AccountGroupCallContext {
+    final class Proxy {
+        let context: AccountGroupCallContextImpl
+        let removed: () -> Void
+        
+        init(context: AccountGroupCallContextImpl, removed: @escaping () -> Void) {
+            self.context = context
+            self.removed = removed
+        }
+        
+        deinit {
+            self.removed()
+        }
+        
+        func keep() {
+        }
+    }
+    
+    var disposable: Disposable?
+    var participantsContext: GroupCallParticipantsContext?
+    
+    private let panelDataPromise = Promise<GroupCallPanelData>()
+    var panelData: Signal<GroupCallPanelData, NoError> {
+        return self.panelDataPromise.get()
+    }
+    
+    init(account: Account, peerId: PeerId, call: CachedChannelData.ActiveCall) {
+        self.panelDataPromise.set(.single(GroupCallPanelData(
+            peerId: peerId,
+            info: GroupCallInfo(
+                id: call.id,
+                accessHash: call.accessHash,
+                participantCount: 0,
+                clientParams: nil
+            ),
+            topParticipants: [],
+            participantCount: 0,
+            activeSpeakers: Set(),
+            groupCall: nil
+        )))
+        
+        self.disposable = (getGroupCallParticipants(account: account, callId: call.id, accessHash: call.accessHash, offset: "", limit: 100)
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
+            return .single(nil)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            guard let strongSelf = self, let state = state else {
+                return
+            }
+            let context = GroupCallParticipantsContext(
+                account: account,
+                peerId: peerId,
+                id: call.id,
+                accessHash: call.accessHash,
+                state: state
+            )
+            strongSelf.participantsContext = context
+            strongSelf.panelDataPromise.set(combineLatest(queue: .mainQueue(),
+                context.state,
+                context.activeSpeakers
+            )
+            |> map { state, activeSpeakers -> GroupCallPanelData in
+                var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                for participant in state.participants {
+                    if topParticipants.count >= 3 {
+                        break
+                    }
+                    topParticipants.append(participant)
+                }
+                return GroupCallPanelData(
+                    peerId: peerId,
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil),
+                    topParticipants: topParticipants,
+                    participantCount: state.totalCount,
+                    activeSpeakers: activeSpeakers,
+                    groupCall: nil
+                )
+            })
+        })
+    }
+    
+    deinit {
+        self.disposable?.dispose()
+    }
+}
+
+public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCache {
+    class Impl {
+        private class Record {
+            let context: AccountGroupCallContextImpl
+            let subscribers = Bag<Void>()
+            var removeTimer: SwiftSignalKit.Timer?
+            
+            init(context: AccountGroupCallContextImpl) {
+                self.context = context
+            }
+        }
+        
+        private let queue: Queue
+        private var contexts: [Int64: Record] = [:]
+        
+        init(queue: Queue) {
+            self.queue = queue
+        }
+        
+        func get(account: Account, peerId: PeerId, call: CachedChannelData.ActiveCall) -> AccountGroupCallContextImpl.Proxy {
+            let result: Record
+            if let current = self.contexts[call.id] {
+                result = current
+            } else {
+                let context = AccountGroupCallContextImpl(account: account, peerId: peerId, call: call)
+                result = Record(context: context)
+                self.contexts[call.id] = result
+            }
+            
+            let index = result.subscribers.add(Void())
+            result.removeTimer?.invalidate()
+            result.removeTimer = nil
+            return AccountGroupCallContextImpl.Proxy(context: result.context, removed: { [weak self, weak result] in
+                Queue.mainQueue().async {
+                    if let strongResult = result, let strongSelf = self, strongSelf.contexts[call.id] === strongResult {
+                        strongResult.subscribers.remove(index)
+                        if strongResult.subscribers.isEmpty {
+                            let removeTimer = SwiftSignalKit.Timer(timeout: 30, repeat: false, completion: {
+                                if let result = result, let strongSelf = self, strongSelf.contexts[call.id] === result, result.subscribers.isEmpty {
+                                    strongSelf.contexts.removeValue(forKey: call.id)
+                                }
+                            }, queue: .mainQueue())
+                            strongResult.removeTimer = removeTimer
+                            removeTimer.start()
+                        }
+                    }
+                }
+            })
+        }
+    }
+    
+    let queue: Queue = .mainQueue()
+    let impl: QueueLocalObject<Impl>
+    
+    public init() {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue)
+        })
+    }
+}
+
 private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
     let presentImpl: (Message?) -> Void = { [weak controller] message in
         if let message = message, let strongController = controller {
@@ -290,7 +439,30 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         guard let activeCall = activeCall else {
                             return .single(nil)
                         }
-                        return getGroupCallParticipants(account: context.account, callId: activeCall.id, accessHash: activeCall.accessHash, offset: "", limit: 10)
+                        
+                        return Signal { [weak context] subscriber in
+                            guard let context = context, let callContextCache = context.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl else {
+                                return EmptyDisposable
+                            }
+                            
+                            let disposable = MetaDisposable()
+                            
+                            callContextCache.impl.syncWith { impl in
+                                let callContext = impl.get(account: context.account, peerId: peerId, call: activeCall)
+                                disposable.set((callContext.context.panelData
+                                |> deliverOnMainQueue).start(next: { panelData in
+                                    callContext.keep()
+                                    subscriber.putNext(panelData)
+                                }))
+                            }
+                            
+                            return ActionDisposable {
+                                disposable.dispose()
+                            }
+                        }
+                        |> runOn(.mainQueue())
+                        
+                        /*let updatedData: Signal<GroupCallPanelData?, NoError> = getGroupCallParticipants(account: context.account, callId: activeCall.id, accessHash: activeCall.accessHash, offset: "", limit: 10)
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
                             return .single(nil)
@@ -344,25 +516,34 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             }
                             |> runOn(.mainQueue())
                         }
+                        
+                        let initialData: Signal<GroupCallPanelData?, NoError> = .single(GroupCallPanelData(
+                            peerId: peerId,
+                            info: GroupCallInfo(
+                                id: activeCall.id,
+                                accessHash: activeCall.accessHash,
+                                participantCount: 0,
+                                clientParams: nil
+                            ),
+                            topParticipants: [],
+                            participantCount: 0,
+                            numberOfActiveSpeakers: 0,
+                            groupCall: nil
+                        ))
+                        
+                        return initialData
+                        |> then(updatedData)*/
                     }
                 } else {
                     availableGroupCall = .single(nil)
                 }
                 
-                self.currentGroupCallDisposable = combineLatest(queue: .mainQueue(),
-                    currentGroupCall,
-                    availableGroupCall
-                ).start(next: { [weak self] currentGroupCall, availableState in
+                self.currentGroupCallDisposable = combineLatest(queue: .mainQueue(), availableGroupCall, currentGroupCall).start(next: { [weak self] availableState, currentGroupCall in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    let panelData: GroupCallPanelData?
-                    if let _ = currentGroupCall {
-                        panelData = nil
-                    } else {
-                        panelData = availableState
-                    }
+                    let panelData = currentGroupCall != nil ? nil : availableState
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
                     strongSelf.groupCallPanelData = panelData

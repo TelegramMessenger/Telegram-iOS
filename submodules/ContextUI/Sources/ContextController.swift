@@ -137,6 +137,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let itemsDisposable = MetaDisposable()
     
+    private let blurBackground: Bool
+    
     init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (ReactionContextItem.Reaction) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void, displayTextSelectionTip: Bool) {
         self.presentationData = presentationData
         self.source = source
@@ -188,13 +190,19 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         var feedbackTap: (() -> Void)?
         
+        var blurBackground = true
+        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
+            blurBackground = false
+        }
+        self.blurBackground = blurBackground
+            
         self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: [], getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
         }, feedbackTap: {
             feedbackTap?()
-        }, displayTextSelectionTip: self.displayTextSelectionTip)
+        }, displayTextSelectionTip: self.displayTextSelectionTip, blurBackground: blurBackground)
         
         if !reactionItems.isEmpty {
             let reactionContextNode = ReactionContextNode(account: account, theme: presentationData.theme, items: reactionItems)
@@ -211,8 +219,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.scrollNode.view.delegate = self
         
-        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
-        } else {
+        if blurBackground {
             self.view.addSubview(self.effectView)
             self.addSubnode(self.dimNode)
             self.addSubnode(self.withoutBlurDimNode)
@@ -1031,7 +1038,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self?.beginDismiss(result)
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
-        }, displayTextSelectionTip: self.displayTextSelectionTip)
+        }, displayTextSelectionTip: self.displayTextSelectionTip, blurBackground: self.blurBackground)
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
         if let layout = self.validLayout {

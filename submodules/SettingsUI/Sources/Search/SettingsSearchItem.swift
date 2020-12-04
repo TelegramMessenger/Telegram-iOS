@@ -15,7 +15,7 @@ import SearchBarNode
 import SearchUI
 import ChatListSearchItemHeader
 
-extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationContentNode {
+/*extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationContentNode {
     public func activate() {
     }
     
@@ -24,7 +24,7 @@ extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationCont
     
     public func setQueryUpdated(_ f: @escaping (String) -> Void) {
     }
-}
+}*/
 
 extension SettingsSearchableItemIcon {
     func image() -> UIImage? {

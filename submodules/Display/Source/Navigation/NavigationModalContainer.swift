@@ -109,9 +109,10 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
-        self.view.addGestureRecognizer(panRecognizer)
-        
-        self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+        if !self.isFlat {
+            self.view.addGestureRecognizer(panRecognizer)
+            self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+        }
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -335,9 +336,13 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         switch layout.metrics.widthClass {
         case .compact:
             self.panRecognizer?.isEnabled = true
-            self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             self.container.clipsToBounds = true
-            if isStandaloneModal || isLandscape {
+            if self.isFlat {
+                self.dim.backgroundColor = .clear
+            } else {
+                self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
+            }
+            if isStandaloneModal || isLandscape || self.isFlat {
                 self.container.cornerRadius = 0.0
             } else {
                 self.container.cornerRadius = 10.0
@@ -361,10 +366,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 containerFrame = unscaledFrame
             } else {
                 topInset = 10.0
-                if self.isFlat, let preferredSize = controllers.last?.preferredContentSizeForLayout(layout) {
-                    topInset = layout.size.height - preferredSize.height
-                }
-                if let statusBarHeight = layout.statusBarHeight {
+                if self.isFlat {
+                    topInset = 0.0
+                } else if let statusBarHeight = layout.statusBarHeight {
                     topInset += statusBarHeight
                 }
                 
@@ -378,11 +382,20 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
         case .regular:
             self.panRecognizer?.isEnabled = false
-            self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
-            self.container.clipsToBounds = true
-            self.container.cornerRadius = 10.0
-            if #available(iOS 11.0, *) {
-                self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+            if self.isFlat {
+                self.dim.backgroundColor = .clear
+                self.container.clipsToBounds = true
+                self.container.cornerRadius = 0.0
+                if #available(iOS 11.0, *) {
+                    self.container.layer.maskedCorners = []
+                }
+            } else {
+                self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
+                self.container.clipsToBounds = true
+                self.container.cornerRadius = 10.0
+                if #available(iOS 11.0, *) {
+                    self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                }
             }
             
             let verticalInset: CGFloat = 44.0
@@ -408,6 +421,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     
     func animateIn(transition: ContainedViewLayoutTransition) {
         if let controller = self.container.controllers.first, case .standaloneModal = controller.navigationPresentation {
+        } else if self.isFlat {
         } else {
             transition.updateAlpha(node: self.dim, alpha: 1.0)
             transition.animatePositionAdditive(node: self.container, offset: CGPoint(x: 0.0, y: self.bounds.height + self.container.bounds.height / 2.0 - (self.container.position.y - self.bounds.height)))
@@ -429,7 +443,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             completion()
             return transition
         } else {
-            if transition.isAnimated {
+            if transition.isAnimated && !self.isFlat {
                 let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                 alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
