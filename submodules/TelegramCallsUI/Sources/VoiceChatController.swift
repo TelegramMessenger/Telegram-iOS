@@ -559,7 +559,7 @@ public final class VoiceChatController: ViewController {
                                     case .bot:
                                         text = presentationData.strings.Login_UnknownError
                                 }
-                                strongSelf.controller?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }))
                         }
                     })
