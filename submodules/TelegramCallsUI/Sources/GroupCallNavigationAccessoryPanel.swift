@@ -280,20 +280,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     }
                     
                     let membersText: String
-                    let membersTextIsActive: Bool
                     if summaryState.participantCount == 0 {
                         membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
                     } else {
                         membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                     }
-                    membersTextIsActive = false
-                    
-                    if strongSelf.textIsActive != membersTextIsActive {
-                        strongSelf.textIsActive = membersTextIsActive
-                        strongSelf.animateTextChange()
-                    }
-                    
-                    strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? strongSelf.theme.chat.inputPanel.panelControlAccentColor : strongSelf.theme.chat.inputPanel.secondaryTextColor)
+                                        
+                    strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                     
                     strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }, animated: false)
                     
@@ -366,22 +359,15 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self.audioLevelDisposable.set(nil)
             
             let membersText: String
-            let membersTextIsActive: Bool
             if data.participantCount == 0 {
                 membersText = self.strings.VoiceChat_Panel_TapToJoin
             } else {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
-            membersTextIsActive = false
             
-            if self.textIsActive != membersTextIsActive {
-                self.textIsActive = membersTextIsActive
-                self.animateTextChange()
-            }
+            self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             
-            self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? self.theme.chat.inputPanel.panelControlAccentColor : self.theme.chat.inputPanel.secondaryTextColor)
-            
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }.filter { $0.id != self.context.account.peerId }, animated: false)
         }
         
         if let (size, leftInset, rightInset) = self.validLayout {

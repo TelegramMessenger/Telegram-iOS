@@ -1009,8 +1009,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset, topItemFound {
-            completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset - effectiveInsets.bottom - effectiveInsets.top)
-            bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+            if !self.stackFromBottom {
+                completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset - effectiveInsets.bottom - effectiveInsets.top)
+                bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+            } else {
+                effectiveInsets.top = self.visibleSize.height - completeHeight
+                completeHeight = max(completeHeight, self.visibleSize.height)
+                bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+            }
         }
         
         var transition: ContainedViewLayoutTransition = .immediate
@@ -1094,6 +1100,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
+        print("off \(offset)")
         if abs(offset) > CGFloat.ulpOfOne {
             self.didScrollWithOffset?(-offset, .immediate, nil)
             
@@ -1413,8 +1420,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
                 
                 if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset {
-                    completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
-                    bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+                    if !self.stackFromBottom {
+                        completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
+                        bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+                    }
                 }
                 
                 if self.stackFromBottom {
@@ -1435,11 +1444,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.ignoreScrollingEvents = true
         if topItemFound && bottomItemFound {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: completeHeight)
-            if self.stackFromBottom {
-                self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
-            } else {
-                self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
-            }
+            self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
             self.scroller.contentOffset = self.lastContentOffset
         } else if topItemFound {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)

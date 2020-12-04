@@ -42,7 +42,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     }
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
-    private var isCurrentlyInHierarchy = false
+    private var isCurrentlyInHierarchy = true
 
     override init() {
         self.foregroundView = UIView()
@@ -89,9 +89,11 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        self.foregroundView.frame = self.bounds
-        self.foregroundGradientLayer.frame = self.bounds
-        self.maskCurveView.frame = self.bounds
+        if self.maskCurveView.frame != self.bounds {
+            self.foregroundView.frame = self.bounds
+            self.foregroundGradientLayer.frame = self.bounds
+            self.maskCurveView.frame = self.bounds
+        }
         CATransaction.commit()
     }
     
@@ -324,7 +326,7 @@ private final class VoiceCurveView: UIView {
             minRandomness: 1,
             maxRandomness: 1.3,
             minSpeed: 0.9,
-            maxSpeed: 3.5,
+            maxSpeed: 3.2,
             minOffset: smallCurveRange.min,
             maxOffset: smallCurveRange.max
         )
@@ -333,7 +335,7 @@ private final class VoiceCurveView: UIView {
             minRandomness: 1.2,
             maxRandomness: 1.5,
             minSpeed: 1.0,
-            maxSpeed: 4.5,
+            maxSpeed: 4.4,
             minOffset: mediumCurveRange.min,
             maxOffset: mediumCurveRange.max
         )
@@ -342,7 +344,7 @@ private final class VoiceCurveView: UIView {
             minRandomness: 1.2,
             maxRandomness: 1.7,
             minSpeed: 1.0,
-            maxSpeed: 6.0,
+            maxSpeed: 5.8,
             minOffset: bigCurveRange.min,
             maxOffset: bigCurveRange.max
         )
@@ -476,7 +478,7 @@ final class CurveView: UIView {
     
     override var frame: CGRect {
         didSet {
-            if self.frame != oldValue {
+            if self.frame.size != oldValue.size {
                 self.fromPoints = nil
                 self.toPoints = nil
                 self.animateToNewShape()
@@ -534,7 +536,7 @@ final class CurveView: UIView {
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
         speedLevel = max(speedLevel, newSpeedLevel)
         
-        if abs(lastSpeedLevel - newSpeedLevel) > 0.3 {
+        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
             animateToNewShape()
         }
     }
@@ -642,7 +644,8 @@ final class CurveView: UIView {
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        shapeLayer.frame = self.bounds
+        shapeLayer.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+        shapeLayer.bounds = self.bounds
         CATransaction.commit()
     }
 }

@@ -6017,6 +6017,7 @@ public final class PeerInfoScreen: ViewController {
 private final class SettingsTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -6261,6 +6262,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 private final class MessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let sourceNode: ContextExtractedContentContainingNode
     

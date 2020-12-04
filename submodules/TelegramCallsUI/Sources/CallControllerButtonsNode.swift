@@ -219,15 +219,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
             
             if videoState.isAvailable {
                 let isCameraActive: Bool
-                let isCameraEnabled: Bool
                 let isCameraInitializing: Bool
                 if videoState.hasVideo {
                     isCameraActive = videoState.isCameraActive
-                    isCameraEnabled = videoState.canChangeStatus
                     isCameraInitializing = videoState.isInitializingCamera
                 } else {
                     isCameraActive = false
-                    isCameraEnabled = videoState.canChangeStatus
                     isCameraInitializing = videoState.isInitializingCamera
                 }
                 topButtons.append(.enableCamera(isCameraActive, false, isCameraInitializing))

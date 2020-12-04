@@ -211,9 +211,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.scrollNode.view.delegate = self
         
-        self.view.addSubview(self.effectView)
-        self.addSubnode(self.dimNode)
-        self.addSubnode(self.withoutBlurDimNode)
+        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
+        } else {
+            self.view.addSubview(self.effectView)
+            self.addSubnode(self.dimNode)
+            self.addSubnode(self.withoutBlurDimNode)
+        }
         
         self.addSubnode(self.clippingNode)
         
@@ -1074,7 +1077,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
 
         switch layout.metrics.widthClass {
         case .compact:
-            if self.effectView.superview == nil {
+            if case let .extracted(extractedSource) = self.source, !extractedSource.blurBackground {
+            } else if self.effectView.superview == nil {
                 self.view.insertSubview(self.effectView, at: 0)
                 if #available(iOS 10.0, *) {
                     if let propertyAnimator = self.propertyAnimator {
@@ -1088,7 +1092,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.dimNode.isHidden = false
             self.withoutBlurDimNode.isHidden = true
         case .regular:
-            if self.effectView.superview != nil {
+            if case let .extracted(extractedSource) = self.source, !extractedSource.blurBackground {
+            } else if self.effectView.superview != nil {
                 self.effectView.removeFromSuperview()
                 self.withoutBlurDimNode.alpha = 1.0
             }
@@ -1471,6 +1476,7 @@ public final class ContextControllerPutBackViewInfo {
 public protocol ContextExtractedContentSource: class {
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
+    var blurBackground: Bool { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
     func putBack() -> ContextControllerPutBackViewInfo?
@@ -1528,7 +1534,11 @@ public final class ContextController: ViewController, StandalonePresentableContr
         
         super.init(navigationBarPresentationData: nil)
         
-        self.statusBar.statusBarStyle = .Hide
+        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
+            self.statusBar.statusBarStyle = .Ignore
+        } else {
+            self.statusBar.statusBarStyle = .Hide
+        }
         self.lockOrientation = true
     }
     

@@ -265,36 +265,15 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             case .none, .all:
                 break
             case let .peer(peerId):
-                let currentGroupCall: Signal<GroupCallPanelData?, NoError> = callManager.currentGroupCallSignal
+                let currentGroupCall: Signal<PresentationGroupCall?, NoError> = callManager.currentGroupCallSignal
                 |> distinctUntilChanged(isEqual: { lhs, rhs in
                     return lhs?.internalId == rhs?.internalId
                 })
-                |> mapToSignal { call -> Signal<GroupCallPanelData?, NoError> in
+                |> map { call -> PresentationGroupCall? in
                     guard let call = call, call.peerId == peerId else {
-                        return .single(nil)
+                        return nil
                     }
-                    return call.summaryState
-                    |> filter { $0 != nil }
-                    |> map { summary -> GroupCallPanelData? in
-                        guard let summary = summary else {
-                            return nil
-                        }
-                        return GroupCallPanelData(
-                            peerId: call.peerId,
-                            info: summary.info,
-                            topParticipants: summary.topParticipants,
-                            participantCount: summary.participantCount,
-                            numberOfActiveSpeakers: summary.numberOfActiveSpeakers,
-                            groupCall: call
-                        )
-                    }
-                    |> take(until: { summary in
-                        if summary != nil {
-                            return SignalTakeAction(passthrough: true, complete: true)
-                        } else {
-                            return SignalTakeAction(passthrough: true, complete: false)
-                        }
-                    })
+                    return call
                 }
                 
                 let availableGroupCall: Signal<GroupCallPanelData?, NoError>
@@ -373,12 +352,17 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 self.currentGroupCallDisposable = combineLatest(queue: .mainQueue(),
                     currentGroupCall,
                     availableGroupCall
-                ).start(next: { [weak self] currentState, availableState in
+                ).start(next: { [weak self] currentGroupCall, availableState in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    let panelData = currentState != nil ? nil : availableState
+                    let panelData: GroupCallPanelData?
+                    if let _ = currentGroupCall {
+                        panelData = nil
+                    } else {
+                        panelData = availableState
+                    }
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
                     strongSelf.groupCallPanelData = panelData
