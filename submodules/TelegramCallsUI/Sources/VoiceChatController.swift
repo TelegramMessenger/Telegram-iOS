@@ -1120,7 +1120,7 @@ public final class VoiceChatController: ViewController {
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
                     let timestamp = CACurrentMediaTime()
-                    if timestamp - self.actionButtonPressGestureStartTime < 0.1 {
+                    if timestamp - self.actionButtonPressGestureStartTime < 0.2 {
                         self.call.toggleIsMuted()
                     } else {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
