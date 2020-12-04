@@ -127,7 +127,7 @@ public final class VoiceChatController: ViewController {
             let isLoading: Bool
             let isEmpty: Bool
             let crossFade: Bool
-            let count: Int
+            let animated: Bool
         }
         
         private struct State: Equatable {
@@ -362,7 +362,7 @@ public final class VoiceChatController: ViewController {
             let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             
-            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count)
+            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, animated: fromEntries.count != toEntries.count)
         }
         
         private weak var controller: VoiceChatController?
@@ -1474,6 +1474,9 @@ public final class VoiceChatController: ViewController {
             if transition.crossFade {
                 options.insert(.AnimateCrossfade)
             }
+            if transition.animated {
+                options.insert(.AnimateInsertion)
+            }
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
             
@@ -1484,18 +1487,6 @@ public final class VoiceChatController: ViewController {
                 if !strongSelf.didSetContentsReady {
                     strongSelf.didSetContentsReady = true
                     strongSelf.controller?.contentsReady.set(true)
-                }
-                
-                if false, !transition.deletions.isEmpty || !transition.insertions.isEmpty {
-                    var itemHeight: CGFloat = 56.0
-                    strongSelf.listNode.forEachVisibleItemNode { node in
-                        if node.frame.height > 0 {
-                            itemHeight = node.frame.height
-                        }
-                    }
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
-                    }
                 }
             })
         }
