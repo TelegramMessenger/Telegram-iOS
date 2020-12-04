@@ -502,6 +502,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         case let .groupPhoneCall(callId, accessHash, nil), let .inviteToGroupPhoneCall(callId, accessHash, _):
+                            guard strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall.id == callId else {
+                                return true
+                            }
+                            
                             let peerId = message.id.peerId
                             let callResult = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash), endCurrentIfAny: false, sourcePanel: nil)
                             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
