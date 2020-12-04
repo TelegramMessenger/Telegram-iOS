@@ -58,6 +58,7 @@ private let avatarFont = avatarPlaceholderFont(size: 12.0)
 
 private final class ContentNode: ASDisplayNode {
     private var audioLevelView: VoiceBlobView?
+    private var audioLevelBlobOverlay: UIImageView?
     private let unclippedNode: ASImageNode
     private let clippedNode: ASImageNode
     
@@ -136,7 +137,7 @@ private final class ContentNode: ASDisplayNode {
         }
     }
     
-    func updateAudioLevel(color: UIColor, value: Float) {
+    func updateAudioLevel(color: UIColor, backgroundColor: UIColor, value: Float) {
         if self.audioLevelView == nil, value > 0.0 {
             let blobFrame = self.unclippedNode.bounds.insetBy(dx: -8.0, dy: -8.0)
             
@@ -248,12 +249,12 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
         return CGSize(width: contentWidth, height: contentHeight)
     }
     
-    public func updateAudioLevels(color: UIColor, levels: [PeerId: Float]) {
+    public func updateAudioLevels(color: UIColor, backgroundColor: UIColor, levels: [PeerId: Float]) {
         for (key, itemNode) in self.contentNodes {
             if let value = levels[key.peerId] {
-                itemNode.updateAudioLevel(color: color, value: value)
+                itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: value)
             } else {
-                itemNode.updateAudioLevel(color: color, value: 0.0)
+                itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: 0.0)
             }
         }
     }

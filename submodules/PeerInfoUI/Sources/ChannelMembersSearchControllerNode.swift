@@ -15,63 +15,98 @@ import SearchBarNode
 import ContactsPeerItem
 import SearchUI
 import ItemListUI
+import ContactListUI
+import ChatListSearchItemHeader
 
 private final class ChannelMembersSearchInteraction {
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
+    let copyInviteLink: () -> Void
     
-    init(openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(
+        openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void,
+        copyInviteLink: @escaping () -> Void
+    ) {
         self.openPeer = openPeer
+        self.copyInviteLink = copyInviteLink
     }
 }
 
 private enum ChannelMembersSearchEntryId: Hashable {
+    case copyInviteLink
     case peer(PeerId)
 }
 
 private enum ChannelMembersSearchEntry: Comparable, Identifiable {
+    case copyInviteLink
     case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing, String?, Bool)
     
     var stableId: ChannelMembersSearchEntryId {
         switch self {
-            case let .peer(peer):
-                return .peer(peer.1.peer.id)
+        case .copyInviteLink:
+            return .copyInviteLink
+        case let .peer(_, participant, _, _, _):
+            return .peer(participant.peer.id)
         }
     }
     
     static func ==(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         switch lhs {
-            case let .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled):
-                if case .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case .copyInviteLink:
+            if case .copyInviteLink = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled):
+            if case .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
     static func <(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         switch lhs {
-            case let .peer(lhsPeer):
-                if case let .peer(rhsPeer) = rhs {
-                    return lhsPeer.0 < rhsPeer.0
-                } else {
-                    return false
-                }
+        case .copyInviteLink:
+            if case .copyInviteLink = rhs {
+                return false
+            } else {
+                return true
+            }
+        case let .peer(lhsIndex, _, _, _, _):
+            if case .copyInviteLink = rhs {
+                return false
+            } else if case let .peer(rhsIndex, _, _, _, _) = rhs {
+                return lhsIndex < rhsIndex
+            } else {
+                return false
+            }
         }
     }
     
     func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchInteraction) -> ListViewItem {
         switch self {
-            case let .peer(_, participant, editing, label, enabled):
-                let status: ContactsPeerItemStatus
-                if let label = label {
-                    status = .custom(string: label, multiline: false)
-                } else {
-                    status = .none
-                }
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
-                    interaction.openPeer(participant.peer, participant)
-                })
+        case .copyInviteLink:
+            let icon: ContactListActionItemIcon
+            if let iconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: presentationData.theme.list.itemAccentColor) {
+                icon = .generic(iconImage)
+            } else {
+                icon = .none
+            }
+            return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.VoiceChat_CopyInviteLink, icon: icon, clearHighlightAutomatically: true, header: nil, action: {
+                interaction.copyInviteLink()
+            })
+        case let .peer(_, participant, editing, label, enabled):
+            let status: ContactsPeerItemStatus
+            if let label = label {
+                status = .custom(string: label, multiline: false)
+            } else {
+                status = .none
+            }
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: .members, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+                interaction.openPeer(participant.peer, participant)
+            })
         }
     }
 }
@@ -110,6 +145,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((Peer, RenderedChannelParticipant?) -> Void)?
+    var requestCopyInviteLink: (() -> Void)?
     var pushController: ((ViewController) -> Void)?
     
     private let forceTheme: PresentationTheme?
@@ -140,10 +176,16 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         
         self.addSubnode(self.listNode)
         
-        let interaction = ChannelMembersSearchInteraction(openPeer: { [weak self] peer, participant in
-            self?.requestOpenPeerFromSearch?(peer, participant)
-            self?.listNode.clearHighlightAnimated(true)
-        })
+        let interaction = ChannelMembersSearchInteraction(
+            openPeer: { [weak self] peer, participant in
+                self?.requestOpenPeerFromSearch?(peer, participant)
+                self?.listNode.clearHighlightAnimated(true)
+            },
+            copyInviteLink: { [weak self] in
+                self?.requestCopyInviteLink?()
+                self?.listNode.clearHighlightAnimated(true)
+            }
+        )
         
         let previousEntries = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
         
@@ -273,6 +315,16 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     return
                 }
                 var entries: [ChannelMembersSearchEntry] = []
+                
+                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                    if case .excludeNonMembers = filter {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    entries.append(.copyInviteLink)
+                }
                 
                 var index = 0
                 for participant in state.list {

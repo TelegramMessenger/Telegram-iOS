@@ -426,7 +426,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             if self.audioLevelGenerators.isEmpty {
                 self.audioLevelGeneratorTimer?.invalidate()
                 self.audioLevelGeneratorTimer = nil
-                self.avatarsNode.updateAudioLevels(color: self.theme.chat.inputPanel.actionControlFillColor, levels: [:])
+                self.avatarsNode.updateAudioLevels(color: self.theme.chat.inputPanel.actionControlFillColor, backgroundColor: self.theme.chat.inputPanel.actionControlFillColor, levels: [:])
             } else if self.audioLevelGeneratorTimer == nil {
                 let audioLevelGeneratorTimer = SwiftSignalKit.Timer(timeout: 1.0 / 30.0, repeat: true, completion: { [weak self] in
                     self?.sampleAudioGenerators()
@@ -442,7 +442,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         for (peerId, generator) in self.audioLevelGenerators {
             levels[peerId] = generator.get()
         }
-        self.avatarsNode.updateAudioLevels(color: self.theme.chat.inputPanel.actionControlFillColor, levels: levels)
+        self.avatarsNode.updateAudioLevels(color: self.theme.chat.inputPanel.actionControlFillColor, backgroundColor: self.theme.chat.inputPanel.actionControlFillColor, levels: levels)
     }
     
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -556,6 +556,8 @@ public final class VoiceChatController: ViewController {
                         if let participant = participant {
                             strongSelf.call.invitePeer(participant.peer.id)
                             dismissController?()
+                            
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                         } else {
                             let selfController = strongSelf.controller
                             let inviteDisposable = strongSelf.inviteDisposable
@@ -586,14 +588,7 @@ public final class VoiceChatController: ViewController {
                                 inviteDisposable.set(nil)
                             }
                             
-                            inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(next: { _ in
-                                guard let strongSelf = self else {
-                                    dismissController?()
-                                    return
-                                }
-                                strongSelf.call.invitePeer(peer.id)
-                                dismissController?()
-                            }, error: { error in
+                            inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
                                 dismissController?()
                                 guard let strongSelf = self else {
                                     return
@@ -620,9 +615,49 @@ public final class VoiceChatController: ViewController {
                                         text = presentationData.strings.Login_UnknownError
                                 }
                                 strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            }, completed: {
+                                guard let strongSelf = self else {
+                                    dismissController?()
+                                    return
+                                }
+                                strongSelf.call.invitePeer(peer.id)
+                                dismissController?()
+                                
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                             }))
                         }
                     })
+                    controller.copyInviteLink = {
+                        dismissController?()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
+                            if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
+                                return "https://t.me/\(addressName)"
+                            } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
+                                if let cachedData = cachedData as? CachedChannelData {
+                                    return cachedData.exportedInvitation?.link
+                                } else if let cachedData = cachedData as? CachedGroupData {
+                                    return cachedData.exportedInvitation?.link
+                                }
+                            }
+                            return nil
+                        }
+                        |> deliverOnMainQueue).start(next: { link in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if let link = link {
+                                UIPasteboard.general.string = link
+                                
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .linkCopied(text: strongSelf.presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            }
+                        })
+                    }
                     dismissController = { [weak controller] in
                         controller?.dismiss()
                     }
@@ -682,7 +717,14 @@ public final class VoiceChatController: ViewController {
                             items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
+                                guard let strongSelf = self else {
+                                    return
+                                }
                                 
+                                let _ = strongSelf.context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: strongSelf.context.account, peerId: strongSelf.call.peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
+                                strongSelf.call.removedPeer(peer.id)
+                                
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                             }))
 
                             actionSheet.setItemGroups([

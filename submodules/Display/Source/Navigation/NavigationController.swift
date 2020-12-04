@@ -438,6 +438,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 modalContainer = NavigationModalContainer(theme: self.theme, isFlat: navigationLayout.modal[i].isFlat, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
+                modalContainer.container.statusBarStyleUpdated = { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateContainersNonReentrant(transition: transition)
+                }
                 self.modalContainers.append(modalContainer)
                 if !modalContainer.isReady {
                     modalContainer.isReadyUpdated = { [weak self, weak modalContainer] in
@@ -586,6 +592,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         var previousModalContainer: NavigationModalContainer?
+        var topVisibleModalContainerWithStatusBar: NavigationModalContainer?
         var visibleModalCount = 0
         var topModalIsFlat = false
         let isLandscape = layout.orientation == .landscape
@@ -617,7 +624,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             containerTransition.updateFrame(node: modalContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
-            modalContainer.update(layout: layout, controllers: navigationLayout.modal[i].controllers, coveredByModalTransition: effectiveModalTransition, transition: containerTransition)
+            modalContainer.update(layout: modalContainer.isFlat ? overlayLayout : layout, controllers: navigationLayout.modal[i].controllers, coveredByModalTransition: effectiveModalTransition, transition: containerTransition)
             
             if modalContainer.supernode == nil && modalContainer.isReady {
                 if let previousModalContainer = previousModalContainer {
@@ -652,6 +659,23 @@ open class NavigationController: UINavigationController, ContainableController, 
                     } else {
                         modalContainer.keyboardViewManager = nil
                         modalContainer.canHaveKeyboardFocus = true
+                    }
+                    
+                    if modalContainer.isFlat {
+                        let controllerStatusBarStyle = modalContainer.container.statusBarStyle
+                        switch controllerStatusBarStyle {
+                        case .Black, .White, .Hide:
+                            if topVisibleModalContainerWithStatusBar == nil {
+                                topVisibleModalContainerWithStatusBar = modalContainer
+                            }
+                            if case .Hide = controllerStatusBarStyle {
+                                statusBarHidden = true
+                            } else {
+                                statusBarHidden = false
+                            }
+                        case .Ignore:
+                            break
+                        }
                     }
                 } else {
                     modalContainer.keyboardViewManager = nil
@@ -919,6 +943,10 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         if let topVisibleOverlayContainerWithStatusBar = topVisibleOverlayContainerWithStatusBar {
             statusBarStyle = topVisibleOverlayContainerWithStatusBar.controller.statusBar.statusBarStyle
+        }
+        
+        if let topVisibleModalContainerWithStatusBar = topVisibleModalContainerWithStatusBar {
+            statusBarStyle = topVisibleModalContainerWithStatusBar.container.statusBarStyle
         }
         
         if self.currentStatusBarExternalHidden {

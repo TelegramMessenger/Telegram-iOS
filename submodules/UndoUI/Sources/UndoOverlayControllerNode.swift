@@ -182,6 +182,34 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 displayUndo = true
                 undoText = cancel
                 self.originalRemainingSeconds = 5
+            case let .linkCopied(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_linkcopied", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+            
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
+                self.originalRemainingSeconds = 5
+            case let .banned(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_banned", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+            
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
+                self.originalRemainingSeconds = 5
             case let .chatAddedToFolder(chatTitle, folderTitle):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -467,7 +495,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat:
+        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned:
             break
         case .dice:
             self.panelWrapperNode.clipsToBounds = true
@@ -578,6 +606,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
             if case .messagesUnpinned = self.content {
                 let factor: CGFloat = 0.5
+                preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
+            } else if case .linkCopied = self.content {
+                let factor: CGFloat = 0.08
+                preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
+            } else if case .banned = self.content {
+                let factor: CGFloat = 0.08
                 preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
             } else {
                 preferredSize = iconSize
