@@ -30,6 +30,8 @@ public final class ChannelMembersSearchController: ViewController {
     private let filters: [ChannelMembersSearchFilter]
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     
+    public var copyInviteLink: (() -> Void)?
+    
     private let forceTheme: PresentationTheme?
     private var presentationData: PresentationData
     
@@ -92,6 +94,9 @@ public final class ChannelMembersSearchController: ViewController {
         }
         self.controllerNode.requestOpenPeerFromSearch = { [weak self] peer, participant in
             self?.openPeer(peer, participant)
+        }
+        self.controllerNode.requestCopyInviteLink = { [weak self] in
+            self?.copyInviteLink?()
         }
         self.controllerNode.pushController = { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)

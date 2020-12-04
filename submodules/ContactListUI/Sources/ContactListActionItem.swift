@@ -14,16 +14,16 @@ public enum ContactListActionItemHighlight {
     case alpha
 }
 
-class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
+public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let presentationData: ItemListPresentationData
     let title: String
     let icon: ContactListActionItemIcon
     let highlight: ContactListActionItemHighlight
     let clearHighlightAutomatically: Bool
     let action: () -> Void
-    let header: ListViewItemHeader?
+    public let header: ListViewItemHeader?
     
-    init(presentationData: ItemListPresentationData, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.title = title
         self.icon = icon
@@ -33,7 +33,7 @@ class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         self.action = action
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactListActionItemNode()
             let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
@@ -50,7 +50,7 @@ class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ContactListActionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -68,9 +68,9 @@ class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         }
     }
     
-    var selectable: Bool = true
+    public var selectable: Bool = true
     
-    func selected(listView: ListView){
+    public func selected(listView: ListView){
         self.action()
         if self.clearHighlightAutomatically {
             listView.clearHighlightAnimated(true)

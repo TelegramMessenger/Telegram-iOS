@@ -15,6 +15,155 @@ import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
 
+public final class AccountGroupCallContextImpl: AccountGroupCallContext {
+    public final class Proxy {
+        public let context: AccountGroupCallContextImpl
+        let removed: () -> Void
+        
+        public init(context: AccountGroupCallContextImpl, removed: @escaping () -> Void) {
+            self.context = context
+            self.removed = removed
+        }
+        
+        deinit {
+            self.removed()
+        }
+        
+        public func keep() {
+        }
+    }
+    
+    var disposable: Disposable?
+    public var participantsContext: GroupCallParticipantsContext?
+    
+    private let panelDataPromise = Promise<GroupCallPanelData>()
+    public var panelData: Signal<GroupCallPanelData, NoError> {
+        return self.panelDataPromise.get()
+    }
+    
+    public init(account: Account, peerId: PeerId, call: CachedChannelData.ActiveCall) {
+        self.panelDataPromise.set(.single(GroupCallPanelData(
+            peerId: peerId,
+            info: GroupCallInfo(
+                id: call.id,
+                accessHash: call.accessHash,
+                participantCount: 0,
+                clientParams: nil
+            ),
+            topParticipants: [],
+            participantCount: 0,
+            activeSpeakers: Set(),
+            groupCall: nil
+        )))
+        
+        self.disposable = (getGroupCallParticipants(account: account, callId: call.id, accessHash: call.accessHash, offset: "", limit: 100)
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
+            return .single(nil)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            guard let strongSelf = self, let state = state else {
+                return
+            }
+            let context = GroupCallParticipantsContext(
+                account: account,
+                peerId: peerId,
+                id: call.id,
+                accessHash: call.accessHash,
+                state: state
+            )
+            strongSelf.participantsContext = context
+            strongSelf.panelDataPromise.set(combineLatest(queue: .mainQueue(),
+                context.state,
+                context.activeSpeakers
+            )
+            |> map { state, activeSpeakers -> GroupCallPanelData in
+                var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                for participant in state.participants {
+                    if topParticipants.count >= 3 {
+                        break
+                    }
+                    topParticipants.append(participant)
+                }
+                return GroupCallPanelData(
+                    peerId: peerId,
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil),
+                    topParticipants: topParticipants,
+                    participantCount: state.totalCount,
+                    activeSpeakers: activeSpeakers,
+                    groupCall: nil
+                )
+            })
+        })
+    }
+    
+    deinit {
+        self.disposable?.dispose()
+    }
+}
+
+public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCache {
+    public class Impl {
+        private class Record {
+            let context: AccountGroupCallContextImpl
+            let subscribers = Bag<Void>()
+            var removeTimer: SwiftSignalKit.Timer?
+            
+            init(context: AccountGroupCallContextImpl) {
+                self.context = context
+            }
+        }
+        
+        private let queue: Queue
+        private var contexts: [Int64: Record] = [:]
+        
+        init(queue: Queue) {
+            self.queue = queue
+        }
+        
+        public func get(account: Account, peerId: PeerId, call: CachedChannelData.ActiveCall) -> AccountGroupCallContextImpl.Proxy {
+            let result: Record
+            if let current = self.contexts[call.id] {
+                result = current
+            } else {
+                let context = AccountGroupCallContextImpl(account: account, peerId: peerId, call: call)
+                result = Record(context: context)
+                self.contexts[call.id] = result
+            }
+            
+            let index = result.subscribers.add(Void())
+            result.removeTimer?.invalidate()
+            result.removeTimer = nil
+            return AccountGroupCallContextImpl.Proxy(context: result.context, removed: { [weak self, weak result] in
+                Queue.mainQueue().async {
+                    if let strongResult = result, let strongSelf = self, strongSelf.contexts[call.id] === strongResult {
+                        strongResult.subscribers.remove(index)
+                        if strongResult.subscribers.isEmpty {
+                            let removeTimer = SwiftSignalKit.Timer(timeout: 30, repeat: false, completion: {
+                                if let result = result, let strongSelf = self, strongSelf.contexts[call.id] === result, result.subscribers.isEmpty {
+                                    strongSelf.contexts.removeValue(forKey: call.id)
+                                }
+                            }, queue: .mainQueue())
+                            strongResult.removeTimer = removeTimer
+                            removeTimer.start()
+                        }
+                    }
+                }
+            })
+        }
+    }
+    
+    let queue: Queue = .mainQueue()
+    public let impl: QueueLocalObject<Impl>
+    
+    public init() {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue)
+        })
+    }
+}
+
 private extension PresentationGroupCallState {
     static var initialValue: PresentationGroupCallState {
         return PresentationGroupCallState(
@@ -436,6 +585,50 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 activeSpeakers: participantsState.activeSpeakers
             )
         })
+        
+        if let initialCall = initialCall, let temporaryParticipantsContext = (self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl)?.impl.syncWith({ impl in
+            impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash))
+        }) {
+            if let participantsContext = temporaryParticipantsContext.context.participantsContext {
+                self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
+                    participantsContext.state,
+                    participantsContext.activeSpeakers
+                ).start(next: { [weak self] state, activeSpeakers in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                    
+                    var members = PresentationGroupCallMembers(
+                        participants: [],
+                        speakingParticipants: [],
+                        totalCount: 0,
+                        loadMoreToken: nil
+                    )
+                    for participant in state.participants {
+                        members.participants.append(participant)
+                        
+                        if topParticipants.count < 3 {
+                            topParticipants.append(participant)
+                        }
+                    }
+                    
+                    members.totalCount = state.totalCount
+                    members.loadMoreToken = state.nextParticipantsFetchOffset
+                    
+                    strongSelf.membersValue = members
+                    
+                    strongSelf.stateValue.adminIds = state.adminIds
+                    
+                    strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
+                        participantCount: state.totalCount,
+                        topParticipants: topParticipants,
+                        activeSpeakers: activeSpeakers
+                    )))
+                }))
+            }
+        }
         
         self.requestCall()
     }
@@ -920,6 +1113,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.invitedPeersValue = updatedInvitedPeers
         
         let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
+    }
+    
+    public func removedPeer(_ peerId: PeerId) {
+        var updatedInvitedPeers = self.invitedPeersValue
+        updatedInvitedPeers.removeAll(where: { $0 == peerId})
+        self.invitedPeersValue = updatedInvitedPeers
     }
     
     private var currentMyAudioLevel: Float = 0.0

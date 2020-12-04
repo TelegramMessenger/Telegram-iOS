@@ -5940,6 +5940,7 @@ Sorry for the inconvenience.";
 "VoiceChat.EndVoiceChat" = "End Voice Chat";
 
 "VoiceChat.CopyInviteLink" = "Copy Invite Link";
+"VoiceChat.InviteLinkCopiedText" = "Invite link copied to clipboard";
 
 "VoiceChat.UnmutePeer" = "Allow to Speak";
 "VoiceChat.MutePeer" = "Mute";
@@ -5956,7 +5957,8 @@ Sorry for the inconvenience.";
 "Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";
 "Notification.VoiceChatInvitationForYou" = "%1$@ invited you to the voice chat";
 
-"VoiceChat.InvitedPeerText" = "You have invited %@ to the voice chat";
+"VoiceChat.InvitedPeerText" = "You invited %@ to the voice chat";
+"VoiceChat.RemovedPeerText" = "You removed %@ from this group";
 
 "Notification.VoiceChatStarted" = "Voice chat started";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";

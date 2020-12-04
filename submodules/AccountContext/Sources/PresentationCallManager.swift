@@ -286,6 +286,7 @@ public protocol PresentationGroupCall: class {
     func updateMuteState(peerId: PeerId, isMuted: Bool)
     
     func invitePeer(_ peerId: PeerId)
+    func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
     
     var sourcePanel: ASDisplayNode? { get set }
