@@ -123,7 +123,17 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
-    public func setImage(_ image: UIImage?, color: UIColor?) {
+    public func setImage(_ image: UIImage?, color: UIColor?, transition: ContainedViewLayoutTransition) {
+        if case let .animated(duration, curve) = transition {
+            if let snapshotLayer = self.iconNode.layer.snapshotContentTree() {
+                snapshotLayer.frame = self.iconNode.frame
+                self.iconNode.layer.insertSublayer(snapshotLayer, at: 0)
+                
+                snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                    snapshotLayer?.removeFromSuperlayer()
+                })
+            }
+        }
         self.iconNode.image = image
         if let color = color {
             self.color = color

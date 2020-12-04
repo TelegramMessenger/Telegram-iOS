@@ -1426,11 +1426,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
                 
                 if self.stackFromBottom {
+                    let previousCompleteHeight = completeHeight
                     let updatedCompleteHeight = max(completeHeight, self.visibleSize.height)
                     let deltaCompleteHeight = updatedCompleteHeight - completeHeight
                     topItemEdge -= deltaCompleteHeight
                     bottomItemEdge -= deltaCompleteHeight
                     completeHeight = updatedCompleteHeight
+                    
+                    if let _ = self.keepMinimalScrollHeightWithTopInset {
+                        completeHeight += effectiveInsets.top + previousCompleteHeight
+                    }
                 }
             }
         }

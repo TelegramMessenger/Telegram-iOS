@@ -127,7 +127,7 @@ public final class VoiceChatController: ViewController {
             let isLoading: Bool
             let isEmpty: Bool
             let crossFade: Bool
-            let count: Int
+            let animated: Bool
         }
         
         private struct State: Equatable {
@@ -362,7 +362,7 @@ public final class VoiceChatController: ViewController {
             let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             
-            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count)
+            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, animated: fromEntries.count != toEntries.count)
         }
         
         private weak var controller: VoiceChatController?
@@ -456,6 +456,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
             self.listNode.clipsToBounds = true
             self.listNode.stackFromBottom = true
+            self.listNode.keepMinimalScrollHeightWithTopInset = 0
             
             self.topPanelNode = ASDisplayNode()
             self.topPanelNode.backgroundColor = panelBackgroundColor
@@ -1360,7 +1361,7 @@ public final class VoiceChatController: ViewController {
                     actionButtonState = .connecting
                     actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
                     actionButtonSubtitle = ""
-                    audioButtonAppearance = .color(.custom(0x1c1c1e))
+                    audioButtonAppearance = .color(.custom(0x2c2c2e))
                     actionButtonEnabled = false
                 case .connected:
                     if let muteState = callState.muteState, !self.pushingToTalk {
@@ -1506,6 +1507,7 @@ public final class VoiceChatController: ViewController {
             }
         }
         
+        private var isFirstTime = true
         private func dequeueTransition() {
             guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
                 return
@@ -1516,28 +1518,26 @@ public final class VoiceChatController: ViewController {
             if transition.crossFade {
                 options.insert(.AnimateCrossfade)
             }
+            if transition.animated {
+                options.insert(.AnimateInsertion)
+            }
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            
+            var scrollToItem: ListViewScrollToItem?
+            if self.isFirstTime {
+                self.isFirstTime = false
+                scrollToItem = ListViewScrollToItem(index: 0, position: .bottom(0), animated: false, curve: .Default(duration: nil), directionHint: .Up)
+            }
+            
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }
                 if !strongSelf.didSetContentsReady {
                     strongSelf.didSetContentsReady = true
                     strongSelf.controller?.contentsReady.set(true)
-                }
-                
-                if false, !transition.deletions.isEmpty || !transition.insertions.isEmpty {
-                    var itemHeight: CGFloat = 56.0
-                    strongSelf.listNode.forEachVisibleItemNode { node in
-                        if node.frame.height > 0 {
-                            itemHeight = node.frame.height
-                        }
-                    }
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
-                    }
                 }
             })
         }
@@ -1633,7 +1633,6 @@ public final class VoiceChatController: ViewController {
                     if let gestureRecognizers = view.gestureRecognizers, view != self.view {
                         for gestureRecognizer in gestureRecognizers {
                             if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
-                                print(view)
                                 if panGestureRecognizer.state != .began {
                                     panGestureRecognizer.isEnabled = false
                                     panGestureRecognizer.isEnabled = true
@@ -1685,8 +1684,7 @@ public final class VoiceChatController: ViewController {
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
-            
-            print("actually hitting")
+
             if result === self.topPanelNode.view || result === self.bottomPanelNode.view {
                 return self.view
             }
