@@ -719,14 +719,14 @@ public final class GroupCallParticipantsContext {
                 
                 if updated {
                     updatedParticipants.sort()
-                    for i in 0 ..< updatedParticipants.count {
+                    /*for i in 0 ..< updatedParticipants.count {
                         if updatedParticipants[i].peer.id == strongSelf.account.peerId {
                             let member = updatedParticipants[i]
                             updatedParticipants.remove(at: i)
                             updatedParticipants.insert(member, at: 0)
                             break
                         }
-                    }
+                    }*/
                     
                     strongSelf.stateValue = InternalState(
                         state: State(
@@ -803,14 +803,14 @@ public final class GroupCallParticipantsContext {
         
         if updated {
             updatedParticipants.sort()
-            for i in 0 ..< updatedParticipants.count {
+            /*for i in 0 ..< updatedParticipants.count {
                 if updatedParticipants[i].peer.id == strongSelf.account.peerId {
                     let member = updatedParticipants[i]
                     updatedParticipants.remove(at: i)
                     updatedParticipants.insert(member, at: 0)
                     break
                 }
-            }
+            }*/
             
             strongSelf.stateValue = InternalState(
                 state: State(
@@ -933,14 +933,14 @@ public final class GroupCallParticipantsContext {
             let defaultParticipantsAreMuted = strongSelf.stateValue.state.defaultParticipantsAreMuted
             
             updatedParticipants.sort()
-            for i in 0 ..< updatedParticipants.count {
+            /*for i in 0 ..< updatedParticipants.count {
                 if updatedParticipants[i].peer.id == strongSelf.account.peerId {
                     let member = updatedParticipants[i]
                     updatedParticipants.remove(at: i)
                     updatedParticipants.insert(member, at: 0)
                     break
                 }
-            }
+            }*/
             
             strongSelf.stateValue = InternalState(
                 state: State(
