@@ -8,42 +8,9 @@ import MergeLists
 
 enum CallListNodeEntryId: Hashable {
     case setting(Int32)
+    case groupCall(PeerId)
     case hole(MessageIndex)
     case message(MessageIndex)
-    
-    var hashValue: Int {
-        switch self {
-            case let .setting(value):
-                return value.hashValue
-            case let .hole(index):
-                return index.hashValue
-            case let .message(index):
-                return index.hashValue
-        }
-    }
-    
-    static func ==(lhs: CallListNodeEntryId, rhs: CallListNodeEntryId) -> Bool {
-        switch lhs {
-            case let .setting(value):
-                if case .setting(value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .hole(index):
-                if case .hole(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .message(index):
-                if case .message(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> Bool {
@@ -57,69 +24,96 @@ private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> B
 }
 
 enum CallListNodeEntry: Comparable, Identifiable {
+    enum SortIndex: Comparable {
+        case displayTab
+        case displayTabInfo
+        case groupCall(ChatListIndex)
+        case message(MessageIndex)
+        case hole(MessageIndex)
+        
+        static func <(lhs: SortIndex, rhs: SortIndex) -> Bool {
+            switch lhs {
+            case .displayTab:
+                return false
+            case .displayTabInfo:
+                switch rhs {
+                case .displayTab:
+                    return true
+                default:
+                    return false
+                }
+            case let .groupCall(lhsIndex):
+                switch rhs {
+                case .displayTab, .displayTabInfo:
+                    return false
+                case let .groupCall(rhsIndex):
+                    return lhsIndex > rhsIndex
+                case .message, .hole:
+                    return true
+                }
+            case let .hole(lhsIndex):
+                switch rhs {
+                case .displayTab, .displayTabInfo, .groupCall:
+                    return false
+                case let .hole(rhsIndex):
+                    return lhsIndex < rhsIndex
+                case let .message(rhsIndex):
+                    return lhsIndex < rhsIndex
+                }
+            case let .message(lhsIndex):
+                switch rhs {
+                case .displayTab, .displayTabInfo, .groupCall:
+                    return false
+                case let .hole(rhsIndex):
+                    return lhsIndex < rhsIndex
+                case let .message(rhsIndex):
+                    return lhsIndex < rhsIndex
+                default:
+                    return true
+                }
+                
+            }
+        }
+    }
+    
     case displayTab(PresentationTheme, String, Bool)
     case displayTabInfo(PresentationTheme, String)
+    case groupCall(index: ChatListIndex, peer: Peer)
     case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool)
     case holeEntry(index: MessageIndex, theme: PresentationTheme)
     
-    var index: MessageIndex {
+    var sortIndex: SortIndex {
         switch self {
-            case .displayTab:
-                return MessageIndex.absoluteUpperBound()
-            case .displayTabInfo:
-                return MessageIndex.absoluteUpperBound().predecessor()
-            case let .messageEntry(message, _, _, _, _, _, _):
-                return message.index
-            case let .holeEntry(index, _):
-                return index
+        case .displayTab:
+            return .displayTab
+        case .displayTabInfo:
+            return .displayTabInfo
+        case let .groupCall(index, _):
+            return .groupCall(index)
+        case let .messageEntry(message, _, _, _, _, _, _):
+            return .message(message.index)
+        case let .holeEntry(index, _):
+            return .hole(index)
         }
     }
     
     var stableId: CallListNodeEntryId {
         switch self {
-            case .displayTab:
-                return .setting(0)
-            case .displayTabInfo:
-                return .setting(1)
-            case let .messageEntry(message, _, _, _, _, _, _):
-                return .message(message.index)
-            case let .holeEntry(index, _):
-                return .hole(index)
+        case .displayTab:
+            return .setting(0)
+        case .displayTabInfo:
+            return .setting(1)
+        case let .groupCall(_, peer):
+            return .groupCall(peer.id)
+        case let .messageEntry(message, _, _, _, _, _, _):
+            return .message(message.index)
+        case let .holeEntry(index, _):
+            return .hole(index)
         }
     }
     
     static func <(lhs: CallListNodeEntry, rhs: CallListNodeEntry) -> Bool {
-        switch lhs {
-            case .displayTab:
-                return false
-            case .displayTabInfo:
-                switch rhs {
-                    case .displayTab:
-                        return true
-                    default:
-                        return false
-                }
-            case let .holeEntry(lhsIndex, _):
-                switch rhs {
-                    case let .holeEntry(rhsIndex, _):
-                        return lhsIndex < rhsIndex
-                    case let .messageEntry(topMessage, _, _, _, _, _, _):
-                        return lhsIndex < topMessage.index
-                    default:
-                        return true
-                }
-            case let .messageEntry(lhsTopMessage, _, _, _, _, _, _):
-                let lhsIndex = lhsTopMessage.index
-                switch rhs {
-                    case let .holeEntry(rhsIndex, _):
-                        return lhsIndex < rhsIndex
-                    case let .messageEntry(topMessage, _, _, _, _, _, _):
-                        return lhsIndex < topMessage.index
-                    default:
-                        return true
-                }
-            
-        }
+        return lhs.sortIndex < rhs.sortIndex
     }
     
     static func ==(lhs: CallListNodeEntry, rhs: CallListNodeEntry) -> Bool {
@@ -132,6 +126,18 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 }
             case let .displayTabInfo(lhsTheme, lhsText):
                 if case let .displayTabInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .groupCall(lhsIndex, lhsPeer):
+                if case let .groupCall(rhsIndex, rhsPeer) = rhs {
+                    if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if !lhsPeer.isEqual(rhsPeer) {
+                        return false
+                    }
                     return true
                 } else {
                     return false
