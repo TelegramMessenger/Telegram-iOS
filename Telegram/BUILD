@@ -24,6 +24,7 @@ load(
     "telegram_bundle_id",
     "telegram_aps_environment",
     "telegram_team_id",
+    "telegram_disable_extensions",
 )
 
 config_setting(
@@ -1528,7 +1529,7 @@ ios_application(
     strings = [
         ":AppStringResources",
     ],
-    extensions = [
+    extensions = [] if telegram_disable_extensions else [
         ":ShareExtension",
         ":NotificationContentExtension",
         ":NotificationServiceExtension",

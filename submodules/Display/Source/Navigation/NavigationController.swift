@@ -643,6 +643,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                     visibleModalCount = 0
                 }
                 if previousModalContainer == nil {
+                    topModalIsFlat = modalContainer.isFlat
+                    
                     topModalDismissProgress = modalContainer.dismissProgress
                     if case .compact = layout.metrics.widthClass {
                         modalContainer.keyboardViewManager = self.keyboardViewManager
@@ -665,8 +667,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
             }
-            
-            topModalIsFlat = modalContainer.isFlat
         }
         
         switch navigationLayout.root {
