@@ -398,6 +398,7 @@ project: check_env kill_xcode
 
 bazel_app_debug_arm64:
 	APP_VERSION="${APP_VERSION}" \
+	TELEGRAM_DISABLE_EXTENSIONS="0" \
 	build-system/prepare-build.sh Telegram distribution
 	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_DEBUG_FLAGS} \
 	-c dbg \
@@ -409,6 +410,7 @@ bazel_app_arm64:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	TELEGRAM_DISABLE_EXTENSIONS="0" \
 	build-system/prepare-build.sh Telegram distribution
 	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
 	-c opt \
@@ -422,6 +424,7 @@ bazel_app_armv7:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	TELEGRAM_DISABLE_EXTENSIONS="0" \
 	build-system/prepare-build.sh Telegram distribution
 	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
 	-c opt \
@@ -435,6 +438,7 @@ bazel_app:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	TELEGRAM_DISABLE_EXTENSIONS="0" \
 	build-system/prepare-build.sh Telegram distribution
 	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
 	-c opt \
@@ -444,28 +448,24 @@ bazel_app:
 	--output_groups=+dsyms \
 	--verbose_failures
 
-bazel_prepare_development_build:
+bazel_project: kill_xcode
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	TELEGRAM_DISABLE_EXTENSIONS="0" \
 	build-system/prepare-build.sh Telegram development
-
-bazel_project: kill_xcode bazel_prepare_development_build
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	build-system/generate-xcode-project.sh Telegram
 
-bazel_soft_project: bazel_prepare_development_build
+bazel_project_noextensions: kill_xcode
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	TELEGRAM_DISABLE_EXTENSIONS="1" \
+	build-system/prepare-build.sh Telegram development
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	build-system/generate-xcode-project.sh Telegram
-
-bazel_opt_project: bazel_prepare_development_build
-	APP_VERSION="${APP_VERSION}" \
-	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
-	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
-	GENERATE_OPT_PROJECT=1 \
-	build-system/generate-xcode-project.sh Telegram
-
