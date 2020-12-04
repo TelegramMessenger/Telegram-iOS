@@ -864,9 +864,23 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         
                         if participant.peer.id == strongSelf.accountContext.account.peerId {
                             if let muteState = participant.muteState {
+                                if muteState.canUnmute {
+                                    switch strongSelf.isMutedValue {
+                                    case let .muted(isPushToTalkActive):
+                                        if !isPushToTalkActive {
+                                            strongSelf.callContext?.setIsMuted(true)
+                                        }
+                                    case .unmuted:
+                                        strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                        strongSelf.callContext?.setIsMuted(true)
+                                    }
+                                } else {
+                                    strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                    strongSelf.callContext?.setIsMuted(true)
+                                }
                                 strongSelf.stateValue.muteState = muteState
-                                strongSelf.callContext?.setIsMuted(true)
                             } else if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
+                                strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
                                 strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
                                 strongSelf.callContext?.setIsMuted(true)
                             }
