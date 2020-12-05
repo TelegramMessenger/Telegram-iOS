@@ -38,6 +38,7 @@ swift_library(
         "//submodules/AlertUI:AlertUI",
         "//submodules/DirectionalPanGesture:DirectionalPanGesture",
         "//submodules/PeerInfoUI:PeerInfoUI",
+        "//submodules/DeviceProximity:DeviceProximity",
     ],
     visibility = [
         "//visibility:public",

@@ -440,6 +440,15 @@ public func stopGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
                     return cachedData
                 }
             })
+            if var peer = transaction.getPeer(peerId) as? TelegramChannel {
+                var flags = peer.flags
+                flags.remove(.hasVoiceChat)
+                flags.remove(.hasActiveVoiceChat)
+                peer = peer.withUpdatedFlags(flags)
+                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                    return updated
+                })
+            }
             
             account.stateManager.addUpdates(result)
         }

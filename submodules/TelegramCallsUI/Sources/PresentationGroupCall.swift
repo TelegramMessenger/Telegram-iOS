@@ -14,6 +14,7 @@ import TelegramPresentationData
 import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
+import DeviceProximity
 
 public final class AccountGroupCallContextImpl: AccountGroupCallContext {
     public final class Proxy {
@@ -427,6 +428,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
     public weak var sourcePanel: ASDisplayNode?
     
+    private var proximityManagerIndex: Int?
+    
     init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -651,6 +654,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.myAudioLevelTimer?.invalidate()
         self.typingDisposable.dispose()
+        
+        if let proximityManagerIndex = self.proximityManagerIndex {
+            DeviceProximityManager.shared().remove(proximityManagerIndex)
+        }
     }
     
     private func updateSessionState(internalState: InternalState, audioSessionControl: ManagedAudioSessionControl?) {
@@ -663,6 +670,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if let audioSessionControl = audioSessionControl, previousControl == nil {
             audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
             audioSessionControl.setup(synchronous: true)
+            
+            self.setCurrentAudioOutput(.speaker)
         }
         
         self.audioSessionShouldBeActive.set(true)
@@ -1032,6 +1041,26 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return
         }
         self.currentAudioOutputValue = output
+        
+        var shouldMonitorProximity = false
+        switch output {
+        case .builtin:
+            shouldMonitorProximity = true
+        default:
+            break
+        }
+        
+        if shouldMonitorProximity {
+            if self.proximityManagerIndex == nil {
+                self.proximityManagerIndex = DeviceProximityManager.shared().add { _ in
+                }
+            }
+        } else {
+            if let proximityManagerIndex = self.proximityManagerIndex {
+                self.proximityManagerIndex = nil
+                DeviceProximityManager.shared().remove(proximityManagerIndex)
+            }
+        }
         
         self.audioOutputStatePromise.set(.single((self.audioOutputStateValue.0, output))
         |> then(
