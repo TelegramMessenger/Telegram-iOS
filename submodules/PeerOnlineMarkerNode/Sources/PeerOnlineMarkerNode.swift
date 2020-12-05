@@ -9,7 +9,6 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
     private let rightLine: ASDisplayNode
     
     private var isCurrentlyInHierarchy = true
-    private var shouldBeAnimating = false
     
     var color: UIColor = UIColor(rgb: 0xffffff) {
         didSet {
@@ -64,10 +63,9 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
     }
     
     private func updateAnimation() {
-        let shouldBeAnimating = self.isCurrentlyInHierarchy
-        if shouldBeAnimating != self.shouldBeAnimating {
-            self.shouldBeAnimating = shouldBeAnimating
-            if shouldBeAnimating {
+        if self.isCurrentlyInHierarchy {
+            if let _ = self.leftLine.layer.animation(forKey: "animation") {
+            } else {
                 let timingFunctions: [CAMediaTimingFunction] = (0 ..< 5).map { _ in CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut) }
                 
                 let leftAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
@@ -75,6 +73,7 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
                 leftAnimation.values = [NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 8.0), NSNumber(value: 4.0), NSNumber(value: 10.0)]
                 leftAnimation.repeatCount = Float.infinity
                 leftAnimation.duration = 2.2
+                leftAnimation.beginTime = 1.0
                 self.leftLine.layer.add(leftAnimation, forKey: "animation")
 
                 let centerAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
@@ -82,6 +81,7 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
                 centerAnimation.values = [NSNumber(value: 6.0), NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 12.0), NSNumber(value: 6.0)]
                 centerAnimation.repeatCount = Float.infinity
                 centerAnimation.duration = 2.2
+                centerAnimation.beginTime = 1.0
                 self.centerLine.layer.add(centerAnimation, forKey: "animation")
                 
                 let rightAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
@@ -89,12 +89,13 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
                 rightAnimation.values = [NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 8.0), NSNumber(value: 4.0), NSNumber(value: 10.0)]
                 rightAnimation.repeatCount = Float.infinity
                 rightAnimation.duration = 2.2
+                rightAnimation.beginTime = 1.0
                 self.rightLine.layer.add(rightAnimation, forKey: "animation")
-            } else {
-                self.leftLine.layer.removeAnimation(forKey: "animation")
-                self.centerLine.layer.removeAnimation(forKey: "animation")
-                self.rightLine.layer.removeAnimation(forKey: "animation")
             }
+        } else {
+            self.leftLine.layer.removeAnimation(forKey: "animation")
+            self.centerLine.layer.removeAnimation(forKey: "animation")
+            self.rightLine.layer.removeAnimation(forKey: "animation")
         }
     }
 }
@@ -124,15 +125,14 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
     }
     
     public func setImage(_ image: UIImage?, color: UIColor?, transition: ContainedViewLayoutTransition) {
-        if case let .animated(duration, curve) = transition {
-            if let snapshotLayer = self.iconNode.layer.snapshotContentTree() {
-                snapshotLayer.frame = self.iconNode.frame
-                self.iconNode.layer.insertSublayer(snapshotLayer, at: 0)
-                
-                snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
-                    snapshotLayer?.removeFromSuperlayer()
-                })
-            }
+        if case let .animated(duration, curve) = transition, !self.iconNode.isHidden {
+            let snapshotLayer = CALayer()
+            snapshotLayer.contents = self.iconNode.layer.contents
+            snapshotLayer.frame = self.iconNode.bounds
+            self.iconNode.layer.insertSublayer(snapshotLayer, at: 0)
+            snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                snapshotLayer?.removeFromSuperlayer()
+            })
         }
         self.iconNode.image = image
         if let color = color {
@@ -147,7 +147,7 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
                 if let strongSelf = self {
                     strongSelf.iconNode.frame = CGRect(x: 0.0, y: 0.0, width: size, height: size)
 
-                    if isVoiceChat {
+                    if online && isVoiceChat {
                         if let _ = strongSelf.animationNode {
                         } else {
                             let animationNode = VoiceChatIndicatorNode()
@@ -166,7 +166,7 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
                             if let strongSelf = self, finished {
                                 strongSelf.iconNode.isHidden = !online
                                 
-                                if let animationNode = strongSelf.animationNode, !isVoiceChat {
+                                if let animationNode = strongSelf.animationNode, !online {
                                     animationNode.removeFromSupernode()
                                 }
                             }
@@ -174,7 +174,7 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
                     } else {
                         strongSelf.iconNode.isHidden = !online
                         
-                        if let animationNode = strongSelf.animationNode, !isVoiceChat {
+                        if let animationNode = strongSelf.animationNode, !online {
                             animationNode.removeFromSupernode()
                         }
                     }

@@ -1447,7 +1447,7 @@ public final class VoiceChatController: ViewController {
             
             self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: self.presentationData.strings.VoiceChat_Audio, transition: .animated(duration: 0.3, curve: .linear))
             
-            self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0x4d120e)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
+            self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0x602522)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
             
             let sideButtonMinimalInset: CGFloat = 16.0
             let sideButtonOffset = min(36.0, floor((((layout.size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))
@@ -1588,15 +1588,15 @@ public final class VoiceChatController: ViewController {
                 index += 1
             }
             
-            if callMembers.isEmpty, let accountPeer = self.accountPeer {
-                entries.append(.peer(PeerEntry(
+            if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
+                entries.insert(.peer(PeerEntry(
                     peer: accountPeer,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: .listening,
                     muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
                     canManageCall: callState?.canManageCall ?? false
-                )))
+                )), at: 1)
             }
             
             for peer in invitedPeers {
@@ -1785,6 +1785,7 @@ public final class VoiceChatController: ViewController {
         super.viewDidDisappear(animated)
         
         self.idleTimerExtensionDisposable.set(nil)
+        self.onViewDidDisappear?()
     }
     
     func dismissInteractively(completion: (() -> Void)? = nil) {

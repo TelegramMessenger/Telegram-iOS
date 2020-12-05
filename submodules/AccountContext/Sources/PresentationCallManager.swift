@@ -190,14 +190,14 @@ public struct PresentationGroupCallState: Equatable {
 }
 
 public struct PresentationGroupCallSummaryState: Equatable {
-    public var info: GroupCallInfo
+    public var info: GroupCallInfo?
     public var participantCount: Int
     public var callState: PresentationGroupCallState
     public var topParticipants: [GroupCallParticipantsContext.Participant]
     public var activeSpeakers: Set<PeerId>
     
     public init(
-        info: GroupCallInfo,
+        info: GroupCallInfo?,
         participantCount: Int,
         callState: PresentationGroupCallState,
         topParticipants: [GroupCallParticipantsContext.Participant],

@@ -574,14 +574,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.statePromise.get()
         )
         |> map { infoState, participantsState, callState -> PresentationGroupCallSummaryState? in
-            guard let infoState = infoState else {
-                return nil
-            }
             guard let participantsState = participantsState else {
                 return nil
             }
             return PresentationGroupCallSummaryState(
-                info: infoState.info,
+                info: infoState?.info,
                 participantCount: participantsState.participantCount,
                 callState: callState,
                 topParticipants: participantsState.topParticipants,
