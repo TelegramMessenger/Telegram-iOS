@@ -1588,15 +1588,15 @@ public final class VoiceChatController: ViewController {
                 index += 1
             }
             
-            if callMembers.isEmpty, let accountPeer = self.accountPeer {
-                entries.append(.peer(PeerEntry(
+            if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
+                entries.insert(.peer(PeerEntry(
                     peer: accountPeer,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: .listening,
                     muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
                     canManageCall: callState?.canManageCall ?? false
-                )))
+                )), at: 1)
             }
             
             for peer in invitedPeers {
