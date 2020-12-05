@@ -5278,23 +5278,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        if let peer = peer as? TelegramUser, peer.id != strongSelf.context.account.peerId, let contextController = contextController {
-                            var contextItems: [ContextMenuItem] = []
-                            
-                            contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesFor(peer.compactDisplayTitle).0, textColor: .primary, icon: { _ in nil }, action: { c, _ in
-                                c.dismiss(completion: {
-                                    pinAction(true, false)
-                                })
-                            })))
-                            
-                            contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesForMe, textColor: .primary, icon: { _ in nil }, action: { c, _ in
-                                c.dismiss(completion: {
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info, let contextController = contextController {
+                            contextController?.dismiss(completion: {
+                                pinAction(true, false)
+                            })
+                        } else if let peer = peer as? TelegramUser, let contextController = contextController {
+                            if peer.id == strongSelf.context.account.peerId {
+                                contextController?.dismiss(completion: {
                                     pinAction(true, true)
                                 })
-                            })))
-                            
-                            contextController.setItems(.single(contextItems))
-                            
+                            } else {
+                                var contextItems: [ContextMenuItem] = []
+                                contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesFor(peer.compactDisplayTitle).0, textColor: .primary, icon: { _ in nil }, action: { c, _ in
+                                    c.dismiss(completion: {
+                                        pinAction(true, false)
+                                    })
+                                })))
+                                
+                                contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesForMe, textColor: .primary, icon: { _ in nil }, action: { c, _ in
+                                    c.dismiss(completion: {
+                                        pinAction(true, true)
+                                    })
+                                })))
+                                
+                                contextController.setItems(.single(contextItems))
+                            }
                             return
                         } else {
                             if let contextController = contextController {

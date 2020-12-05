@@ -162,6 +162,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentCallState: PresentationCallState?
     private var currentGroupCallState: PresentationGroupCallSummaryState?
     private var currentIsMuted = true
+    private var currentIsConnecting = true
     
     public override init() {
         self.backgroundNode = CallStatusBarBackgroundNode()
@@ -224,13 +225,13 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                     self.nameDisplayOrder = presentationData.nameDisplayOrder
                     self.stateDisposable.set(
                         (combineLatest(
-                            account.postbox.loadedPeerWithId(call.peerId),
+                            account.postbox.peerView(id: call.peerId),
                             call.summaryState,
                             call.isMuted
                         )
-                    |> deliverOnMainQueue).start(next: { [weak self] peer, state, isMuted in
+                    |> deliverOnMainQueue).start(next: { [weak self] view, state, isMuted in
                         if let strongSelf = self {
-                            strongSelf.currentPeer = peer
+                            strongSelf.currentPeer = view.peers[view.peerId]
                             strongSelf.currentGroupCallState = state
                             strongSelf.currentIsMuted = isMuted
                             strongSelf.update()
