@@ -338,6 +338,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.maskBlobView = VoiceBlobView(frame: CGRect(origin: CGPoint(x: (areaSize.width - blobSize.width) / 2.0, y: (areaSize.height - blobSize.height) / 2.0), size: blobSize), maxLevel: 2.0, mediumBlobRange: (0.69, 0.87), bigBlobRange: (0.71, 1.0))
         self.maskBlobView.setColor(white)
+        self.maskBlobView.isHidden = true
         
         var updateInHierarchy: ((Bool) -> Void)?
         self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
@@ -450,6 +451,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     private func setupProgressAnimations() {
         if let _ = self.maskProgressLayer.animation(forKey: "progressRotation") {
         } else {
+            self.maskProgressLayer.isHidden = false
+            
             let animation = CABasicAnimation(keyPath: "transform.rotation.z")
             animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
             animation.duration = 1.0
@@ -535,7 +538,110 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.foregroundGradientLayer.colors = targetColors
         self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
     }
+    
+    private func playConnectionDisappearanceAnimation() {
+        let initialRotation: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.transform.rotation.z") as? NSNumber)?.floatValue ?? 0.0)
+        let initialStrokeEnd: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.strokeEnd") as? NSNumber)?.floatValue ?? 1.0)
         
+        self.maskProgressLayer.removeAnimation(forKey: "progressGrowth")
+        self.maskProgressLayer.removeAnimation(forKey: "progressRotation")
+        
+        let duration: Double = (1.0 - Double(initialStrokeEnd)) * 0.6
+        
+        let growthAnimation = CABasicAnimation(keyPath: "strokeEnd")
+        growthAnimation.fromValue = initialStrokeEnd
+        growthAnimation.toValue = 0.0
+        growthAnimation.duration = duration
+        growthAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+        
+        let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+        rotateAnimation.fromValue = initialRotation
+        rotateAnimation.toValue = initialRotation + CGFloat.pi * 2
+        rotateAnimation.isAdditive = true
+        rotateAnimation.duration = duration
+        rotateAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+        
+        let groupAnimation = CAAnimationGroup()
+        groupAnimation.animations = [growthAnimation, rotateAnimation]
+        groupAnimation.duration = duration
+        
+        CATransaction.setCompletionBlock {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.maskProgressLayer.isHidden = true
+            self.maskProgressLayer.removeAllAnimations()
+            CATransaction.commit()
+        }
+        
+        self.maskProgressLayer.add(groupAnimation, forKey: "progressDisappearance")
+        CATransaction.commit()
+    }
+    
+    private func playBlobsDisappearanceAnimation() {
+        self.foregroundCircleLayer.isHidden = false
+        
+        self.updateGlowAndGradientAnimations(active: nil, previousActive: nil)
+        
+        self.maskBlobView.startAnimating()
+        self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.maskBlobView.isHidden = true
+            self?.maskBlobView.stopAnimating()
+            self?.maskBlobView.layer.removeAllAnimations()
+        })
+        
+        CATransaction.begin()
+        let growthAnimation = CABasicAnimation(keyPath: "transform.scale")
+        growthAnimation.fromValue = 0.0
+        growthAnimation.toValue = 1.0
+        growthAnimation.duration = 0.15
+        growthAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeOut)
+        
+        CATransaction.setCompletionBlock {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.maskGradientLayer.isHidden = true
+            self.maskCircleLayer.isHidden = true
+            self.foregroundCircleLayer.isHidden = true
+            CATransaction.commit()
+        }
+        
+        self.foregroundCircleLayer.add(growthAnimation, forKey: "insideGrowth")
+        CATransaction.commit()
+    }
+        
+    private func playBlobsAppearanceAnimation(active: Bool) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.foregroundCircleLayer.isHidden = false
+        self.maskCircleLayer.isHidden = false
+        self.maskProgressLayer.isHidden = true
+        self.maskGradientLayer.isHidden = false
+        CATransaction.commit()
+                
+        self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
+        
+        self.maskBlobView.isHidden = false
+        self.maskBlobView.startAnimating()
+        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                
+        CATransaction.begin()
+        let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
+        shrinkAnimation.fromValue = 1.0
+        shrinkAnimation.toValue = 0.0
+        shrinkAnimation.duration = 0.15
+        shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+        
+        CATransaction.setCompletionBlock {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.foregroundCircleLayer.isHidden = true
+            CATransaction.commit()
+        }
+        
+        self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
+        CATransaction.commit()
+    }
+    
     private func playConnectionAnimation(active: Bool, completion: @escaping () -> Void) {
         CATransaction.begin()
         let initialRotation: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.transform.rotation.z") as? NSNumber)?.floatValue ?? 0.0)
@@ -576,6 +682,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             
             self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
             
+            self.maskBlobView.isHidden = false
             self.maskBlobView.startAnimating()
             self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
             
@@ -624,21 +731,34 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                     if transition == .connecting {
                         self.playConnectionAnimation(active: newActive) { [weak self] in
                             self?.isActive = newActive
-                            self?.transition = nil
                         }
                     } else if transition == .disabled {
+                        self.playBlobsAppearanceAnimation(active: newActive)
                         self.transition = nil
+                        self.isActive = newActive
+                        self.updatedActive?(true)
                     } else if case let .blob(previousActive) = transition {
                         updateGlowAndGradientAnimations(active: newActive, previousActive: previousActive)
                         self.transition = nil
                         self.isActive = newActive
                     }
+                    self.transition = nil
                 } else {
                     self.maskBlobView.startAnimating()
                 }
             case .disabled:
+                self.updatedActive?(true)
                 self.isActive = false
                 self.updateGlowScale(nil)
+                
+                if let transition = self.transition {
+                    if case .connecting = transition {
+                        playConnectionDisappearanceAnimation()
+                    } else if case .blob = transition {
+                        playBlobsDisappearanceAnimation()
+                    }
+                    self.transition = nil
+                }
                 break
         }
     }

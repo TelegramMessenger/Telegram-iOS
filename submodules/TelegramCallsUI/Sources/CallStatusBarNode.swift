@@ -162,7 +162,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentCallState: PresentationCallState?
     private var currentGroupCallState: PresentationGroupCallSummaryState?
     private var currentIsMuted = true
-    private var currentIsConnecting = true
+    private var currentIsConnected = true
     
     public override init() {
         self.backgroundNode = CallStatusBarBackgroundNode()
@@ -234,6 +234,15 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.currentPeer = view.peers[view.peerId]
                             strongSelf.currentGroupCallState = state
                             strongSelf.currentIsMuted = isMuted
+                            
+                            let currentIsConnected: Bool
+                            if let state = state, case .connected = state.callState.networkState {
+                                currentIsConnected = true
+                            } else {
+                                currentIsConnected = false
+                            }
+                            strongSelf.currentIsConnected = currentIsConnected
+                            
                             strongSelf.update()
                         }
                     }))
@@ -292,7 +301,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.titleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize)
         self.subtitleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize)
         
-        self.backgroundNode.speaking = !self.currentIsMuted
+        self.backgroundNode.speaking = self.currentIsConnected && !self.currentIsMuted
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
     }
 }

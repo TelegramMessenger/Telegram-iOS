@@ -5279,12 +5279,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info, let contextController = contextController {
-                            contextController?.dismiss(completion: {
+                            contextController.dismiss(completion: {
                                 pinAction(true, false)
                             })
                         } else if let peer = peer as? TelegramUser, let contextController = contextController {
                             if peer.id == strongSelf.context.account.peerId {
-                                contextController?.dismiss(completion: {
+                                contextController.dismiss(completion: {
                                     pinAction(true, true)
                                 })
                             } else {
