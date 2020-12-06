@@ -3207,7 +3207,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             if let activeCall = cachedChannelData.activeCall {
-                let _ = self.context.sharedContext.callManager?.joinGroupCall(context: self.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false, sourcePanel: nil)
+                self.context.joinGroupCall(peerId: peer.id, activeCall: activeCall, sourcePanel: nil)
             } else {
                 self.createAndJoinGroupCall(peerId: peer.id)
             }
@@ -3221,48 +3221,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.controller?.present(textAlertController(context: self.context, title: self.presentationData.strings.Call_ConnectionErrorTitle, text: self.presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             return
         }
-            
-        let callResult = self.context.sharedContext.callManager?.requestCall(context: self.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
-        if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-            if currentPeerId == peer.id {
-                self.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
-            } else {
-                let presentationData = self.presentationData
-                let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                    return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
-                } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                    if let peer = peer {
-                        if let strongSelf = self, let current = current {
-                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                if let strongSelf = self {
-                                    let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
-                                }
-                            })]), in: .window(.root))
-                        } else if let strongSelf = self {
-                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                            })]), in: .window(.root))
-                        }
-                    }
-                })
-                
-                /*let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                    return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
-                }
-                |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let peer = peer, let current = current {
-                        strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Call_CallInProgressTitle, text: strongSelf.presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
-                        })]), in: .window(.root))
-                    }
-                })*/
-            }
-        }
+        
+        self.context.requestCall(peerId: peer.id, isVideo: isVideo, completion: {})
     }
     
     private func createAndJoinGroupCall(peerId: PeerId) {
@@ -3286,7 +3246,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: endCurrentIfAny, sourcePanel: nil)
+                    strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), sourcePanel: nil)
                 }, error: { [weak self] _ in
                     dismissStatus?()
                     

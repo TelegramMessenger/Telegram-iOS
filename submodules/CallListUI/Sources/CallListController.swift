@@ -275,37 +275,10 @@ public final class CallListController: ViewController {
                     strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
-            
-                let callResult = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: false)
-                if let callResult = callResult {
-                    if case let .alreadyInProgress(currentPeerId) = callResult {
-                        if currentPeerId == peerId {
-                            began?()
-                            strongSelf.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
-                        } else {
-                            let presentationData = strongSelf.presentationData
-                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                                return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
-                            } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                                if let strongSelf = self, let peer = peer {
-                                    if let current = current {
-                                        strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                            if let strongSelf = self {
-                                                let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
-                                                began?()
-                                            }
-                                        })]), in: .window(.root))
-                                    } else {
-                                        strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        })]), in: .window(.root))
-                                    }
-                                }
-                            })
-                        }
-                    } else {
-                        began?()
-                    }
-                }
+                
+                strongSelf.context.requestCall(peerId: peerId, isVideo: isVideo, completion: {
+                    began?()
+                })
             }
         }))
     }

@@ -673,4 +673,7 @@ public protocol AccountContext: class {
     func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput
     func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
+    
+    func joinGroupCall(peerId: PeerId, activeCall: CachedChannelData.ActiveCall, sourcePanel: ASDisplayNode?)
+    func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
 }

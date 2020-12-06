@@ -243,6 +243,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                         }
                                     case .excludeNonMembers:
                                         break
+                                    case .excludeBots:
+                                        if let user = peer as? TelegramUser, user.botInfo != nil {
+                                            continue
+                                        }
                                 }
                             }
                         case .promote:
@@ -261,6 +265,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                         }
                                     case .excludeNonMembers:
                                         break
+                                    case .excludeBots:
+                                        if let user = peer as? TelegramUser, user.botInfo != nil {
+                                            continue
+                                        }
                                 }
                             }
                             if case .creator = participant {
@@ -283,6 +291,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                         }
                                     case .excludeNonMembers:
                                         break
+                                    case .excludeBots:
+                                        if let user = peer as? TelegramUser, user.botInfo != nil {
+                                            continue
+                                        }
                                 }
                             }
                     }
@@ -327,9 +339,9 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 
                 var index = 0
-                for participant in state.list {
+                participantsLoop: for participant in state.list {
                     if participant.peer.isDeleted {
-                        continue
+                        continue participantsLoop
                     }
                     
                     var label: String?
@@ -337,13 +349,13 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     switch mode {
                         case .ban:
                             if participant.peer.id == context.account.peerId {
-                                continue
+                                continue participantsLoop
                             }
                             for filter in filters {
                                 switch filter {
                                 case let .exclude(ids):
                                     if ids.contains(participant.peer.id) {
-                                        continue
+                                        continue participantsLoop
                                     }
                                 case let .disable(ids):
                                     if ids.contains(participant.peer.id) {
@@ -351,6 +363,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                     }
                                 case .excludeNonMembers:
                                     break
+                                case .excludeBots:
+                                    if let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                                        continue participantsLoop
+                                    }
                                 }
                             }
                         case .promote:
@@ -361,7 +377,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 switch filter {
                                 case let .exclude(ids):
                                     if ids.contains(participant.peer.id) {
-                                        continue
+                                        continue participantsLoop
                                     }
                                 case let .disable(ids):
                                     if ids.contains(participant.peer.id) {
@@ -369,6 +385,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                     }
                                 case .excludeNonMembers:
                                     break
+                                case .excludeBots:
+                                    if let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                                        continue participantsLoop
+                                    }
                                 }
                             }
                             if case .creator = participant.participant {
@@ -383,7 +403,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 switch filter {
                                 case let .exclude(ids):
                                     if ids.contains(participant.peer.id) {
-                                        continue
+                                        continue participantsLoop
                                     }
                                 case let .disable(ids):
                                     if ids.contains(participant.peer.id) {
@@ -391,6 +411,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                     }
                                 case .excludeNonMembers:
                                     break
+                                case .excludeBots:
+                                    if let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                                        continue participantsLoop
+                                    }
                                 }
                             }
                     }

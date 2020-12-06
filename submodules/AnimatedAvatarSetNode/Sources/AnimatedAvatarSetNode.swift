@@ -250,6 +250,7 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
     }
     
     public func updateAudioLevels(color: UIColor, backgroundColor: UIColor, levels: [PeerId: Float]) {
+        //print("updateAudioLevels visible: \(self.contentNodes.keys.map(\.peerId.id)) data: \(levels)")
         for (key, itemNode) in self.contentNodes {
             if let value = levels[key.peerId] {
                 itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: value)

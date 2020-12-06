@@ -507,36 +507,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             
                             let peerId = message.id.peerId
-                            let callResult = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash), endCurrentIfAny: false, sourcePanel: nil)
-                            if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                                if currentPeerId == peerId {
-                                    strongSelf.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
-                                } else {
-                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                                        return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
-                                    }
-                                    |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        guard let peer = peer else {
-                                            return
-                                        }
-                                        if let current = current {
-                                            strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                                if let strongSelf = self {
-                                                    let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash), endCurrentIfAny: true, sourcePanel: nil)
-                                                }
-                                            })]), in: .window(.root))
-                                        } else {
-                                            strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                            })]), in: .window(.root))
-                                        }
-                                    })
-                                }
-                            }
-                            break
+                            
+                            strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash), sourcePanel: nil)
                         default:
                             break
                     }
@@ -1413,30 +1385,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
-                    if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                        if currentPeerId == peer.id {
-                            context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
-                        } else {
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                                return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
-                            } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                                if let peer = peer {
-                                    if let strongSelf = self, let current = current {
-                                        strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                            if let strongSelf = self {
-                                                let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
-                                            }
-                                        })]), in: .window(.root))
-                                    } else {
-                                        strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        })]), in: .window(.root))
-                                    }
-                                }
-                            })
-                        }
-                    }
+                    context.requestCall(peerId: peer.id, isVideo: isVideo, completion: {})
                 })
             }
         }, longTap: { [weak self] action, message in
@@ -6035,30 +5984,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            let callResult = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false, sourcePanel: nil)
-            if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                if currentPeerId == peer.id {
-                    strongSelf.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
-                } else {
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                        return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
-                    } |> deliverOnMainQueue).start(next: { peer, current in
-                        if let peer = peer {
-                            if let strongSelf = self, let current = current {
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    if let strongSelf = self {
-                                        let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true, sourcePanel: nil)
-                                    }
-                                })]), in: .window(.root))
-                            } else {
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                })]), in: .window(.root))
-                            }
-                        }
-                    })
-                }
-            }
+            strongSelf.context.joinGroupCall(peerId: peer.id, activeCall: activeCall, sourcePanel: nil)
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
