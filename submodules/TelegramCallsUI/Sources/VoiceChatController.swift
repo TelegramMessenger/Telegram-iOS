@@ -1248,7 +1248,7 @@ public final class VoiceChatController: ViewController {
             let previousLeftBorderFrame = self.leftBorderNode.frame
             let previousRightBorderFrame = self.rightBorderNode.frame
             
-            self.updateColors(fullscreen: panelOffset == layoutTopInset)
+            self.updateColors(fullscreen: abs(panelOffset - layoutTopInset) < 1.0)
             
             if !backgroundFrame.equalTo(previousBackgroundFrame) {
                 self.backgroundNode.frame = backgroundFrame

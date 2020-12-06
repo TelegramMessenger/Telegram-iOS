@@ -200,6 +200,8 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             return
         }
         
+        let wasEmpty = (self.titleNode.attributedText?.string ?? "").isEmpty
+        
         if !self.didSetupData {
             switch content {
                 case let .call(sharedContext, account, call):
@@ -340,11 +342,13 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let contentHeight: CGFloat = 24.0
         let verticalOrigin: CGFloat = size.height - contentHeight
         
-        self.microphoneNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - animationSize) / 2.0)), size: CGSize(width: animationSize, height: animationSize))
+        let transition: ContainedViewLayoutTransition = wasEmpty ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
+        
+        transition.updateFrame(node: self.microphoneNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - animationSize) / 2.0)), size: CGSize(width: animationSize, height: animationSize)))
         self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: self.currentIsMuted, color: UIColor.white), animated: true)
         
-        self.titleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize)
-        self.subtitleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize)
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
+        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
         
         self.backgroundNode.speaking = self.currentIsConnected && !self.currentIsMuted
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))

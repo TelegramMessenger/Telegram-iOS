@@ -1013,7 +1013,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset - effectiveInsets.bottom - effectiveInsets.top)
                 bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
             } else {
-                effectiveInsets.top = self.visibleSize.height - completeHeight
+                effectiveInsets.top = max(effectiveInsets.top, self.visibleSize.height - completeHeight)
                 completeHeight = max(completeHeight, self.visibleSize.height)
                 bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
             }
