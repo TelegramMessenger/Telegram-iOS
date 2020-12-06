@@ -962,7 +962,11 @@ open class NavigationController: UINavigationController, ContainableController, 
         let resolvedStatusBarStyle: NavigationStatusBarStyle
         switch statusBarStyle {
         case .Ignore, .Hide:
-            resolvedStatusBarStyle = self.theme.statusBar
+            if self.inCallStatusBar != nil {
+                resolvedStatusBarStyle = .white
+            } else {
+                resolvedStatusBarStyle = self.theme.statusBar
+            }
         case .Black:
             resolvedStatusBarStyle = .black
         case .White:

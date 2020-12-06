@@ -5971,12 +5971,14 @@ Sorry for the inconvenience.";
 "VoiceChat.Panel.Members_3_10" = "%@ members";
 "VoiceChat.Panel.Members_many" = "%@ members";
 "VoiceChat.Panel.Members_any" = "%@ members";
-"VoiceChat.Panel.MembersSpeaking_0" = "%@ members speaking";
-"VoiceChat.Panel.MembersSpeaking_1" = "%@ member speaking";
-"VoiceChat.Panel.MembersSpeaking_2" = "%@ members speaking";
-"VoiceChat.Panel.MembersSpeaking_3_10" = "%@ members speaking";
-"VoiceChat.Panel.MembersSpeaking_many" = "%@ members speaking";
-"VoiceChat.Panel.MembersSpeaking_any" = "%@ members speaking";
+
+"VoiceChat.Status.Members_0" = "[%@]members";
+"VoiceChat.Status.Members_1" = "[%@]member";
+"VoiceChat.Status.Members_2" = "[%@]members";
+"VoiceChat.Status.Members_3_10" = "[%@]members";
+"VoiceChat.Status.Members_many" = "[%@]members";
+"VoiceChat.Status.Members_any" = "[%@]members";
+"VoiceChat.Status.MembersFormat" = "%1$@ %2$@";
 
 "ChannelInfo.CreateVoiceChat" = "Start Voice Chat";
 

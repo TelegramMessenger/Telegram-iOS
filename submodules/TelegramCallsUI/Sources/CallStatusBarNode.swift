@@ -147,7 +147,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private let backgroundNode: CallStatusBarBackgroundNode
     private let microphoneNode: VoiceChatMicrophoneNode
     private let titleNode: ImmediateTextNode
-    private let subtitleNode: ImmediateTextNode
+    private let subtitleNode: ImmediateAnimatedCountLabelNode
     
     private let audioLevelDisposable = MetaDisposable()
     private let stateDisposable = MetaDisposable()
@@ -169,7 +169,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.backgroundNode = CallStatusBarBackgroundNode()
         self.microphoneNode = VoiceChatMicrophoneNode()
         self.titleNode = ImmediateTextNode()
-        self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode = ImmediateAnimatedCountLabelNode()
         
         super.init()
                 
@@ -267,6 +267,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         var title: String = ""
         var subtitle: String = ""
         
+        let textFont = Font.regular(13.0)
+        let textColor = UIColor.white
+        var segments: [AnimatedCountLabelNode.Segment] = []
+        
         if let strings = self.strings {
             if let currentPeer = self.currentPeer {
                 title = currentPeer.displayTitle(strings: strings, displayOrder: self.nameDisplayOrder)
@@ -277,18 +281,58 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             } else if let content = self.currentContent, case .groupCall = content {
                 membersCount = 1
             }
+            
             if let membersCount = membersCount {
-                subtitle = strings.VoiceChat_Panel_Members(membersCount)
+                var membersPart = strings.VoiceChat_Status_Members(membersCount)
+                if let startIndex = membersPart.firstIndex(of: "["), let endIndex = membersPart.firstIndex(of: "]") {
+                    membersPart.removeSubrange(startIndex ... endIndex)
+                }
+                
+                let rawTextAndRanges = strings.VoiceChat_Status_MembersFormat("\(membersCount)", membersPart)
+                
+                let (rawText, ranges) = rawTextAndRanges
+                var textIndex = 0
+                var latestIndex = 0
+                for (index, range) in ranges {
+                    var lowerSegmentIndex = range.lowerBound
+                    if index != 0 {
+                        lowerSegmentIndex = min(lowerSegmentIndex, latestIndex)
+                    } else {
+                        if latestIndex < range.lowerBound {
+                            let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.lowerBound)])
+                            segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: textColor)))
+                            textIndex += 1
+                        }
+                    }
+                    latestIndex = range.upperBound
+                    
+                    let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.upperBound)])
+                    if index == 0 {
+                        segments.append(.number(Int(membersCount), NSAttributedString(string: part, font: textFont, textColor: textColor)))
+                    } else {
+                        segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: textColor)))
+                        textIndex += 1
+                    }
+                }
+                if latestIndex < rawText.count {
+                    let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex)...])
+                    segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: textColor)))
+                    textIndex += 1
+                }
             }
         }
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white)
-        self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: .white)
         
+        if self.subtitleNode.segments != segments {
+            self.subtitleNode.segments = segments
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white)
+
         let animationSize: CGFloat = 25.0
         let iconSpacing: CGFloat = 0.0
         let spacing: CGFloat = 5.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: size.height))
-        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: 160.0, height: size.height))
+        let subtitleSize = self.subtitleNode.updateLayout(size: CGSize(width: 160.0, height: size.height), animated: true)
         
         let totalWidth = animationSize + iconSpacing + titleSize.width + spacing + subtitleSize.width
         let horizontalOrigin: CGFloat = floor((size.width - totalWidth) / 2.0)
