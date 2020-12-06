@@ -397,7 +397,6 @@ public final class VoiceChatController: ViewController {
         private var didSetContentsReady: Bool = false
         private var didSetDataReady: Bool = false
         
-        private var currentGroupMembers: [RenderedChannelParticipant]?
         private var currentCallMembers: [GroupCallParticipantsContext.Participant]?
         private var currentInvitedPeers: [Peer]?
         private var currentSpeakingPeers: Set<PeerId>?
@@ -542,6 +541,7 @@ public final class VoiceChatController: ViewController {
                     if !groupPeer.hasPermission(.inviteMembers) {
                         filters.append(.excludeNonMembers)
                     }
+                    filters.append(.excludeBots)
                     
                     var dismissController: (() -> Void)?
                     let controller = ChannelMembersSearchController(context: strongSelf.context, peerId: groupPeer.id, forceTheme: strongSelf.darkTheme, mode: .inviteToCall, filters: filters, openPeer: { peer, participant in
@@ -560,72 +560,78 @@ public final class VoiceChatController: ViewController {
                             
                             strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                         } else {
-                            let selfController = strongSelf.controller
-                            let inviteDisposable = strongSelf.inviteDisposable
-                            var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(account: strongSelf.context.account, peerId: groupPeer.id, memberIds: [peer.id])
-                            var cancelImpl: (() -> Void)?
-                            let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
-                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                    cancelImpl?()
-                                }))
-                                selfController?.present(controller, in: .window(.root))
-                                return ActionDisposable { [weak controller] in
-                                    Queue.mainQueue().async() {
-                                        controller?.dismiss()
+                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                let selfController = strongSelf.controller
+                                let inviteDisposable = strongSelf.inviteDisposable
+                                var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(account: strongSelf.context.account, peerId: groupPeer.id, memberIds: [peer.id])
+                                var cancelImpl: (() -> Void)?
+                                let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
+                                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                                        cancelImpl?()
+                                    }))
+                                    selfController?.present(controller, in: .window(.root))
+                                    return ActionDisposable { [weak controller] in
+                                        Queue.mainQueue().async() {
+                                            controller?.dismiss()
+                                        }
                                     }
                                 }
-                            }
-                            |> runOn(Queue.mainQueue())
-                            |> delay(0.15, queue: Queue.mainQueue())
-                            let progressDisposable = progressSignal.start()
-                            
-                            inviteSignal = inviteSignal
-                            |> afterDisposed {
-                                Queue.mainQueue().async {
-                                    progressDisposable.dispose()
-                                }
-                            }
-                            cancelImpl = {
-                                inviteDisposable.set(nil)
-                            }
-                            
-                            inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
-                                dismissController?()
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                |> runOn(Queue.mainQueue())
+                                |> delay(0.15, queue: Queue.mainQueue())
+                                let progressDisposable = progressSignal.start()
                                 
-                                let text: String
-                                switch error {
-                                    case .limitExceeded:
-                                        text = presentationData.strings.Channel_ErrorAddTooMuch
-                                    case .tooMuchJoined:
-                                        text = presentationData.strings.Invite_ChannelsTooMuch
-                                    case .generic:
-                                        text = presentationData.strings.Login_UnknownError
-                                    case .restricted:
-                                        text = presentationData.strings.Channel_ErrorAddBlocked
-                                    case .notMutualContact:
-                                        text = presentationData.strings.GroupInfo_AddUserLeftError
-                                    case .botDoesntSupportGroups:
-                                        text = presentationData.strings.Channel_BotDoesntSupportGroups
-                                    case .tooMuchBots:
-                                        text = presentationData.strings.Channel_TooMuchBots
-                                    case .bot:
-                                        text = presentationData.strings.Login_UnknownError
+                                inviteSignal = inviteSignal
+                                |> afterDisposed {
+                                    Queue.mainQueue().async {
+                                        progressDisposable.dispose()
+                                    }
                                 }
-                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            }, completed: {
-                                guard let strongSelf = self else {
+                                cancelImpl = {
+                                    inviteDisposable.set(nil)
+                                }
+                                
+                                inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
                                     dismissController?()
-                                    return
-                                }
-                                strongSelf.call.invitePeer(peer.id)
-                                dismissController?()
-                                
-                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
-                            }))
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                    
+                                    let text: String
+                                    switch error {
+                                        case .limitExceeded:
+                                            text = presentationData.strings.Channel_ErrorAddTooMuch
+                                        case .tooMuchJoined:
+                                            text = presentationData.strings.Invite_ChannelsTooMuch
+                                        case .generic:
+                                            text = presentationData.strings.Login_UnknownError
+                                        case .restricted:
+                                            text = presentationData.strings.Channel_ErrorAddBlocked
+                                        case .notMutualContact:
+                                            text = presentationData.strings.GroupInfo_AddUserLeftError
+                                        case .botDoesntSupportGroups:
+                                            text = presentationData.strings.Channel_BotDoesntSupportGroups
+                                        case .tooMuchBots:
+                                            text = presentationData.strings.Channel_TooMuchBots
+                                        case .bot:
+                                            text = presentationData.strings.Login_UnknownError
+                                    }
+                                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                }, completed: {
+                                    guard let strongSelf = self else {
+                                        dismissController?()
+                                        return
+                                    }
+                                    strongSelf.call.invitePeer(peer.id)
+                                    dismissController?()
+                                    
+                                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                }))
+                            })]), in: .window(.root))
                         }
                     })
                     controller.copyInviteLink = {
@@ -809,17 +815,9 @@ public final class VoiceChatController: ViewController {
                             strongSelf.actionButton.isUserInteractionEnabled = true
                         }
                     }
-                    
-                    /*if wasMuted != (state.muteState != nil), let groupMembers = strongSelf.currentGroupMembers {
-                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
-                    }
-                    
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                    }*/
                 }
                 
-                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: strongSelf.currentGroupMembers ?? [], callMembers: callMembers?.participants ?? [], invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [])
+                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: callMembers?.participants ?? [], invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [])
                 
                 let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers?.totalCount ?? 0)))
                 strongSelf.titleView.set(title: strongSelf.presentationData.strings.VoiceChat_Title, subtitle: subtitle)
@@ -837,7 +835,7 @@ public final class VoiceChatController: ViewController {
                                 
                 if !strongSelf.didSetDataReady {
                     strongSelf.accountPeer = accountPeer
-                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: [], callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
                     
                     if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
                         let addressName = channel.addressName ?? ""
@@ -997,7 +995,7 @@ public final class VoiceChatController: ViewController {
                     })))
                 }
             
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: strongOptionsButton.extractedContainerNode, keepInPlace: true, blurBackground: false)), items: .single(items), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: strongOptionsButton.extractedContainerNode, keepInPlace: false, blurBackground: false)), items: .single(items), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
             
@@ -1113,7 +1111,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
-                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+                    self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 case .ended, .cancelled:
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
@@ -1128,7 +1126,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
-                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+                    self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 default:
                     break
             }
@@ -1544,8 +1542,7 @@ public final class VoiceChatController: ViewController {
             })
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, groupMembers: [RenderedChannelParticipant], callMembers: [GroupCallParticipantsContext.Participant], invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
-            self.currentGroupMembers = groupMembers
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: [GroupCallParticipantsContext.Participant], invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
             self.currentCallMembers = callMembers
             self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers

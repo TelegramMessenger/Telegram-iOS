@@ -185,7 +185,6 @@
 "PUSH_CHAT_MESSAGES_1" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGES_any" = "%2$@|%1$@ sent %3$d messages";
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
-"PUSH_CHAT_MESSAGE_DOCS" = "%2$@|%1$@ sent %3$d files";
 "PUSH_CHAT_MESSAGE_DOCS_1" = "%2$@|%1$@ sent a file";
 "PUSH_CHAT_MESSAGE_DOCS_any" = "%2$@|%1$@ sent %3$d files";
 
@@ -2491,10 +2490,12 @@ Unused sets are archived when you add more.";
 
 "Call.CallInProgressTitle" = "Call in Progress";
 "Call.CallInProgressMessage" = "Finish call with %1$@ and start a new one with %2$@?";
+"Call.CallInProgressVoiceChatMessage" = "Finish call with %1$@ and start a voice chat with %2$@?";
 "Call.ExternalCallInProgressMessage" = "Please finish the current call first.";
 
 "Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
 "Call.VoiceChatInProgressMessage" = "Leave voice chat in %1$@ and start a new one with %2$@?";
+"Call.VoiceChatInProgressCallMessage" = "Leave voice chat in %1$@ and start a call with %2$@?";
 
 "Call.Message" = "Message";
 
@@ -5987,6 +5988,9 @@ Sorry for the inconvenience.";
 "VoiceChat.EndConfirmationTitle" = "End voice chat";
 "VoiceChat.EndConfirmationText" = "Are you sure you want to end this voice chat?";
 "VoiceChat.EndConfirmationEnd" = "End";
+
+"VoiceChat.InviteMemberToGroupFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the group?";
+"VoiceChat.InviteMemberToGroupFirstAdd" = "Add";
 
 "CHAT_VOICECHAT_START" = "%1$@ has started voice chat in the group %2$@";
 "CHAT_VOICECHAT_INVITE" = "%1$@ has invited %3$@ in the group %2$@";

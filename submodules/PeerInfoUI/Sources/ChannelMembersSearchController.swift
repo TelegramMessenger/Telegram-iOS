@@ -19,6 +19,7 @@ public enum ChannelMembersSearchFilter {
     case exclude([PeerId])
     case disable([PeerId])
     case excludeNonMembers
+    case excludeBots
 }
 
 public final class ChannelMembersSearchController: ViewController {

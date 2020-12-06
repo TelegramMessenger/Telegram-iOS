@@ -651,12 +651,15 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     var entries: [ChannelMembersSearchEntry] = []
                     
                     var existingPeerIds = Set<PeerId>()
+                    var excludeBots = false
                     for filter in filters {
                         switch filter {
                             case let .exclude(ids):
                                 existingPeerIds = existingPeerIds.union(ids)
                             case .disable, .excludeNonMembers:
                                 break
+                            case .excludeBots:
+                                excludeBots = true
                         }
                     }
                     switch mode {
@@ -670,6 +673,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for participant in foundGroupMembers {
                         if participant.peer.isDeleted {
+                            continue
+                        }
+                        
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
                             continue
                         }
                         
@@ -807,6 +814,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     for participant in foundMembers {
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection
@@ -836,6 +847,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     for peer in foundContacts.0 {
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .contacts, dateTimeFormat: presentationData.dateTimeFormat))
@@ -845,6 +860,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.0 {
                         let peer = foundPeer.peer
+                        
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
@@ -854,6 +874,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.1 {
                         let peer = foundPeer.peer
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
@@ -939,12 +963,15 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     var entries: [ChannelMembersSearchEntry] = []
                     
                     var existingPeerIds = Set<PeerId>()
+                    var excludeBots = false
                     for filter in filters {
                         switch filter {
                         case let .exclude(ids):
                             existingPeerIds = existingPeerIds.union(ids)
                         case .disable, .excludeNonMembers:
                             break
+                        case .excludeBots:
+                            excludeBots = true
                         }
                     }
                     switch mode {
@@ -957,6 +984,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     var index = 0
                     
                     for participant in foundGroupMembers {
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection
@@ -1087,6 +1118,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     for participant in foundMembers {
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection
@@ -1117,6 +1152,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.0 {
                         let peer = foundPeer.peer
+                        
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
@@ -1126,6 +1166,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.1 {
                         let peer = foundPeer.peer
+                        
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))

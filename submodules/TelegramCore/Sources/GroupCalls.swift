@@ -114,7 +114,6 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 )
             }
             |> mapError { _ -> GetCurrentGroupCallError in
-                return .generic
             }
         }
     }
@@ -122,6 +121,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
 
 public enum CreateGroupCallError {
     case generic
+    case anonymousNotAllowed
 }
 
 public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCallInfo, CreateGroupCallError> {
@@ -135,7 +135,10 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
         }
         
         return account.network.request(Api.functions.phone.createGroupCall(channel: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max)))
-        |> mapError { _ -> CreateGroupCallError in
+        |> mapError { error -> CreateGroupCallError in
+            if error.errorDescription == "ANONYMOUS_CALLS_DISABLED" {
+                return .anonymousNotAllowed
+            }
             return .generic
         }
         |> mapToSignal { result -> Signal<GroupCallInfo, CreateGroupCallError> in
