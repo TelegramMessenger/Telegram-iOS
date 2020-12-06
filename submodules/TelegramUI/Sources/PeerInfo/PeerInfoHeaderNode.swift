@@ -69,6 +69,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         super.init()
         
+        self.accessibilityTraits = .button
+        
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.textNode)
@@ -132,6 +134,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         }
         
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.accessibilityLabel = text
         let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -1838,6 +1841,9 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         
         super.init(pointerStyle: .default)
         
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
+        
         self.addSubnode(self.regularTextNode)
         self.addSubnode(self.whiteTextNode)
         self.addSubnode(self.iconNode)
@@ -1874,6 +1880,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                 case .editVideo:
                     text = presentationData.strings.Settings_EditVideo
             }
+            self.accessibilityLabel = text
             
             let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
             

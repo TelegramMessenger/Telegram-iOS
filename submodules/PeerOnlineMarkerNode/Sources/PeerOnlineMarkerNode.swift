@@ -161,20 +161,24 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
                     if animated {
                         let initialScale: CGFloat = strongSelf.iconNode.isHidden ? 0.0 : CGFloat((strongSelf.iconNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
                         let targetScale: CGFloat = online ? 1.0 : 0.0
-                        strongSelf.iconNode.isHidden = false
-                        strongSelf.iconNode.layer.animateScale(from: initialScale, to: targetScale, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
-                            if let strongSelf = self, finished {
-                                strongSelf.iconNode.isHidden = !online
-                                
-                                if let animationNode = strongSelf.animationNode, !online {
-                                    animationNode.removeFromSupernode()
+                        if initialScale != targetScale {
+                            strongSelf.iconNode.isHidden = false
+                            strongSelf.iconNode.layer.animateScale(from: initialScale, to: targetScale, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
+                                if let strongSelf = self, finished {
+                                    strongSelf.iconNode.isHidden = !online
+                                    
+                                    if let animationNode = strongSelf.animationNode, !online {
+                                        strongSelf.animationNode = nil
+                                        animationNode.removeFromSupernode()
+                                    }
                                 }
-                            }
-                        })
+                            })
+                        }
                     } else {
                         strongSelf.iconNode.isHidden = !online
                         
                         if let animationNode = strongSelf.animationNode, !online {
+                            strongSelf.animationNode = nil
                             animationNode.removeFromSupernode()
                         }
                     }

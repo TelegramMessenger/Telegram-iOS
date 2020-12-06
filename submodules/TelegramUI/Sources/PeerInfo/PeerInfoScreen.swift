@@ -59,11 +59,15 @@ protocol PeerInfoScreenItem: class {
     func node() -> PeerInfoScreenItemNode
 }
 
-class PeerInfoScreenItemNode: ASDisplayNode {
+class PeerInfoScreenItemNode: ASDisplayNode, AccessibilityFocusableNode {
     var bringToFrontForHighlight: (() -> Void)?
     
     func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         preconditionFailure()
+    }
+    
+    override open func accessibilityElementDidBecomeFocused() {
+//        (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0)
     }
 }
 

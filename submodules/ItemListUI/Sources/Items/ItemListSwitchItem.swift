@@ -251,8 +251,8 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
-                    strongSelf.activateArea.accessibilityValue = item.value ? "On" : "Off"
-                    strongSelf.activateArea.accessibilityHint = "Tap to change"
+                    strongSelf.activateArea.accessibilityValue = item.value ? item.presentationData.strings.VoiceOver_Common_On : item.presentationData.strings.VoiceOver_Common_Off
+                    strongSelf.activateArea.accessibilityHint = item.presentationData.strings.VoiceOver_Common_TapToChange
                     var accessibilityTraits = UIAccessibilityTraits()
                     if item.enabled {
                     } else {

@@ -83,7 +83,7 @@ public struct ListViewItemLayoutParams {
     }
 }
 
-open class ListViewItemNode: ASDisplayNode {
+open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     let rotated: Bool
     final var index: Int?
     

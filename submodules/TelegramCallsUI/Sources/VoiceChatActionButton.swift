@@ -578,12 +578,15 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     }
     
     private func playBlobsDisappearanceAnimation() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         self.foregroundCircleLayer.isHidden = false
+        CATransaction.commit()
         
         self.updateGlowAndGradientAnimations(active: nil, previousActive: nil)
         
         self.maskBlobView.startAnimating()
-        self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak self] _ in
+        self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
             self?.maskBlobView.isHidden = true
             self?.maskBlobView.stopAnimating()
             self?.maskBlobView.layer.removeAllAnimations()
@@ -595,6 +598,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         growthAnimation.toValue = 1.0
         growthAnimation.duration = 0.15
         growthAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeOut)
+        growthAnimation.isRemovedOnCompletion = false
         
         CATransaction.setCompletionBlock {
             CATransaction.begin()
@@ -602,6 +606,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             self.maskGradientLayer.isHidden = true
             self.maskCircleLayer.isHidden = true
             self.foregroundCircleLayer.isHidden = true
+            self.foregroundCircleLayer.removeAllAnimations()
             CATransaction.commit()
         }
         
