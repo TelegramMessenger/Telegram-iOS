@@ -784,22 +784,49 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            self.memberStatesDisposable = combineLatest(queue: .mainQueue(),
+            self.memberStatesDisposable = (combineLatest(queue: .mainQueue(),
+                self.call.state,
                 self.call.members,
                 invitedPeers
-            ).start(next: { [weak self] callMembers, invitedPeers in
-                guard let strongSelf = self, let callMembers = callMembers else {
+            )
+            |> mapToSignal { values in
+                return .single(values)
+                |> delay(0.0, queue: .mainQueue())
+            }).start(next: { [weak self] state, callMembers, invitedPeers in
+                guard let strongSelf = self else {
                     return
                 }
-                if let groupMembers = strongSelf.currentGroupMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: callMembers.participants, invitedPeers: invitedPeers, speakingPeers: callMembers.speakingParticipants)
-                } else {
-                    strongSelf.currentCallMembers = callMembers.participants
-                    strongSelf.currentInvitedPeers = invitedPeers
+                
+                if strongSelf.callState != state {
+                    let wasMuted = strongSelf.callState?.muteState != nil
+                    strongSelf.callState = state
+                    
+                    if let muteState = state.muteState, !muteState.canUnmute {
+                        if strongSelf.pushingToTalk {
+                            strongSelf.pushingToTalk = false
+                            strongSelf.actionButton.pressing = false
+                            strongSelf.actionButton.isUserInteractionEnabled = false
+                            strongSelf.actionButton.isUserInteractionEnabled = true
+                        }
+                    }
+                    
+                    /*if wasMuted != (state.muteState != nil), let groupMembers = strongSelf.currentGroupMembers {
+                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
+                    }
+                    
+                    if let (layout, navigationHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                    }*/
                 }
                 
-                let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers.totalCount)))
+                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: strongSelf.currentGroupMembers ?? [], callMembers: callMembers?.participants ?? [], invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [])
+                
+                let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers?.totalCount ?? 0)))
                 strongSelf.titleView.set(title: strongSelf.presentationData.strings.VoiceChat_Title, subtitle: subtitle)
+                
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
             })
             
             self.peerViewDisposable = (combineLatest(self.context.account.viewTracker.peerView(self.call.peerId), self.context.account.postbox.loadedPeerWithId(self.context.account.peerId))
@@ -826,34 +853,6 @@ public final class VoiceChatController: ViewController {
                     
                     strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
-                }
-            })
-            
-            self.callStateDisposable = (self.call.state
-            |> deliverOnMainQueue).start(next: { [weak self] state in
-                guard let strongSelf = self else {
-                    return
-                }
-                if strongSelf.callState != state {
-                    let wasMuted = strongSelf.callState?.muteState != nil
-                    strongSelf.callState = state
-                    
-                    if let muteState = state.muteState, !muteState.canUnmute {
-                        if strongSelf.pushingToTalk {
-                            strongSelf.pushingToTalk = false
-                            strongSelf.actionButton.pressing = false
-                            strongSelf.actionButton.isUserInteractionEnabled = false
-                            strongSelf.actionButton.isUserInteractionEnabled = true
-                        }
-                    }
-                    
-                    if wasMuted != (state.muteState != nil), let groupMembers = strongSelf.currentGroupMembers {
-                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
-                    }
-                    
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                    }
                 }
             })
             
@@ -1126,6 +1125,7 @@ public final class VoiceChatController: ViewController {
                     } else {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
                     }
+                    
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }

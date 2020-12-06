@@ -404,7 +404,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         }
         
         if let (size, leftInset, rightInset) = self.validLayout {
-            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
         if updateAudioLevels {
@@ -448,6 +448,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset)
         
+        let staticTransition: ContainedViewLayoutTransition = .immediate
+        
         let panelHeight = size.height
         
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -462,17 +464,17 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         let joinButtonTitleSize = self.joinButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
         let joinButtonSize = CGSize(width: joinButtonTitleSize.width + 20.0, height: 28.0)
         let joinButtonFrame = CGRect(origin: CGPoint(x: size.width - rightInset - 7.0 - joinButtonSize.width, y: floor((panelHeight - joinButtonSize.height) / 2.0)), size: joinButtonSize)
-        transition.updateFrame(node: self.joinButton, frame: joinButtonFrame)
-        transition.updateFrame(node: self.joinButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: joinButtonFrame.size))
-        transition.updateFrame(node: self.joinButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((joinButtonFrame.width - joinButtonTitleSize.width) / 2.0), y: floorToScreenPixels((joinButtonFrame.height - joinButtonTitleSize.height) / 2.0)), size: joinButtonTitleSize))
+        staticTransition.updateFrame(node: self.joinButton, frame: joinButtonFrame)
+        staticTransition.updateFrame(node: self.joinButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: joinButtonFrame.size))
+        staticTransition.updateFrame(node: self.joinButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((joinButtonFrame.width - joinButtonTitleSize.width) / 2.0), y: floorToScreenPixels((joinButtonFrame.height - joinButtonTitleSize.height) / 2.0)), size: joinButtonTitleSize))
         
         let micButtonSize = CGSize(width: 36.0, height: 36.0)
         let micButtonFrame = CGRect(origin: CGPoint(x: size.width - rightInset - 7.0 - micButtonSize.width, y: floor((panelHeight - micButtonSize.height) / 2.0)), size: micButtonSize)
-        transition.updateFrame(node: self.micButton, frame: micButtonFrame)
-        transition.updateFrame(node: self.micButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: micButtonFrame.size))
+        staticTransition.updateFrame(node: self.micButton, frame: micButtonFrame)
+        staticTransition.updateFrame(node: self.micButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: micButtonFrame.size))
         
         let animationSize = CGSize(width: 36.0, height: 36.0)
-        transition.updateFrame(node: self.micButtonForegroundNode, frame: CGRect(origin: CGPoint(x: floor((micButtonFrame.width - animationSize.width) / 2.0), y: floor((micButtonFrame.height - animationSize.height) / 2.0)), size: animationSize))
+        staticTransition.updateFrame(node: self.micButtonForegroundNode, frame: CGRect(origin: CGPoint(x: floor((micButtonFrame.width - animationSize.width) / 2.0), y: floor((micButtonFrame.height - animationSize.height) / 2.0)), size: animationSize))
         
         var isMuted = true
         if let _ = self.callState?.muteState {
@@ -498,11 +500,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         let textSize = self.textNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         
         let titleFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 9.0), size: titleSize)
-        transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset + 16.0, y: titleFrame.maxY + 1.0), size: textSize))
+        staticTransition.updateFrame(node: self.titleNode, frame: titleFrame)
+        staticTransition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset + 16.0, y: titleFrame.maxY + 1.0), size: textSize))
         
         if let image = self.muteIconNode.image {
-            transition.updateFrame(node: self.muteIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + 5.0), size: image.size))
+            staticTransition.updateFrame(node: self.muteIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + 5.0), size: image.size))
         }
         self.muteIconNode.isHidden = self.currentData?.groupCall != nil
         self.joinButton.isHidden = self.currentData?.groupCall != nil

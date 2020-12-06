@@ -1361,7 +1361,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             animateOnline = true
                         } else if let channel = renderedPeer.peer as? TelegramChannel {
                             onlineIsVoiceChat = true
-                            if channel.flags.contains(.hasVoiceChat) && item.interaction.searchTextHighightState == nil {
+                            if channel.flags.contains(.hasActiveVoiceChat) && item.interaction.searchTextHighightState == nil {
                                 online = true
                             }
                             animateOnline = true

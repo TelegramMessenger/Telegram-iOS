@@ -140,6 +140,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     var inCallNavigate: (() -> Void)?
     private var inCallStatusBar: StatusBar?
+    private var updateInCallStatusBarState: CallStatusBarNode?
     private var globalScrollToTopNode: ScrollToTopNode?
     private var rootContainer: RootContainer?
     private var rootModalFrame: NavigationModalFrame?
@@ -406,6 +407,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             inCallStatusBar.callStatusBarNode?.frame = inCallStatusBarFrame
             layout.statusBarHeight = inCallStatusBarFrame.height
             inCallStatusBar.frame = inCallStatusBarFrame
+            
+            if let forceInCallStatusBar = self.updateInCallStatusBarState {
+                self.updateInCallStatusBarState = nil
+                inCallStatusBar.updateState(statusBar: nil, withSafeInsets: !layout.safeInsets.top.isZero, inCallNode: forceInCallStatusBar, animated: false)
+            }
         }
         
         if let globalOverlayContainerParent = self.globalOverlayContainerParent {
@@ -1409,6 +1415,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             if let layout = self.validLayout {
                 inCallStatusBar.updateState(statusBar: nil, withSafeInsets: !layout.safeInsets.top.isZero, inCallNode: forceInCallStatusBar, animated: false)
                 self.containerLayoutUpdated(layout, transition: transition)
+            } else {
+                self.updateInCallStatusBarState = forceInCallStatusBar
             }
         } else if let inCallStatusBar = self.inCallStatusBar {
             self.inCallStatusBar = nil

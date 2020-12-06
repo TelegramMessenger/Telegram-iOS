@@ -333,8 +333,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
         let containerScale: CGFloat
-        switch layout.metrics.widthClass {
-        case .compact:
+        if layout.metrics.widthClass == .compact || self.isFlat {
             self.panRecognizer?.isEnabled = true
             self.container.clipsToBounds = true
             if self.isFlat {
@@ -387,7 +386,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 let scaledTopInset: CGFloat = topInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
                 containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
             }
-        case .regular:
+        } else {
             self.panRecognizer?.isEnabled = false
             if self.isFlat {
                 self.dim.backgroundColor = .clear

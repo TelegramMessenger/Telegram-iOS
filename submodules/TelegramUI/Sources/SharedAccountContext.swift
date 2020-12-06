@@ -94,7 +94,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var callDisposable: Disposable?
     private var callStateDisposable: Disposable?
     
-    private var currentCallStatusBarNode: CallStatusBarNodeImpl?
+    private(set) var currentCallStatusBarNode: CallStatusBarNodeImpl?
     
     private var groupCallDisposable: Disposable?
     

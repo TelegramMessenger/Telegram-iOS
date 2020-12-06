@@ -5988,7 +5988,7 @@ Sorry for the inconvenience.";
 
 "CHAT_VOICECHAT_START" = "%1$@ has started voice chat in the group %2$@";
 "CHAT_VOICECHAT_INVITE" = "%1$@ has invited %3$@ in the group %2$@";
-"CHAT_VOICECHAT_INVITE_YOU" = "%1$@ has invited you to voice chat in the group %1$@";
+"CHAT_VOICECHAT_INVITE_YOU" = "%1$@ has invited you to voice chat in the group %2$@";
 
 "Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
 "Call.VoiceChatInProgressMessageCall" = "Leave voice chat in %1$@ and start a call with %2$@?";

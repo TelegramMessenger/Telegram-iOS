@@ -39,6 +39,7 @@ swift_library(
         "//submodules/DirectionalPanGesture:DirectionalPanGesture",
         "//submodules/PeerInfoUI:PeerInfoUI",
         "//submodules/AnimatedCountLabelNode:AnimatedCountLabelNode",
+        "//submodules/DeviceProximity:DeviceProximity",
     ],
     visibility = [
         "//visibility:public",
