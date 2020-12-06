@@ -1115,14 +1115,13 @@ public final class VoiceChatController: ViewController {
                     }
                     self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 case .ended, .cancelled:
-                    self.hapticFeedback.impact(.light)
-                    
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
                     let timestamp = CACurrentMediaTime()
                     if timestamp - self.actionButtonPressGestureStartTime < 0.2 {
                         self.call.toggleIsMuted()
                     } else {
+                        self.hapticFeedback.impact(.light)
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
                     }
                     
@@ -1335,8 +1334,6 @@ public final class VoiceChatController: ViewController {
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve)
             
-//            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listFrame.size, insets: UIEdgeInsets(top: -1.0, left: -6.0, bottom: -1.0, right: -6.0), scrollIndicatorInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0), duration: duration, curve: curve)
-            
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
             transition.updateFrame(node: self.topCornersNode, frame: CGRect(origin: CGPoint(x: sideInset, y: 63.0), size: CGSize(width: layout.size.width - sideInset * 2.0, height: 50.0)))
@@ -1464,21 +1461,30 @@ public final class VoiceChatController: ViewController {
         }
         
         func animateIn() {
-            self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-            self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.dimNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -self.bounds.size.height), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+            guard let (layout, _) = self.validLayout else {
+                return
+            }
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            
+            let topPanelFrame = self.topPanelNode.view.convert(self.topPanelNode.bounds, to: self.view)
+
+            let initialBounds = self.contentContainer.bounds
+            self.contentContainer.bounds = initialBounds.offsetBy(dx: 0.0, dy: -(layout.size.height - topPanelFrame.minY))
+            transition.animateView {
+                self.contentContainer.view.bounds = initialBounds
+            }
+            self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
         
         func animateOut(completion: (() -> Void)?) {
-            var dimCompleted = false
             var offsetCompleted = false
             let internalCompletion: () -> Void = { [weak self] in
-                if dimCompleted && offsetCompleted {
+                if offsetCompleted {
                     if let strongSelf = self {
-                        strongSelf.layer.removeAllAnimations()
+                        strongSelf.contentContainer.layer.removeAllAnimations()
                         strongSelf.dimNode.layer.removeAllAnimations()
                         
-                        var bounds = strongSelf.bounds
+                        var bounds = strongSelf.contentContainer.bounds
                         bounds.origin.y = 0.0
                         strongSelf.contentContainer.bounds = bounds
                     }
@@ -1486,15 +1492,11 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            self.layer.animateBoundsOriginYAdditive(from: self.bounds.origin.y, to: -self.bounds.size.height, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            self.contentContainer.layer.animateBoundsOriginYAdditive(from: self.contentContainer.bounds.origin.y, to: -self.contentContainer.bounds.size.height, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 offsetCompleted = true
                 internalCompletion()
             })
             self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.dimNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -self.bounds.size.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
-                dimCompleted = true
-                internalCompletion()
-            })
         }
         
         private func enqueueTransition(_ transition: ListTransition) {
@@ -1665,8 +1667,8 @@ public final class VoiceChatController: ViewController {
                     if (bounds.minY < -60.0 || velocity.y > 300.0) {
                         self.controller?.dismiss()
                     } else {
-                        let previousBounds = self.bounds
-                        var bounds = self.bounds
+                        var bounds = self.contentContainer.bounds
+                        let previousBounds = bounds
                         bounds.origin.y = 0.0
                         self.contentContainer.bounds = bounds
                         self.contentContainer.layer.animateBounds(from: previousBounds, to: self.contentContainer.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
@@ -1685,7 +1687,11 @@ public final class VoiceChatController: ViewController {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
 
-            if result === self.topPanelNode.view || result === self.bottomPanelNode.view {
+            if result === self.topPanelNode.view {
+                return self.listNode.view
+            }
+            
+            if result === self.bottomPanelNode.view {
                 return self.view
             }
             

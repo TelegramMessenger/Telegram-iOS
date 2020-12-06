@@ -271,6 +271,9 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                             if peer.id == context.account.peerId {
                                 continue
                             }
+                            if let user = peer as? TelegramUser, user.botInfo != nil || user.flags.contains(.isSupport) {
+                                continue
+                            }
                             for filter in filters {
                                 switch filter {
                                     case let .exclude(ids):
@@ -377,6 +380,9 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                             }
                         case .inviteToCall:
                             if participant.peer.id == context.account.peerId {
+                                continue
+                            }
+                            if let user = participant.peer as? TelegramUser, user.botInfo != nil || user.flags.contains(.isSupport) {
                                 continue
                             }
                             for filter in filters {
