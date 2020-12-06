@@ -1038,6 +1038,9 @@ public final class VoiceChatController: ViewController {
         override func didLoad() {
             super.didLoad()
             
+            self.view.disablesInteractiveTransitionGestureRecognizer = true
+            self.view.disablesInteractiveModalDismiss = true
+            
             self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
@@ -1049,17 +1052,6 @@ public final class VoiceChatController: ViewController {
             panRecognizer.delegate = self
             panRecognizer.delaysTouchesBegan = false
             panRecognizer.cancelsTouchesInView = true
-//            panRecognizer.shouldBegin = { [weak self] point in
-//                guard let strongSelf = self else {
-//                    return false
-//                }
-//                if strongSelf.topPanelNode.bounds.contains(strongSelf.view.convert(point, to: strongSelf.topPanelNode.view)) {
-//                    if strongSelf.topPanelNode.frame.maxY <= strongSelf.listNode.frame.minY {
-//                        return true
-//                    }
-//                }
-//                return false
-//            }
             self.view.addGestureRecognizer(panRecognizer)
         }
         

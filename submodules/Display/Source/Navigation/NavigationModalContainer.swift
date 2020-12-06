@@ -189,12 +189,12 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if !self.isDismissed {
-                self.dismisWithAnimation()
+                self.dismissWithAnimation()
             }
         }
     }
     
-    private func dismisWithAnimation() {
+    private func dismissWithAnimation() {
         let scrollView = self.scrollNode.view
         let targetOffset: CGFloat
         let duration = 0.3
