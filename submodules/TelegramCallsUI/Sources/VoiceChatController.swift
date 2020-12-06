@@ -680,29 +680,45 @@ public final class VoiceChatController: ViewController {
                 var items: [ContextMenuItem] = []
 
                 if peer.id != strongSelf.context.account.peerId {
-                    if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)), !callState.adminIds.contains(peer.id) {
-                        if let muteState = entry.muteState, !muteState.canUnmute {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { _, f in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                
-                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
-                                f(.default)
-                            })))
+                    if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
+                        if callState.adminIds.contains(peer.id) {
+                            if let _ = entry.muteState {
+                            } else {
+                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
+                                    f(.default)
+                                })))
+                            }
                         } else {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { _, f in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                
-                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
-                                f(.default)
-                            })))
+                            if let muteState = entry.muteState, !muteState.canUnmute {
+                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
+                                    f(.default)
+                                })))
+                            } else {
+                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
+                                    f(.default)
+                                })))
+                            }
                         }
                     }
                 
