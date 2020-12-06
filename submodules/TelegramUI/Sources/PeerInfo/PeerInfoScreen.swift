@@ -3247,13 +3247,22 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         return
                     }
                     strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), sourcePanel: nil)
-                }, error: { [weak self] _ in
+                }, error: { [weak self] error in
                     dismissStatus?()
                     
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                    
+                    let text: String
+                    switch error {
+                    case .generic:
+                        text = strongSelf.presentationData.strings.Login_UnknownError
+                    case .anonymousNotAllowed:
+                        text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                    }
+                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }, completed: { [weak self] in
                     dismissStatus?()
                     
