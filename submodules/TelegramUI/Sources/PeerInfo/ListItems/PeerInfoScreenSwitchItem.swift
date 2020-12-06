@@ -67,7 +67,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
                 return false
             }
             let value = !strongSelf.switchNode.isOn
-            item.toggled(value)
+            item.toggled?(value)
             return true
         }
     }
