@@ -311,6 +311,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
     
     private let presentationDataPromise: Promise<PresentationData>
     
+    private var _hasDim: Bool = false
+    override public var hasDim: Bool {
+        return _hasDim
+    }
+    
     public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
@@ -333,7 +338,17 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
         
-        self.addSubnode(self.emptyQueryListNode)
+        if !filters.contains(where: { filter in
+            if case .excludeBots = filter {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            self.addSubnode(self.emptyQueryListNode)
+        } else {
+            self._hasDim = true
+        }
         self.addSubnode(self.listNode)
         
         let statePromise = ValuePromise(ChannelMembersSearchContainerState(), ignoreRepeated: true)
@@ -1359,5 +1374,15 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         if case .ended = recognizer.state {
             self.cancel?()
         }
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let result = self.view.hitTest(point, with: event) else {
+            return nil
+        }
+        if result === self.view {
+            return nil
+        }
+        return result
     }
 }

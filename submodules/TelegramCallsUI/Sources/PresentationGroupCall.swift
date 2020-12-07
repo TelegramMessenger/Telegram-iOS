@@ -324,7 +324,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     private var summaryStateDisposable: Disposable?
     
-    private var isMutedValue: PresentationGroupCallMuteAction = .muted(isPushToTalkActive: false)
+    private var isMutedValue: PresentationGroupCallMuteAction = .muted(isPushToTalkActive: false) {
+        didSet {
+            if self.isMutedValue != oldValue {
+                self.updateProximityMonitoring()
+            }
+        }
+    }
     private let isMutedPromise = ValuePromise<PresentationGroupCallMuteAction>(.muted(isPushToTalkActive: false))
     public var isMuted: Signal<Bool, NoError> {
         return self.isMutedPromise.get()
@@ -339,8 +345,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private let audioOutputStatePromise = Promise<([AudioSessionOutput], AudioSessionOutput?)>(([], nil))
+    private var audioOutputStateDisposable: Disposable?
+    private var actualAudioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     private var audioOutputStateValue: ([AudioSessionOutput], AudioSessionOutput?) = ([], nil)
-    private var currentAudioOutputValue: AudioSessionOutput = .builtin
+    private var currentSelectedAudioOutputValue: AudioSessionOutput = .builtin
     public var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
         return self.audioOutputStatePromise.get()
     }
@@ -453,6 +461,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         var didReceiveAudioOutputs = false
         
+        if !audioSession.getIsHeadsetPluggedIn() {
+            self.currentSelectedAudioOutputValue = .speaker
+        }
+        
         self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] control in
             Queue.mainQueue().async {
                 if let strongSelf = self {
@@ -527,6 +539,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if let strongSelf = self {
                 strongSelf.updateIsAudioSessionActive(value)
             }
+        })
+        
+        self.audioOutputStateDisposable = (self.audioOutputStatePromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] availableOutputs, currentOutput in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateAudioOutputs(availableOutputs: availableOutputs, currentOutput: currentOutput)
         })
         
         self.groupCallParticipantUpdatesDisposable = (self.account.stateManager.groupCallParticipantUpdates
@@ -655,6 +675,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if let proximityManagerIndex = self.proximityManagerIndex {
             DeviceProximityManager.shared().remove(proximityManagerIndex)
         }
+        
+        self.audioOutputStateDisposable?.dispose()
     }
     
     private func updateSessionState(internalState: InternalState, audioSessionControl: ManagedAudioSessionControl?) {
@@ -665,10 +687,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.internalState = internalState
         
         if let audioSessionControl = audioSessionControl, previousControl == nil {
-            audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
+            switch self.currentSelectedAudioOutputValue {
+            case .speaker:
+                audioSessionControl.setOutputMode(.custom(self.currentSelectedAudioOutputValue))
+            default:
+                break
+            }
             audioSessionControl.setup(synchronous: true)
-            
-            self.setCurrentAudioOutput(.speaker)
         }
         
         self.audioSessionShouldBeActive.set(true)
@@ -1034,17 +1059,34 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
-        guard self.currentAudioOutputValue != output else {
+        guard self.currentSelectedAudioOutputValue != output else {
             return
         }
-        self.currentAudioOutputValue = output
+        self.currentSelectedAudioOutputValue = output
         
+        self.updateProximityMonitoring()
+        
+        self.audioOutputStatePromise.set(.single((self.audioOutputStateValue.0, output))
+        |> then(
+            .single(self.audioOutputStateValue)
+            |> delay(1.0, queue: Queue.mainQueue())
+        ))
+        
+        if let audioSessionControl = self.audioSessionControl {
+            audioSessionControl.setOutputMode(.custom(output))
+        }
+    }
+    
+    private func updateProximityMonitoring() {
         var shouldMonitorProximity = false
-        switch output {
+        switch self.currentSelectedAudioOutputValue {
         case .builtin:
             shouldMonitorProximity = true
         default:
             break
+        }
+        if case .muted(isPushToTalkActive: true) = self.isMutedValue {
+            shouldMonitorProximity = false
         }
         
         if shouldMonitorProximity {
@@ -1058,15 +1100,29 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 DeviceProximityManager.shared().remove(proximityManagerIndex)
             }
         }
-        
-        self.audioOutputStatePromise.set(.single((self.audioOutputStateValue.0, output))
-        |> then(
-            .single(self.audioOutputStateValue)
-            |> delay(1.0, queue: Queue.mainQueue())
-        ))
-        
-        if let audioSessionControl = self.audioSessionControl {
-            audioSessionControl.setOutputMode(.custom(output))
+    }
+    
+    private func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?) {
+        if self.actualAudioOutputState?.0 != availableOutputs || self.actualAudioOutputState?.1 != currentOutput {
+            self.actualAudioOutputState = (availableOutputs, currentOutput)
+            
+            self.setupAudioOutputs()
+        }
+    }
+    
+    private func setupAudioOutputs() {
+        if let actualAudioOutputState = self.actualAudioOutputState, let currentOutput = actualAudioOutputState.1 {
+            self.currentSelectedAudioOutputValue = currentOutput
+            
+            switch currentOutput {
+            case .headphones, .speaker:
+                break
+            case let .port(port) where port.type == .bluetooth:
+                break
+            default:
+                //self.setCurrentAudioOutput(.speaker)
+                break
+            }
         }
     }
     
