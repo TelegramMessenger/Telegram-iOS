@@ -548,7 +548,9 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         mediaOverlayControlColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x000000, alpha: 0.6), foregroundColor: UIColor(rgb: 0xffffff)),
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: UIColor(rgb: 0x007ee5), strokeColor: UIColor(rgb: 0xc7c7cc), foregroundColor: UIColor(rgb: 0xffffff)),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff3b30), foregroundColor: UIColor(rgb: 0xffffff)),
-        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
+        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
+        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.45)),
+        stickerPlaceholderShimmerColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.45))
     )
     
     let messageDay = PresentationThemeChatMessage(
@@ -614,7 +616,9 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         mediaOverlayControlColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x000000, alpha: 0.6), foregroundColor: UIColor(rgb: 0xffffff)),
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: UIColor(rgb: 0x007ee5), strokeColor: UIColor(rgb: 0xc7c7cc), foregroundColor: UIColor(rgb: 0xffffff)),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff3b30), foregroundColor: UIColor(rgb: 0xffffff)),
-        mediaHighlightOverlayColor: UIColor(rgb: 0xffffff, alpha: 0.6)
+        mediaHighlightOverlayColor: UIColor(rgb: 0xffffff, alpha: 0.6),
+        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.45)),
+        stickerPlaceholderShimmerColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.45))
     )
     
     let serviceMessage = PresentationThemeServiceMessage(

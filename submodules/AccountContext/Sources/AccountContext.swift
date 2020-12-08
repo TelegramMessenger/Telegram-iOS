@@ -565,7 +565,7 @@ public protocol SharedAccountContext: class {
     
     func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
     
-    func navigateToCurrentCall(sourcePanel: ASDisplayNode?)
+    func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
     
@@ -674,6 +674,6 @@ public protocol AccountContext: class {
     func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
     
-    func joinGroupCall(peerId: PeerId, activeCall: CachedChannelData.ActiveCall, sourcePanel: ASDisplayNode?)
+    func joinGroupCall(peerId: PeerId, activeCall: CachedChannelData.ActiveCall)
     func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
 }

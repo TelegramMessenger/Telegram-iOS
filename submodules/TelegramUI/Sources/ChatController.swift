@@ -508,7 +508,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             let peerId = message.id.peerId
                             
-                            strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash), sourcePanel: nil)
+                            strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash))
                         default:
                             break
                     }
@@ -4445,12 +4445,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                     if let selectionState = strongSelf.presentationInterfaceState.interfaceState.selectionState {
                     let count = selectionState.selectedIds.count
-                    let text: String
-                    if count == 1 {
-                        text = "1 message selected"
-                    } else {
-                        text = "\(count) messages selected"
-                    }
+                    let text = strongSelf.presentationData.strings.VoiceOver_Chat_MessagesSelected(Int32(count))
                     UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: text)
                 }
             } else {
@@ -5984,7 +5979,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            strongSelf.context.joinGroupCall(peerId: peer.id, activeCall: activeCall, sourcePanel: nil)
+            strongSelf.context.joinGroupCall(peerId: peer.id, activeCall: activeCall)
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
@@ -7649,6 +7644,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             }, openCamera: { [weak self] cameraView, menuController in
                 if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                    if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveGroupCall {
+                        return
+                    }
+                    
                     presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: settings.storeEditedPhotos, mediaGrouping: true, initialCaption: inputText.string, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                         if let strongSelf = self {
                             if editMediaOptions != nil {
@@ -10360,7 +10359,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let galleryController = AvatarGalleryController(context: self.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
             }, synchronousLoad: true)
             galleryController.setHintWillBePresentedInPreviewingContext(true)
-            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             return (galleryController, buttonView.convert(buttonView.bounds, to: sourceView))
         }
         return nil
@@ -10401,7 +10400,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     gallery.setHintWillBePresentedInPreviewingContext(true)
                                     let rect = selectedTransitionNode.0.view.convert(selectedTransitionNode.0.bounds, to: sourceView)
                                     let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
-                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                                     return (gallery, sourceRect)
                                 case .instantPage:
                                     break

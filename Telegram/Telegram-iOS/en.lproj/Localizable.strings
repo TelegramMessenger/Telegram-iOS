@@ -6001,6 +6001,13 @@ Sorry for the inconvenience.";
 
 "Conversation.Dice.u1F3B3" = "Send a bowling emoji to try your luck.";
 
-"VoiceOver.Common.TapToChange" = "Tap To Change";
+"VoiceOver.Common.SwitchHint" = "Double Tap To Toggle";
 "VoiceOver.Common.On" = "On";
 "VoiceOver.Common.Off" = "Off";
+
+"VoiceOver.Chat.MessagesSelected_0" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_1" = "%@ message selected";
+"VoiceOver.Chat.MessagesSelected_2" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_3_10" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_many" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_any" = "%@ messages selected";

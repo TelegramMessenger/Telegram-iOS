@@ -987,7 +987,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return openChatMessageImpl(params)
     }
     
-    public func navigateToCurrentCall(sourcePanel: ASDisplayNode? = nil) {
+    public func navigateToCurrentCall() {
         guard let mainWindow = self.mainWindow else {
             return
         }

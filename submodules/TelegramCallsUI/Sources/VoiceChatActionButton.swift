@@ -36,7 +36,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     
-    private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, dark: Bool, small: Bool, title: String, subtitle: String)?
+    private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, dark: Bool, small: Bool, title: String, subtitle: String, snap: Bool)?
     
     private var activePromise = ValuePromise<Bool>(false)
     private var outerColorPromise = ValuePromise<UIColor?>(nil)
@@ -47,12 +47,18 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     
     var pressing: Bool = false {
         didSet {
-            if self.pressing {
+            var pressing = self.pressing
+            var snap = false
+            if let (_, _, _, _, _, _, _, snapValue) = self.currentParams, snapValue {
+                pressing = false
+                snap = true
+            }
+            if pressing {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: 0.9)
             } else {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                transition.updateTransformScale(node: self.iconNode, scale: 1.0)
+                transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
             }
         }
     }
@@ -76,12 +82,19 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
+                var highlighted = highlighted
+                var snap = false
+                if let (_, _, _, _, _, _, _, snapValue) = strongSelf.currentParams, snapValue {
+                    highlighted = false
+                    snap = true
+                }
+                
                 if highlighted {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                     transition.updateTransformScale(node: strongSelf.iconNode, scale: 0.9)
                 } else if !strongSelf.pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                    transition.updateTransformScale(node: strongSelf.iconNode, scale: 1.0)
+                    transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
                 }
             }
         }
@@ -104,7 +117,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     
     func applyParams(animated: Bool) {
-        guard let (size, _, _, _, small, title, subtitle) = self.currentParams else {
+        guard let (size, _, state, _, small, title, subtitle, snap) = self.currentParams else {
             return
         }
         
@@ -144,19 +157,52 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.backgroundNode.bounds = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        if small {
-            self.backgroundNode.transform = CATransform3DMakeScale(0.85, 0.85, 1.0)
+        
+        var active = false
+        switch state {
+            case let .active(state):
+                switch state {
+                    case .on:
+                        active = true
+                    default:
+                        break
+                }
+            case .connecting:
+                break
+        }
+        
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        if snap {
+            transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.75 : 0.5)
+            transition.updateTransformScale(node: self.iconNode, scale: 0.5)
+            transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
+            transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
         } else {
-            self.backgroundNode.transform = CATransform3DIdentity
+            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0)
+            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0)
+            transition.updateAlpha(node: self.titleLabel, alpha: 1.0)
+            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0)
         }
         
         let iconSize = CGSize(width: 90.0, height: 90.0)
-        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+        self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
+        self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+    }
+    
+    func update(snap: Bool) {
+        if let previous = self.currentParams {
+            self.currentParams = (previous.size, previous.buttonSize, previous.state, previous.dark, previous.small, previous.title, previous.subtitle, snap)
+            
+            self.backgroundNode.glowHidden = snap
+            
+            self.applyParams(animated: true)
+        }
     }
     
     func update(size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, title: String, subtitle: String, dark: Bool, small: Bool, animated: Bool = false) {
-        let previousState = self.currentParams?.state
-        self.currentParams = (size, buttonSize, state, dark, small, title, subtitle)
+        let previous = self.currentParams
+        let previousState = previous?.state
+        self.currentParams = (size, buttonSize, state, dark, small, title, subtitle, previous?.snap ?? false)
         
         var iconMuted = true
         var iconColor: UIColor = .white
@@ -195,7 +241,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         var hitRect = self.bounds
-        if let (_, buttonSize, _, _, _, _, _) = self.currentParams {
+        if let (_, buttonSize, _, _, _, _, _, _) = self.currentParams {
             hitRect = self.bounds.insetBy(dx: (self.bounds.width - buttonSize.width) / 2.0, dy: (self.bounds.height - buttonSize.height) / 2.0)
         }
         let result = super.hitTest(point, with: event)
@@ -336,7 +382,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     override init() {
         self.state = .connecting
         
-        self.maskBlobView = VoiceBlobView(frame: CGRect(origin: CGPoint(x: (areaSize.width - blobSize.width) / 2.0, y: (areaSize.height - blobSize.height) / 2.0), size: blobSize), maxLevel: 2.0, mediumBlobRange: (0.69, 0.87), bigBlobRange: (0.71, 1.0))
+        self.maskBlobView = VoiceBlobView(frame: CGRect(origin: CGPoint(x: (areaSize.width - blobSize.width) / 2.0, y: (areaSize.height - blobSize.height) / 2.0), size: blobSize), maxLevel: 1.5, mediumBlobRange: (0.69, 0.87), bigBlobRange: (0.71, 1.0))
         self.maskBlobView.setColor(white)
         self.maskBlobView.isHidden = true
         
@@ -426,7 +472,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             if self.maskBlobView.presentationAudioLevel > 0.15 {
                 newValue = CGPoint(x: CGFloat.random(in: 0.8 ..< 1.0), y: CGFloat.random(in: 0.1 ..< 0.45))
             } else {
-                newValue = CGPoint(x: CGFloat.random(in: 0.6 ..< 0.8), y: CGFloat.random(in: 0.1 ..< 0.45))
+                newValue = CGPoint(x: CGFloat.random(in: 0.65 ..< 0.85), y: CGFloat.random(in: 0.1 ..< 0.45))
             }
             self.foregroundGradientLayer.startPoint = newValue
             
@@ -490,15 +536,25 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         }
     }
     
+    var glowHidden: Bool = false {
+        didSet {
+            if self.glowHidden != oldValue {
+                let initialAlpha = CGFloat(self.maskProgressLayer.opacity)
+                let targetAlpha: CGFloat = self.glowHidden ? 0.0 : 1.0
+                self.maskGradientLayer.opacity = Float(targetAlpha)
+                self.maskGradientLayer.animateAlpha(from: initialAlpha, to: targetAlpha, duration: 0.2)
+            }
+        }
+    }
+    
     func updateGlowScale(_ scale: CGFloat?) {
-        return
         if let scale = scale {
             self.maskGradientLayer.transform = CATransform3DMakeScale(0.89 + 0.11 * scale, 0.89 + 0.11 * scale, 1.0)
         } else {
-//            let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (effectivePreviousActive ? 0.95 : 0.8))
-//            let targetScale: CGFloat = self.isActive ? 0.89 : 0.85
-//            self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
-//            self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
+            let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (0.89))
+            let targetScale: CGFloat = self.isActive ? 0.89 : 0.85
+            self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
+            self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
         }
     }
     
@@ -1041,9 +1097,9 @@ final class BlobView: UIView {
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
         speedLevel = max(speedLevel, newSpeedLevel)
         
-        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
-            animateToNewShape()
-        }
+//        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
+//            animateToNewShape()
+//        }
     }
     
     func startAnimating() {

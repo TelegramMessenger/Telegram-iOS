@@ -288,8 +288,6 @@ public protocol PresentationGroupCall: class {
     func invitePeer(_ peerId: PeerId)
     func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
-    
-    var sourcePanel: ASDisplayNode? { get set }
 }
 
 public protocol PresentationCallManager: class {
@@ -297,5 +295,5 @@ public protocol PresentationCallManager: class {
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> JoinGroupCallManagerResult
+    func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
 }

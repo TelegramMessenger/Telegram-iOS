@@ -48,7 +48,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     override init() {
         self.foregroundView = UIView()
         self.foregroundGradientLayer = CAGradientLayer()
-        self.maskCurveView = VoiceCurveView(frame: CGRect(), maxLevel: 2.5, smallCurveRange: (0.0, 0.0), mediumCurveRange: (0.1, 0.55), bigCurveRange: (0.1, 1.0))
+        self.maskCurveView = VoiceCurveView(frame: CGRect(), maxLevel: 1.5, smallCurveRange: (0.0, 0.0), mediumCurveRange: (0.1, 0.55), bigCurveRange: (0.1, 1.0))
         self.maskCurveView.setColor(UIColor(rgb: 0xffffff))
         
         var updateInHierarchy: ((Bool) -> Void)?
@@ -170,11 +170,11 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.microphoneNode = VoiceChatMicrophoneNode()
         self.titleNode = ImmediateTextNode()
         self.subtitleNode = ImmediateAnimatedCountLabelNode()
+        self.subtitleNode.reverseAnimationDirection = true
         
         super.init()
                 
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.microphoneNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
     }
@@ -267,7 +267,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         }
         
         var title: String = ""
-        var subtitle: String = ""
         
         let textFont = Font.regular(13.0)
         let textColor = UIColor.white
@@ -336,7 +335,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: size.height))
         let subtitleSize = self.subtitleNode.updateLayout(size: CGSize(width: 160.0, height: size.height), animated: true)
         
-        let totalWidth = animationSize + iconSpacing + titleSize.width + spacing + subtitleSize.width
+        let totalWidth = titleSize.width + spacing + subtitleSize.width
         let horizontalOrigin: CGFloat = floor((size.width - totalWidth) / 2.0)
         
         let contentHeight: CGFloat = 24.0
@@ -344,11 +343,11 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         
         let transition: ContainedViewLayoutTransition = wasEmpty ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
         
-        transition.updateFrame(node: self.microphoneNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - animationSize) / 2.0)), size: CGSize(width: animationSize, height: animationSize)))
-        self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: self.currentIsMuted, color: UIColor.white), animated: true)
+//        transition.updateFrame(node: self.microphoneNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - animationSize) / 2.0)), size: CGSize(width: animationSize, height: animationSize)))
+//        self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: self.currentIsMuted, color: UIColor.white), animated: true)
         
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
-        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
+        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
         
         self.backgroundNode.speaking = self.currentIsConnected && !self.currentIsMuted
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
@@ -381,7 +380,7 @@ private final class VoiceCurveView: UIView {
         self.maxLevel = maxLevel
         
         self.smallCurve = CurveView(
-            pointsCount: 7,
+            pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1.3,
             minSpeed: 0.9,
@@ -390,7 +389,7 @@ private final class VoiceCurveView: UIView {
             maxOffset: smallCurveRange.max
         )
         self.mediumCurve = CurveView(
-            pointsCount: 7,
+            pointsCount: 8,
             minRandomness: 1.2,
             maxRandomness: 1.5,
             minSpeed: 1.0,
@@ -399,7 +398,7 @@ private final class VoiceCurveView: UIView {
             maxOffset: mediumCurveRange.max
         )
         self.bigCurve = CurveView(
-            pointsCount: 7,
+            pointsCount: 8,
             minRandomness: 1.2,
             maxRandomness: 1.7,
             minSpeed: 1.0,
@@ -595,9 +594,9 @@ final class CurveView: UIView {
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
         speedLevel = max(speedLevel, newSpeedLevel)
         
-        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
-            animateToNewShape()
-        }
+//        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
+//            animateToNewShape()
+//        }
     }
     
     func startAnimating() {

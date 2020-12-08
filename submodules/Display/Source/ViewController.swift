@@ -253,6 +253,8 @@ public enum TabBarItemContextActionType {
     
     public var additionalNavigationBarHeight: CGFloat = 0.0
     
+    public var additionalSideInsets: UIEdgeInsets = UIEdgeInsets()
+    
     private let _ready = Promise<Bool>(true)
     open var ready: Promise<Bool> {
         return self._ready
