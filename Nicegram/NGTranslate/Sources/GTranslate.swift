@@ -48,19 +48,19 @@ public func parseTranslateResponse(_ data: String) -> String {
 
 public func getGoogleLang(_ userLang: String) -> String {
     var lang = userLang
-    let rawSuffix = "-raw"
+    let rawSuffix =  "-raw"
     if lang.hasSuffix(rawSuffix) {
         lang = String(lang.dropLast(rawSuffix.count))
     }
     if ["zh-hans", "zh-hant"].contains(lang) {
         if lang == "zh-hans" {
-            return "zh-CN"
+            lang = "zh-CN"
         } else if lang == "zh-hant" {
-            return "zh-TW"
+            lang = "zh-TW"
         }
     }
     
-    return userLang
+    return lang
 }
 
 
@@ -73,8 +73,10 @@ public func requestTranslateUrl(url: URL) -> Signal<String, TranslateFetchError>
     return Signal { subscriber in
         let completed = Atomic<Bool>(value: false)
         var request = URLRequest(url: url)
+        request.httpMethod = "GET"
         // Set headers
         request.setValue("Mozilla/4.0 (compatible;MSIE 6.0;Windows NT 5.1;SV1;.NET CLR 1.1.4322;.NET CLR 2.0.50727;.NET CLR 3.0.04506.30)", forHTTPHeaderField: "User-Agent")
+        HTTPCookieStorage.shared.cookies?.forEach(HTTPCookieStorage.shared.deleteCookie)
         let downloadTask = URLSession.shared.dataTask(with: request, completionHandler: { data, response, error in
             let _ = completed.swap(true)
             if let response = response as? HTTPURLResponse {
@@ -109,7 +111,8 @@ public func requestTranslateUrl(url: URL) -> Signal<String, TranslateFetchError>
 
 public func gtranslate(_ text: String, _ toLang: String) -> Signal<String, TranslateFetchError> {
     return Signal { subscriber in
-        let url = URL(string: getTranslateUrl(text, getGoogleLang(toLang)))!
+        let urlString = getTranslateUrl(text, getGoogleLang(toLang))
+        let url = URL(string: urlString)!
         let translateSignal = requestTranslateUrl(url: url)
         
         let _ = (translateSignal |> deliverOnMainQueue).start(next: {

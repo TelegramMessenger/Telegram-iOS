@@ -139,7 +139,7 @@ public func downloadLocale(_ locale: String) -> Void {
             niceWebLocales[lang] = localeDict
             ngLog("Successfully downloaded locale \(lang)", LOGTAG)
         } else {
-            ngLog("Failed to download \(locale)", LOGTAG)
+            ngLog("Failed to download \(lang)", LOGTAG)
         }
     } catch {
         return
