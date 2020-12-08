@@ -101,7 +101,7 @@ final class VoiceChatOverlayController: ViewController {
         }
                 
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if let actionButton = self.controller?.actionButton, actionButton.frame.contains(point) {
+            if let actionButton = self.controller?.actionButton, actionButton.supernode === self, actionButton.frame.contains(point) {
                 return actionButton.hitTest(self.view.convert(point, to: actionButton.view), with: event)
             } else {
                 return nil
@@ -113,8 +113,9 @@ final class VoiceChatOverlayController: ViewController {
             
             if let actionButton = self.controller?.actionButton {
                 let convertedRect = actionButton.view.convert(actionButton.bounds, to: self.view)
-                let insets = layout.insets(options: [.input])
-                actionButton.position = CGPoint(x: layout.size.width - layout.safeInsets.right - 21.0, y: layout.size.height - insets.bottom - 22.0)
+                let insets = layout.insets(options: [.input])                
+                transition.updatePosition(node: actionButton, position: CGPoint(x: layout.size.width - layout.safeInsets.right - 21.0, y: layout.size.height - insets.bottom - 22.0))
+                
                 if actionButton.supernode !== self {
                     self.addSubnode(actionButton)
                     
@@ -147,6 +148,12 @@ final class VoiceChatOverlayController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = Node(controller: self)
         self.displayNodeDidLoad()
+    }
+    
+    override func dismiss(completion: (() -> Void)? = nil) {
+        super.dismiss(completion: completion)
+        self.presentingViewController?.dismiss(animated: false, completion: nil)
+        completion?()
     }
             
     func animateOut(reclaim: Bool, completion: @escaping () -> Void) {

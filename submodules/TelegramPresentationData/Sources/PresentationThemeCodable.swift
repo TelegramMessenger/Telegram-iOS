@@ -1276,6 +1276,8 @@ extension PresentationThemeChatMessage: Codable {
         try values.encode(self.selectionControlColors, forKey: .selectionControl)
         try values.encode(self.deliveryFailedColors, forKey: .deliveryFailed)
         try encodeColor(&values, self.mediaHighlightOverlayColor, .mediaHighlightOverlay)
+        try values.encode(self.stickerPlaceholderColor, forKey: .stickerPlaceholder)
+        try values.encode(self.stickerPlaceholderShimmerColor, forKey: .stickerPlaceholderShimmer)
     }
 }
 
