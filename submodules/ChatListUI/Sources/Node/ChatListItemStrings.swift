@@ -220,13 +220,13 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 let incoming = message.flags.contains(.Incoming)
                                 if let discardReason = discardReason {
                                     switch discardReason {
-                                        case .busy, .disconnect:
+                                        case .disconnect:
                                             if isVideo {
                                                 messageText = strings.Notification_VideoCallCanceled
                                             } else {
                                                 messageText = strings.Notification_CallCanceled
                                             }
-                                        case .missed:
+                                        case .missed, .busy:
                                             if incoming {
                                                 if isVideo {
                                                     messageText = strings.Notification_VideoCallMissed

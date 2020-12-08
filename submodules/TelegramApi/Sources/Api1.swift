@@ -3979,6 +3979,80 @@ public extension Api {
         }
     
     }
+    public enum InlineQueryPeerType: TypeConstructorDescription {
+        case inlineQueryPeerTypeSameBotPM
+        case inlineQueryPeerTypePM
+        case inlineQueryPeerTypeChat
+        case inlineQueryPeerTypeMegagroup
+        case inlineQueryPeerTypeBroadcast
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inlineQueryPeerTypeSameBotPM:
+                    if boxed {
+                        buffer.appendInt32(813821341)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypePM:
+                    if boxed {
+                        buffer.appendInt32(-2093215828)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypeChat:
+                    if boxed {
+                        buffer.appendInt32(-681130742)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypeMegagroup:
+                    if boxed {
+                        buffer.appendInt32(1589952067)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypeBroadcast:
+                    if boxed {
+                        buffer.appendInt32(1664413338)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inlineQueryPeerTypeSameBotPM:
+                return ("inlineQueryPeerTypeSameBotPM", [])
+                case .inlineQueryPeerTypePM:
+                return ("inlineQueryPeerTypePM", [])
+                case .inlineQueryPeerTypeChat:
+                return ("inlineQueryPeerTypeChat", [])
+                case .inlineQueryPeerTypeMegagroup:
+                return ("inlineQueryPeerTypeMegagroup", [])
+                case .inlineQueryPeerTypeBroadcast:
+                return ("inlineQueryPeerTypeBroadcast", [])
+    }
+    }
+    
+        public static func parse_inlineQueryPeerTypeSameBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeSameBotPM
+        }
+        public static func parse_inlineQueryPeerTypePM(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypePM
+        }
+        public static func parse_inlineQueryPeerTypeChat(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeChat
+        }
+        public static func parse_inlineQueryPeerTypeMegagroup(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeMegagroup
+        }
+        public static func parse_inlineQueryPeerTypeBroadcast(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeBroadcast
+        }
+    
+    }
     public enum AutoDownloadSettings: TypeConstructorDescription {
         case autoDownloadSettings(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, videoUploadMaxbitrate: Int32)
     
@@ -6293,7 +6367,6 @@ public extension Api {
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
         case updateStickerSets
         case updateSavedGifs
-        case updateBotInlineQuery(flags: Int32, queryId: Int64, userId: Int32, query: String, geo: Api.GeoPoint?, offset: String)
         case updateBotInlineSend(flags: Int32, userId: Int32, query: String, geo: Api.GeoPoint?, id: String, msgId: Api.InputBotInlineMessageID?)
         case updateEditChannelMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int32, peer: Api.Peer, msgId: Int32, chatInstance: Int64, data: Buffer?, gameShortName: String?)
@@ -6347,6 +6420,7 @@ public extension Api {
         case updatePinnedChannelMessages(flags: Int32, channelId: Int32, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateGroupCallParticipants(call: Api.InputGroupCall, participants: [Api.GroupCallParticipant], version: Int32)
         case updateGroupCall(channelId: Int32, call: Api.GroupCall)
+        case updateBotInlineQuery(flags: Int32, queryId: Int64, userId: Int32, query: String, geo: Api.GeoPoint?, peerType: Api.InlineQueryPeerType?, offset: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6628,17 +6702,6 @@ public extension Api {
                         buffer.appendInt32(-1821035490)
                     }
                     
-                    break
-                case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let offset):
-                    if boxed {
-                        buffer.appendInt32(1417832080)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(queryId, buffer: buffer, boxed: false)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeString(query, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {geo!.serialize(buffer, true)}
-                    serializeString(offset, buffer: buffer, boxed: false)
                     break
                 case .updateBotInlineSend(let flags, let userId, let query, let geo, let id, let msgId):
                     if boxed {
@@ -7101,6 +7164,18 @@ public extension Api {
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
                     break
+                case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let peerType, let offset):
+                    if boxed {
+                        buffer.appendInt32(1059076315)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeString(query, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {geo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {peerType!.serialize(buffer, true)}
+                    serializeString(offset, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -7172,8 +7247,6 @@ public extension Api {
                 return ("updateStickerSets", [])
                 case .updateSavedGifs:
                 return ("updateSavedGifs", [])
-                case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let offset):
-                return ("updateBotInlineQuery", [("flags", flags), ("queryId", queryId), ("userId", userId), ("query", query), ("geo", geo), ("offset", offset)])
                 case .updateBotInlineSend(let flags, let userId, let query, let geo, let id, let msgId):
                 return ("updateBotInlineSend", [("flags", flags), ("userId", userId), ("query", query), ("geo", geo), ("id", id), ("msgId", msgId)])
                 case .updateEditChannelMessage(let message, let pts, let ptsCount):
@@ -7280,6 +7353,8 @@ public extension Api {
                 return ("updateGroupCallParticipants", [("call", call), ("participants", participants), ("version", version)])
                 case .updateGroupCall(let channelId, let call):
                 return ("updateGroupCall", [("channelId", channelId), ("call", call)])
+                case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let peerType, let offset):
+                return ("updateBotInlineQuery", [("flags", flags), ("queryId", queryId), ("userId", userId), ("query", query), ("geo", geo), ("peerType", peerType), ("offset", offset)])
     }
     }
     
@@ -7838,34 +7913,6 @@ public extension Api {
         }
         public static func parse_updateSavedGifs(_ reader: BufferReader) -> Update? {
             return Api.Update.updateSavedGifs
-        }
-        public static func parse_updateBotInlineQuery(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Api.GeoPoint?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.GeoPoint
-            } }
-            var _6: String?
-            _6 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.Update.updateBotInlineQuery(flags: _1!, queryId: _2!, userId: _3!, query: _4!, geo: _5, offset: _6!)
-            }
-            else {
-                return nil
-            }
         }
         public static func parse_updateBotInlineSend(_ reader: BufferReader) -> Update? {
             var _1: Int32?
@@ -8784,6 +8831,39 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateGroupCall(channelId: _1!, call: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotInlineQuery(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Api.GeoPoint?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            } }
+            var _6: Api.InlineQueryPeerType?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.InlineQueryPeerType
+            } }
+            var _7: String?
+            _7 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Update.updateBotInlineQuery(flags: _1!, queryId: _2!, userId: _3!, query: _4!, geo: _5, peerType: _6, offset: _7!)
             }
             else {
                 return nil
@@ -12607,6 +12687,11 @@ public extension Api {
         case channelAdminLogEventActionChangeLinkedChat(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionChangeLocation(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation)
         case channelAdminLogEventActionToggleSlowMode(prevValue: Int32, newValue: Int32)
+        case channelAdminLogEventActionStartGroupCall(call: Api.InputGroupCall)
+        case channelAdminLogEventActionDiscardGroupCall(call: Api.InputGroupCall)
+        case channelAdminLogEventActionParticipantMute(participant: Api.GroupCallParticipant)
+        case channelAdminLogEventActionParticipantUnmute(participant: Api.GroupCallParticipant)
+        case channelAdminLogEventActionToggleGroupCallSetting(joinMuted: Api.Bool)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -12748,6 +12833,36 @@ public extension Api {
                     serializeInt32(prevValue, buffer: buffer, boxed: false)
                     serializeInt32(newValue, buffer: buffer, boxed: false)
                     break
+                case .channelAdminLogEventActionStartGroupCall(let call):
+                    if boxed {
+                        buffer.appendInt32(589338437)
+                    }
+                    call.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionDiscardGroupCall(let call):
+                    if boxed {
+                        buffer.appendInt32(-610299584)
+                    }
+                    call.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionParticipantMute(let participant):
+                    if boxed {
+                        buffer.appendInt32(-115071790)
+                    }
+                    participant.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionParticipantUnmute(let participant):
+                    if boxed {
+                        buffer.appendInt32(-431740480)
+                    }
+                    participant.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionToggleGroupCallSetting(let joinMuted):
+                    if boxed {
+                        buffer.appendInt32(1456906823)
+                    }
+                    joinMuted.serialize(buffer, true)
+                    break
     }
     }
     
@@ -12795,6 +12910,16 @@ public extension Api {
                 return ("channelAdminLogEventActionChangeLocation", [("prevValue", prevValue), ("newValue", newValue)])
                 case .channelAdminLogEventActionToggleSlowMode(let prevValue, let newValue):
                 return ("channelAdminLogEventActionToggleSlowMode", [("prevValue", prevValue), ("newValue", newValue)])
+                case .channelAdminLogEventActionStartGroupCall(let call):
+                return ("channelAdminLogEventActionStartGroupCall", [("call", call)])
+                case .channelAdminLogEventActionDiscardGroupCall(let call):
+                return ("channelAdminLogEventActionDiscardGroupCall", [("call", call)])
+                case .channelAdminLogEventActionParticipantMute(let participant):
+                return ("channelAdminLogEventActionParticipantMute", [("participant", participant)])
+                case .channelAdminLogEventActionParticipantUnmute(let participant):
+                return ("channelAdminLogEventActionParticipantUnmute", [("participant", participant)])
+                case .channelAdminLogEventActionToggleGroupCallSetting(let joinMuted):
+                return ("channelAdminLogEventActionToggleGroupCallSetting", [("joinMuted", joinMuted)])
     }
     }
     
@@ -13086,6 +13211,71 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSlowMode(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionStartGroupCall(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.InputGroupCall?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStartGroupCall(call: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionDiscardGroupCall(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.InputGroupCall?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDiscardGroupCall(call: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionParticipantMute(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.GroupCallParticipant?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipant
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantMute(participant: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionParticipantUnmute(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.GroupCallParticipant?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipant
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantUnmute(participant: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionToggleGroupCallSetting(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleGroupCallSetting(joinMuted: _1!)
             }
             else {
                 return nil

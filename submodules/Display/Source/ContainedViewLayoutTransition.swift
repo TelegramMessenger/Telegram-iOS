@@ -843,44 +843,10 @@ public extension ContainedViewLayoutTransition {
             completion?(true)
             return
         }
-        let t = node.layer.sublayerTransform
-        let currentScaleX = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
-        var currentScaleY = sqrt((t.m21 * t.m21) + (t.m22 * t.m22) + (t.m23 * t.m23))
-        if t.m22 < 0.0 {
-            currentScaleY = -currentScaleY
-        }
-        if CGPoint(x: currentScaleX, y: currentScaleY) == scale {
-            if let completion = completion {
-                completion(true)
-            }
-            return
-        }
-        
-        switch self {
-            case .immediate:
-                node.layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-                if let completion = completion {
-                    completion(true)
-                }
-            case let .animated(duration, curve):
-                let initialTransform: CATransform3D
-                if beginWithCurrentState, node.isNodeLoaded {
-                    initialTransform = node.layer.presentation()?.sublayerTransform ?? t
-                } else {
-                    initialTransform = t
-                }
-                
-                node.layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-                node.layer.animate(from: NSValue(caTransform3D: initialTransform), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
-                    result in
-                    if let completion = completion {
-                        completion(result)
-                    }
-                })
-        }
+        self.updateSublayerTransformScale(layer: node.layer, scale: scale, beginWithCurrentState: beginWithCurrentState, completion: completion)
     }
     
-    func updateSublayerTransformScale(layer: CALayer, scale: CGPoint, completion: ((Bool) -> Void)? = nil) {
+    func updateSublayerTransformScale(layer: CALayer, scale: CGPoint, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let t = layer.sublayerTransform
         let currentScaleX = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         var currentScaleY = sqrt((t.m21 * t.m21) + (t.m22 * t.m22) + (t.m23 * t.m23))
@@ -901,8 +867,15 @@ public extension ContainedViewLayoutTransition {
                 completion(true)
             }
         case let .animated(duration, curve):
+            let initialTransform: CATransform3D
+            if beginWithCurrentState {
+                initialTransform = layer.presentation()?.sublayerTransform ?? t
+            } else {
+                initialTransform = t
+            }
+            
             layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-            layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+            layer.animate(from: NSValue(caTransform3D: initialTransform), to: NSValue(caTransform3D: layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
                 result in
                 if let completion = completion {
                     completion(result)

@@ -275,7 +275,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     
     private func ringingStatesUpdated(_ ringingStates: [(Account, Peer, CallSessionRingingState, Bool, NetworkType)], enableCallKit: Bool) {
         if let firstState = ringingStates.first {
-            if self.currentCall == nil {
+            if self.currentCall == nil && self.currentGroupCall == nil {
                 self.currentCallDisposable.set((combineLatest(firstState.0.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1))
                 |> deliverOnMainQueue).start(next: { [weak self] preferences, sharedData in
                     guard let strongSelf = self else {

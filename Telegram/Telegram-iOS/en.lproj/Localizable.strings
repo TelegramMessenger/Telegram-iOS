@@ -185,8 +185,8 @@
 "PUSH_CHAT_MESSAGES_1" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGES_any" = "%2$@|%1$@ sent %3$d messages";
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
-"PUSH_CHAT_MESSAGE_DOCS_1" = "%2$@|%1$@ sent a file";
-"PUSH_CHAT_MESSAGE_DOCS_any" = "%2$@|%1$@ sent %3$d files";
+"PUSH_CHAT_MESSAGE_DOCS_FIX1_1" = "%2$@|%1$@ sent a file";
+"PUSH_CHAT_MESSAGE_DOCS_FIX1_any" = "%2$@|%1$@ sent %3$d files";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -6011,3 +6011,10 @@ Sorry for the inconvenience.";
 "VoiceOver.Chat.MessagesSelected_3_10" = "%@ messages selected";
 "VoiceOver.Chat.MessagesSelected_many" = "%@ messages selected";
 "VoiceOver.Chat.MessagesSelected_any" = "%@ messages selected";
+
+"Channel.AdminLog.StartedVoiceChat" = "%1$@ started voice chat";
+"Channel.AdminLog.EndedVoiceChat" = "%1$@ ended voice chat";
+"Channel.AdminLog.MutedParticipant" = "%1$@ muted %2$@";
+"Channel.AdminLog.UnmutedMutedParticipant" = "%1$@ unmuted %2$@";
+"Channel.AdminLog.AllowedNewMembersToSpeak" = "%1$@ allowed new members to speak";
+"Channel.AdminLog.MutedNewMembers" = "%1$@ muted new members";

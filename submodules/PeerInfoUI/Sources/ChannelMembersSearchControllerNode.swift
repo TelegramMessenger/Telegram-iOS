@@ -34,11 +34,13 @@ private final class ChannelMembersSearchInteraction {
 private enum ChannelMembersSearchEntryId: Hashable {
     case copyInviteLink
     case peer(PeerId)
+    case contact(PeerId)
 }
 
 private enum ChannelMembersSearchEntry: Comparable, Identifiable {
     case copyInviteLink
     case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing, String?, Bool)
+    case contact(Int, Peer, TelegramUserPresence?)
     
     var stableId: ChannelMembersSearchEntryId {
         switch self {
@@ -46,6 +48,8 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             return .copyInviteLink
         case let .peer(_, participant, _, _, _):
             return .peer(participant.peer.id)
+        case let .contact(_, peer, _):
+            return .contact(peer.id)
         }
     }
     
@@ -59,6 +63,21 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             }
         case let .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled):
             if case .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .contact(lhsIndex, lhsPeer, lhsPresence):
+            if case let .contact(rhsIndex, rhsPeer, rhsPresence) = rhs {
+                if lhsIndex != rhsIndex {
+                    return false
+                }
+                if !lhsPeer.isEqual(rhsPeer) {
+                    return false
+                }
+                if lhsPresence != rhsPresence {
+                    return false
+                }
                 return true
             } else {
                 return false
@@ -78,6 +97,18 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             if case .copyInviteLink = rhs {
                 return false
             } else if case let .peer(rhsIndex, _, _, _, _) = rhs {
+                return lhsIndex < rhsIndex
+            } else if case .contact = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .contact(lhsIndex, _, _):
+            if case .copyInviteLink = rhs {
+                return false
+            } else if case .peer = rhs {
+                return false
+            } else if case let .contact(rhsIndex, _, _) = rhs {
                 return lhsIndex < rhsIndex
             } else {
                 return false
@@ -101,11 +132,26 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             let status: ContactsPeerItemStatus
             if let label = label {
                 status = .custom(string: label, multiline: false)
+            } else if participant.peer.id != context.account.peerId {
+                let presence = participant.presences[participant.peer.id] ?? TelegramUserPresence(status: .none, lastActivity: 0)
+                status = .presence(presence, presentationData.dateTimeFormat)
             } else {
                 status = .none
             }
+            
             return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: .members, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
                 interaction.openPeer(participant.peer, participant)
+            })
+        case let .contact(_, peer, presence):
+            let status: ContactsPeerItemStatus
+            if peer.id != context.account.peerId, let presence = presence {
+                status = .presence(presence, presentationData.dateTimeFormat)
+            } else {
+                status = .none
+            }
+            
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: nil), status: status, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+                interaction.openPeer(peer, nil)
             })
         }
     }
@@ -190,6 +236,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         let previousEntries = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
         
         let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
+        let additionalDisposable = MetaDisposable()
         
         if peerId.namespace == Namespaces.Peer.CloudGroup {
             let disposable = (context.account.postbox.peerView(id: peerId)
@@ -325,7 +372,16 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             })
             disposableAndLoadMoreControl = (disposable, nil)
         } else {
-            disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { [weak self] state in
+            let membersState = Promise<ChannelMemberListState>()
+            
+            disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+                membersState.set(.single(state))
+            })
+            
+            additionalDisposable.set((combineLatest(queue: .mainQueue(),
+               membersState.get(),
+               context.account.postbox.contactPeersView(accountPeerId: context.account.peerId, includePresences: true)
+            ).start(next: { [weak self] state, contactsView in
                 guard let strongSelf = self else {
                     return
                 }
@@ -428,12 +484,24 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     index += 1
                 }
                 
+                if case .inviteToCall = mode {
+                    for peer in contactsView.peers {
+                        entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.peerPresences[peer.id] as? TelegramUserPresence))
+                        index += 1
+                    }
+                }
+                
                 let previous = previousEntries.swap(entries)
                 
                 strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, context: context, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
-            })
+            })))
         }
-        self.disposable = disposableAndLoadMoreControl.0
+        
+        let combinedDisposable = DisposableSet()
+        combinedDisposable.add(disposableAndLoadMoreControl.0)
+        combinedDisposable.add(additionalDisposable)
+        
+        self.disposable = combinedDisposable
         self.listControl = disposableAndLoadMoreControl.1
         
         if peerId.namespace == Namespaces.Peer.CloudChannel {

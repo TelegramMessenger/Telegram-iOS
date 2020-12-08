@@ -395,9 +395,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 if let discardReason = discardReason {
                     switch discardReason {
-                    case .busy, .disconnect:
+                    case .disconnect:
                         titleString = strings.Notification_CallCanceled
-                    case .missed:
+                    case .missed, .busy:
                         titleString = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
                     case .hangup:
                         break

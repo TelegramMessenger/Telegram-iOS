@@ -274,7 +274,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
     }
     return account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), params: .dataJSON(data: joinPayload)))
     |> mapError { error -> JoinGroupCallError in
-        if error.errorDescription == "GROUP_CALL_ANONYMOUS_FORBIDDEN" {
+        if error.errorDescription == "GROUPCALL_ANONYMOUS_FORBIDDEN" {
             return .anonymousNotAllowed
         } else if error.errorDescription == "GROUPCALL_PARTICIPANTS_TOO_MUCH" {
             return .tooManyParticipants
@@ -1077,6 +1077,30 @@ public final class GroupCallParticipantsContext {
             }
             strongSelf.account.stateManager.addUpdates(updates)
         }))
+    }
+}
+
+extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
+    init(_ apiParticipant: Api.GroupCallParticipant) {
+        switch apiParticipant {
+        case let .groupCallParticipant(flags, userId, date, activeDate, source):
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+            let ssrc = UInt32(bitPattern: source)
+            var muteState: GroupCallParticipantsContext.Participant.MuteState?
+            if (flags & (1 << 0)) != 0 {
+                let canUnmute = (flags & (1 << 2)) != 0
+                muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
+            }
+            let isRemoved = (flags & (1 << 1)) != 0
+            self.init(
+                peerId: peerId,
+                ssrc: ssrc,
+                joinTimestamp: date,
+                activityTimestamp: activeDate.flatMap(Double.init),
+                muteState: muteState,
+                isRemoved: isRemoved
+            )
+        }
     }
 }
 

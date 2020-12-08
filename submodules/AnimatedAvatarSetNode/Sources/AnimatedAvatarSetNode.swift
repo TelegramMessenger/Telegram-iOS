@@ -154,10 +154,10 @@ private final class ContentNode: ASDisplayNode {
             playbackMaskLayer.frame = maskRect
             playbackMaskLayer.fillRule = .evenOdd
             let maskPath = UIBezierPath()
-            maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 12, dy: 12), cornerRadius: 22))
+            maskPath.append(UIBezierPath(roundedRect: self.unclippedNode.bounds.offsetBy(dx: 8, dy: 8), cornerRadius: maskRect.width / 2.0))
             maskPath.append(UIBezierPath(rect: maskRect))
             playbackMaskLayer.path = maskPath.cgPath
-            audioLevelView.layer.mask = playbackMaskLayer
+            //audioLevelView.layer.mask = playbackMaskLayer
             
             audioLevelView.setColor(color)
             self.audioLevelView = audioLevelView
@@ -169,16 +169,20 @@ private final class ContentNode: ASDisplayNode {
             audioLevelView.updateLevel(CGFloat(value) * 2.0)
             
             let avatarScale: CGFloat
+            let audioLevelScale: CGFloat
             if value > 0.0 {
                 audioLevelView.startAnimating()
                 avatarScale = 1.03 + level * 0.07
+                audioLevelScale = 1.0
             } else {
                 audioLevelView.stopAnimating(duration: 0.5)
                 avatarScale = 1.0
+                audioLevelScale = 0.01
             }
             
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
             transition.updateSublayerTransformScale(node: self, scale: CGPoint(x: avatarScale, y: avatarScale), beginWithCurrentState: true)
+            transition.updateSublayerTransformScale(layer: audioLevelView.layer, scale: CGPoint(x: audioLevelScale, y: audioLevelScale), beginWithCurrentState: true)
         }
     }
 }

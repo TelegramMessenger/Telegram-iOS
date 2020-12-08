@@ -1079,6 +1079,98 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                 return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case .startGroupCall, .endGroupCall:
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+                
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)])
+                if case .startGroupCall = self.entry.event.action {
+                    rawText = self.presentationData.strings.Channel_AdminLog_StartedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                } else {
+                    rawText = self.presentationData.strings.Channel_AdminLog_EndedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                }
+                    
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .groupCallUpdateParticipantMuteStatus(participantId, isMuted):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                var participant: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+                if let participantPeer = self.entry.peers[participantId] {
+                    participant = participantPeer
+                    peers[peer.id] = participantPeer
+                }
+                
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)])
+                if isMuted {
+                    rawText = self.presentationData.strings.Channel_AdminLog_MutedParticipant(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", participant?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                } else {
+                    rawText = self.presentationData.strings.Channel_AdminLog_UnmutedMutedParticipant(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", participant?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                }
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .updateGroupCallSettings(joinMuted):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+                
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)])
+                if joinMuted {
+                    rawText = self.presentationData.strings.Channel_AdminLog_MutedNewMembers(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                } else {
+                    rawText = self.presentationData.strings.Channel_AdminLog_AllowedNewMembersToSpeak(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                }
+                    
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
         }
     }
 }
