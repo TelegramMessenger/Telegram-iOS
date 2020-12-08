@@ -54,6 +54,10 @@ public enum AdminLogEventAction {
     case linkedPeerUpdated(previous: Peer?, updated: Peer?)
     case changeGeoLocation(previous: PeerGeoLocation?, updated: PeerGeoLocation?)
     case updateSlowmode(previous: Int32?, updated: Int32?)
+    case startGroupCall
+    case endGroupCall
+    case groupCallUpdateParticipantMuteStatus(peerId: PeerId, isMuted: Bool)
+    case updateGroupCallSettings(joinMuted: Bool)
 }
 
 public enum ChannelAdminLogEventError {
@@ -213,6 +217,18 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         action = .changeGeoLocation(previous: PeerGeoLocation(apiLocation: prevValue), updated: PeerGeoLocation(apiLocation: newValue))
                                     case let .channelAdminLogEventActionToggleSlowMode(prevValue, newValue):
                                         action = .updateSlowmode(previous: prevValue == 0 ? nil : prevValue, updated: newValue == 0 ? nil : newValue)
+                                    case .channelAdminLogEventActionStartGroupCall:
+                                        action = .startGroupCall
+                                    case .channelAdminLogEventActionDiscardGroupCall:
+                                        action = .endGroupCall
+                                    case let .channelAdminLogEventActionParticipantMute(participant):
+                                        let parsedParticipant = GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(participant)
+                                        action = .groupCallUpdateParticipantMuteStatus(peerId: parsedParticipant.peerId, isMuted: parsedParticipant.muteState != nil)
+                                    case let .channelAdminLogEventActionParticipantUnmute(participant):
+                                        let parsedParticipant = GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(participant)
+                                        action = .groupCallUpdateParticipantMuteStatus(peerId: parsedParticipant.peerId, isMuted: parsedParticipant.muteState != nil)
+                                    case let .channelAdminLogEventActionToggleGroupCallSetting(joinMuted):
+                                        action = .updateGroupCallSettings(joinMuted: joinMuted == .boolTrue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

@@ -438,6 +438,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var proximityManagerIndex: Int?
     
+    private var removedChannelMembersDisposable: Disposable?
+    
     init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -626,11 +628,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         totalCount: 0,
                         loadMoreToken: nil
                     )
+                    
+                    var updatedInvitedPeers = strongSelf.invitedPeersValue
+                    var didUpdateInvitedPeers = false
+                    
                     for participant in state.participants {
                         members.participants.append(participant)
                         
                         if topParticipants.count < 3 {
                             topParticipants.append(participant)
+                        }
+                        
+                        if let index = updatedInvitedPeers.firstIndex(of: participant.peer.id) {
+                            updatedInvitedPeers.remove(at: index)
+                            didUpdateInvitedPeers = true
                         }
                     }
                     
@@ -646,9 +657,25 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         topParticipants: topParticipants,
                         activeSpeakers: activeSpeakers
                     )))
+                    
+                    if didUpdateInvitedPeers {
+                        strongSelf.invitedPeersValue = updatedInvitedPeers
+                    }
                 }))
             }
         }
+        
+        self.removedChannelMembersDisposable = (accountContext.peerChannelMemberCategoriesContextsManager.removedChannelMembers
+        |> deliverOnMainQueue).start(next: { [weak self] pairs in
+            guard let strongSelf = self else {
+                return
+            }
+            for (channelId, memberId) in pairs {
+                if channelId == strongSelf.peerId {
+                    strongSelf.removedPeer(memberId)
+                }
+            }
+        })
         
         self.requestCall()
     }
@@ -677,6 +704,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         self.audioOutputStateDisposable?.dispose()
+        
+        self.removedChannelMembersDisposable?.dispose()
     }
     
     private func updateSessionState(internalState: InternalState, audioSessionControl: ManagedAudioSessionControl?) {
@@ -838,6 +867,33 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 self.callContext?.setJoinResponse(payload: clientParams, ssrcs: ssrcs)
                 
+                let accountContext = self.accountContext
+                let peerId = self.peerId
+                let rawAdminIds = Signal<Set<PeerId>, NoError> { subscriber in
+                    let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
+                        subscriber.putNext(Set(list.list.map { $0.peer.id }))
+                    })
+                    return disposable
+                }
+                |> runOn(.mainQueue())
+                
+                let adminIds = combineLatest(queue: .mainQueue(),
+                    rawAdminIds,
+                    accountContext.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+                )
+                |> map { rawAdminIds, view -> Set<PeerId> in
+                    var rawAdminIds = rawAdminIds
+                    if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer as? TelegramChannel {
+                        if peer.hasPermission(.manageCalls) {
+                            rawAdminIds.insert(accountContext.account.peerId)
+                        } else {
+                            rawAdminIds.remove(accountContext.account.peerId)
+                        }
+                    }
+                    return rawAdminIds
+                }
+                |> distinctUntilChanged
+                
                 let participantsContext = GroupCallParticipantsContext(
                     account: self.accountContext.account,
                     peerId: self.peerId,
@@ -848,9 +904,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.participantsContext = participantsContext
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
-                    participantsContext.activeSpeakers |> deliverOnMainQueue,
-                    self.speakingParticipantsContext.get() |> deliverOnMainQueue
-                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants in
+                    participantsContext.activeSpeakers,
+                    self.speakingParticipantsContext.get(),
+                    adminIds
+                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants, adminIds in
                     guard let strongSelf = self else {
                         return
                     }
@@ -884,6 +941,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         totalCount: 0,
                         loadMoreToken: nil
                     )
+                    
+                    var updatedInvitedPeers = strongSelf.invitedPeersValue
+                    var didUpdateInvitedPeers = false
+                    
                     for participant in state.participants {
                         members.participants.append(participant)
                         
@@ -916,6 +977,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.callContext?.setIsMuted(true)
                             }
                         }
+                        
+                        if let index = updatedInvitedPeers.firstIndex(of: participant.peer.id) {
+                            updatedInvitedPeers.remove(at: index)
+                            didUpdateInvitedPeers = true
+                        }
                     }
                     
                     members.totalCount = state.totalCount
@@ -923,9 +989,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     strongSelf.membersValue = members
                     
-                    strongSelf.stateValue.adminIds = state.adminIds
+                    strongSelf.stateValue.adminIds = adminIds
                     
-                    if (state.isCreator || state.adminIds.contains(strongSelf.accountContext.account.peerId)) && state.defaultParticipantsAreMuted.canChange {
+                    if (state.isCreator || strongSelf.stateValue.adminIds.contains(strongSelf.accountContext.account.peerId)) && state.defaultParticipantsAreMuted.canChange {
                         strongSelf.stateValue.defaultParticipantMuteState = state.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
                     }
                     
@@ -934,6 +1000,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         topParticipants: topParticipants,
                         activeSpeakers: activeSpeakers
                     )))
+                    
+                    if didUpdateInvitedPeers {
+                        strongSelf.invitedPeersValue = updatedInvitedPeers
+                    }
                 }))
                 
                 if let isCurrentlyConnecting = self.isCurrentlyConnecting, isCurrentlyConnecting {

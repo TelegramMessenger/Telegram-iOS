@@ -83,14 +83,14 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                         callDuration = duration
                         if let discardReason = discardReason {
                             switch discardReason {
-                                case .busy, .disconnect:
+                                case .disconnect:
                                     callSuccessful = false
                                     if isVideo {
                                         titleString = item.presentationData.strings.Notification_VideoCallCanceled
                                     } else {
                                         titleString = item.presentationData.strings.Notification_CallCanceled
                                     }
-                                case .missed:
+                                case .missed, .busy:
                                     callSuccessful = false
                                     if incoming {
                                         if isVideo {

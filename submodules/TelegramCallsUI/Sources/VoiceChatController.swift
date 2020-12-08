@@ -560,7 +560,7 @@ public final class VoiceChatController: ViewController {
                             
                             strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                         } else {
-                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
+                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -620,7 +620,7 @@ public final class VoiceChatController: ViewController {
                                         case .bot:
                                             text = presentationData.strings.Login_UnknownError
                                     }
-                                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 }, completed: {
                                     guard let strongSelf = self else {
                                         dismissController?()
@@ -859,14 +859,21 @@ public final class VoiceChatController: ViewController {
                             if addressName.isEmpty {
                                 let _ = ensuredExistingPeerExportedInvitation(account: strongSelf.context.account, peerId: call.peerId).start()
                             }
-                        } else {
-                            strongSelf.optionsButton.isUserInteractionEnabled = false
-                            strongSelf.optionsButton.alpha = 0.0
                         }
                     }
                     
                     strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
+                }
+                
+                if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
+                    if channel.hasPermission(.manageCalls) {
+                        strongSelf.optionsButton.isUserInteractionEnabled = true
+                        strongSelf.optionsButton.alpha = 1.0
+                    } else {
+                        strongSelf.optionsButton.isUserInteractionEnabled = false
+                        strongSelf.optionsButton.alpha = 0.0
+                    }
                 }
             })
             
@@ -1004,7 +1011,7 @@ public final class VoiceChatController: ViewController {
                             })
                         }
                         
-                        let alert = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
+                        let alert = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
                             action()
                         })])
                         strongSelf.controller?.present(alert, in: .window(.root))

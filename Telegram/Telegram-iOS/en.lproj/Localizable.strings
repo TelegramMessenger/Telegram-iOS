@@ -6004,3 +6004,10 @@ Sorry for the inconvenience.";
 "VoiceOver.Common.TapToChange" = "Tap To Change";
 "VoiceOver.Common.On" = "On";
 "VoiceOver.Common.Off" = "Off";
+
+"Channel.AdminLog.StartedVoiceChat" = "%1$@ started voice chat";
+"Channel.AdminLog.EndedVoiceChat" = "%1$@ ended voice chat";
+"Channel.AdminLog.MutedParticipant" = "%1$@ muted %2$@";
+"Channel.AdminLog.UnmutedMutedParticipant" = "%1$@ unmuted %2$@";
+"Channel.AdminLog.AllowedNewMembersToSpeak" = "%1$@ allowed new members to speak";
+"Channel.AdminLog.MutedNewMembers" = "%1$@ muted new members";

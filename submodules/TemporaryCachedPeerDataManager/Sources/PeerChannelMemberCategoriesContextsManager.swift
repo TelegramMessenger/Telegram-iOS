@@ -267,6 +267,11 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
 public final class PeerChannelMemberCategoriesContextsManager {
     private let impl: QueueLocalObject<PeerChannelMemberCategoriesContextsManagerImpl>
     
+    private let removedChannelMembersPipe = ValuePipe<[(PeerId, PeerId)]>()
+    public var removedChannelMembers: Signal<[(PeerId, PeerId)], NoError> {
+        return self.removedChannelMembersPipe.signal()
+    }
+    
     public init() {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return PeerChannelMemberCategoriesContextsManagerImpl()
@@ -362,6 +367,9 @@ public final class PeerChannelMemberCategoriesContextsManager {
                             context.replayUpdates([(previous, updated, isMember)])
                         }
                     }
+                }
+                if !isMember {
+                    strongSelf.removedChannelMembersPipe.putNext([(peerId, memberId)])
                 }
             }
         }
