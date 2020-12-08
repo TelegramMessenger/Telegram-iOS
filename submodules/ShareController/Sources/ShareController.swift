@@ -685,7 +685,7 @@ public final class ShareController: ViewController {
                                     let shareToInstagram = ShareToInstagramActivity(action: { sharedItems in
                                         let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
                                         
-                                        let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
+                                        let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
                                         renderer.update(layout: layout) { image in
                                             if let data = image?.pngData() {
                                                 let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,

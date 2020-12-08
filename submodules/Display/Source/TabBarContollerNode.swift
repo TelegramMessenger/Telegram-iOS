@@ -92,7 +92,7 @@ final class TabBarControllerNode: ASDisplayNode {
         let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (self.tabBarHidden ? 0.0 : tabBarHeight)), size: CGSize(width: layout.size.width, height: tabBarHeight))
         
         transition.updateFrame(node: self.tabBarNode, frame: tabBarFrame)
-        self.tabBarNode.updateLayout(size: layout.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, transition: transition)
+        self.tabBarNode.updateLayout(size: layout.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, transition: transition)
         
         transition.updateFrame(node: self.disabledOverlayNode, frame: tabBarFrame)
         

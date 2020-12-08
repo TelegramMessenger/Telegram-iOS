@@ -433,8 +433,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var isCurrentlyConnecting: Bool?
 
     private var myAudioLevelTimer: SwiftSignalKit.Timer?
-
-    public weak var sourcePanel: ASDisplayNode?
     
     private var proximityManagerIndex: Int?
     

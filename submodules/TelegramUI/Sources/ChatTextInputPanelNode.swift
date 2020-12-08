@@ -220,7 +220,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics, Bool)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
@@ -450,15 +450,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.actionButtons.micButton.offsetRecordingControls = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState {
-                if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
-                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
+                if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
                 }
             }
         }
         self.actionButtons.micButton.updateCancelTranslation = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState {
-                if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
-                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
+                if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
                 }
             }
         }
@@ -667,8 +667,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return minimalHeight
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics, isSecondary)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
         let baseWidth = width - leftInset - rightInset
         
         var wasEditingMedia = false
@@ -1235,7 +1235,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         let searchLayoutClearButtonSize = CGSize(width: 44.0, height: minimalHeight)
-        let textFieldInsets = self.textFieldInsets(metrics: metrics)
+        var textFieldInsets = self.textFieldInsets(metrics: metrics)
+        if additionalSideInsets.right > 0.0 && self.text.isEmpty {
+            textFieldInsets.right += additionalSideInsets.right / 3.0
+        }
         transition.updateFrame(layer: self.searchLayoutClearButton.layer, frame: CGRect(origin: CGPoint(x: width - rightInset - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset + 3.0, y: panelHeight - minimalHeight), size: searchLayoutClearButtonSize))
         if let image = self.searchLayoutClearImageNode.image {
             self.searchLayoutClearImageNode.frame = CGRect(origin: CGPoint(x: floor((searchLayoutClearButtonSize.width - image.size.width) / 2.0), y: floor((searchLayoutClearButtonSize.height - image.size.height) / 2.0)), size: image.size)
@@ -1480,7 +1483,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
         }
         
-        if let (width, leftInset, rightInset, maxHeight, metrics, _) = self.validLayout {
+        if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, _) = self.validLayout {
             var composeButtonsOffset: CGFloat = 0.0
             if self.extendedSearchLayout {
                 composeButtonsOffset = 44.0
@@ -1672,8 +1675,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private func updateTextHeight(animated: Bool) {
-        if let (width, leftInset, rightInset, maxHeight, metrics, _) = self.validLayout {
-            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
+        if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, _) = self.validLayout {
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - additionalSideInsets.right, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             if !self.bounds.size.height.isEqual(to: panelHeight) {
                 self.updateHeight(animated)

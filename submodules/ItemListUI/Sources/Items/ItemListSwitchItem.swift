@@ -252,7 +252,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.accessibilityValue = item.value ? item.presentationData.strings.VoiceOver_Common_On : item.presentationData.strings.VoiceOver_Common_Off
-                    strongSelf.activateArea.accessibilityHint = item.presentationData.strings.VoiceOver_Common_TapToChange
+                    strongSelf.activateArea.accessibilityHint = item.presentationData.strings.VoiceOver_Common_SwitchHint
                     var accessibilityTraits = UIAccessibilityTraits()
                     if item.enabled {
                     } else {

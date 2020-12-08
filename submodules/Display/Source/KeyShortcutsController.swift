@@ -34,10 +34,6 @@ public class KeyShortcutsController: UIResponder {
             return true
         })
         
-        // iOS 8 fix
-        convertedCommands.append(KeyShortcut(modifiers:[.command]).uiKeyCommand)
-        convertedCommands.append(KeyShortcut(modifiers:[.alternate]).uiKeyCommand)
-
         convertedCommands.append(contentsOf: shortcuts.map { $0.uiKeyCommand })
         
         self.effectiveShortcuts = shortcuts

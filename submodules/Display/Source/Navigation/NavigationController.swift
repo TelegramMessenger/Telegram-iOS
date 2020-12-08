@@ -34,9 +34,6 @@ public struct NavigationAnimationOptions : OptionSet {
     public static let removeOnMasterDetails = NavigationAnimationOptions(rawValue: 1 << 0)
 }
 
-private final class NavigationControllerContainerView: UIView {
-}
-
 public enum NavigationEmptyDetailsBackgoundMode {
     case image(UIImage)
     case wallpaper(UIImage)
@@ -99,6 +96,11 @@ private final class NavigationControllerNode: ASDisplayNode {
         } else {
             return super.hitTest(point, with: event)
         }
+    }
+    
+    override func accessibilityPerformEscape() -> Bool {
+        print("escape")
+        return true
     }
 }
 
@@ -544,6 +546,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        var additionalSideInsets = UIEdgeInsets()
         var previousOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.overlayContainers.count).reversed() {
             let overlayContainer = self.overlayContainers[i]
@@ -573,6 +576,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 overlayContainer.transitionIn()
             }
             
+            let controllerAdditionalSideInsets = overlayContainer.controller.additionalSideInsets
+            additionalSideInsets = UIEdgeInsets(top: 0.0, left: max(additionalSideInsets.left, controllerAdditionalSideInsets.left), bottom: 0.0, right: max(additionalSideInsets.right, controllerAdditionalSideInsets.right))
+            
             if overlayContainer.supernode != nil {
                 previousOverlayContainer = overlayContainer
                 let controllerStatusBarStyle = overlayContainer.controller.statusBar.statusBarStyle
@@ -591,6 +597,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
             }
         }
+        
+        layout.additionalInsets.left = max(layout.intrinsicInsets.left, additionalSideInsets.left)
+        layout.additionalInsets.right = max(layout.intrinsicInsets.right, additionalSideInsets.right)
         
         if self.currentTopVisibleOverlayContainerStatusBar !== topVisibleOverlayContainerWithStatusBar {
             animateStatusBarStyleTransition = true

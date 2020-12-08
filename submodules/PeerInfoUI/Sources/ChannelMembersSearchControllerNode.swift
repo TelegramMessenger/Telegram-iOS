@@ -529,18 +529,21 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         self.searchDisplayController?.updatePresentationData(self.presentationData)
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.containerLayout != nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
+        var headerInsets = layout.insets(options: [.input])
+        headerInsets.top += actualNavigationBarHeight
+        
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
 
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         

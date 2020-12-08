@@ -102,7 +102,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         
         self.activateArea.accessibilityLabel = item.text
         self.activateArea.accessibilityValue = item.value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
-        self.activateArea.accessibilityHint = presentationData.strings.VoiceOver_Common_TapToChange
+        self.activateArea.accessibilityHint = presentationData.strings.VoiceOver_Common_SwitchHint
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0 - 56.0, height: .greatestFiniteMagnitude))
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 12.0), size: textSize)

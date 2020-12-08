@@ -82,6 +82,10 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         |> distinctUntilChanged
     }
     
+    public var hasActiveGroupCall: Bool {
+        return self.currentGroupCall != nil
+    }
+    
     private let currentCallPromise = Promise<PresentationCall?>(nil)
     public var currentCallSignal: Signal<PresentationCall?, NoError> {
         return self.currentCallPromise.get()
@@ -620,9 +624,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> JoinGroupCallManagerResult {
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
-            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall, sourcePanel: sourcePanel).start()
+            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall).start()
         }
         
         if let currentGroupCall = self.currentGroupCallValue {
@@ -657,8 +661,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         accountContext: AccountContext,
         peerId: PeerId,
         initialCall: CachedChannelData.ActiveCall,
-        internalId: CallSessionInternalId = CallSessionInternalId(),
-        sourcePanel: ASDisplayNode?
+        internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         

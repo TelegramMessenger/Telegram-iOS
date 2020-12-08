@@ -34,7 +34,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                 if self.selectedMessages.isEmpty {
                     self.actions = nil
                     if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = self.validLayout, let interfaceState = self.presentationInterfaceState {
-                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, additionalSideInsets: UIEdgeInsets(), maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
                     }
                     self.canDeleteMessagesDisposable.set(nil)
                 } else if let context = self.context {
@@ -43,7 +43,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                         if let strongSelf = self {
                             strongSelf.actions = actions
                             if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
-                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, additionalSideInsets: UIEdgeInsets(), maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
                             }
                         }
                     }))
@@ -138,7 +138,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.shareSelectedMessages()
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, maxHeight, metrics, isSecondary)
         
         let panelHeight = defaultHeight(metrics: metrics)

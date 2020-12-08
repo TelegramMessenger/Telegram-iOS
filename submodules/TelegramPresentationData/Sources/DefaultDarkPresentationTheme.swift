@@ -412,7 +412,9 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         mediaOverlayControlColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x000000, alpha: 0.6), foregroundColor: UIColor(rgb: 0xffffff)),
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: UIColor(rgb: 0xffffff), strokeColor: UIColor(rgb: 0xffffff), foregroundColor:  UIColor(rgb: 0x000000)),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xeb5545), foregroundColor: UIColor(rgb: 0xffffff)),
-        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
+        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
+        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
+        stickerPlaceholderShimmerColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5))
     )
     
     let serviceMessage = PresentationThemeServiceMessage(
