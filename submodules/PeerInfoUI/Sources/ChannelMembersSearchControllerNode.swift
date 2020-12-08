@@ -139,7 +139,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 status = .none
             }
             
-            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: .members, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: .groupMembers, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
                 interaction.openPeer(participant.peer, participant)
             })
         case let .contact(_, peer, presence):

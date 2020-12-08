@@ -6011,3 +6011,5 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.UnmutedMutedParticipant" = "%1$@ unmuted %2$@";
 "Channel.AdminLog.AllowedNewMembersToSpeak" = "%1$@ allowed new members to speak";
 "Channel.AdminLog.MutedNewMembers" = "%1$@ muted new members";
+
+"Group.GroupMembersHeader" = "GROUP MEMBERS";
