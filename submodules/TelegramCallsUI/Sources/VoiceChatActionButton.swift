@@ -47,15 +47,13 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     
     var pressing: Bool = false {
         didSet {
-            var pressing = self.pressing
             var snap = false
-            if let (_, _, _, _, _, _, _, snapValue) = self.currentParams, snapValue {
-                pressing = false
-                snap = true
+            if let (_, _, _, _, _, _, _, snapValue) = self.currentParams {
+                snap = snapValue
             }
-            if pressing {
+            if self.pressing {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                transition.updateTransformScale(node: self.iconNode, scale: 0.9)
+                transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
             } else {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
@@ -80,18 +78,15 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.iconNode)
         
-        self.highligthedChanged = { [weak self] highlighted in
+        self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
-                var highlighted = highlighted
                 var snap = false
-                if let (_, _, _, _, _, _, _, snapValue) = strongSelf.currentParams, snapValue {
-                    highlighted = false
-                    snap = true
+                if let (_, _, _, _, _, _, _, snapValue) = strongSelf.currentParams {
+                    snap = snapValue
                 }
-                
-                if highlighted {
+                if pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                    transition.updateTransformScale(node: strongSelf.iconNode, scale: 0.9)
+                    transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
                 } else if !strongSelf.pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                     transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
@@ -173,7 +168,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         if snap {
-            transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.75 : 0.5)
+            transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? 0.75 : 0.5)
             transition.updateTransformScale(node: self.iconNode, scale: 0.5)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
@@ -909,8 +904,8 @@ private final class VoiceBlobView: UIView {
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 0.85,
-            maxSpeed: 7,
+            minSpeed: 0.9,
+            maxSpeed: 4.0,
             minScale: mediumBlobRange.min,
             maxScale: mediumBlobRange.max
         )
@@ -918,8 +913,8 @@ private final class VoiceBlobView: UIView {
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 0.85,
-            maxSpeed: 7,
+            minSpeed: 1.0,
+            maxSpeed: 4.4,
             minScale: bigBlobRange.min,
             maxScale: bigBlobRange.max
         )
