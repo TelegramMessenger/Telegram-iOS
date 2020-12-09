@@ -177,6 +177,16 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
+    private var _viewControllersPipe = ValuePipe<[UIViewController]>()
+    public var viewControllersSignal: Signal<[UIViewController], NoError> {
+        return _viewControllersPipe.signal()
+    }
+    
+    private var _overlayControllersPipe = ValuePipe<[UIViewController]>()
+    public var overlayControllersSignal: Signal<[UIViewController], NoError> {
+        return _overlayControllersPipe.signal()
+    }
+    
     override open var topViewController: UIViewController? {
         return self._viewControllers.last
     }
@@ -1236,6 +1246,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         if let layout = self.validLayout {
             self.updateContainers(layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
         }
+        self._viewControllersPipe.putNext(self.viewControllers)
     }
     
     public func presentOverlay(controller: ViewController, inGlobal: Bool = false, blockInteraction: Bool = false) {
@@ -1259,6 +1270,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if overlayContainer.controller === controller {
                         overlayContainer.removeFromSupernode()
                         strongSelf.overlayContainers.remove(at: i)
+                        strongSelf._overlayControllersPipe.putNext(strongSelf.overlayContainers.map({ $0.controller }))
                         strongSelf.internalOverlayControllersUpdated()
                         break
                     }
@@ -1280,6 +1292,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.globalOverlayContainers.append(container)
         } else {
             self.overlayContainers.append(container)
+            self._overlayControllersPipe.putNext(self.overlayContainers.map({ $0.controller }))
         }
         container.isReadyUpdated = { [weak self, weak container] in
             guard let strongSelf = self, let _ = container else {

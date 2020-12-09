@@ -122,7 +122,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.titleLabel.attributedText = NSAttributedString(string: title, font: titleFont, textColor: .white)
         self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, font: subtitleFont, textColor: .white)
                 
-        if animated {
+        if animated && self.titleLabel.alpha > 0.0 {
             if let snapshotView = self.titleLabel.view.snapshotContentTree(), updatedTitle {
                 self.titleLabel.view.superview?.insertSubview(snapshotView, belowSubview: self.titleLabel.view)
                 snapshotView.frame = self.titleLabel.frame
@@ -152,20 +152,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.backgroundNode.bounds = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        
-        var active = false
-        switch state {
-            case let .active(state):
-                switch state {
-                    case .on:
-                        active = true
-                    default:
-                        break
-                }
-            case .connecting:
-                break
-        }
-        
+                
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         if snap {
             transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? 0.75 : 0.5)

@@ -106,8 +106,9 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: UIColor(rgb: 0xffffff))
         self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.5))
         
-        let titleSize = self.titleNode.measure(size)
-        let infoSize = self.infoNode.measure(size)
+        let constrainedSize = CGSize(width: size.width - 80.0, height: size.height)
+        let titleSize = self.titleNode.measure(constrainedSize)
+        let infoSize = self.infoNode.measure(constrainedSize)
         let titleInfoSpacing: CGFloat = 0.0
         
         let combinedHeight = titleSize.height + infoSize.height + titleInfoSpacing
@@ -476,10 +477,12 @@ public final class VoiceChatController: ViewController {
             
             self.topPanelBackgroundNode = ASDisplayNode()
             self.topPanelBackgroundNode.backgroundColor = panelBackgroundColor
+            self.topPanelBackgroundNode.isUserInteractionEnabled = false
             
             self.topPanelEdgeNode = ASDisplayNode()
             self.topPanelEdgeNode.backgroundColor = panelBackgroundColor
             self.topPanelEdgeNode.layer.cornerRadius = 12.0
+            self.topPanelEdgeNode.isUserInteractionEnabled = false
             
             self.optionsButton = VoiceChatHeaderButton()
             self.optionsButton.setImage(optionsButtonImage(dark: false))
@@ -1979,7 +1982,7 @@ public final class VoiceChatController: ViewController {
             return
         }
         
-        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton)
+        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, navigationController: self.navigationController as? NavigationController)
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
         }
@@ -1988,7 +1991,6 @@ public final class VoiceChatController: ViewController {
         
         self.reclaimActionButton = { [weak self, weak overlayController] in
             if let strongSelf = self {
-                let actionButton = strongSelf.controllerNode.actionButton
                 overlayController?.animateOut(reclaim: true, completion: {})
                 strongSelf.reclaimActionButton = nil
             }

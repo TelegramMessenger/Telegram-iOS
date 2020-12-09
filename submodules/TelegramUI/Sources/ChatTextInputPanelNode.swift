@@ -1239,6 +1239,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if additionalSideInsets.right > 0.0 && self.text.isEmpty {
             textFieldInsets.right += additionalSideInsets.right / 3.0
         }
+        self.actionButtons.micButton.isHidden = additionalSideInsets.right > 0.0
+
         transition.updateFrame(layer: self.searchLayoutClearButton.layer, frame: CGRect(origin: CGPoint(x: width - rightInset - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset + 3.0, y: panelHeight - minimalHeight), size: searchLayoutClearButtonSize))
         if let image = self.searchLayoutClearImageNode.image {
             self.searchLayoutClearImageNode.frame = CGRect(origin: CGPoint(x: floor((searchLayoutClearButtonSize.width - image.size.width) / 2.0), y: floor((searchLayoutClearButtonSize.height - image.size.height) / 2.0)), size: image.size)

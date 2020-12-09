@@ -5965,19 +5965,19 @@ Sorry for the inconvenience.";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";
 
 "VoiceChat.Panel.TapToJoin" = "Tap to join";
-"VoiceChat.Panel.Members_0" = "%@ members";
-"VoiceChat.Panel.Members_1" = "%@ member";
-"VoiceChat.Panel.Members_2" = "%@ members";
-"VoiceChat.Panel.Members_3_10" = "%@ members";
-"VoiceChat.Panel.Members_many" = "%@ members";
-"VoiceChat.Panel.Members_any" = "%@ members";
+"VoiceChat.Panel.Members_0" = "%@ participants";
+"VoiceChat.Panel.Members_1" = "%@ participant";
+"VoiceChat.Panel.Members_2" = "%@ participants";
+"VoiceChat.Panel.Members_3_10" = "%@ participants";
+"VoiceChat.Panel.Members_many" = "%@ participants";
+"VoiceChat.Panel.Members_any" = "%@ participants";
 
-"VoiceChat.Status.Members_0" = "[%@]members";
-"VoiceChat.Status.Members_1" = "[%@]member";
-"VoiceChat.Status.Members_2" = "[%@]members";
-"VoiceChat.Status.Members_3_10" = "[%@]members";
-"VoiceChat.Status.Members_many" = "[%@]members";
-"VoiceChat.Status.Members_any" = "[%@]members";
+"VoiceChat.Status.Members_0" = "[%@]participants";
+"VoiceChat.Status.Members_1" = "[%@]participant";
+"VoiceChat.Status.Members_2" = "[%@]participants";
+"VoiceChat.Status.Members_3_10" = "[%@]participants";
+"VoiceChat.Status.Members_many" = "[%@]participants";
+"VoiceChat.Status.Members_any" = "[%@]participants";
 "VoiceChat.Status.MembersFormat" = "%1$@ %2$@";
 
 "ChannelInfo.CreateVoiceChat" = "Start Voice Chat";
