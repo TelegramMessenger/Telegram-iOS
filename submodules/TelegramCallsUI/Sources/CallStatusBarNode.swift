@@ -236,6 +236,11 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         if let strongSelf = self {
                             strongSelf.currentPeer = view.peers[view.peerId]
                             strongSelf.currentGroupCallState = state
+                            
+                            var isMuted = isMuted
+                            if let state = state, let muteState = state.callState.muteState, !muteState.canUnmute {
+                                isMuted = true
+                            }
                             strongSelf.currentIsMuted = isMuted
                             
                             let currentIsConnected: Bool

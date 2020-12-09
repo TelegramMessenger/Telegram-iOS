@@ -45,18 +45,31 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     var activeDisposable = MetaDisposable()
     
+    var wasActiveWhenPressed = false
     var pressing: Bool = false {
         didSet {
-            var snap = false
-            if let (_, _, _, _, _, _, _, snapValue) = self.currentParams {
-                snap = snapValue
+            guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
+                return
             }
             if self.pressing {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
+                
+                switch state {
+                    case let .active(state):
+                        switch state {
+                            case .on:
+                                self.wasActiveWhenPressed = true
+                            default:
+                                break
+                        }
+                    case .connecting:
+                        break
+                }
             } else {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
+                self.wasActiveWhenPressed = false
             }
         }
     }
@@ -80,9 +93,8 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
-                var snap = false
-                if let (_, _, _, _, _, _, _, snapValue) = strongSelf.currentParams {
-                    snap = snapValue
+                guard let (_, _, _, _, _, _, _, snap) = self.currentParams else {
+                    return
                 }
                 if pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
@@ -153,9 +165,22 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.backgroundNode.bounds = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
                 
+        var active = false
+        switch state {
+            case let .active(state):
+                switch state {
+                    case .on:
+                        active = self.pressing && !self.wasActiveWhenPressed
+                    default:
+                        break
+                }
+            case .connecting:
+                break
+        }
+        
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         if snap {
-            transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? 0.75 : 0.5)
+            transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.75 : 0.5)
             transition.updateTransformScale(node: self.iconNode, scale: 0.5)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
@@ -169,6 +194,8 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let iconSize = CGSize(width: 90.0, height: 90.0)
         self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
         self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        
+        self.wasActiveWhenPressed = false
     }
     
     func update(snap: Bool) {
@@ -344,6 +371,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     private let backgroundCircleLayer = CAShapeLayer()
     private let foregroundCircleLayer = CAShapeLayer()
+    private let growingForegroundCircleLayer = CAShapeLayer()
     
     private let foregroundView = UIView()
     private let foregroundGradientLayer = CAGradientLayer()
@@ -386,6 +414,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.foregroundCircleLayer.path = smallerCirclePath
         self.foregroundCircleLayer.transform = CATransform3DMakeScale(0.0, 0.0, 1)
         self.foregroundCircleLayer.isHidden = true
+        
+        self.growingForegroundCircleLayer.fillColor = greyColor.cgColor
+        self.growingForegroundCircleLayer.path = smallerCirclePath
+        self.growingForegroundCircleLayer.transform = CATransform3DMakeScale(1.0, 1.0, 1)
+        self.growingForegroundCircleLayer.isHidden = true
         
         self.foregroundGradientLayer.type = .radial
         self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor]
@@ -430,7 +463,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.view.addSubview(self.foregroundView)
         self.layer.addSublayer(self.foregroundCircleLayer)
-        
+        self.layer.addSublayer(self.growingForegroundCircleLayer)
+    
         self.foregroundView.mask = self.maskView
         self.foregroundView.layer.addSublayer(self.foregroundGradientLayer)
           
@@ -529,7 +563,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         }
     }
     
+    var disableGlowAnimations = false
     func updateGlowScale(_ scale: CGFloat?) {
+        if self.disableGlowAnimations {
+            return
+        }
         if let scale = scale {
             self.maskGradientLayer.transform = CATransform3DMakeScale(0.89 + 0.11 * scale, 0.89 + 0.11 * scale, 1.0)
         } else {
@@ -617,12 +655,19 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         CATransaction.commit()
     }
     
+    var animatingDisappearance = false
     private func playBlobsDisappearanceAnimation() {
+        if self.animatingDisappearance {
+            return
+        }
+        self.animatingDisappearance = true
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        self.foregroundCircleLayer.isHidden = false
+        self.growingForegroundCircleLayer.isHidden = false
         CATransaction.commit()
         
+        self.disableGlowAnimations = true
+        self.maskGradientLayer.removeAllAnimations()
         self.updateGlowAndGradientAnimations(active: nil, previousActive: nil)
         
         self.maskBlobView.startAnimating()
@@ -643,14 +688,16 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         CATransaction.setCompletionBlock {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
+            self.disableGlowAnimations = false
             self.maskGradientLayer.isHidden = true
             self.maskCircleLayer.isHidden = true
-            self.foregroundCircleLayer.isHidden = true
-            self.foregroundCircleLayer.removeAllAnimations()
+            self.growingForegroundCircleLayer.isHidden = true
+            self.growingForegroundCircleLayer.removeAllAnimations()
+            self.animatingDisappearance = false
             CATransaction.commit()
         }
         
-        self.foregroundCircleLayer.add(growthAnimation, forKey: "insideGrowth")
+        self.growingForegroundCircleLayer.add(growthAnimation, forKey: "insideGrowth")
         CATransaction.commit()
     }
         
@@ -663,6 +710,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskGradientLayer.isHidden = false
         CATransaction.commit()
                 
+        self.disableGlowAnimations = true
+        self.maskGradientLayer.removeAllAnimations()
         self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
         
         self.maskBlobView.isHidden = false
@@ -679,6 +728,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         CATransaction.setCompletionBlock {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
+            self.disableGlowAnimations = false
             self.foregroundCircleLayer.isHidden = true
             CATransaction.commit()
         }
@@ -818,8 +868,10 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         }
         self.backgroundCircleLayer.fillColor = targetColor
         self.foregroundCircleLayer.fillColor = targetColor
+        self.growingForegroundCircleLayer.fillColor = targetColor
         self.backgroundCircleLayer.animate(from: previousColor, to: targetColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         self.foregroundCircleLayer.animate(from: previousColor, to: targetColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        self.growingForegroundCircleLayer.animate(from: previousColor, to: targetColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
     }
     
     func update(state: State, animated: Bool) {
@@ -850,6 +902,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.backgroundCircleLayer.frame = circleFrame
         self.foregroundCircleLayer.position = center
         self.foregroundCircleLayer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: circleFrame.width - progressLineWidth, height: circleFrame.height - progressLineWidth))
+        self.growingForegroundCircleLayer.position = center
+        self.growingForegroundCircleLayer.bounds = self.foregroundCircleLayer.bounds
         self.maskCircleLayer.frame = circleFrame.insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
         self.maskProgressLayer.frame = circleFrame.insetBy(dx: -3.0, dy: -3.0)
         self.foregroundView.frame = self.bounds

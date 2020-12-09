@@ -14,6 +14,7 @@ import SyncCore
 import AppBundle
 import ContextUI
 import PresentationDataUtils
+import TooltipUI
 
 public final class VoiceChatOverlayController: ViewController {
     private final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
@@ -23,6 +24,10 @@ public final class VoiceChatOverlayController: ViewController {
     
         init(controller: VoiceChatOverlayController) {
             self.controller = controller
+            
+            super.init()
+            
+            self.clipsToBounds = true
         }
         
         private var isButtonHidden = false
@@ -42,7 +47,7 @@ public final class VoiceChatOverlayController: ViewController {
                 if hidden {
                     if slide {
                         self.isSlidOffscreen = true
-                        transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint(x: 70.0, y: 0.0))
+                        transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint(x: 80.0 + 44.0, y: 0.0))
                     } else {
                         actionButton.layer.removeAllAnimations()
                         actionButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak actionButton] _ in
@@ -104,7 +109,7 @@ public final class VoiceChatOverlayController: ViewController {
             if reclaim {
                 let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 268.0 / 2.0)
                 let sourcePoint = actionButton.position
-                let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 20.0, y: sourcePoint.y + 10.0)
+                let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 60.0, y: sourcePoint.y + 10.0)
                 
                 let x1 = sourcePoint.x
                 let y1 = sourcePoint.y
@@ -127,7 +132,7 @@ public final class VoiceChatOverlayController: ViewController {
                 
                 actionButton.update(snap: false)
                 actionButton.position = targetPosition
-                actionButton.layer.animateKeyframes(values: keyframes, duration: 0.4, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
+                actionButton.layer.animateKeyframes(values: keyframes, duration: 0.34, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
                     completion()
                 })
             } else {
@@ -192,9 +197,16 @@ public final class VoiceChatOverlayController: ViewController {
             self.disposable = (combineLatest(queue: Queue.mainQueue(), controllers, overlayControllers)).start(next: { [weak self] controllers, overlayControllers in
                 if let strongSelf = self {
                     var hasVoiceChatController = false
+                    var overlayControllersCount = 0
                     for controller in controllers {
                         if controller is VoiceChatController {
                             hasVoiceChatController = true
+                        }
+                    }
+                    for controller in overlayControllers {
+                        if controller is TooltipController || controller is TooltipScreen || controller is AlertController {
+                        } else {
+                            overlayControllersCount += 1
                         }
                     }
                     
@@ -202,7 +214,7 @@ public final class VoiceChatOverlayController: ViewController {
                     if controllers.count == 1 || controllers.last is ChatController {
                         hidden = false
                     }
-                    if overlayControllers.count > 0 {
+                    if overlayControllersCount > 0 {
                         hidden = true
                     }
                     if hasVoiceChatController {

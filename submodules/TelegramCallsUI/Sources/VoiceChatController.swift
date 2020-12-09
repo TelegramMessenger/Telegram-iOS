@@ -1151,7 +1151,7 @@ public final class VoiceChatController: ViewController {
         private var pressTimer: SwiftSignalKit.Timer?
         private func startPressTimer() {
             self.pressTimer?.invalidate()
-            let pressTimer = SwiftSignalKit.Timer(timeout: 0.2, repeat: false, completion: { [weak self] in
+            let pressTimer = SwiftSignalKit.Timer(timeout: 0.185, repeat: false, completion: { [weak self] in
                 self?.pressTimerFired()
                 self?.pressTimer = nil
             }, queue: Queue.mainQueue())
@@ -1672,15 +1672,16 @@ public final class VoiceChatController: ViewController {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            if transition.crossFade {
-                options.insert(.AnimateCrossfade)
-            }
-            if transition.animated {
-                options.insert(.AnimateInsertion)
+            if !isFirstTime {
+                if transition.crossFade {
+                    options.insert(.AnimateCrossfade)
+                }
+                if transition.animated {
+                    options.insert(.AnimateInsertion)
+                }
             }
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
-            
             
             var scrollToItem: ListViewScrollToItem?
             if self.isFirstTime {
