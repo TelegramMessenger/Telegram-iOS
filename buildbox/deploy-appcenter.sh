@@ -80,4 +80,5 @@ upload_dsym() {
     	"$API_HOST/v0.1/apps/$API_USER_NAME/$API_APP_NAME/symbol_uploads/$DSYM_UPLOAD_ID"
 }
 
-upload_ipa
+appcenter login --token "$API_TOKEN"
+appcenter distribute release --app "$API_USER_NAME/$API_APP_NAME" -f "$IPA_PATH" -g Internal
