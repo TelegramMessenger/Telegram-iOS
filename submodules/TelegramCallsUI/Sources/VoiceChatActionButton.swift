@@ -198,13 +198,13 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.wasActiveWhenPressed = false
     }
     
-    func update(snap: Bool) {
+    func update(snap: Bool, animated: Bool) {
         if let previous = self.currentParams {
             self.currentParams = (previous.size, previous.buttonSize, previous.state, previous.dark, previous.small, previous.title, previous.subtitle, snap)
             
             self.backgroundNode.glowHidden = snap
             
-            self.applyParams(animated: true)
+            self.applyParams(animated: animated)
         }
     }
     

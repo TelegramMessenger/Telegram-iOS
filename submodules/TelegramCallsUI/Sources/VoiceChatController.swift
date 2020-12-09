@@ -1120,7 +1120,7 @@ public final class VoiceChatController: ViewController {
             panRecognizer.delegate = self
             panRecognizer.delaysTouchesBegan = false
             panRecognizer.cancelsTouchesInView = true
-//            self.view.addGestureRecognizer(panRecognizer)
+            self.view.addGestureRecognizer(panRecognizer)
         }
         
         @objc private func optionsPressed() {
@@ -1617,8 +1617,10 @@ public final class VoiceChatController: ViewController {
             transition.animateView({
                 self.contentContainer.view.bounds = initialBounds
             }, completion: { _ in
-                self.bottomPanelNode.addSubnode(self.actionButton)
-                self.containerLayoutUpdated(layout, navigationHeight:navigationHeight,  transition: .immediate)
+                if self.actionButton.supernode !== self.bottomPanelNode {
+                    self.bottomPanelNode.addSubnode(self.actionButton)
+                    self.containerLayoutUpdated(layout, navigationHeight:navigationHeight,  transition: .immediate)
+                }
                 
                 self.controller?.currentOverlayController?.dismiss()
                 self.controller?.currentOverlayController = nil
@@ -1926,7 +1928,7 @@ public final class VoiceChatController: ViewController {
         self.idleTimerExtensionDisposable.dispose()
         
         if let currentOverlayController = self.currentOverlayController {
-            currentOverlayController.animateOut(reclaim: false, completion: {})
+            currentOverlayController.animateOut(reclaim: false, completion: { _ in })
         }
     }
     
@@ -1970,7 +1972,12 @@ public final class VoiceChatController: ViewController {
         
     public func dismiss(closing: Bool) {
         if !closing {
-            self.detachActionButton()
+            if let navigationController = self.navigationController as? NavigationController {
+                let count = navigationController.viewControllers.count
+                if count == 2 || navigationController.viewControllers[count - 2] is ChatController {
+                    self.detachActionButton() 
+                }
+            }
         } else {
             self.isDisconnected = true
         }
@@ -1992,7 +1999,11 @@ public final class VoiceChatController: ViewController {
         
         self.reclaimActionButton = { [weak self, weak overlayController] in
             if let strongSelf = self {
-                overlayController?.animateOut(reclaim: true, completion: {})
+                overlayController?.animateOut(reclaim: true, completion: { [weak self] immediate in
+                    if let strongSelf = self, immediate {
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.actionButton)
+                    }
+                })
                 strongSelf.reclaimActionButton = nil
             }
         }

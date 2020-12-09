@@ -16,6 +16,8 @@ import ContextUI
 import PresentationDataUtils
 import TooltipUI
 
+private let slideOffset: CGFloat = 80.0 + 44.0
+
 public final class VoiceChatOverlayController: ViewController {
     private final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: VoiceChatOverlayController?
@@ -33,7 +35,7 @@ public final class VoiceChatOverlayController: ViewController {
         private var isButtonHidden = false
         private var isSlidOffscreen = false
         func update(hidden: Bool, slide: Bool, animated: Bool) {
-            guard let actionButton = self.controller?.actionButton, actionButton.supernode === self else {
+            guard let actionButton = self.controller?.actionButton else {
                 return
             }
             
@@ -41,13 +43,17 @@ public final class VoiceChatOverlayController: ViewController {
                 return
             }
             self.isButtonHidden = hidden
+            self.isSlidOffscreen = hidden && slide
+            
+            guard actionButton.supernode === self else {
+                return
+            }
             
             if animated {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                 if hidden {
                     if slide {
-                        self.isSlidOffscreen = true
-                        transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint(x: 80.0 + 44.0, y: 0.0))
+                        transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint(x: slideOffset, y: 0.0))
                     } else {
                         actionButton.layer.removeAllAnimations()
                         actionButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak actionButton] _ in
@@ -56,7 +62,6 @@ public final class VoiceChatOverlayController: ViewController {
                     }
                 } else {
                     if slide {
-                        self.isSlidOffscreen = false
                         transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint())
                     } else {
                         actionButton.layer.removeAllAnimations()
@@ -65,12 +70,26 @@ public final class VoiceChatOverlayController: ViewController {
                     }
                 }
             } else {
-                
+                if hidden {
+                    if slide {
+                        actionButton.layer.sublayerTransform = CATransform3DMakeTranslation(slideOffset, 0.0, 0.0)
+                    }
+                } else {
+                    if slide {
+                        actionButton.layer.sublayerTransform = CATransform3DIdentity
+                    }
+                }
             }
         }
     
         func animateIn(from: CGRect) {
             guard let actionButton = self.controller?.actionButton else {
+                return
+            }
+            
+            actionButton.update(snap: true, animated: !self.isSlidOffscreen)
+            if self.isSlidOffscreen {
+                actionButton.layer.sublayerTransform = CATransform3DMakeTranslation(slideOffset, 0.0, 0.0)
                 return
             }
             
@@ -101,40 +120,56 @@ public final class VoiceChatOverlayController: ViewController {
             })
         }
         
-        func animateOut(reclaim: Bool, completion: @escaping () -> Void) {
+        private var animating = false
+        func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
             guard let actionButton = self.controller?.actionButton, let layout = self.validLayout else {
                 return
             }
             
             if reclaim {
                 let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 268.0 / 2.0)
-                let sourcePoint = actionButton.position
-                let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 60.0, y: sourcePoint.y + 10.0)
-                
-                let x1 = sourcePoint.x
-                let y1 = sourcePoint.y
-                let x2 = midPoint.x
-                let y2 = midPoint.y
-                let x3 = targetPosition.x
-                let y3 = targetPosition.y
-                
-                let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
-                let b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
-                let c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
-                
-                var keyframes: [AnyObject] = []
-                for i in 0 ..< 10 {
-                    let k = CGFloat(i) / CGFloat(10 - 1)
-                    let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
-                    let y = a * x * x + b * x + c
-                    keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
+                if self.isSlidOffscreen {
+                    self.isSlidOffscreen = false
+                    self.isButtonHidden = true
+                    actionButton.layer.sublayerTransform = CATransform3DIdentity
+                    actionButton.update(snap: false, animated: false)
+                    actionButton.position = CGPoint(x: targetPosition.x, y: 268.0 / 2.0)
+                    completion(true)
+                } else {
+                    self.animating = true
+                    let sourcePoint = actionButton.position
+                    var midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 60.0, y: sourcePoint.y)
+                    if sourcePoint.y < layout.size.height - 100.0 {
+                        midPoint.x = (sourcePoint.x + targetPosition.x) / 2.0 + 30.0
+                        midPoint.y = (sourcePoint.y + targetPosition.y) / 2.0 + 40.0
+                    }
+                    
+                    let x1 = sourcePoint.x
+                    let y1 = sourcePoint.y
+                    let x2 = midPoint.x
+                    let y2 = midPoint.y
+                    let x3 = targetPosition.x
+                    let y3 = targetPosition.y
+                    
+                    let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                    let b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                    let c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                    
+                    var keyframes: [AnyObject] = []
+                    for i in 0 ..< 10 {
+                        let k = CGFloat(i) / CGFloat(10 - 1)
+                        let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
+                        let y = a * x * x + b * x + c
+                        keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
+                    }
+                    
+                    actionButton.update(snap: false, animated: true)
+                    actionButton.position = targetPosition
+                    actionButton.layer.animateKeyframes(values: keyframes, duration: 0.34, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
+                        self.animating = false
+                        completion(false)
+                    })
                 }
-                
-                actionButton.update(snap: false)
-                actionButton.position = targetPosition
-                actionButton.layer.animateKeyframes(values: keyframes, duration: 0.34, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
-                    completion()
-                })
             } else {
                 actionButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self, weak actionButton] _ in
                     actionButton?.removeFromSupernode()
@@ -157,15 +192,14 @@ public final class VoiceChatOverlayController: ViewController {
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
-            if let actionButton = self.controller?.actionButton {
+            if let actionButton = self.controller?.actionButton, !self.animating {
                 let convertedRect = actionButton.view.convert(actionButton.bounds, to: self.view)
                 let insets = layout.insets(options: [.input])                
                 transition.updatePosition(node: actionButton, position: CGPoint(x: layout.size.width - layout.safeInsets.right - 21.0, y: layout.size.height - insets.bottom - 22.0))
                 
                 if actionButton.supernode !== self {
                     self.addSubnode(actionButton)
-                    
-                    actionButton.update(snap: true)
+
                     self.animateIn(from: convertedRect)
                 }
             }
@@ -211,6 +245,7 @@ public final class VoiceChatOverlayController: ViewController {
                     }
                     
                     var hidden = true
+                    var animated = true
                     if controllers.count == 1 || controllers.last is ChatController {
                         hidden = false
                     }
@@ -219,8 +254,9 @@ public final class VoiceChatOverlayController: ViewController {
                     }
                     if hasVoiceChatController {
                         hidden = false
+                        animated = false
                     }
-                    strongSelf.controllerNode.update(hidden: hidden, slide: true, animated: true)
+                    strongSelf.controllerNode.update(hidden: hidden, slide: true, animated: animated)
                 }
             })
         }
@@ -245,7 +281,7 @@ public final class VoiceChatOverlayController: ViewController {
         completion?()
     }
             
-    func animateOut(reclaim: Bool, completion: @escaping () -> Void) {
+    func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
         self.controllerNode.animateOut(reclaim: reclaim, completion: completion)
     }
     
