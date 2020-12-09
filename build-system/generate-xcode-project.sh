@@ -14,6 +14,15 @@ if [ "$BAZEL" = "" ]; then
 	exit 1
 fi
 
+BAZEL_x86_64="$BAZEL"
+if [ "$(arch)" == "arm64" ]; then
+	BAZEL_x86_64="$(which bazel_x86_64)"
+fi
+if [ "$BAZEL_x86_64" = "" ]; then
+	echo "bazel_x86_64 not found in PATH"
+	exit 1
+fi
+
 XCODE_VERSION=$(cat "build-system/xcode_version")
 INSTALLED_XCODE_VERSION=$(echo `plutil -p \`xcode-select -p\`/../Info.plist | grep -e CFBundleShortVersionString | sed 's/[^0-9\.]*//g'`)
 
@@ -36,7 +45,7 @@ rm -rf "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj"
 rm -rf "$TULSI_APP"
 
 pushd "build-system/tulsi"
-"$BAZEL" build //:tulsi --xcode_version="$XCODE_VERSION"
+"$BAZEL_x86_64" build //:tulsi --xcode_version="$XCODE_VERSION" --use_top_level_targets_for_symlinks
 popd
 
 mkdir -p "$TULSI_DIRECTORY"
