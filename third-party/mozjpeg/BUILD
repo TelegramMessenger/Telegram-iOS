@@ -55,7 +55,7 @@ genrule(
 
     mkdir -p "$$BUILD_DIR/Public/mozjpeg"
 
-    PATH="$$PATH:$$CMAKE_DIR/cmake-3.18.4-Darwin-x86_64/CMake.app/Contents/bin" sh $$BUILD_DIR/build-mozjpeg-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/mozjpeg" "$$BUILD_DIR"
+    PATH="$$PATH:$$CMAKE_DIR/cmake-3.18.4-Darwin-x86_64/CMake.app/Contents/bin" arch -x86_64 sh $$BUILD_DIR/build-mozjpeg-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/mozjpeg" "$$BUILD_DIR"
     """ +
     "\n".join([
         "cp -f \"$$BUILD_DIR/mozjpeg/{}\" \"$(location Public/mozjpeg/{})\"".format(header, header) for header in headers
