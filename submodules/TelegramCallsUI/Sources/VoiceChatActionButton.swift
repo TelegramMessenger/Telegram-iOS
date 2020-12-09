@@ -548,8 +548,10 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         } else {
             let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (0.89))
             let targetScale: CGFloat = self.isActive ? 0.89 : 0.85
-            self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
-            self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
+            if abs(targetScale - initialScale) > 0.03 {
+                self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
+                self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
+            }
         }
     }
     
@@ -566,11 +568,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             if active {
                 targetColors = [blue.cgColor, green.cgColor]
                 targetScale = 0.89
-                outerColor = UIColor(rgb: 0x005720)
+                outerColor = UIColor(rgb: 0x21674f)
             } else {
                 targetColors = [lightBlue.cgColor, blue.cgColor]
                 targetScale = 0.85
-                outerColor = UIColor(rgb: 0x00274d)
+                outerColor = UIColor(rgb: 0x1d588d)
             }
         } else {
             targetColors = [lightBlue.cgColor, blue.cgColor]

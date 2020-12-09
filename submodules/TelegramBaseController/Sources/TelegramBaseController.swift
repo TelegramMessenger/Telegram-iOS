@@ -270,7 +270,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     return lhs?.internalId == rhs?.internalId
                 })
                 |> map { call -> PresentationGroupCall? in
-                    guard let call = call, call.peerId == peerId else {
+                    guard let call = call, call.peerId == peerId && call.account.peerId == context.account.peerId else {
                         return nil
                     }
                     return call
@@ -312,78 +312,6 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             }
                         }
                         |> runOn(.mainQueue())
-                        
-                        /*let updatedData: Signal<GroupCallPanelData?, NoError> = getGroupCallParticipants(account: context.account, callId: activeCall.id, accessHash: activeCall.accessHash, offset: "", limit: 10)
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
-                            return .single(nil)
-                        }
-                        |> mapToSignal { initialState -> Signal<GroupCallPanelData?, NoError> in
-                            guard let initialState = initialState else {
-                                return .single(nil)
-                            }
-                            
-                            return Signal<GroupCallPanelData?, NoError> { subscriber in
-                                let participantsContext = QueueLocalObject<GroupCallParticipantsContext>(queue: .mainQueue(), generate: {
-                                    return GroupCallParticipantsContext(
-                                        account: context.account,
-                                        peerId: peerId,
-                                        id: activeCall.id,
-                                        accessHash: activeCall.accessHash,
-                                        state: initialState
-                                    )
-                                })
-                                
-                                let disposable = MetaDisposable()
-                                participantsContext.with { participantsContext in
-                                    disposable.set(combineLatest(queue: .mainQueue(),
-                                        participantsContext.state,
-                                        participantsContext.numberOfActiveSpeakers
-                                    ).start(next: { state, numberOfActiveSpeakers in
-                                        var topParticipants: [GroupCallParticipantsContext.Participant] = []
-                                        for participant in state.participants {
-                                            if topParticipants.count >= 3 {
-                                                break
-                                            }
-                                            topParticipants.append(participant)
-                                        }
-                                        let data = GroupCallPanelData(
-                                            peerId: peerId,
-                                            info: GroupCallInfo(id: activeCall.id, accessHash: activeCall.accessHash, participantCount: state.totalCount, clientParams: nil),
-                                            topParticipants: topParticipants,
-                                            participantCount: state.totalCount,
-                                            numberOfActiveSpeakers: numberOfActiveSpeakers,
-                                            groupCall: nil
-                                        )
-                                        subscriber.putNext(data)
-                                    }))
-                                }
-                                
-                                return ActionDisposable {
-                                    disposable.dispose()
-                                    participantsContext.with { _ in
-                                    }
-                                }
-                            }
-                            |> runOn(.mainQueue())
-                        }
-                        
-                        let initialData: Signal<GroupCallPanelData?, NoError> = .single(GroupCallPanelData(
-                            peerId: peerId,
-                            info: GroupCallInfo(
-                                id: activeCall.id,
-                                accessHash: activeCall.accessHash,
-                                participantCount: 0,
-                                clientParams: nil
-                            ),
-                            topParticipants: [],
-                            participantCount: 0,
-                            numberOfActiveSpeakers: 0,
-                            groupCall: nil
-                        ))
-                        
-                        return initialData
-                        |> then(updatedData)*/
                     }
                 } else {
                     availableGroupCall = .single(nil)
