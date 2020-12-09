@@ -93,7 +93,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
-                guard let (_, _, _, _, _, _, _, snap) = self.currentParams else {
+                guard let (_, _, _, _, _, _, _, snap) = strongSelf.currentParams else {
                     return
                 }
                 if pressing {
