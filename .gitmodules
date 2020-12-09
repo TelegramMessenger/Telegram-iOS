@@ -16,7 +16,7 @@ url=https://github.com/bazelbuild/rules_apple.git
 	url = https://github.com/telegramdesktop/libtgvoip.git
 [submodule "build-system/tulsi"]
 	path = build-system/tulsi
-	url = https://github.com/ali-fareed/tulsi.git
+url=https://github.com/bazelbuild/tulsi.git
 [submodule "third-party/depot_tools"]
 	path = third-party/depot_tools
 	url = https://chromium.googlesource.com/chromium/tools/depot_tools.git
