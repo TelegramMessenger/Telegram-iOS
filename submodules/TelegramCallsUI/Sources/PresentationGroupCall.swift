@@ -463,6 +463,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         if !audioSession.getIsHeadsetPluggedIn() {
             self.currentSelectedAudioOutputValue = .speaker
+            self.audioOutputStatePromise.set(.single(([], .speaker)))
         }
         
         self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] control in
@@ -493,7 +494,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if !didReceiveAudioOutputs {
                     didReceiveAudioOutputs = true
                     if currentOutput == .speaker {
-                        signal = .single((availableOutputs, .builtin))
+                        signal = .single((availableOutputs, .speaker))
                         |> then(
                             signal
                             |> delay(1.0, queue: Queue.mainQueue())
@@ -989,6 +990,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     strongSelf.stateValue.adminIds = adminIds
                     
+                    strongSelf.stateValue.canManageCall = state.isCreator || adminIds.contains(strongSelf.accountContext.account.peerId)
                     if (state.isCreator || strongSelf.stateValue.adminIds.contains(strongSelf.accountContext.account.peerId)) && state.defaultParticipantsAreMuted.canChange {
                         strongSelf.stateValue.defaultParticipantMuteState = state.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
                     }
