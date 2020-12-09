@@ -15,7 +15,7 @@ import AppBundle
 import ContextUI
 import PresentationDataUtils
 
-final class VoiceChatOverlayController: ViewController {
+public final class VoiceChatOverlayController: ViewController {
     private final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: VoiceChatOverlayController?
         
@@ -23,6 +23,41 @@ final class VoiceChatOverlayController: ViewController {
     
         init(controller: VoiceChatOverlayController) {
             self.controller = controller
+        }
+        
+        private var isButtonHidden = false
+        func update(hidden: Bool, slide: Bool, animated: Bool) {
+            guard let actionButton = self.controller?.actionButton, actionButton.supernode === self else {
+                return
+            }
+            
+            if self.isButtonHidden == hidden {
+                return
+            }
+            self.isButtonHidden = hidden
+            
+            if animated {
+                if hidden {
+                    if slide {
+                        
+                    } else {
+                        actionButton.layer.removeAllAnimations()
+                        actionButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak actionButton] _ in
+                            actionButton?.isHidden = true
+                        })
+                    }
+                } else {
+                    if slide {
+                        
+                    } else {
+                        actionButton.layer.removeAllAnimations()
+                        actionButton.isHidden = false
+                        actionButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                    }
+                }
+            } else {
+                
+            }
         }
     
         func animateIn(from: CGRect) {
@@ -53,7 +88,7 @@ final class VoiceChatOverlayController: ViewController {
                 keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
             }
             
-            actionButton.layer.animateKeyframes(values: keyframes, duration: 0.3, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, completion: { [weak self] _ in
+            actionButton.layer.animateKeyframes(values: keyframes, duration: 0.2, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
             })
         }
         
@@ -88,9 +123,8 @@ final class VoiceChatOverlayController: ViewController {
                 
                 actionButton.update(snap: false)
                 actionButton.position = targetPosition
-                actionButton.layer.animateKeyframes(values: keyframes, duration: 0.4, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
+                actionButton.layer.animateKeyframes(values: keyframes, duration: 0.4, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
                     completion()
-                    self?.controller?.dismiss()
                 })
             } else {
                 actionButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self, weak actionButton] _ in
@@ -101,11 +135,14 @@ final class VoiceChatOverlayController: ViewController {
         }
                 
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if let actionButton = self.controller?.actionButton, actionButton.supernode === self, actionButton.frame.contains(point) {
-                return actionButton.hitTest(self.view.convert(point, to: actionButton.view), with: event)
-            } else {
-                return nil
+            if let actionButton = self.controller?.actionButton, actionButton.supernode === self {
+                let actionButtonSize = CGSize(width: 84.0, height: 84.0)
+                let actionButtonFrame = CGRect(origin: CGPoint(x: actionButton.position.x - actionButtonSize.width / 2.0, y: actionButton.position.y - actionButtonSize.height / 2.0), size: actionButtonSize)
+                if actionButtonFrame.contains(point) {
+                    return actionButton.hitTest(self.view.convert(point, to: actionButton.view), with: event)
+                }
             }
+            return nil
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -141,6 +178,10 @@ final class VoiceChatOverlayController: ViewController {
         self.additionalSideInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 75.0)
     }
     
+    deinit {
+        print("")
+    }
+    
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -150,7 +191,7 @@ final class VoiceChatOverlayController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override func dismiss(completion: (() -> Void)? = nil) {
+    public override func dismiss(completion: (() -> Void)? = nil) {
         super.dismiss(completion: completion)
         self.presentingViewController?.dismiss(animated: false, completion: nil)
         completion?()
@@ -158,6 +199,10 @@ final class VoiceChatOverlayController: ViewController {
             
     func animateOut(reclaim: Bool, completion: @escaping () -> Void) {
         self.controllerNode.animateOut(reclaim: reclaim, completion: completion)
+    }
+    
+    public func update(hidden: Bool, slide: Bool, animated: Bool) {
+        self.controllerNode.update(hidden: hidden, slide: slide, animated: animated)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

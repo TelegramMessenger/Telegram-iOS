@@ -500,6 +500,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         var notifyGlobalOverlayControllersUpdated = false
         
+        var additionalSideInsets = UIEdgeInsets()
+        
         var modalStyleOverlayTransitionFactor: CGFloat = 0.0
         var previousGlobalOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.globalOverlayContainers.count).reversed() {
@@ -527,6 +529,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 notifyGlobalOverlayControllersUpdated = true
             }
             
+            let controllerAdditionalSideInsets = overlayContainer.controller.additionalSideInsets
+            additionalSideInsets = UIEdgeInsets(top: 0.0, left: max(additionalSideInsets.left, controllerAdditionalSideInsets.left), bottom: 0.0, right: max(additionalSideInsets.right, controllerAdditionalSideInsets.right))
+            
             if overlayContainer.supernode != nil {
                 previousGlobalOverlayContainer = overlayContainer
                 let controllerStatusBarStyle = overlayContainer.controller.statusBar.statusBarStyle
@@ -546,7 +551,6 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
-        var additionalSideInsets = UIEdgeInsets()
         var previousOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.overlayContainers.count).reversed() {
             let overlayContainer = self.overlayContainers[i]

@@ -666,8 +666,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                             if let strongSelf = self {
-                                strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
-                                strongSelf.editMessageMediaWithLegacySignals(signals!)
+                                if canEditMessage(context: strongSelf.context, limitsConfiguration: strongSelf.context.currentLimitsConfiguration.with { $0 }, message: message) {
+                                    strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
+                                    strongSelf.editMessageMediaWithLegacySignals(signals!)
+                                } else {
+                                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
+                                }
                             }
                         }, present: { [weak self] c, a in
                             self?.present(c, in: .window(.root), with: a)
@@ -7051,6 +7055,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if saveInterfaceState {
             self.saveInterfaceState(includeScrollState: false)
+        }
+        
+        if let navigationController = self.navigationController as? NavigationController {
+            var voiceChatOverlayController: VoiceChatOverlayController?
+            for controller in navigationController.globalOverlayControllers {
+                if let controller = controller as? VoiceChatOverlayController {
+                    voiceChatOverlayController = controller
+                    break
+                }
+            }
+            
+            if let controller = voiceChatOverlayController {
+                if self.presentationInterfaceState.inputMode == .text && self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
+                    controller.update(hidden: true, slide: false, animated: true)
+                } else {
+                    controller.update(hidden: false, slide: false, animated: true)
+                }
+            }
         }
     }
     

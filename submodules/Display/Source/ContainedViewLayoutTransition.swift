@@ -1051,14 +1051,15 @@ public extension ContainedViewLayoutTransition {
 #if os(iOS)
     
 public extension ContainedViewLayoutTransition {
-    func animateView(_ f: @escaping () -> Void) {
+    func animateView(_ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
         switch self {
         case .immediate:
             f()
+            completion?(true)
         case let .animated(duration, curve):
             UIView.animate(withDuration: duration, delay: 0.0, options: curve.viewAnimationOptions, animations: {
                 f()
-            }, completion: nil)
+            }, completion: completion)
         }
     }
 }
