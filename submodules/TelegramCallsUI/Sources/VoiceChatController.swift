@@ -907,9 +907,13 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
+                let wasEmpty = strongSelf.audioOutputState == nil
                 strongSelf.audioOutputState = state
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
+                if wasEmpty {
+                    strongSelf.controller?.audioOutputStateReady.set(true)
                 }
             })
             
@@ -1846,6 +1850,7 @@ public final class VoiceChatController: ViewController {
         
     fileprivate let contentsReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     fileprivate let dataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
+    fileprivate let audioOutputStateReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let _ready = Promise<Bool>(false)
     override public var ready: Promise<Bool> {
         return self._ready
@@ -1881,7 +1886,8 @@ public final class VoiceChatController: ViewController {
         
         self._ready.set(combineLatest([
             self.contentsReady.get(),
-            self.dataReady.get()
+            self.dataReady.get(),
+            self.audioOutputStateReady.get()
         ])
         |> map { values -> Bool in
             for value in values {
