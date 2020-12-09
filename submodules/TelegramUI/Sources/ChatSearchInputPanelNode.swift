@@ -28,7 +28,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     private var needsSearchResultsTooltip = true
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics, Bool)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -39,7 +39,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                         strongSelf.displayActivity = value
                         strongSelf.activityIndicator.isHidden = !value
                         if let interfaceState = strongSelf.presentationInterfaceState, let validLayout = strongSelf.validLayout {
-                            strongSelf.updateLayout(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: UIEdgeInsets(), maxHeight: validLayout.3, isSecondary: validLayout.5, transition: .immediate, interfaceState: interfaceState, metrics: validLayout.4)
+                            strongSelf.updateLayout(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, maxHeight: validLayout.4, isSecondary: validLayout.6, transition: .immediate, interfaceState: interfaceState, metrics: validLayout.5)
                         }
                     }
                 }))
@@ -128,7 +128,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics, isSecondary)
+        self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
         
         if self.presentationInterfaceState != interfaceState {
             let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme
@@ -151,6 +151,11 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             panelHeight = 49.0
         } else {
             panelHeight = 45.0
+        }
+        
+        var width = width
+        if additionalSideInsets.right > 0.0 {
+            width -= additionalSideInsets.right
         }
         
         self.downButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 48.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight))

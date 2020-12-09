@@ -99,10 +99,10 @@ public final class ToolbarNode: ASDisplayNode {
         self.backgroundColor = theme.tabBarBackgroundColor
     }
     
-    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, toolbar: Toolbar, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, bottomInset: CGFloat, toolbar: Toolbar, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
         
-        let sideInset: CGFloat = 16.0
+        var sideInset: CGFloat = 16.0
         
         self.leftTitle.attributedText = NSAttributedString(string: toolbar.leftAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.leftAction?.isEnabled ?? false) ? self.theme.tabBarSelectedTextColor : self.theme.tabBarTextColor)
         self.leftButton.accessibilityLabel = toolbar.leftAction?.title
@@ -112,6 +112,12 @@ public final class ToolbarNode: ASDisplayNode {
         
         self.middleTitle.attributedText = NSAttributedString(string: toolbar.middleAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.middleAction?.isEnabled ?? false) ? self.theme.tabBarSelectedTextColor : self.theme.tabBarTextColor)
         self.middleButton.accessibilityLabel = toolbar.middleAction?.title
+        
+        var size = size
+        if additionalSideInsets.right > 0.0 {
+            size = CGSize(width: size.width - additionalSideInsets.right, height: size.height)
+            sideInset = 8.0
+        }
         
         let leftSize = self.leftTitle.updateLayout(size)
         let rightSize = self.rightTitle.updateLayout(size)

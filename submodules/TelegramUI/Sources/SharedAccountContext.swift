@@ -634,7 +634,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> deliverOnMainQueue).start(next: { [weak self] call in
                 if let strongSelf = self {
                     if call !== strongSelf.groupCallController?.call {
-                        strongSelf.groupCallController?.dismiss()
+                        strongSelf.groupCallController?.dismiss(closing: true)
                         strongSelf.groupCallController = nil
                         strongSelf.hasOngoingCall.set(false)
                         

@@ -106,8 +106,9 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: UIColor(rgb: 0xffffff))
         self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.5))
         
-        let titleSize = self.titleNode.measure(size)
-        let infoSize = self.infoNode.measure(size)
+        let constrainedSize = CGSize(width: size.width - 80.0, height: size.height)
+        let titleSize = self.titleNode.measure(constrainedSize)
+        let infoSize = self.infoNode.measure(constrainedSize)
         let titleInfoSpacing: CGFloat = 0.0
         
         let combinedHeight = titleSize.height + infoSize.height + titleInfoSpacing
@@ -460,6 +461,7 @@ public final class VoiceChatController: ViewController {
             self.dimNode.backgroundColor = dimColor
             
             self.contentContainer = ASDisplayNode()
+            self.contentContainer.isHidden = true
             
             self.backgroundNode = ASDisplayNode()
             self.backgroundNode.backgroundColor = secondaryPanelBackgroundColor
@@ -475,10 +477,12 @@ public final class VoiceChatController: ViewController {
             
             self.topPanelBackgroundNode = ASDisplayNode()
             self.topPanelBackgroundNode.backgroundColor = panelBackgroundColor
+            self.topPanelBackgroundNode.isUserInteractionEnabled = false
             
             self.topPanelEdgeNode = ASDisplayNode()
             self.topPanelEdgeNode.backgroundColor = panelBackgroundColor
             self.topPanelEdgeNode.layer.cornerRadius = 12.0
+            self.topPanelEdgeNode.isUserInteractionEnabled = false
             
             self.optionsButton = VoiceChatHeaderButton()
             self.optionsButton.setImage(optionsButtonImage(dark: false))
@@ -907,9 +911,13 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
+                let wasEmpty = strongSelf.audioOutputState == nil
                 strongSelf.audioOutputState = state
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
+                if wasEmpty {
+                    strongSelf.controller?.audioOutputStateReady.set(true)
                 }
             })
             
@@ -1596,7 +1604,7 @@ public final class VoiceChatController: ViewController {
         }
         
         func animateIn() {
-            guard let (layout, _) = self.validLayout else {
+            guard let (layout, navigationHeight) = self.validLayout else {
                 return
             }
             let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -1605,13 +1613,23 @@ public final class VoiceChatController: ViewController {
 
             let initialBounds = self.contentContainer.bounds
             self.contentContainer.bounds = initialBounds.offsetBy(dx: 0.0, dy: -(layout.size.height - topPanelFrame.minY))
-            transition.animateView {
+            self.contentContainer.isHidden = false
+            transition.animateView({
                 self.contentContainer.view.bounds = initialBounds
-            }
+            }, completion: { _ in
+                self.bottomPanelNode.addSubnode(self.actionButton)
+                self.containerLayoutUpdated(layout, navigationHeight:navigationHeight,  transition: .immediate)
+                
+                self.controller?.currentOverlayController?.dismiss()
+                self.controller?.currentOverlayController = nil
+            })
             self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
         
         func animateOut(completion: (() -> Void)?) {
+            guard let (layout, _) = self.validLayout else {
+                return
+            }
             var offsetCompleted = false
             let internalCompletion: () -> Void = { [weak self] in
                 if offsetCompleted {
@@ -1627,7 +1645,9 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            self.contentContainer.layer.animateBoundsOriginYAdditive(from: self.contentContainer.bounds.origin.y, to: -self.contentContainer.bounds.size.height, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            let topPanelFrame = self.topPanelNode.view.convert(self.topPanelNode.bounds, to: self.view)
+            
+            self.contentContainer.layer.animateBoundsOriginYAdditive(from: self.contentContainer.bounds.origin.y, to: -(layout.size.height - topPanelFrame.minY), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 offsetCompleted = true
                 internalCompletion()
             })
@@ -1846,6 +1866,7 @@ public final class VoiceChatController: ViewController {
         
     fileprivate let contentsReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     fileprivate let dataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
+    fileprivate let audioOutputStateReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let _ready = Promise<Bool>(false)
     override public var ready: Promise<Bool> {
         return self._ready
@@ -1857,6 +1878,7 @@ public final class VoiceChatController: ViewController {
     
     private var didAppearOnce: Bool = false
     private var isDismissed: Bool = false
+    private var isDisconnected: Bool = false
     
     private var controllerNode: Node {
         return self.displayNode as! Node
@@ -1864,7 +1886,7 @@ public final class VoiceChatController: ViewController {
     
     private let idleTimerExtensionDisposable = MetaDisposable()
     
-    private var currentOverlayController: VoiceChatOverlayController?
+    private weak var currentOverlayController: VoiceChatOverlayController?
     
     private var validLayout: ContainerViewLayout?
     
@@ -1881,7 +1903,8 @@ public final class VoiceChatController: ViewController {
         
         self._ready.set(combineLatest([
             self.contentsReady.get(),
-            self.dataReady.get()
+            self.dataReady.get(),
+            self.audioOutputStateReady.get()
         ])
         |> map { values -> Bool in
             for value in values {
@@ -1937,39 +1960,40 @@ public final class VoiceChatController: ViewController {
         self.idleTimerExtensionDisposable.set(nil)
         
         DispatchQueue.main.async {
+            self.didAppearOnce = false
+            self.isDismissed = true
+            self.detachActionButton()
             self.onViewDidDisappear?()
         }
     }
         
     public func dismiss(closing: Bool) {
-        if closing {
-            self.dismiss()
+        if !closing {
+            self.detachActionButton()
         } else {
-            let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton)
-            if let navigationController = self.navigationController as? NavigationController {
-                navigationController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
+            self.isDisconnected = true
+        }
+        
+        self.dismiss()
+    }
+    
+    private func detachActionButton() {
+        guard self.currentOverlayController == nil && !self.isDisconnected else {
+            return
+        }
+        
+        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, navigationController: self.navigationController as? NavigationController)
+        if let navigationController = self.navigationController as? NavigationController {
+            navigationController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
+        }
+        
+        self.currentOverlayController = overlayController
+        
+        self.reclaimActionButton = { [weak self, weak overlayController] in
+            if let strongSelf = self {
+                overlayController?.animateOut(reclaim: true, completion: {})
+                strongSelf.reclaimActionButton = nil
             }
-            self.sharedContext.presentGlobalController(overlayController, nil)
-            
-            self.currentOverlayController = overlayController
-            
-            self.reclaimActionButton = { [weak self, weak overlayController] in
-                if let strongSelf = self {
-                    let actionButton = strongSelf.controllerNode.actionButton
-                    overlayController?.animateOut(reclaim: true, completion: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.controllerNode.bottomPanelNode.addSubnode(actionButton)
-                            if let validLayout = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(validLayout, transition: .immediate)
-                            }
-                        }
-                    })
-                    strongSelf.currentOverlayController = nil
-                    strongSelf.reclaimActionButton = nil
-                }
-            }
-            
-            self.dismiss()
         }
     }
     

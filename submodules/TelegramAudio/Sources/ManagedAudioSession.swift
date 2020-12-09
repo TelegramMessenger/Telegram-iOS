@@ -823,13 +823,13 @@ public final class ManagedAudioSession {
                 
                 print("\(CFAbsoluteTimeGetCurrent()) AudioSession activate: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
-                self.updateCurrentAudioRouteInfo()
-                
-                print("\(CFAbsoluteTimeGetCurrent()) AudioSession updateCurrentAudioRouteInfo: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-                
                 try self.setupOutputMode(outputMode, type: type)
                 
                 print("\(CFAbsoluteTimeGetCurrent()) AudioSession setupOutputMode: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                
+                self.updateCurrentAudioRouteInfo()
+                
+                print("\(CFAbsoluteTimeGetCurrent()) AudioSession updateCurrentAudioRouteInfo: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 if case .voiceCall = type {
                     try AVAudioSession.sharedInstance().setPreferredIOBufferDuration(0.005)
