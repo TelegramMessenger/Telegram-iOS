@@ -26,20 +26,32 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         }
     }
     
-    var speaking = false {
+    var connectingColor: UIColor = UIColor(rgb: 0xb6b6bb) {
         didSet {
-            if self.speaking != oldValue {
-                let initialColors = self.foregroundGradientLayer.colors
-                let targetColors: [CGColor]
-                if speaking {
-                    targetColors = [green.cgColor, blue.cgColor]
-                } else {
-                    targetColors = [blue.cgColor, lightBlue.cgColor]
-                }
-                self.foregroundGradientLayer.colors = targetColors
-                self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+            if self.connectingColor.rgb != oldValue.rgb {
+                self.updateGradientColors()
             }
         }
+    }
+    
+    var speaking: Bool? = nil {
+        didSet {
+            if self.speaking != oldValue {
+                self.updateGradientColors()
+            }
+        }
+    }
+    
+    private func updateGradientColors() {
+        let initialColors = self.foregroundGradientLayer.colors
+        let targetColors: [CGColor]
+        if let speaking = self.speaking {
+            targetColors = speaking ? [green.cgColor, blue.cgColor] : [blue.cgColor, lightBlue.cgColor]
+        } else {
+            targetColors = [connectingColor.cgColor, connectingColor.cgColor]
+        }
+        self.foregroundGradientLayer.colors = targetColors
+        self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
     }
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
@@ -145,7 +157,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     }
     
     private let backgroundNode: CallStatusBarBackgroundNode
-    private let microphoneNode: VoiceChatMicrophoneNode
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateAnimatedCountLabelNode
     
@@ -156,8 +167,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentSize: CGSize?
     private var currentContent: Content?
     
-    private var strings: PresentationStrings?
-    private var nameDisplayOrder: PresentationPersonNameOrder = .firstLast
+    private var presentationData: PresentationData?
+    private let presentationDataDisposable = MetaDisposable()
+    
     private var currentPeer: Peer?
     private var currentCallTimer: SwiftSignalKit.Timer?
     private var currentCallState: PresentationCallState?
@@ -167,7 +179,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     
     public override init() {
         self.backgroundNode = CallStatusBarBackgroundNode()
-        self.microphoneNode = VoiceChatMicrophoneNode()
         self.titleNode = ImmediateTextNode()
         self.subtitleNode = ImmediateAnimatedCountLabelNode()
         self.subtitleNode.reverseAnimationDirection = true
@@ -180,6 +191,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     }
     
     deinit {
+        self.presentationDataDisposable.dispose()
         self.audioLevelDisposable.dispose()
         self.stateDisposable.dispose()
         self.currentCallTimer?.invalidate()
@@ -203,11 +215,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let wasEmpty = (self.titleNode.attributedText?.string ?? "").isEmpty
         
         if !self.didSetupData {
+            self.didSetupData = true
             switch content {
                 case let .call(sharedContext, account, call):
-                    let presentationData = sharedContext.currentPresentationData.with { $0 }
-                    self.strings = presentationData.strings
-                    self.nameDisplayOrder = presentationData.nameDisplayOrder
+                    self.presentationData = sharedContext.currentPresentationData.with { $0 }
                     self.stateDisposable.set(
                         (combineLatest(
                             account.postbox.loadedPeerWithId(call.peerId),
@@ -223,9 +234,14 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         }
                     }))
                 case let .groupCall(sharedContext, account, call):
-                    let presentationData = sharedContext.currentPresentationData.with { $0 }
-                    self.strings = presentationData.strings
-                    self.nameDisplayOrder = presentationData.nameDisplayOrder
+                    self.presentationData = sharedContext.currentPresentationData.with { $0 }
+                    self.presentationDataDisposable.set((sharedContext.presentationData
+                    |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                        if let strongSelf = self {
+                            strongSelf.presentationData = presentationData
+                            strongSelf.update()
+                        }
+                    }))
                     self.stateDisposable.set(
                         (combineLatest(
                             account.postbox.peerView(id: call.peerId),
@@ -238,7 +254,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.currentGroupCallState = state
                             
                             var isMuted = isMuted
-                            if let state = state, let muteState = state.callState.muteState, !muteState.canUnmute {
+                            if let state = state, state.callState.muteState != nil {
                                 isMuted = true
                             }
                             strongSelf.currentIsMuted = isMuted
@@ -268,7 +284,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         strongSelf.backgroundNode.audioLevel = effectiveLevel
                     }))
             }
-            self.didSetupData = true
         }
         
         var title: String = ""
@@ -277,9 +292,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let textColor = UIColor.white
         var segments: [AnimatedCountLabelNode.Segment] = []
         
-        if let strings = self.strings {
+        if let presentationData = self.presentationData {
             if let currentPeer = self.currentPeer {
-                title = currentPeer.displayTitle(strings: strings, displayOrder: self.nameDisplayOrder)
+                title = currentPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             var membersCount: Int32?
             if let groupCallState = self.currentGroupCallState {
@@ -289,12 +304,12 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             }
             
             if let membersCount = membersCount {
-                var membersPart = strings.VoiceChat_Status_Members(membersCount)
+                var membersPart = presentationData.strings.VoiceChat_Status_Members(membersCount)
                 if let startIndex = membersPart.firstIndex(of: "["), let endIndex = membersPart.firstIndex(of: "]") {
                     membersPart.removeSubrange(startIndex ... endIndex)
                 }
                 
-                let rawTextAndRanges = strings.VoiceChat_Status_MembersFormat("\(membersCount)", membersPart)
+                let rawTextAndRanges = presentationData.strings.VoiceChat_Status_MembersFormat("\(membersCount)", membersPart)
                 
                 let (rawText, ranges) = rawTextAndRanges
                 var textIndex = 0
@@ -326,6 +341,8 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                     textIndex += 1
                 }
             }
+            
+            self.backgroundNode.connectingColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
         }
         
         if self.subtitleNode.segments != segments {
@@ -334,8 +351,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white)
 
-        let animationSize: CGFloat = 25.0
-        let iconSpacing: CGFloat = 0.0
         let spacing: CGFloat = 5.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: size.height))
         let subtitleSize = self.subtitleNode.updateLayout(size: CGSize(width: 160.0, height: size.height), animated: true)
@@ -347,14 +362,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let verticalOrigin: CGFloat = size.height - contentHeight
         
         let transition: ContainedViewLayoutTransition = wasEmpty ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
-        
-//        transition.updateFrame(node: self.microphoneNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - animationSize) / 2.0)), size: CGSize(width: animationSize, height: animationSize)))
-//        self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: self.currentIsMuted, color: UIColor.white), animated: true)
-        
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
         transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
         
-        self.backgroundNode.speaking = self.currentIsConnected && !self.currentIsMuted
+        self.backgroundNode.speaking = self.currentIsConnected ? !self.currentIsMuted : nil
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
     }
 }

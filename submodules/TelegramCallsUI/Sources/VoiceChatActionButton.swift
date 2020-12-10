@@ -43,12 +43,21 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     var outerColor: Signal<UIColor?, NoError> {
         return outerColorPromise.get()
     }
+    
+    var connectingColor: UIColor = UIColor(rgb: 0xb6b6bb) {
+        didSet {
+            self.backgroundNode.connectingColor = self.connectingColor
+        }
+    }
+    
     var activeDisposable = MetaDisposable()
+    
+    var isDisabled: Bool = false
     
     var wasActiveWhenPressed = false
     var pressing: Bool = false {
         didSet {
-            guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
+            guard let (_, _, state, _, _, _, _, snap) = self.currentParams, !self.isDisabled else {
                 return
             }
             if self.pressing {
@@ -93,7 +102,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
-                guard let (_, _, _, _, _, _, _, snap) = strongSelf.currentParams else {
+                guard let (_, _, _, _, _, _, _, snap) = strongSelf.currentParams, !strongSelf.isDisabled else {
                     return
                 }
                 if pressing {
@@ -184,11 +193,13 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateTransformScale(node: self.iconNode, scale: 0.5)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
+            transition.updateAlpha(layer: self.maskProgressLayer, alpha: 0.0)
         } else {
             transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0)
             transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0)
             transition.updateAlpha(node: self.titleLabel, alpha: 1.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0)
+            transition.updateAlpha(layer: self.maskProgressLayer, alpha: 1.0)
         }
         
         let iconSize = CGSize(width: 90.0, height: 90.0)
@@ -202,8 +213,9 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         if let previous = self.currentParams {
             self.currentParams = (previous.size, previous.buttonSize, previous.state, previous.dark, previous.small, previous.title, previous.subtitle, snap)
             
+            self.backgroundNode.isSnap = snap
             self.backgroundNode.glowHidden = snap
-            
+            self.backgroundNode.updateColors()
             self.applyParams(animated: animated)
         }
     }
@@ -212,7 +224,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let previous = self.currentParams
         let previousState = previous?.state
         self.currentParams = (size, buttonSize, state, dark, small, title, subtitle, previous?.snap ?? false)
-        
+
         var iconMuted = true
         var iconColor: UIColor = .white
         var backgroundState: VoiceChatActionButtonBackgroundNode.State
@@ -231,7 +243,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             case .connecting:
                 backgroundState = .connecting
         }
-        self.backgroundNode.updateColor(dark: dark)
+        self.backgroundNode.isDark = dark
         self.backgroundNode.update(state: backgroundState, animated: true)
         self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, color: iconColor), animated: true)
         
@@ -819,6 +831,13 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         switch self.state {
             case .connecting:
                 self.updatedActive?(false)
+                if let transition = self.transition {
+                    self.updateGlowScale(nil)
+                    if case .blob = transition {
+                        playBlobsDisappearanceAnimation()
+                    }
+                    self.transition = nil
+                }
                 self.setupProgressAnimations()
                 self.isActive = false
             case let .blob(newActive):
@@ -858,10 +877,36 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         }
     }
     
-    func updateColor(dark: Bool) {
+    var isDark: Bool = false {
+        didSet {
+            if self.isDark != oldValue {
+                self.updateColors()
+            }
+        }
+    }
+    
+    var isSnap: Bool = false {
+        didSet {
+            if self.isSnap != oldValue {
+                self.updateColors()
+            }
+        }
+    }
+    
+    var connectingColor: UIColor = UIColor(rgb: 0xb6b6bb) {
+        didSet {
+            if self.connectingColor.rgb != oldValue.rgb {
+                self.updateColors()
+            }
+        }
+    }
+    
+    fileprivate func updateColors() {
         let previousColor: CGColor = self.backgroundCircleLayer.fillColor ?? greyColor.cgColor
         let targetColor: CGColor
-        if dark {
+        if self.isSnap {
+            targetColor = self.connectingColor.cgColor
+        } else if self.isDark {
             targetColor = secondaryGreyColor.cgColor
         } else {
             targetColor = greyColor.cgColor

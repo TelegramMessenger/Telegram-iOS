@@ -234,9 +234,11 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             if !animated {
                 placeholderNode.removeFromSupernode()
             } else {
+                placeholderNode.allowsGroupOpacity = true
                 placeholderNode.alpha = 0.0
                 placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
                     placeholderNode?.removeFromSupernode()
+                    placeholderNode?.allowsGroupOpacity = false
                 })
             }
         }

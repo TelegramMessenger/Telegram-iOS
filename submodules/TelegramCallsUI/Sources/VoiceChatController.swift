@@ -376,6 +376,7 @@ public final class VoiceChatController: ViewController {
         private let context: AccountContext
         private let call: PresentationGroupCall
         private var presentationData: PresentationData
+        private var presentationDataDisposable: Disposable?
         private var darkTheme: PresentationTheme
         
         private let dimNode: ASDisplayNode
@@ -832,6 +833,14 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
+            self.presentationDataDisposable = (sharedContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    strongSelf.presentationData = presentationData
+                    strongSelf.actionButton.connectingColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+                }
+            })
+            
             self.memberStatesDisposable = (combineLatest(queue: .mainQueue(),
                 self.call.state,
                 self.call.members,
@@ -1092,6 +1101,7 @@ public final class VoiceChatController: ViewController {
         }
         
         deinit {
+            self.presentationDataDisposable?.dispose()
             self.peerViewDisposable?.dispose()
             self.leaveDisposable.dispose()
             self.isMutedDisposable?.dispose()
@@ -1182,6 +1192,9 @@ public final class VoiceChatController: ViewController {
         
         @objc private func actionButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
             guard let callState = self.callState else {
+                return
+            }
+            if case .connecting = callState.networkState {
                 return
             }
             if let muteState = callState.muteState {
@@ -1580,7 +1593,7 @@ public final class VoiceChatController: ViewController {
                 actionButtonEnabled = false
             }
             
-            self.actionButton.isUserInteractionEnabled = actionButtonEnabled
+            self.actionButton.isDisabled = !actionButtonEnabled
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: layout.size.width < 330.0, animated: true)
             
             if self.actionButton.supernode === self.bottomPanelNode {
@@ -1975,7 +1988,7 @@ public final class VoiceChatController: ViewController {
             if let navigationController = self.navigationController as? NavigationController {
                 let count = navigationController.viewControllers.count
                 if count == 2 || navigationController.viewControllers[count - 2] is ChatController {
-                    self.detachActionButton() 
+                    self.detachActionButton()
                 }
             }
         } else {
