@@ -565,10 +565,12 @@ class TabBarNode: ASDisplayNode {
                 if let callsTabBarNodeContainer = callsTabBarNodeContainer {
                     tabBarNodeContainers.remove(at: 1)
                     transition.updateAlpha(node: callsTabBarNodeContainer.imageNode, alpha: 0.0)
+                    callsTabBarNodeContainer.imageNode.isUserInteractionEnabled = false
                 }
             } else {
                 if let callsTabBarNodeContainer = callsTabBarNodeContainer {
                     transition.updateAlpha(node: callsTabBarNodeContainer.imageNode, alpha: 1.0)
+                    callsTabBarNodeContainer.imageNode.isUserInteractionEnabled = true
                 }
             }
             
@@ -641,6 +643,9 @@ class TabBarNode: ASDisplayNode {
             
             for i in 0 ..< self.tabBarNodeContainers.count {
                 let node = self.tabBarNodeContainers[i].imageNode
+                if !node.isUserInteractionEnabled {
+                    continue
+                }
                 let distance = abs(location.x - node.position.x)
                 if let previousClosestNode = closestNode {
                     if previousClosestNode.1 > distance {

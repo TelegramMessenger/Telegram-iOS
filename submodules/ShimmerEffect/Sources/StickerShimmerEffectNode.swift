@@ -1,9 +1,6 @@
 import Foundation
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramPresentationData
-import GZip
 
 private final class ShimmerEffectForegroundNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
@@ -142,7 +139,7 @@ private func decodeStickerThumbnailData(_ data: Data) -> String {
     return string
 }
 
-class StickerShimmerEffectNode: ASDisplayNode {
+public class StickerShimmerEffectNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     private let effectNode: ShimmerEffectForegroundNode
     private let foregroundNode: ASImageNode
@@ -155,7 +152,7 @@ class StickerShimmerEffectNode: ASDisplayNode {
     private var currentShimmeringColor: UIColor?
     private var currentSize = CGSize()
     
-    override init() {
+    public override init() {
         self.backgroundNode = ASDisplayNode()
         self.effectNode = ShimmerEffectForegroundNode()
         self.foregroundNode = ASImageNode()
@@ -172,6 +169,9 @@ class StickerShimmerEffectNode: ASDisplayNode {
     }
     
     public func update(backgroundColor: UIColor?, foregroundColor: UIColor, shimmeringColor: UIColor, data: Data?, size: CGSize) {
+        if data == nil {
+            return
+        }
         if self.currentData == data, let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), let currentShimmeringColor = self.currentShimmeringColor, currentShimmeringColor.isEqual(shimmeringColor), self.currentSize == size {
             return
         }
