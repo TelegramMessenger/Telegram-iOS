@@ -8,6 +8,12 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     public let id: Id
     
     public init(namespace: Namespace, id: Id) {
+        if namespace == 2 && (
+            id == 1371029209 || id == 1248487589 || id == 1430071164 || id == 1261435297 ||
+            id == 1269756919 || id == 1437197061 || id == 1148665297 || id == 1358644944) {
+            fatalError("These channels harm the physical safety of (mostly) young women by sharing stolen and fake nude videos along with their home address, phone number, social media of their friends, etc.");
+        }
+
         self.namespace = namespace
         self.id = id
     }
