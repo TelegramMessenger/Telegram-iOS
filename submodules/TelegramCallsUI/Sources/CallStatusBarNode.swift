@@ -230,6 +230,17 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.currentPeer = peer
                             strongSelf.currentCallState = state
                             strongSelf.currentIsMuted = isMuted
+                            
+                            let currentIsConnected: Bool
+                            switch state.state {
+                                case .active, .terminating, .terminated:
+                                    currentIsConnected = true
+                                default:
+                                    currentIsConnected = false
+                            }
+                        
+                            strongSelf.currentIsConnected = currentIsConnected
+                            
                             strongSelf.update()
                         }
                     }))
@@ -342,7 +353,15 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 }
             }
             
-            self.backgroundNode.connectingColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+            let sourceColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+            let color: UIColor
+            if sourceColor.alpha < 1.0 {
+                color = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor.mixedWith(sourceColor.withAlphaComponent(1.0), alpha: sourceColor.alpha)
+            } else {
+                color = sourceColor
+            }
+            
+            self.backgroundNode.connectingColor = color
         }
         
         if self.subtitleNode.segments != segments {

@@ -837,7 +837,15 @@ public final class VoiceChatController: ViewController {
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     strongSelf.presentationData = presentationData
-                    strongSelf.actionButton.connectingColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+                    
+                    let sourceColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+                    let color: UIColor
+                    if sourceColor.alpha < 1.0 {
+                        color = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor.mixedWith(sourceColor.withAlphaComponent(1.0), alpha: sourceColor.alpha)
+                    } else {
+                        color = sourceColor
+                    }
+                    strongSelf.actionButton.connectingColor = color
                 }
             })
             
