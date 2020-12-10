@@ -393,7 +393,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     private let maskBlobView: VoiceBlobView
     private let maskCircleLayer = CAShapeLayer()
     
-    private let maskProgressLayer = CAShapeLayer()
+    fileprivate let maskProgressLayer = CAShapeLayer()
     
     private let maskMediumBlobLayer = CAShapeLayer()
     private let maskBigBlobLayer = CAShapeLayer()
