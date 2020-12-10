@@ -505,9 +505,9 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
         entries.append(.shareSheet(presentationData.theme, presentationData.strings.ChatSettings_IntentsSettings))
     }
-    if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+    /*if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
         entries.append(.widgetSettings(presentationData.strings.ChatSettings_WidgetSettings))
-    }
+    }*/
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
