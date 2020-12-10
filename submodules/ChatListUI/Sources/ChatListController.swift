@@ -23,6 +23,7 @@ import AppBundle
 import LocalizedPeerData
 import TelegramIntents
 import TooltipUI
+import TelegramCallsUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -1727,6 +1728,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 (strongSelf.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
             })
+            
+            if let navigationController = self.navigationController as? NavigationController {
+                var voiceChatOverlayController: VoiceChatOverlayController?
+                for controller in navigationController.globalOverlayControllers {
+                    if let controller = controller as? VoiceChatOverlayController {
+                        voiceChatOverlayController = controller
+                        break
+                    }
+                }
+                
+                if let controller = voiceChatOverlayController {
+                    controller.update(hidden: true, slide: true, animated: true)
+                }
+            }
         }
     }
     
@@ -1767,6 +1782,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 if !tabsIsEmpty {
                     self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                }
+            }
+            
+            if let navigationController = self.navigationController as? NavigationController {
+                var voiceChatOverlayController: VoiceChatOverlayController?
+                for controller in navigationController.globalOverlayControllers {
+                    if let controller = controller as? VoiceChatOverlayController {
+                        voiceChatOverlayController = controller
+                        break
+                    }
+                }
+                
+                if let controller = voiceChatOverlayController {
+                    controller.update(hidden: false, slide: true, animated: true)
                 }
             }
         }

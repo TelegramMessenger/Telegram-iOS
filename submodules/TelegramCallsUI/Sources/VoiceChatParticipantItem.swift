@@ -159,7 +159,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private let actionContainerNode: ASDisplayNode
     private var animationNode: VoiceChatMicrophoneNode?
     private var iconNode: ASImageNode?
-    private var actionButtonNode: HighlightTrackingButtonNode
+    private var actionButtonNode: HighlightableButtonNode
     
     private var audioLevelView: VoiceBlobView?
     private let audioLevelDisposable = MetaDisposable()
@@ -201,7 +201,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.statusNode.contentsScale = UIScreen.main.scale
         
         self.actionContainerNode = ASDisplayNode()
-        self.actionButtonNode = HighlightTrackingButtonNode()
+        self.actionButtonNode = HighlightableButtonNode()
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -613,7 +613,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             }
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, color: color), animated: true)
-                        strongSelf.actionButtonNode.isUserInteractionEnabled = false
+                        strongSelf.actionButtonNode.isUserInteractionEnabled = item.contextAction != nil
                     } else if let animationNode = strongSelf.animationNode {
                         strongSelf.animationNode = nil
                         animationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -643,7 +643,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: item.presentationData.theme.list.itemAccentColor)
                         }
-                        strongSelf.actionButtonNode.isUserInteractionEnabled = !invited
+                        strongSelf.actionButtonNode.isUserInteractionEnabled = false
                     } else if let iconNode = strongSelf.iconNode {
                         strongSelf.iconNode = nil
                         iconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -734,15 +734,15 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     }
     
     @objc private func actionButtonPressed() {
-        if let item = self.layoutParams?.0 {
-            item.action?()
+        if let item = self.layoutParams?.0, let contextAction = item.contextAction {
+            contextAction(self.contextSourceNode, nil)
         }
     }
     
     override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let item = self.layoutParams?.0, let params = self.layoutParams?.1 {
+        if let _ = self.layoutParams?.0, let params = self.layoutParams?.1 {
             let leftInset: CGFloat = 65.0 + params.leftInset
                         
             var avatarFrame = self.avatarNode.frame
