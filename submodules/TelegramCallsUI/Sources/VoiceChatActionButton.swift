@@ -193,13 +193,13 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateTransformScale(node: self.iconNode, scale: 0.5)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
-            transition.updateAlpha(layer: self.maskProgressLayer, alpha: 0.0)
+            transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
             transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0)
             transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0)
             transition.updateAlpha(node: self.titleLabel, alpha: 1.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0)
-            transition.updateAlpha(layer: self.maskProgressLayer, alpha: 1.0)
+            transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
         let iconSize = CGSize(width: 90.0, height: 90.0)

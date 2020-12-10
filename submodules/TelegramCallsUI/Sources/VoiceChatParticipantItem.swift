@@ -742,7 +742,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let item = self.layoutParams?.0, let params = self.layoutParams?.1 {
+        if let _ = self.layoutParams?.0, let params = self.layoutParams?.1 {
             let leftInset: CGFloat = 65.0 + params.leftInset
                         
             var avatarFrame = self.avatarNode.frame
