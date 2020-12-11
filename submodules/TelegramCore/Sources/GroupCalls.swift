@@ -103,6 +103,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                             peer: peer,
                             ssrc: ssrc,
                             joinTimestamp: date,
+                            activityTimestamp: activeDate.flatMap(Double.init),
                             muteState: muteState
                         ))
                     }
@@ -511,6 +512,20 @@ public final class GroupCallParticipantsContext {
         public var joinTimestamp: Int32
         public var activityTimestamp: Double?
         public var muteState: MuteState?
+        
+        public init(
+            peer: Peer,
+            ssrc: UInt32,
+            joinTimestamp: Int32,
+            activityTimestamp: Double?,
+            muteState: MuteState?
+        ) {
+            self.peer = peer
+            self.ssrc = ssrc
+            self.joinTimestamp = joinTimestamp
+            self.activityTimestamp = activityTimestamp
+            self.muteState = muteState
+        }
         
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
             if !lhs.peer.isEqual(rhs.peer) {

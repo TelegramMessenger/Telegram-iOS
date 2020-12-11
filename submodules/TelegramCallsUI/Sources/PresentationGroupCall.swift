@@ -239,20 +239,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         }
         
-        private let audioLevelsPromise = Promise<[(PeerId, Float)]>()
+        private let audioLevelsPromise = Promise<[(PeerId, Float, Bool)]>()
         
         init() {
         }
         
-        func update(levels: [(PeerId, Float)]) {
+        func update(levels: [(PeerId, Float, Bool)]) {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             let currentParticipants: [PeerId: Participant] = self.participants
             
             var validSpeakers: [PeerId: Participant] = [:]
             var silentParticipants = Set<PeerId>()
             var speakingParticipants = Set<PeerId>()
-            for (peerId, level) in levels {
-                if level > speakingLevelThreshold {
+            for (peerId, level, hasVoice) in levels {
+                if level > speakingLevelThreshold && hasVoice {
                     validSpeakers[peerId] = Participant(timestamp: timestamp, level: level)
                     speakingParticipants.insert(peerId)
                 } else {
@@ -276,9 +276,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }
             
-            var audioLevels: [(PeerId, Float)] = []
-            for (peerId, speaker) in validSpeakers {
-                audioLevels.append((peerId, speaker.level))
+            var audioLevels: [(PeerId, Float, Bool)] = []
+            for (peerId, level, hasVoice) in levels {
+                if level > 0.1 {
+                    audioLevels.append((peerId, level, hasVoice))
+                }
             }
             
             self.participants = validSpeakers
@@ -290,7 +292,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return self.speakingParticipantsPromise.get() |> distinctUntilChanged
         }
         
-        func getAudioLevels() -> Signal<[(PeerId, Float)], NoError> {
+        func getAudioLevels() -> Signal<[(PeerId, Float, Bool)], NoError> {
             return self.audioLevelsPromise.get()
         }
     }
@@ -309,6 +311,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
     public let peer: Peer?
+    
+    private let temporaryJoinTimestamp: Int32
     
     private var internalState: InternalState = .requesting
     
@@ -357,7 +361,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private let speakingParticipantsContext = SpeakingParticipantsContext()
     private var speakingParticipantsReportTimestamp: [PeerId: Double] = [:]
-    public var audioLevels: Signal<[(PeerId, Float)], NoError> {
+    public var audioLevels: Signal<[(PeerId, Float, Bool)], NoError> {
         return self.speakingParticipantsContext.getAudioLevels()
     }
     
@@ -458,6 +462,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.internalId = internalId
         self.peerId = peerId
         self.peer = peer
+        
+        self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
         var didReceiveAudioOutputs = false
         
@@ -611,10 +617,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash))
         }) {
             if let participantsContext = temporaryParticipantsContext.context.participantsContext {
+                let accountPeerId = self.accountContext.account.peerId
+                let accountPeer = self.accountContext.account.postbox.transaction { transaction -> Peer? in
+                    return transaction.getPeer(accountPeerId)
+                }
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
+                    accountPeer,
                     participantsContext.state,
                     participantsContext.activeSpeakers
-                ).start(next: { [weak self] state, activeSpeakers in
+                ).start(next: { [weak self] accountPeer, state, activeSpeakers in
                     guard let strongSelf = self else {
                         return
                     }
@@ -631,7 +642,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     var updatedInvitedPeers = strongSelf.invitedPeersValue
                     var didUpdateInvitedPeers = false
                     
-                    for participant in state.participants {
+                    var participants = state.participants
+                    
+                    if !participants.contains(where: { $0.peer.id == accountPeerId }) {
+                        if let accountPeer = accountPeer {
+                            participants.append(GroupCallParticipantsContext.Participant(
+                                peer: accountPeer,
+                                ssrc: 0,
+                                joinTimestamp: strongSelf.temporaryJoinTimestamp,
+                                activityTimestamp: nil,
+                                muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                            ))
+                            participants.sort()
+                        }
+                    }
+                    
+                    for participant in participants {
                         members.participants.append(participant)
                         
                         if topParticipants.count < 3 {
@@ -816,9 +842,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let strongSelf = self else {
                         return
                     }
-                    var result: [(PeerId, Float)] = []
+                    var result: [(PeerId, Float, Bool)] = []
                     var myLevel: Float = 0.0
-                    for (ssrcKey, level) in levels {
+                    var myLevelHasVoice: Bool = false
+                    for (ssrcKey, level, hasVoice) in levels {
                         var peerId: PeerId?
                         switch ssrcKey {
                         case .local:
@@ -828,20 +855,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         if let peerId = peerId {
                             if case .local = ssrcKey {
-                                myLevel = level
+                                if !strongSelf.isMutedValue.isEffectivelyMuted {
+                                    myLevel = level
+                                    myLevelHasVoice = hasVoice
+                                }
                             }
-                            result.append((peerId, level))
+                            result.append((peerId, level, hasVoice))
                         }
                     }
+                    
                     strongSelf.speakingParticipantsContext.update(levels: result)
                     
                     let mappedLevel = myLevel * 1.5
-                    
                     strongSelf.myAudioLevelPipe.putNext(mappedLevel)
-                    strongSelf.processMyAudioLevel(level: mappedLevel)
-                    if !strongSelf.isMutedValue.isEffectivelyMuted {
-                        strongSelf.speakingParticipantsContext.update(levels: [(strongSelf.account.peerId, mappedLevel)])
-                    }
+                    strongSelf.processMyAudioLevel(level: mappedLevel, hasVoice: myLevelHasVoice)
                 }))
             }
         }
@@ -1273,9 +1300,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }))
     }
     
-    public func invitePeer(_ peerId: PeerId) {
+    public func invitePeer(_ peerId: PeerId) -> Bool {
         guard case let .estabilished(callInfo, _, _, _) = self.internalState, !self.invitedPeersValue.contains(peerId) else {
-            return
+            return false
         }
 
         var updatedInvitedPeers = self.invitedPeersValue
@@ -1283,6 +1310,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.invitedPeersValue = updatedInvitedPeers
         
         let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
+        
+        return true
     }
     
     public func removedPeer(_ peerId: PeerId) {
@@ -1329,10 +1358,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         myAudioLevelTimer.start()
     }
     
-    private func processMyAudioLevel(level: Float) {
+    private func processMyAudioLevel(level: Float, hasVoice: Bool) {
         self.currentMyAudioLevel = level
         
-        if level > 0.01 {
+        if level > 0.01 && hasVoice {
             self.currentMyAudioLevelTimestamp = CACurrentMediaTime()
             
             if self.myAudioLevelTimer == nil {

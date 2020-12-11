@@ -46,7 +46,7 @@ public final class OngoingGroupCallContext {
         let joinPayload = Promise<(String, UInt32)>()
         let networkState = ValuePromise<NetworkState>(.connecting, ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
-        let audioLevels = ValuePipe<[(AudioLevelKey, Float)]>()
+        let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
         
         init(queue: Queue, inputDeviceId: String, outputDeviceId: String) {
             self.queue = queue
@@ -88,7 +88,7 @@ public final class OngoingGroupCallContext {
             
             let audioLevels = self.audioLevels
             audioLevelsUpdatedImpl = { levels in
-                var mappedLevels: [(AudioLevelKey, Float)] = []
+                var mappedLevels: [(AudioLevelKey, Float, Bool)] = []
                 var i = 0
                 while i < levels.count {
                     let uintValue = levels[i].uint32Value
@@ -98,8 +98,8 @@ public final class OngoingGroupCallContext {
                     } else {
                         key = .source(uintValue)
                     }
-                    mappedLevels.append((key, levels[i + 1].floatValue))
-                    i += 2
+                    mappedLevels.append((key, levels[i + 1].floatValue, levels[i + 2].boolValue))
+                    i += 3
                 }
                 queue.async {
                     audioLevels.putNext(mappedLevels)
@@ -177,7 +177,7 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public var audioLevels: Signal<[(AudioLevelKey, Float)], NoError> {
+    public var audioLevels: Signal<[(AudioLevelKey, Float, Bool)], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
