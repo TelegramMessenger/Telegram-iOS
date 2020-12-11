@@ -205,8 +205,6 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let iconSize = CGSize(width: 90.0, height: 90.0)
         self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
         self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        
-        self.wasActiveWhenPressed = false
     }
     
     private func applyIconParams() {
@@ -520,8 +518,10 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         } else {
             let previousValue = self.foregroundGradientLayer.startPoint
             let newValue: CGPoint
-            if self.maskBlobView.presentationAudioLevel > 0.15 {
-                newValue = CGPoint(x: CGFloat.random(in: 0.8 ..< 1.0), y: CGFloat.random(in: 0.1 ..< 0.45))
+            if self.maskBlobView.presentationAudioLevel > 0.22 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.1 ..< 0.35))
+            } else if self.maskBlobView.presentationAudioLevel > 0.01 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.77 ..< 0.95), y: CGFloat.random(in: 0.1 ..< 0.35))
             } else {
                 newValue = CGPoint(x: CGFloat.random(in: 0.65 ..< 0.85), y: CGFloat.random(in: 0.1 ..< 0.45))
             }

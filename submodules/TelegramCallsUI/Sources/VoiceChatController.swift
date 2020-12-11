@@ -127,6 +127,7 @@ public final class VoiceChatController: ViewController {
             let isLoading: Bool
             let isEmpty: Bool
             let crossFade: Bool
+            let count: Int
             let animated: Bool
         }
         
@@ -368,7 +369,7 @@ public final class VoiceChatController: ViewController {
             let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             
-            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, animated: fromEntries.count != toEntries.count)
+            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count, animated: fromEntries.count != toEntries.count)
         }
         
         private weak var controller: VoiceChatController?
@@ -470,8 +471,8 @@ public final class VoiceChatController: ViewController {
             self.listNode = ListView()
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
             self.listNode.clipsToBounds = true
-            self.listNode.stackFromBottom = true
-            self.listNode.keepMinimalScrollHeightWithTopInset = 0
+//            self.listNode.stackFromBottom = true
+//            self.listNode.keepMinimalScrollHeightWithTopInset = 0
             
             self.topPanelNode = ASDisplayNode()
             self.topPanelNode.clipsToBounds = false
@@ -1544,7 +1545,7 @@ public final class VoiceChatController: ViewController {
             let listTopInset = layoutTopInset + 63.0
             let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             
-            insets.top = max(0.0, listSize.height - 44.0 - floor(56.0 * 3.5))
+            insets.top = max(0.0, self.topInset ?? listSize.height)
             
             transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset), size: listSize))
             
@@ -1687,9 +1688,10 @@ public final class VoiceChatController: ViewController {
             }
         }
         
+        private var topInset: CGFloat?
         private var isFirstTime = true
         private func dequeueTransition() {
-            guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
+            guard let (layout, _) = self.validLayout, let transition = self.enqueuedTransitions.first else {
                 return
             }
             self.enqueuedTransitions.remove(at: 0)
@@ -1709,10 +1711,30 @@ public final class VoiceChatController: ViewController {
             var scrollToItem: ListViewScrollToItem?
             if self.isFirstTime {
                 self.isFirstTime = false
-                scrollToItem = ListViewScrollToItem(index: 0, position: .bottom(0), animated: false, curve: .Default(duration: nil), directionHint: .Up)
+//                scrollToItem = ListViewScrollToItem(index: 0, position: .bottom(0), animated: false, curve: .Default(duration: nil), directionHint: .Up)
             }
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            var itemsHeight: CGFloat = 46.0 + CGFloat(transition.count - 1) * 56.0
+           
+            let bottomAreaHeight: CGFloat = 268.0
+            let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
+            
+            let sideInset: CGFloat = 16.0
+            var insets = UIEdgeInsets()
+            insets.left = layout.safeInsets.left + sideInset
+            insets.right = layout.safeInsets.right + sideInset
+            
+            let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
+            let listTopInset = layoutTopInset + 63.0
+            let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
+            
+            insets.top = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
+            self.topInset = insets.top
+            
+            let (duration, curve) = listViewAnimationDurationAndCurve(transition: .animated(duration: 0.4, curve: .spring))
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve)
+            
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }

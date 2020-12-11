@@ -265,8 +265,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.currentGroupCallState = state
                             
                             var isMuted = isMuted
-                            if let state = state, state.callState.muteState != nil {
-                                isMuted = true
+                            if let state = state, let muteState = state.callState.muteState {
+                                if !muteState.canUnmute {
+                                    isMuted = true
+                                }
                             }
                             strongSelf.currentIsMuted = isMuted
                             
