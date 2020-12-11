@@ -14,6 +14,7 @@ private let secondaryGreyColor = UIColor(rgb: 0x1c1c1e)
 private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
+private let activeBlue = UIColor(rgb: 0x00a0b9)
 
 private let areaSize = CGSize(width: 440.0, height: 440.0)
 private let blobSize = CGSize(width: 244.0, height: 244.0)
@@ -626,7 +627,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let targetScale: CGFloat
         if let active = active {
             if active {
-                targetColors = [blue.cgColor, green.cgColor]
+                targetColors = [activeBlue.cgColor, green.cgColor]
                 targetScale = 0.89
                 outerColor = UIColor(rgb: 0x21674f)
             } else {
