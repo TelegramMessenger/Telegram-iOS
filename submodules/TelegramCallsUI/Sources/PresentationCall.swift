@@ -14,7 +14,7 @@ import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
 
-private final class PresentationCallToneRenderer {
+final class PresentationCallToneRenderer {
     let queue: Queue
     
     let tone: PresentationCallTone
@@ -94,15 +94,26 @@ private final class PresentationCallToneRenderer {
                     while takenCount < frameSize {
                         let dataOffset = (takeOffset + takenCount) % toneData.count
                         let dataCount = min(frameSize, toneData.count - dataOffset)
-                        memcpy(bytes, dataBytes.advanced(by: dataOffset), dataCount)
+                        //print("take from \(dataOffset) count: \(dataCount)")
+                        memcpy(bytes.advanced(by: takenCount), dataBytes.advanced(by: dataOffset), dataCount)
                         takenCount += dataCount
+                        
+                        if let toneDataMaxOffset = toneDataMaxOffset, takeOffset + takenCount >= toneDataMaxOffset {
+                            break
+                        }
+                    }
+                    
+                    if takenCount < frameSize {
+                        //print("fill with zeros from \(takenCount) count: \(frameSize - takenCount)")
+                        memset(bytes.advanced(by: takenCount), 0, frameSize - takenCount)
                     }
                 }
                 
-                if let toneDataMaxOffset = toneDataMaxOffset, takeOffset + frameSize > toneDataMaxOffset {
+                /*if let toneDataMaxOffset = toneDataMaxOffset, takeOffset + frameSize > toneDataMaxOffset {
                     let validCount = max(0, toneDataMaxOffset - takeOffset)
                     memset(bytes.advanced(by: validCount), 0, frameSize - validCount)
-                }
+                    print("clear from \(validCount) count: \(frameSize - validCount)")
+                }*/
                 
                 let status = CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: bytes, blockLength: frameSize, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: frameSize, flags: 0, blockBufferOut: &blockBuffer)
                 if status != noErr {

@@ -389,6 +389,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self._canBeRemoved.get()
     }
     
+    private let wasRemoved = Promise<Bool>(false)
+    
     private var stateValue = PresentationGroupCallState.initialValue {
         didSet {
             if self.stateValue != oldValue {
@@ -441,6 +443,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var proximityManagerIndex: Int?
     
     private var removedChannelMembersDisposable: Disposable?
+    
+    private var didConnectOnce: Bool = false
+    private var toneRenderer: PresentationCallToneRenderer?
     
     init(
         accountContext: AccountContext,
@@ -528,10 +533,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 return EmptyDisposable
                             })
                         } else {
-                            audioSessionControl.activate({ _ in })
-                            audioSessionActive = .single(true)
+                            audioSessionControl.activate({ [weak self] _ in
+                                Queue.mainQueue().async {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.audioSessionActive.set(.single(true))
+                                }
+                            })
                         }
-                        strongSelf.audioSessionActive.set(audioSessionActive)
                     } else {
                         strongSelf.audioSessionActive.set(.single(false))
                     }
@@ -835,6 +845,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.checkCallDisposable = nil
                         }
                     }
+                    
+                    if case .connected = state, !strongSelf.didConnectOnce {
+                        strongSelf.didConnectOnce = true
+                        
+                        let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
+                        strongSelf.toneRenderer = toneRenderer
+                        toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                    }
                 }))
                 
                 self.audioLevelsDisposable.set((callContext.audioLevels
@@ -1074,7 +1092,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private func updateIsAudioSessionActive(_ value: Bool) {
         if self.isAudioSessionActive != value {
             self.isAudioSessionActive = value
+            self.toneRenderer?.setAudioSessionActive(value)
         }
+    }
+    
+    private func markAsCanBeRemoved() {
+        self.callContext?.stop()
+        self.callContext = nil
+        self._canBeRemoved.set(.single(true))
+        
+        let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
+        self.toneRenderer = toneRenderer
+        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
+        
+        Queue.mainQueue().after(0.5, {
+            self.wasRemoved.set(.single(true))
+        })
     }
     
     public func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError> {
@@ -1085,9 +1118,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.callContext?.stop()
-                    strongSelf.callContext = nil
-                    strongSelf._canBeRemoved.set(.single(true))
+                    strongSelf.markAsCanBeRemoved()
                 }))
             } else {
                 self.leaveDisposable.set((leaveGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, source: localSsrc)
@@ -1095,23 +1126,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.callContext?.stop()
-                    strongSelf.callContext = nil
-                    strongSelf._canBeRemoved.set(.single(true))
+                    strongSelf.markAsCanBeRemoved()
                 }, completed: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.callContext?.stop()
-                    strongSelf.callContext = nil
-                    strongSelf._canBeRemoved.set(.single(true))
+                    strongSelf.markAsCanBeRemoved()
                 }))
             }
         } else {
-            self.callContext?.stop()
-            self.callContext = nil
-            self.requestDisposable.set(nil)
-            self._canBeRemoved.set(.single(true))
+            self.markAsCanBeRemoved()
         }
         return self._canBeRemoved.get()
     }
