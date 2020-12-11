@@ -5609,6 +5609,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
                 strongSelf.saveInterfaceState()
                 
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    for controller in navigationController.globalOverlayControllers {
+                        if controller is VoiceChatOverlayController {
+                            return
+                        }
+                    }
+                }
+                
                 var rect: CGRect? = strongSelf.chatDisplayNode.frameForInputPanelAccessoryButton(.silentPost(true))
                 if rect == nil {
                     rect = strongSelf.chatDisplayNode.frameForInputPanelAccessoryButton(.silentPost(false))
@@ -7062,11 +7070,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let controller = voiceChatOverlayController {
+                var hidden = false
                 if self.presentationInterfaceState.interfaceState.editMessage != nil || self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
-                    controller.update(hidden: true, slide: false, animated: true)
-                } else {
-                    controller.update(hidden: false, slide: false, animated: true)
+                    hidden = true
                 }
+                controller.update(hidden: hidden, slide: false, animated: true)
             }
         }
     }

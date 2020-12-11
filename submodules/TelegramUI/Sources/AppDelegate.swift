@@ -1245,11 +1245,7 @@ final class SharedApplicationContext {
             |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
                 return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
-        }).start(next: { [weak self] accountManager, loggedOutAccountPeerIds in
-            guard let strongSelf = self else {
-                return
-            }
-
+        }).start(next: { accountManager, loggedOutAccountPeerIds in
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
@@ -1888,7 +1884,7 @@ final class SharedApplicationContext {
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedContext in
             let type = ApplicationShortcutItemType(rawValue: shortcutItem.type)
-            var immediately = type == .account
+            let immediately = type == .account
             let proceed: () -> Void = {
                 let _ = (self.context.get()
                 |> take(1)

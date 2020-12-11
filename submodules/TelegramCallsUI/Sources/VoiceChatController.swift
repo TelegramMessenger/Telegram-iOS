@@ -376,6 +376,7 @@ public final class VoiceChatController: ViewController {
         private let context: AccountContext
         private let call: PresentationGroupCall
         private var presentationData: PresentationData
+        private var presentationDataDisposable: Disposable?
         private var darkTheme: PresentationTheme
         
         private let dimNode: ASDisplayNode
@@ -834,6 +835,22 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
+            self.presentationDataDisposable = (sharedContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    strongSelf.presentationData = presentationData
+                    
+                    let sourceColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+                    let color: UIColor
+                    if sourceColor.alpha < 1.0 {
+                        color = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor.mixedWith(sourceColor.withAlphaComponent(1.0), alpha: sourceColor.alpha)
+                    } else {
+                        color = sourceColor
+                    }
+                    strongSelf.actionButton.connectingColor = color
+                }
+            })
+            
             self.memberStatesDisposable = (combineLatest(queue: .mainQueue(),
                 self.call.state,
                 self.call.members,
@@ -1093,6 +1110,7 @@ public final class VoiceChatController: ViewController {
         }
         
         deinit {
+            self.presentationDataDisposable?.dispose()
             self.peerViewDisposable?.dispose()
             self.leaveDisposable.dispose()
             self.isMutedDisposable?.dispose()
@@ -1121,7 +1139,7 @@ public final class VoiceChatController: ViewController {
             panRecognizer.delegate = self
             panRecognizer.delaysTouchesBegan = false
             panRecognizer.cancelsTouchesInView = true
-//            self.view.addGestureRecognizer(panRecognizer)
+            self.view.addGestureRecognizer(panRecognizer)
         }
         
         @objc private func optionsPressed() {
@@ -1152,7 +1170,7 @@ public final class VoiceChatController: ViewController {
         private var pressTimer: SwiftSignalKit.Timer?
         private func startPressTimer() {
             self.pressTimer?.invalidate()
-            let pressTimer = SwiftSignalKit.Timer(timeout: 0.2, repeat: false, completion: { [weak self] in
+            let pressTimer = SwiftSignalKit.Timer(timeout: 0.185, repeat: false, completion: { [weak self] in
                 self?.pressTimerFired()
                 self?.pressTimer = nil
             }, queue: Queue.mainQueue())
@@ -1183,6 +1201,9 @@ public final class VoiceChatController: ViewController {
         
         @objc private func actionButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
             guard let callState = self.callState else {
+                return
+            }
+            if case .connecting = callState.networkState {
                 return
             }
             if let muteState = callState.muteState {
@@ -1581,7 +1602,7 @@ public final class VoiceChatController: ViewController {
                 actionButtonEnabled = false
             }
             
-            self.actionButton.isUserInteractionEnabled = actionButtonEnabled
+            self.actionButton.isDisabled = !actionButtonEnabled
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: layout.size.width < 330.0, animated: true)
             
             if self.actionButton.supernode === self.bottomPanelNode {
@@ -1618,8 +1639,10 @@ public final class VoiceChatController: ViewController {
             transition.animateView({
                 self.contentContainer.view.bounds = initialBounds
             }, completion: { _ in
-                self.bottomPanelNode.addSubnode(self.actionButton)
-                self.containerLayoutUpdated(layout, navigationHeight:navigationHeight,  transition: .immediate)
+                if self.actionButton.supernode !== self.bottomPanelNode {
+                    self.bottomPanelNode.addSubnode(self.actionButton)
+                    self.containerLayoutUpdated(layout, navigationHeight:navigationHeight,  transition: .immediate)
+                }
                 
                 self.controller?.currentOverlayController?.dismiss()
                 self.controller?.currentOverlayController = nil
@@ -1673,15 +1696,16 @@ public final class VoiceChatController: ViewController {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            if transition.crossFade {
-                options.insert(.AnimateCrossfade)
-            }
-            if transition.animated {
-                options.insert(.AnimateInsertion)
+            if !isFirstTime {
+                if transition.crossFade {
+                    options.insert(.AnimateCrossfade)
+                }
+                if transition.animated {
+                    options.insert(.AnimateInsertion)
+                }
             }
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
-            
             
             var scrollToItem: ListViewScrollToItem?
             if self.isFirstTime {
@@ -1915,7 +1939,7 @@ public final class VoiceChatController: ViewController {
         self.idleTimerExtensionDisposable.dispose()
         
         if let currentOverlayController = self.currentOverlayController {
-            currentOverlayController.animateOut(reclaim: false, completion: {})
+            currentOverlayController.animateOut(reclaim: false, completion: { _ in })
         }
     }
     
@@ -1959,7 +1983,12 @@ public final class VoiceChatController: ViewController {
         
     public func dismiss(closing: Bool) {
         if !closing {
-            self.detachActionButton()
+            if let navigationController = self.navigationController as? NavigationController {
+                let count = navigationController.viewControllers.count
+                if count == 2 || navigationController.viewControllers[count - 2] is ChatController {
+                    self.detachActionButton()
+                }
+            }
         } else {
             self.isDisconnected = true
         }
@@ -1981,7 +2010,11 @@ public final class VoiceChatController: ViewController {
         
         self.reclaimActionButton = { [weak self, weak overlayController] in
             if let strongSelf = self {
-                overlayController?.animateOut(reclaim: true, completion: {})
+                overlayController?.animateOut(reclaim: true, completion: { [weak self] immediate in
+                    if let strongSelf = self, immediate {
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.actionButton)
+                    }
+                })
                 strongSelf.reclaimActionButton = nil
             }
         }
