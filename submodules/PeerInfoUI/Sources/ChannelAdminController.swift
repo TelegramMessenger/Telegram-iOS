@@ -1010,9 +1010,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 if updateFlags == nil {
                                     if member.adminInfo?.rights == nil {
                                         if channel.flags.contains(.isCreator) {
-                                            updateFlags = maskRightsFlags.subtracting(.canAddAdmins)
+                                            updateFlags = maskRightsFlags.subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else if let adminRights = channel.adminRights {
-                                            updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting(.canAddAdmins)
+                                            updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else {
                                             updateFlags = []
                                         }

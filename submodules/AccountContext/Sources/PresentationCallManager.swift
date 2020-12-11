@@ -272,7 +272,7 @@ public protocol PresentationGroupCall: class {
     var state: Signal<PresentationGroupCallState, NoError> { get }
     var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> { get }
     var members: Signal<PresentationGroupCallMembers?, NoError> { get }
-    var audioLevels: Signal<[(PeerId, Float)], NoError> { get }
+    var audioLevels: Signal<[(PeerId, Float, Bool)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
     
@@ -285,7 +285,7 @@ public protocol PresentationGroupCall: class {
     
     func updateMuteState(peerId: PeerId, isMuted: Bool)
     
-    func invitePeer(_ peerId: PeerId)
+    func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
 }
