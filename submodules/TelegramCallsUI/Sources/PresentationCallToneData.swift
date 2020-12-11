@@ -71,6 +71,8 @@ enum PresentationCallTone {
     case busy
     case failed
     case ended
+    case groupJoined
+    case groupLeft
     
     var loopCount: Int? {
         switch self {
@@ -79,6 +81,8 @@ enum PresentationCallTone {
             case .failed:
                 return 1
             case .ended:
+                return 1
+            case .groupJoined, .groupLeft:
                 return 1
             default:
                 return nil
@@ -98,5 +102,9 @@ func presentationCallToneData(_ tone: PresentationCallTone) -> Data? {
             return loadToneData(name: "voip_fail.caf")
         case .ended:
             return loadToneData(name: "voip_end.caf")
+        case .groupJoined:
+            return loadToneData(name: "voip_group_joined.wav")
+        case .groupLeft:
+            return loadToneData(name: "voip_group_left.wav")
     }
 }

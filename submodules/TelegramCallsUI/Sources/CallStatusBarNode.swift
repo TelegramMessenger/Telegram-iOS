@@ -249,6 +249,13 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.update()
                         }
                     }))
+                    self.audioLevelDisposable.set((call.audioLevel
+                    |> deliverOnMainQueue).start(next: { [weak self] audioLevel in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.backgroundNode.audioLevel = audioLevel
+                    }))
                 case let .groupCall(sharedContext, account, call):
                     self.presentationData = sharedContext.currentPresentationData.with { $0 }
                     self.presentationDataDisposable.set((sharedContext.presentationData
