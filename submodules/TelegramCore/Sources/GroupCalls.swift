@@ -103,6 +103,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                             peer: peer,
                             ssrc: ssrc,
                             joinTimestamp: date,
+                            activityTimestamp: activeDate.flatMap(Double.init),
                             muteState: muteState
                         ))
                     }
@@ -512,6 +513,20 @@ public final class GroupCallParticipantsContext {
         public var activityTimestamp: Double?
         public var muteState: MuteState?
         
+        public init(
+            peer: Peer,
+            ssrc: UInt32,
+            joinTimestamp: Int32,
+            activityTimestamp: Double?,
+            muteState: MuteState?
+        ) {
+            self.peer = peer
+            self.ssrc = ssrc
+            self.joinTimestamp = joinTimestamp
+            self.activityTimestamp = activityTimestamp
+            self.muteState = muteState
+        }
+        
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
             if !lhs.peer.isEqual(rhs.peer) {
                 return false
@@ -599,12 +614,18 @@ public final class GroupCallParticipantsContext {
     public enum Update {
         public struct StateUpdate {
             public struct ParticipantUpdate {
+                public enum ParticipationStatusChange {
+                    case none
+                    case joined
+                    case left
+                }
+                
                 public var peerId: PeerId
                 public var ssrc: UInt32
                 public var joinTimestamp: Int32
                 public var activityTimestamp: Double?
                 public var muteState: Participant.MuteState?
-                public var isRemoved: Bool
+                public var participationStatusChange: ParticipationStatusChange
             }
             
             public var participantUpdates: [ParticipantUpdate]
@@ -896,7 +917,7 @@ public final class GroupCallParticipantsContext {
             var updatedTotalCount = strongSelf.stateValue.state.totalCount
             
             for participantUpdate in update.participantUpdates {
-                if participantUpdate.isRemoved {
+                if case .left = participantUpdate.participationStatusChange {
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         updatedParticipants.remove(at: index)
                         updatedTotalCount = max(0, updatedTotalCount - 1)
@@ -912,7 +933,7 @@ public final class GroupCallParticipantsContext {
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         previousActivityTimestamp = updatedParticipants[index].activityTimestamp
                         updatedParticipants.remove(at: index)
-                    } else {
+                    } else if case .left = participantUpdate.participationStatusChange {
                         updatedTotalCount += 1
                     }
                     
@@ -1092,13 +1113,24 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
             }
             let isRemoved = (flags & (1 << 1)) != 0
+            let justJoined = (flags & (1 << 4)) != 0
+            
+            let participationStatusChange: GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate.ParticipationStatusChange
+            if isRemoved {
+                participationStatusChange = .left
+            } else if justJoined {
+                participationStatusChange = .joined
+            } else {
+                participationStatusChange = .none
+            }
+            
             self.init(
                 peerId: peerId,
                 ssrc: ssrc,
                 joinTimestamp: date,
                 activityTimestamp: activeDate.flatMap(Double.init),
                 muteState: muteState,
-                isRemoved: isRemoved
+                participationStatusChange: participationStatusChange
             )
         }
     }
@@ -1118,13 +1150,24 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
                 }
                 let isRemoved = (flags & (1 << 1)) != 0
+                let justJoined = (flags & (1 << 4)) != 0
+                
+                let participationStatusChange: GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate.ParticipationStatusChange
+                if isRemoved {
+                    participationStatusChange = .left
+                } else if justJoined {
+                    participationStatusChange = .joined
+                } else {
+                    participationStatusChange = .none
+                }
+                
                 participantUpdates.append(GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(
                     peerId: peerId,
                     ssrc: ssrc,
                     joinTimestamp: date,
                     activityTimestamp: activeDate.flatMap(Double.init),
                     muteState: muteState,
-                    isRemoved: isRemoved
+                    participationStatusChange: participationStatusChange
                 ))
             }
         }

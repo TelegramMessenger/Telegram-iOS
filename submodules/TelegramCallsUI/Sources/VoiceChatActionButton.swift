@@ -132,7 +132,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.backgroundNode.audioLevel = level
     }
     
-    func applyParams(animated: Bool) {
+    private func applyParams(animated: Bool) {
         guard let (size, _, state, _, small, title, subtitle, snap) = self.currentParams else {
             return
         }
@@ -209,6 +209,31 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.wasActiveWhenPressed = false
     }
     
+    private func applyIconParams() {
+        guard let (size, _, state, _, small, title, subtitle, snap) = self.currentParams else {
+            return
+        }
+        
+        var iconMuted = true
+        var iconColor: UIColor = UIColor(rgb: 0xffffff)
+        switch state {
+            case let .active(state):
+                switch state {
+                    case .on:
+                        iconMuted = false
+                    case .muted:
+                        break
+                    case .cantSpeak:
+                        if !snap {
+                            iconColor = UIColor(rgb: 0xff3b30)
+                        }
+                }
+            case .connecting:
+                break
+        }
+        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, color: iconColor), animated: true)
+    }
+    
     func update(snap: Bool, animated: Bool) {
         if let previous = self.currentParams {
             self.currentParams = (previous.size, previous.buttonSize, previous.state, previous.dark, previous.small, previous.title, previous.subtitle, snap)
@@ -217,6 +242,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             self.backgroundNode.glowHidden = snap
             self.backgroundNode.updateColors()
             self.applyParams(animated: animated)
+            self.applyIconParams()
         }
     }
     
@@ -225,27 +251,24 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let previousState = previous?.state
         self.currentParams = (size, buttonSize, state, dark, small, title, subtitle, previous?.snap ?? false)
 
-        var iconMuted = true
-        var iconColor: UIColor = .white
         var backgroundState: VoiceChatActionButtonBackgroundNode.State
         switch state {
             case let .active(state):
                 switch state {
                     case .on:
-                        iconMuted = false
                         backgroundState = .blob(true)
                     case .muted:
                         backgroundState = .blob(false)
                     case .cantSpeak:
-                        iconColor = UIColor(rgb: 0xff3b30)
                         backgroundState = .disabled
                 }
             case .connecting:
                 backgroundState = .connecting
         }
+        self.applyIconParams()
+        
         self.backgroundNode.isDark = dark
         self.backgroundNode.update(state: backgroundState, animated: true)
-        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, color: iconColor), animated: true)
         
         if case .active = state, let previousState = previousState, case .connecting = previousState, animated {
             self.activeDisposable.set((self.activePromise.get()

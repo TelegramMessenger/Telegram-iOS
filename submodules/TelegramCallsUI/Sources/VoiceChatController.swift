@@ -172,9 +172,9 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            func updateAudioLevels(_ levels: [(PeerId, Float)], reset: Bool = false) {
+            func updateAudioLevels(_ levels: [(PeerId, Float, Bool)], reset: Bool = false) {
                 var updated = Set<PeerId>()
-                for (peerId, level) in levels {
+                for (peerId, level, _) in levels {
                     if let pipe = self.audioLevels[peerId] {
                         if reset {
                             pipe.putNext(level)
@@ -579,10 +579,11 @@ public final class VoiceChatController: ViewController {
                             return
                         }
                         if let participant = participant {
-                            strongSelf.call.invitePeer(participant.peer.id)
                             dismissController?()
                             
-                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            if strongSelf.call.invitePeer(participant.peer.id) {
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            }
                         } else {
                             strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
                                 guard let strongSelf = self else {
@@ -650,10 +651,11 @@ public final class VoiceChatController: ViewController {
                                         dismissController?()
                                         return
                                     }
-                                    strongSelf.call.invitePeer(peer.id)
                                     dismissController?()
                                     
-                                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    if strongSelf.call.invitePeer(peer.id) {
+                                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    }
                                 }))
                             })]), in: .window(.root))
                         }
@@ -837,7 +839,15 @@ public final class VoiceChatController: ViewController {
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     strongSelf.presentationData = presentationData
-                    strongSelf.actionButton.connectingColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+                    
+                    let sourceColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+                    let color: UIColor
+                    if sourceColor.alpha < 1.0 {
+                        color = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor.mixedWith(sourceColor.withAlphaComponent(1.0), alpha: sourceColor.alpha)
+                    } else {
+                        color = sourceColor
+                    }
+                    strongSelf.actionButton.connectingColor = color
                 }
             })
             
@@ -855,7 +865,6 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 if strongSelf.callState != state {
-                    let wasMuted = strongSelf.callState?.muteState != nil
                     strongSelf.callState = state
                     
                     if let muteState = state.muteState, !muteState.canUnmute {
@@ -1227,7 +1236,7 @@ public final class VoiceChatController: ViewController {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
                     }
                     
-                    self.itemInteraction?.updateAudioLevels([(self.context.account.peerId, 0.0)], reset: true)
+                    self.itemInteraction?.updateAudioLevels([(self.context.account.peerId, 0.0, false)], reset: true)
                                         
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
@@ -1758,17 +1767,6 @@ public final class VoiceChatController: ViewController {
                     canManageCall: callState?.canManageCall ?? false
                 )))
                 index += 1
-            }
-            
-            if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
-                entries.insert(.peer(PeerEntry(
-                    peer: accountPeer,
-                    presence: nil,
-                    activityTimestamp: Int32.max - 1 - index,
-                    state: .listening,
-                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
-                    canManageCall: callState?.canManageCall ?? false
-                )), at: 1)
             }
             
             for peer in invitedPeers {
