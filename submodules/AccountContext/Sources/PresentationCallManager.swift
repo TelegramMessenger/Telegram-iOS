@@ -132,6 +132,7 @@ public protocol PresentationCall: class {
     var peer: Peer? { get }
     
     var state: Signal<PresentationCallState, NoError> { get }
+    var audioLevel: Signal<Float, NoError> { get }
 
     var isMuted: Signal<Bool, NoError> { get }
     
