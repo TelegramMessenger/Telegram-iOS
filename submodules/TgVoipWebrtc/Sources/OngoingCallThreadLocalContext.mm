@@ -463,6 +463,16 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     }
                 }];
             },
+            .audioLevelUpdated = [weakSelf, queue](float level) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        if (strongSelf->_audioLevelUpdated) {
+                            strongSelf->_audioLevelUpdated(level);
+                        }
+                    }
+                }];
+            },
             .remoteMediaStateUpdated = [weakSelf, queue](tgcalls::AudioState audioState, tgcalls::VideoState videoState) {
                 [queue dispatch:^{
                     __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;

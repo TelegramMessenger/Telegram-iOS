@@ -578,7 +578,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         switch update {
                         case let .state(update):
                             for participantUpdate in update.participantUpdates {
-                                if participantUpdate.isRemoved {
+                                if case .left = participantUpdate.participationStatusChange {
                                     removedSsrc.append(participantUpdate.ssrc)
                                     
                                     if participantUpdate.peerId == strongSelf.accountContext.account.peerId {
@@ -590,6 +590,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     if case let .estabilished(_, _, ssrc, _) = strongSelf.internalState, ssrc != participantUpdate.ssrc {
                                         strongSelf._canBeRemoved.set(.single(true))
                                     }
+                                } else if case .joined = participantUpdate.participationStatusChange {
                                 }
                             }
                         case let .call(isTerminated, _):

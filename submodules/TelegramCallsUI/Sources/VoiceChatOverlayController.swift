@@ -56,20 +56,24 @@ public final class VoiceChatOverlayController: ViewController {
                         transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint(x: slideOffset, y: 0.0))
                     } else {
                         actionButton.layer.removeAllAnimations()
-                        actionButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak actionButton] _ in
-                            actionButton?.isHidden = true
+                        actionButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak actionButton] finished in
+                            if finished {
+                                actionButton?.isHidden = true
+                            }
                         })
                     }
                 } else {
+                    actionButton.isHidden = false
                     if slide {
                         transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint())
                     } else {
                         actionButton.layer.removeAllAnimations()
-                        actionButton.isHidden = false
                         actionButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
                     }
                 }
             } else {
+                actionButton.isHidden = hidden
+                actionButton.layer.removeAllAnimations()
                 if hidden {
                     if slide {
                         actionButton.layer.sublayerTransform = CATransform3DMakeTranslation(slideOffset, 0.0, 0.0)

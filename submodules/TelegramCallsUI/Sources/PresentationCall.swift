@@ -93,7 +93,7 @@ final class PresentationCallToneRenderer {
                     var takenCount = 0
                     while takenCount < frameSize {
                         let dataOffset = (takeOffset + takenCount) % toneData.count
-                        let dataCount = min(frameSize, toneData.count - dataOffset)
+                        let dataCount = min(frameSize - takenCount, toneData.count - dataOffset)
                         //print("take from \(dataOffset) count: \(dataCount)")
                         memcpy(bytes.advanced(by: takenCount), dataBytes.advanced(by: dataOffset), dataCount)
                         takenCount += dataCount
@@ -200,6 +200,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var requestedVideoAspect: Float?
     private var reception: Int32?
     private var receptionDisposable: Disposable?
+    private var audioLevelDisposable: Disposable?
     private var reportedIncomingCall = false
     
     private var batteryLevelDisposable: Disposable?
@@ -217,6 +218,11 @@ public final class PresentationCallImpl: PresentationCall {
     private let statePromise = ValuePromise<PresentationCallState>()
     public var state: Signal<PresentationCallState, NoError> {
         return self.statePromise.get()
+    }
+    
+    private let audioLevelPromise = ValuePromise<Float>(0.0)
+    public var audioLevel: Signal<Float, NoError> {
+        return self.audioLevelPromise.get()
     }
     
     private let isMutedPromise = ValuePromise<Bool>(false)
@@ -436,6 +442,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.sessionStateDisposable?.dispose()
         self.ongoingContextStateDisposable?.dispose()
         self.receptionDisposable?.dispose()
+        self.audioLevelDisposable?.dispose()
         self.batteryLevelDisposable?.dispose()
         self.audioSessionDisposable?.dispose()
         
@@ -653,6 +660,13 @@ public final class PresentationCallImpl: PresentationCall {
                             } else {
                                 strongSelf.reception = reception
                             }
+                        }
+                    })
+                    
+                    self.audioLevelDisposable = (ongoingContext.audioLevel
+                    |> deliverOnMainQueue).start(next: { [weak self] level in
+                        if let strongSelf = self {
+                            strongSelf.audioLevelPromise.set(level)
                         }
                     })
                     
