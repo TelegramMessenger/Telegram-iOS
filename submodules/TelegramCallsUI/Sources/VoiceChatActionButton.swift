@@ -14,6 +14,7 @@ private let secondaryGreyColor = UIColor(rgb: 0x1c1c1e)
 private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
+private let activeBlue = UIColor(rgb: 0x00a0b9)
 
 private let areaSize = CGSize(width: 440.0, height: 440.0)
 private let blobSize = CGSize(width: 244.0, height: 244.0)
@@ -205,8 +206,6 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let iconSize = CGSize(width: 90.0, height: 90.0)
         self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
         self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        
-        self.wasActiveWhenPressed = false
     }
     
     private func applyIconParams() {
@@ -520,8 +519,10 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         } else {
             let previousValue = self.foregroundGradientLayer.startPoint
             let newValue: CGPoint
-            if self.maskBlobView.presentationAudioLevel > 0.15 {
-                newValue = CGPoint(x: CGFloat.random(in: 0.8 ..< 1.0), y: CGFloat.random(in: 0.1 ..< 0.45))
+            if self.maskBlobView.presentationAudioLevel > 0.22 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.1 ..< 0.35))
+            } else if self.maskBlobView.presentationAudioLevel > 0.01 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.77 ..< 0.95), y: CGFloat.random(in: 0.1 ..< 0.35))
             } else {
                 newValue = CGPoint(x: CGFloat.random(in: 0.65 ..< 0.85), y: CGFloat.random(in: 0.1 ..< 0.45))
             }
@@ -626,7 +627,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let targetScale: CGFloat
         if let active = active {
             if active {
-                targetColors = [blue.cgColor, green.cgColor]
+                targetColors = [activeBlue.cgColor, green.cgColor]
                 targetScale = 0.89
                 outerColor = UIColor(rgb: 0x21674f)
             } else {

@@ -18,8 +18,8 @@ import AccountContext
 import LegacyComponents
 import AudioBlob
 
-public final class VoiceChatParticipantItem: ListViewItem {
-    public enum ParticipantText {
+final class VoiceChatParticipantItem: ListViewItem {
+    enum ParticipantText {
         public enum TextColor {
             case generic
             case accent
@@ -31,25 +31,25 @@ public final class VoiceChatParticipantItem: ListViewItem {
         case none
     }
     
-    public enum Icon {
+    enum Icon {
         case none
         case microphone(Bool, UIColor)
         case invite(Bool)
     }
     
-    public struct RevealOption {
-        public enum RevealOptionType {
+    struct RevealOption {
+        enum RevealOptionType {
             case neutral
             case warning
             case destructive
             case accent
         }
         
-        public var type: RevealOptionType
-        public var title: String
-        public var action: () -> Void
+        var type: RevealOptionType
+        var title: String
+        var action: () -> Void
         
-        public init(type: RevealOptionType, title: String, action: @escaping () -> Void) {
+        init(type: RevealOptionType, title: String, action: @escaping () -> Void) {
             self.type = type
             self.title = title
             self.action = action
@@ -138,7 +138,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
 
 private let avatarFont = avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0))
 
-public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
+class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -170,7 +170,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (VoiceChatParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
             
-    public init() {
+    init() {
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
         
@@ -281,7 +281,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.audioLevelDisposable.dispose()
     }
         
-    public func asyncLayout() -> (_ item: VoiceChatParticipantItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
+    func asyncLayout() -> (_ item: VoiceChatParticipantItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         var currentDisabledOverlayNode = self.disabledOverlayNode
@@ -706,7 +706,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
              
         self.isHighlighted = highlighted
@@ -714,20 +714,19 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    
-    override public func header() -> ListViewItemHeader? {
+    override func header() -> ListViewItemHeader? {
         return nil
     }
     
-    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         var rect = rect
         rect.origin.y += self.insets.top
         self.absoluteLocation = (rect, containerSize)
@@ -739,7 +738,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
         if let _ = self.layoutParams?.0, let params = self.layoutParams?.1 {
@@ -761,24 +760,28 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override public func revealOptionsInteractivelyOpened() {
+    override func revealOptionsInteractivelyOpened() {
         if let item = self.layoutParams?.0 {
             item.setPeerIdWithRevealedOptions(item.peer.id, nil)
         }
     }
     
-    override public func revealOptionsInteractivelyClosed() {
+    override func revealOptionsInteractivelyClosed() {
         if let item = self.layoutParams?.0 {
             item.setPeerIdWithRevealedOptions(nil, item.peer.id)
         }
     }
     
-    override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         if let item = self.layoutParams?.0 {
             item.revealOptions[Int(option.key)].action()
         }
         
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
+    }
+    
+    override var preferredAnimationCurve: (CGFloat) -> CGFloat {
+        return listViewAnimationCurveEaseInOut
     }
 }

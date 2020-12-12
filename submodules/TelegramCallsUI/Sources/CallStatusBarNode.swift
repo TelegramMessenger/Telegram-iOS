@@ -14,6 +14,7 @@ import AnimatedCountLabelNode
 private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
+private let activeBlue = UIColor(rgb: 0x00a0b9)
 
 private class CallStatusBarBackgroundNode: ASDisplayNode {
     private let foregroundView: UIView
@@ -46,7 +47,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         let initialColors = self.foregroundGradientLayer.colors
         let targetColors: [CGColor]
         if let speaking = self.speaking {
-            targetColors = speaking ? [green.cgColor, blue.cgColor] : [blue.cgColor, lightBlue.cgColor]
+            targetColors = speaking ? [green.cgColor, activeBlue.cgColor] : [blue.cgColor, lightBlue.cgColor]
         } else {
             targetColors = [connectingColor.cgColor, connectingColor.cgColor]
         }
@@ -159,6 +160,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private let backgroundNode: CallStatusBarBackgroundNode
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateAnimatedCountLabelNode
+    private let speakerNode: ImmediateTextNode
     
     private let audioLevelDisposable = MetaDisposable()
     private let stateDisposable = MetaDisposable()
@@ -175,6 +177,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentCallState: PresentationCallState?
     private var currentGroupCallState: PresentationGroupCallSummaryState?
     private var currentIsMuted = true
+    private var currentMembers: PresentationGroupCallMembers?
     private var currentIsConnected = true
     
     public override init() {
@@ -182,12 +185,14 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.titleNode = ImmediateTextNode()
         self.subtitleNode = ImmediateAnimatedCountLabelNode()
         self.subtitleNode.reverseAnimationDirection = true
+        self.speakerNode = ImmediateTextNode()
         
         super.init()
                 
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.speakerNode)
     }
     
     deinit {
@@ -264,16 +269,20 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         (combineLatest(
                             account.postbox.peerView(id: call.peerId),
                             call.summaryState,
-                            call.isMuted
+                            call.isMuted,
+                            call.members
                         )
-                    |> deliverOnMainQueue).start(next: { [weak self] view, state, isMuted in
+                    |> deliverOnMainQueue).start(next: { [weak self] view, state, isMuted, members in
                         if let strongSelf = self {
                             strongSelf.currentPeer = view.peers[view.peerId]
                             strongSelf.currentGroupCallState = state
+                            strongSelf.currentMembers = members
                             
                             var isMuted = isMuted
-                            if let state = state, state.callState.muteState != nil {
-                                isMuted = true
+                            if let state = state, let muteState = state.callState.muteState {
+                                if !muteState.canUnmute {
+                                    isMuted = true
+                                }
                             }
                             strongSelf.currentIsMuted = isMuted
                             
@@ -294,17 +303,18 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             return
                         }
                         var effectiveLevel: Float = 0.0
+                        var audioLevels = audioLevels
                         if !strongSelf.currentIsMuted {
-                            effectiveLevel = myAudioLevel
-                        } else {
-                            effectiveLevel = audioLevels.map { $0.1 }.max() ?? 0.0
+                            audioLevels.append((PeerId(0), myAudioLevel, true))
                         }
+                        effectiveLevel = audioLevels.map { $0.1 }.max() ?? 0.0
                         strongSelf.backgroundNode.audioLevel = effectiveLevel
                     }))
             }
         }
         
         var title: String = ""
+        var speakerSubtitle: String = ""
         
         let textFont = Font.regular(13.0)
         let textColor = UIColor.white
@@ -319,6 +329,21 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 membersCount = Int32(max(1, groupCallState.participantCount))
             } else if let content = self.currentContent, case .groupCall = content {
                 membersCount = 1
+            }
+            
+            var speakingPeer: Peer?
+            if let members = currentMembers {
+                var speakingPeers: [Peer] = []
+                for member in members.participants {
+                    if members.speakingParticipants.contains(member.peer.id) {
+                        speakingPeers.append(member.peer)
+                    }
+                }
+                speakingPeer = speakingPeers.first
+            }
+            
+            if let speakingPeer = speakingPeer {
+                speakerSubtitle = speakingPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             
             if let membersCount = membersCount {
@@ -371,15 +396,24 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             self.backgroundNode.connectingColor = color
         }
         
-        if self.subtitleNode.segments != segments {
+        if self.subtitleNode.segments != segments && speakerSubtitle.isEmpty {
             self.subtitleNode.segments = segments
         }
         
+        let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+        alphaTransition.updateAlpha(node: self.subtitleNode, alpha: !speakerSubtitle.isEmpty ? 0.0 : 1.0)
+        alphaTransition.updateAlpha(node: self.speakerNode, alpha: !speakerSubtitle.isEmpty ? 1.0 : 0.0)
+        
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white)
-
+        
+        if !speakerSubtitle.isEmpty {
+            self.speakerNode.attributedText = NSAttributedString(string: speakerSubtitle, font: Font.regular(13.0), textColor: .white)
+        }
+        
         let spacing: CGFloat = 5.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: size.height))
         let subtitleSize = self.subtitleNode.updateLayout(size: CGSize(width: 160.0, height: size.height), animated: true)
+        let speakerSize = self.speakerNode.updateLayout(CGSize(width: 160.0, height: size.height))
         
         let totalWidth = titleSize.width + spacing + subtitleSize.width
         let horizontalOrigin: CGFloat = floor((size.width - totalWidth) / 2.0)
@@ -390,6 +424,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let transition: ContainedViewLayoutTransition = wasEmpty ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
         transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
+        
+        if !speakerSubtitle.isEmpty {
+            self.speakerNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - speakerSize.height) / 2.0)), size: speakerSize)
+        }
         
         self.backgroundNode.speaking = self.currentIsConnected ? !self.currentIsMuted : nil
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
