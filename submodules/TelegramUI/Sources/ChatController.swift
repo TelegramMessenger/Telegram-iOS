@@ -7071,7 +7071,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if let controller = voiceChatOverlayController {
                 var hidden = false
-                if self.presentationInterfaceState.interfaceState.editMessage != nil || self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
+                if self.presentationInterfaceState.interfaceState.editMessage != nil || self.presentationInterfaceState.interfaceState.forwardMessageIds != nil || self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
                     hidden = true
                 }
                 controller.update(hidden: hidden, slide: false, animated: true)

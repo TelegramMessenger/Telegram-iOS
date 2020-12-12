@@ -12,6 +12,7 @@ import AccountContext
 import StickerResources
 import ContextUI
 import Markdown
+import ShimmerEffect
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -21,6 +22,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
+    private var placeholderNode: StickerShimmerEffectNode?
     var textNode: TextNode?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
@@ -50,6 +52,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.isUserInteractionEnabled = false
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
@@ -96,6 +100,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
+        if let placeholderNode = self.placeholderNode {
+            self.contextSourceNode.contentNode.addSubnode(placeholderNode)
+        }
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
         
@@ -113,6 +120,21 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     deinit {
         self.fetchDisposable.dispose()
+    }
+    
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     override func didLoad() {
