@@ -910,7 +910,7 @@ public final class VoiceChatController: ViewController {
                     
                     if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
                         let addressName = channel.addressName ?? ""
-                        if !addressName.isEmpty || (channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers)) {
+                        if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                             if addressName.isEmpty {
                                 let _ = ensuredExistingPeerExportedInvitation(account: strongSelf.context.account, peerId: call.peerId).start()
                             }
@@ -1020,36 +1020,6 @@ public final class VoiceChatController: ViewController {
                 if !items.isEmpty {
                     items.append(.separator)
                 }
-                
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
-                }, action: { [weak self] _, f in
-                    f(.dismissWithoutContent)
-                  
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
-                        if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
-                            return "https://t.me/\(addressName)"
-                        } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
-                            if let cachedData = cachedData as? CachedChannelData {
-                                return cachedData.exportedInvitation?.link
-                            } else if let cachedData = cachedData as? CachedGroupData {
-                                return cachedData.exportedInvitation?.link
-                            }
-                        }
-                        return nil
-                    } |> deliverOnMainQueue).start(next: { link in
-                        if let link = link {
-                            if let strongSelf = self {
-                                let shareController = ShareController(context: strongSelf.context, subject: .url(link), forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_CopyInviteLink)
-                                strongSelf.controller?.present(shareController, in: .window(.root))
-                            }
-                        }
-                    })
-                })))
                 
                 if let callState = strongSelf.callState, callState.canManageCall {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
@@ -1756,7 +1726,8 @@ public final class VoiceChatController: ViewController {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            if self.isFirstTime {
+            let isFirstTime = self.isFirstTime
+            if isFirstTime {
                 self.isFirstTime = false
             } else {
                 if transition.crossFade {
@@ -1769,7 +1740,7 @@ public final class VoiceChatController: ViewController {
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
             
-            var itemsHeight: CGFloat = 46.0 + CGFloat(transition.count - 1) * 56.0
+            let itemsHeight: CGFloat = 46.0 + CGFloat(transition.count - 1) * 56.0
            
             let bottomAreaHeight: CGFloat = 268.0
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
@@ -1785,8 +1756,13 @@ public final class VoiceChatController: ViewController {
             
             self.topInset = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
             
-            if !self.isExpanded {
-                let targetY = listTopInset + (self.topInset ?? listSize.height)
+            let targetY = listTopInset + (self.topInset ?? listSize.height)
+            
+            if isFirstTime {
+                var frame = self.listNode.frame
+                frame.origin.y = targetY
+                self.listNode.frame = frame
+            } else if !self.isExpanded {
                 if self.listNode.frame.minY != targetY && !self.animatingExpansion && self.panGestureArguments == nil {
                     self.animation = ListViewAnimation(from: self.listNode.frame.minY, to: targetY, duration: 0.4, curve: listViewAnimationCurveEaseInOut, beginAt: CACurrentMediaTime(), update: { [weak self] _, currentValue in
                         if let strongSelf = self {
