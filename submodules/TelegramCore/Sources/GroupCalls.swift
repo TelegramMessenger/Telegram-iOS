@@ -955,6 +955,8 @@ public final class GroupCallParticipantsContext {
                 }
             }
             
+            updatedTotalCount = max(updatedTotalCount, updatedParticipants.count)
+            
             var updatedOverlayState = strongSelf.stateValue.overlayState
             for peerId in update.removePendingMuteStates {
                 updatedOverlayState.pendingMuteStateChanges.removeValue(forKey: peerId)
