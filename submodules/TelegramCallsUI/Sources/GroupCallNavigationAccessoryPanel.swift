@@ -296,7 +296,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }.filter { $0.id != self.context.account.peerId }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             
@@ -321,7 +321,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                                         
                     strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                     
-                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }.filter { $0.id != strongSelf.context.account.peerId }, animated: false)
+                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }, animated: false)
                     
                     if let (size, leftInset, rightInset) = strongSelf.validLayout {
                         strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
@@ -400,7 +400,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
 
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }.filter { $0.id != self.context.account.peerId }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
             
             updateAudioLevels = true
         }

@@ -6227,9 +6227,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        let shouldBeActive = combineLatest(self.context.sharedContext.mediaManager.audioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
-        |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes -> Signal<Bool, NoError> in
-            if hasVisiblePlayableItemNodes && !isPlaybackActive {
+        let hasActiveCalls: Signal<Bool, NoError>
+        if let callManager = self.context.sharedContext.callManager as? PresentationCallManagerImpl {
+            hasActiveCalls = callManager.hasActiveCalls
+        } else {
+            hasActiveCalls = .single(false)
+        }
+        
+        let shouldBeActive = combineLatest(self.context.sharedContext.mediaManager.audioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes, hasActiveCalls)
+        |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes, hasActiveCalls -> Signal<Bool, NoError> in
+            if hasVisiblePlayableItemNodes && !isPlaybackActive && !hasActiveCalls {
                 return Signal<Bool, NoError> { [weak self] subscriber in
                     guard let strongSelf = self else {
                         subscriber.putCompletion()
@@ -7066,7 +7073,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.saveInterfaceState(includeScrollState: false)
         }
         
-        if let navigationController = self.navigationController as? NavigationController {
+        if let navigationController = self.navigationController as? NavigationController, self.traceVisibility() &&  isTopmostChatController(self) {
             var voiceChatOverlayController: VoiceChatOverlayController?
             for controller in navigationController.globalOverlayControllers {
                 if let controller = controller as? VoiceChatOverlayController {
@@ -7076,11 +7083,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let controller = voiceChatOverlayController {
-                var hidden = false
-                if self.presentationInterfaceState.interfaceState.editMessage != nil || self.presentationInterfaceState.interfaceState.forwardMessageIds != nil || self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
-                    hidden = true
-                }
-                controller.update(hidden: hidden, slide: false, animated: true)
+                controller.update(hidden: self.isSendButtonVisible, slide: false, animated: true)
             }
         }
     }
@@ -7675,11 +7678,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             }, openCamera: { [weak self] cameraView, menuController in
                 if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                    if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveGroupCall {
-                        return
+                    var photoOnly = false
+                    if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveCall {
+                        photoOnly = true
                     }
                     
-                    presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: settings.storeEditedPhotos, mediaGrouping: true, initialCaption: inputText.string, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
+                    presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: settings.storeEditedPhotos, mediaGrouping: true, initialCaption: inputText.string, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, photoOnly: photoOnly, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                         if let strongSelf = self {
                             if editMediaOptions != nil {
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
@@ -11312,6 +11316,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func acceptPossibleControllerDropContent(content: NavigationControllerDropContent) -> Bool {
         //return self.chatDisplayNode.acceptEmbeddedTitlePeekContent(content: content)
         return false
+    }
+    
+    public var isSendButtonVisible: Bool {
+        if self.presentationInterfaceState.interfaceState.editMessage != nil || self.presentationInterfaceState.interfaceState.forwardMessageIds != nil || self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
+            return true
+        } else {
+            return false
+        }
     }
 }
 

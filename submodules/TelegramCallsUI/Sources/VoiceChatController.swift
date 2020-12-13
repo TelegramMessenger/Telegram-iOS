@@ -106,7 +106,7 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: UIColor(rgb: 0xffffff))
         self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.5))
         
-        let constrainedSize = CGSize(width: size.width - 80.0, height: size.height)
+        let constrainedSize = CGSize(width: size.width - 120.0, height: size.height)
         let titleSize = self.titleNode.measure(constrainedSize)
         let infoSize = self.infoNode.measure(constrainedSize)
         let titleInfoSpacing: CGFloat = 0.0
@@ -128,7 +128,6 @@ public final class VoiceChatController: ViewController {
             let isEmpty: Bool
             let crossFade: Bool
             let count: Int
-            let isExpanded: Bool
             let animated: Bool
         }
         
@@ -363,14 +362,14 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction, isExpanded: Bool) -> ListTransition {
+        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
             let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
             
             let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
             let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             
-            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count, isExpanded: isExpanded, animated: true)
+            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count, animated: true)
         }
         
         private weak var controller: VoiceChatController?
@@ -414,7 +413,6 @@ public final class VoiceChatController: ViewController {
         private var currentCallMembers: [GroupCallParticipantsContext.Participant]?
         private var currentInvitedPeers: [Peer]?
         private var currentSpeakingPeers: Set<PeerId>?
-        private var currentIsExpanded: Bool = false
         private var currentContentOffset: CGFloat?
         private var ignoreScrolling = false
         private var accountPeer: Peer?
@@ -476,6 +474,7 @@ public final class VoiceChatController: ViewController {
             self.listNode = ListView()
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
             self.listNode.clipsToBounds = true
+            self.listNode.scroller.bounces = false
             
             self.topPanelNode = ASDisplayNode()
             self.topPanelNode.clipsToBounds = false
@@ -886,7 +885,7 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: callMembers?.participants ?? [], invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [], isExpanded: strongSelf.currentIsExpanded)
+                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: callMembers?.participants ?? [], invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [])
                 
                 let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers?.totalCount ?? 0)))
                 strongSelf.currentSubtitle = subtitle
@@ -907,7 +906,7 @@ public final class VoiceChatController: ViewController {
                 }
                 if !strongSelf.didSetDataReady {
                     strongSelf.accountPeer = accountPeer
-                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), isExpanded: strongSelf.currentIsExpanded)
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
                     
                     if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
                         let addressName = channel.addressName ?? ""
@@ -1100,38 +1099,9 @@ public final class VoiceChatController: ViewController {
             self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
                 if let strongSelf = self {
                     strongSelf.currentContentOffset = offset
-                    strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
-                }
-            }
-            
-            self.listNode.endedInteractiveDragging = { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                if strongSelf.ignoreScrolling {
-                    Queue.mainQueue().after(0.5) {
-                        strongSelf.ignoreScrolling = false
+                    if strongSelf.animation == nil && !strongSelf.animatingExpansion {
+                        strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
                     }
-                }
-            }
-            
-            self.listNode.visibleContentOffsetChanged = { [weak self] offset in
-                guard let strongSelf = self else {
-                    return
-                }
-                switch offset {
-                case let .known(value):
-//                    strongSelf.updateFloatingHeaderOffset(offset: -value + strongSelf.listNode.insets.top, transition: strongSelf.listNode.isTracking ? .immediate : .animated(duration: 0.4, curve: .linear))
-                    
-                    if value > 5, !strongSelf.currentIsExpanded && strongSelf.listNode.isTracking && !strongSelf.ignoreScrolling {
-                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers:strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), isExpanded: true)
-                        strongSelf.ignoreScrolling = true
-                    } else if value < -5, strongSelf.currentIsExpanded && strongSelf.listNode.isTracking && !strongSelf.ignoreScrolling {
-                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? [], isExpanded: false)
-                        strongSelf.ignoreScrolling = true
-                    }
-                default:
-                    break
                 }
             }
         }
@@ -1223,7 +1193,7 @@ public final class VoiceChatController: ViewController {
                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
             }
             
-            self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), isExpanded: self.currentIsExpanded)
+            self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
         }
         
         @objc private func actionButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
@@ -1268,7 +1238,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
-                    self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), isExpanded: self.currentIsExpanded)
+                    self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 default:
                     break
             }
@@ -1341,7 +1311,7 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func updateFloatingHeaderOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        private func updateFloatingHeaderOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
             guard let (layout, _) = self.validLayout else {
                 return
             }
@@ -1352,9 +1322,22 @@ public final class VoiceChatController: ViewController {
             let bottomAreaHeight: CGFloat = 268.0
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
-            let topInset = self.topInset ?? listSize.height
+            let topInset: CGFloat
+            if let (panInitialTopInset, panOffset) = self.panGestureArguments {
+                if self.isExpanded {
+                    topInset = min(self.topInset ?? listSize.height, panInitialTopInset + max(0.0, panOffset))
+                } else {
+                    topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
+                }
+            } else if let _ = self.animation {
+                topInset = self.listNode.frame.minY - listTopInset
+            } else if let currentTopInset = self.topInset {
+                topInset = self.isExpanded ? 0.0 : currentTopInset
+            } else {
+                topInset = listSize.height
+            }
             
-            var offset = offset + topInset
+            let offset = offset + topInset
             self.floatingHeaderOffset = offset
                     
             let rawPanelOffset = offset + listTopInset - topPanelHeight
@@ -1374,7 +1357,7 @@ public final class VoiceChatController: ViewController {
             if !topPanelFrame.equalTo(previousTopPanelFrame) {
                 self.topPanelNode.frame = topPanelFrame
                 let positionDelta = CGPoint(x: 0.0, y: topPanelFrame.minY - previousTopPanelFrame.minY)
-                transition.animateOffsetAdditive(node: self.topPanelNode, offset: positionDelta.y)
+                transition.animateOffsetAdditive(layer: self.topPanelNode.layer, offset: positionDelta.y, completion: completion)
 
                 self.backgroundNode.frame = backgroundFrame
                 let backgroundPositionDelta = CGPoint(x: 0.0, y: previousBackgroundFrame.minY - backgroundFrame.minY)
@@ -1387,6 +1370,8 @@ public final class VoiceChatController: ViewController {
                 self.rightBorderNode.frame = rightBorderFrame
                 let rightBorderPositionDelta = CGPoint(x: 0.0, y: previousRightBorderFrame.minY - rightBorderFrame.minY)
                 transition.animatePositionAdditive(node: self.rightBorderNode, offset: rightBorderPositionDelta)
+            } else {
+                completion?()
             }
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: layout.size.width, height: 24.0)
                         
@@ -1422,19 +1407,17 @@ public final class VoiceChatController: ViewController {
         }
         
         var isFullscreen = false
-        func updateColors(fullscreen: Bool) {
-            guard self.isFullscreen != fullscreen, let (layout, _) = self.validLayout else {
+        func updateIsFullscreen(_ isFullscreen: Bool) {
+            guard self.isFullscreen != isFullscreen, let (layout, _) = self.validLayout else {
                 return
             }
-            self.isFullscreen = fullscreen
+            self.isFullscreen = isFullscreen
             
-            self.controller?.statusBar.statusBarStyle = fullscreen ? .White : .Ignore
-            
-            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .linear)
-            
+            self.controller?.statusBar.statusBarStyle = isFullscreen ? .White : .Ignore
+                        
             let topPanelHeight: CGFloat = 63.0
             let topEdgeFrame: CGRect
-            if self.isFullscreen {
+            if isFullscreen {
                 let offset: CGFloat
                 if let statusBarHeight = layout.statusBarHeight {
                     offset = statusBarHeight
@@ -1445,16 +1428,17 @@ public final class VoiceChatController: ViewController {
             } else {
                 topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: topPanelHeight)
             }
+            
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .linear)
             transition.updateFrame(node: self.topPanelEdgeNode, frame: topEdgeFrame)
-            transition.updateCornerRadius(node: self.topPanelEdgeNode, cornerRadius: fullscreen ? layout.deviceMetrics.screenCornerRadius - 0.5 : 12.0)
-//            transition.updateBackgroundColor(node: self.dimNode, color: fullscreen ? fullscreenBackgroundColor : dimColor)
-            transition.updateBackgroundColor(node: self.topPanelBackgroundNode, color: fullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
-            transition.updateBackgroundColor(node: self.topPanelEdgeNode, color: fullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
-            transition.updateBackgroundColor(node: self.backgroundNode, color: fullscreen ? panelBackgroundColor : secondaryPanelBackgroundColor)
-            transition.updateBackgroundColor(node: self.bottomPanelBackgroundNode, color: fullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
-            transition.updateBackgroundColor(node: self.leftBorderNode, color: fullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
-            transition.updateBackgroundColor(node: self.rightBorderNode, color: fullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
-            transition.updateBackgroundColor(node: self.rightBorderNode, color: fullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
+            transition.updateCornerRadius(node: self.topPanelEdgeNode, cornerRadius: isFullscreen ? layout.deviceMetrics.screenCornerRadius - 0.5 : 12.0)
+            transition.updateBackgroundColor(node: self.topPanelBackgroundNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
+            transition.updateBackgroundColor(node: self.topPanelEdgeNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
+            transition.updateBackgroundColor(node: self.backgroundNode, color: isFullscreen ? panelBackgroundColor : secondaryPanelBackgroundColor)
+            transition.updateBackgroundColor(node: self.bottomPanelBackgroundNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
+            transition.updateBackgroundColor(node: self.leftBorderNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
+            transition.updateBackgroundColor(node: self.rightBorderNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
+            transition.updateBackgroundColor(node: self.rightBorderNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
             
             if let snapshotView = self.topCornersNode.view.snapshotContentTree() {
                 snapshotView.frame = self.topCornersNode.frame
@@ -1464,7 +1448,7 @@ public final class VoiceChatController: ViewController {
                     snapshotView?.removeFromSuperview()
                 })
             }
-            self.topCornersNode.image = cornersImage(top: true, bottom: false, dark: fullscreen)
+            self.topCornersNode.image = cornersImage(top: true, bottom: false, dark: isFullscreen)
             
             if let snapshotView = self.bottomCornersNode.view.snapshotContentTree() {
                 snapshotView.frame = self.bottomCornersNode.bounds
@@ -1474,10 +1458,10 @@ public final class VoiceChatController: ViewController {
                     snapshotView?.removeFromSuperview()
                 })
             }
-            self.bottomCornersNode.image = cornersImage(top: false, bottom: true, dark: fullscreen)
+            self.bottomCornersNode.image = cornersImage(top: false, bottom: true, dark: isFullscreen)
 
-            self.optionsButton.setImage(optionsButtonImage(dark: fullscreen), animated: transition.isAnimated)
-            self.closeButton.setImage(closeButtonImage(dark: fullscreen), animated: transition.isAnimated)
+            self.optionsButton.setImage(optionsButtonImage(dark: isFullscreen), animated: transition.isAnimated)
+            self.closeButton.setImage(closeButtonImage(dark: isFullscreen), animated: transition.isAnimated)
             
             self.updateTitle(transition: transition)
         }
@@ -1536,6 +1520,7 @@ public final class VoiceChatController: ViewController {
             
             let soundImage: CallControllerButtonItemNode.Content.Image
             var soundAppearance: CallControllerButtonItemNode.Content.Appearance = audioButtonAppearance
+            var soundTitle: String = self.presentationData.strings.Call_Speaker
             switch audioMode {
             case .none, .builtin:
                 soundImage = .speaker
@@ -1543,7 +1528,8 @@ public final class VoiceChatController: ViewController {
                 soundImage = .speaker
                 soundAppearance = .blurred(isFilled: true)
             case .headphones:
-                soundImage = .bluetooth
+                soundImage = .headphones
+                soundTitle = self.presentationData.strings.Call_Audio
             case let .bluetooth(type):
                 switch type {
                 case .generic:
@@ -1553,10 +1539,11 @@ public final class VoiceChatController: ViewController {
                 case .airpodsPro:
                     soundImage = .airpodsPro
                 }
+                soundTitle = self.presentationData.strings.Call_Audio
             }
             
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
-            self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: self.presentationData.strings.VoiceChat_Audio, transition: .animated(duration: 0.3, curve: .linear))
+            self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: soundTitle, transition: .animated(duration: 0.3, curve: .linear))
             
             self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0x602522)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
         }
@@ -1583,25 +1570,43 @@ public final class VoiceChatController: ViewController {
             insets.right = layout.safeInsets.right + sideInset
             
             let topPanelHeight: CGFloat = 63.0
-            let topEdgeFrame: CGRect
-            if self.isFullscreen {
-                let offset: CGFloat
-                if let statusBarHeight = layout.statusBarHeight {
-                    offset = statusBarHeight
-                } else {
-                    offset = 44.0
-                }
-                topEdgeFrame = CGRect(x: 0.0, y: -offset, width: layout.size.width, height: topPanelHeight + offset)
+            if let _ = self.panGestureArguments {
             } else {
-                topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: topPanelHeight)
+                let topEdgeFrame: CGRect
+                if self.isFullscreen {
+                    let offset: CGFloat
+                    if let statusBarHeight = layout.statusBarHeight {
+                        offset = statusBarHeight
+                    } else {
+                        offset = 44.0
+                    }
+                    topEdgeFrame = CGRect(x: 0.0, y: -offset, width: layout.size.width, height: topPanelHeight + offset)
+                } else {
+                    topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: topPanelHeight)
+                }
+                transition.updateFrame(node: self.topPanelEdgeNode, frame: topEdgeFrame)
             }
-            transition.updateFrame(node: self.topPanelEdgeNode, frame: topEdgeFrame)
             
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             let listTopInset = layoutTopInset + topPanelHeight
             let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
-                        
-            transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + (self.topInset ?? listSize.height)), size: listSize))
+                 
+            let topInset: CGFloat
+            if let (panInitialTopInset, panOffset) = self.panGestureArguments {
+                if self.isExpanded {
+                    topInset = min(self.topInset ?? listSize.height, panInitialTopInset + max(0.0, panOffset))
+                } else {
+                    topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
+                }
+            } else if let currentTopInset = self.topInset {
+                topInset = self.isExpanded ? 0.0 : currentTopInset
+            } else {
+                topInset = listSize.height
+            }
+            
+            if self.animation == nil {
+                transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + topInset), size: listSize))
+            }
             
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve)
@@ -1695,7 +1700,7 @@ public final class VoiceChatController: ViewController {
             }, completion: { _ in
                 if self.actionButton.supernode !== self.bottomPanelNode {
                     self.bottomPanelNode.addSubnode(self.actionButton)
-                    self.containerLayoutUpdated(layout, navigationHeight:navigationHeight,  transition: .immediate)
+                    self.containerLayoutUpdated(layout, navigationHeight :navigationHeight, transition: .immediate)
                 }
                 
                 self.controller?.currentOverlayController?.dismiss()
@@ -1778,24 +1783,24 @@ public final class VoiceChatController: ViewController {
             let listTopInset = layoutTopInset + 63.0
             let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             
-            let previousIsExpanded = self.currentIsExpanded
-            self.currentIsExpanded = transition.isExpanded
-            self.topInset = max(0.0, transition.isExpanded ? 0.0 : max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
+            self.topInset = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
             
-            let frameTransition: ContainedViewLayoutTransition
-            if previousIsExpanded != self.currentIsExpanded {
-                frameTransition = .animated(duration: 0.4, curve: .spring)
-            } else {
-                frameTransition = .animated(duration: 0.4, curve: .easeInOut)
+            if !self.isExpanded {
+                let targetY = listTopInset + (self.topInset ?? listSize.height)
+                if self.listNode.frame.minY != targetY && !self.animatingExpansion && self.panGestureArguments == nil {
+                    self.animation = ListViewAnimation(from: self.listNode.frame.minY, to: targetY, duration: 0.4, curve: listViewAnimationCurveEaseInOut, beginAt: CACurrentMediaTime(), update: { [weak self] _, currentValue in
+                        if let strongSelf = self {
+                            var frame = strongSelf.listNode.frame
+                            frame.origin.y = currentValue
+                            strongSelf.listNode.frame = frame
+                            strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .immediate)
+                        }
+                    })
+                    self.updateAnimation()
+                }
             }
-            frameTransition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + (self.topInset ?? listSize.height)), size: listSize))
-            
-            let (duration, curve) = listViewAnimationDurationAndCurve(transition: frameTransition)
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve)
-            
-            self.updateColors(fullscreen: transition.isExpanded)
-            
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
+                        
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: nil, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1804,12 +1809,42 @@ public final class VoiceChatController: ViewController {
                     strongSelf.controller?.contentsReady.set(true)
                 }
             })
-            if previousIsExpanded != self.currentIsExpanded {
-                self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: frameTransition)
+        }
+        
+        
+        private var animator: ConstantDisplayLinkAnimator?
+        private var animation: ListViewAnimation?
+        private func updateAnimation() {
+            var animate = false
+            let timestamp = CACurrentMediaTime()
+            
+            if let animation = self.animation {
+                animation.applyAt(timestamp)
+            
+                if animation.completeAt(timestamp) {
+                    self.animation = nil
+                } else {
+                    animate = true
+                }
+            }
+            
+            if animate {
+                let animator: ConstantDisplayLinkAnimator
+                if let current = self.animator {
+                    animator = current
+                } else {
+                    animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                        self?.updateAnimation()
+                    })
+                    self.animator = animator
+                }
+                animator.isPaused = false
+            } else {
+                self.animator?.isPaused = true
             }
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: [GroupCallParticipantsContext.Participant], invitedPeers: [Peer], speakingPeers: Set<PeerId>, isExpanded: Bool) {
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: [GroupCallParticipantsContext.Participant], invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
             self.currentCallMembers = callMembers
             self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers
@@ -1874,7 +1909,7 @@ public final class VoiceChatController: ViewController {
             self.currentEntries = entries
             
             let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
-            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, crossFade: false, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!, isExpanded: isExpanded ?? self.currentIsExpanded)
+            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, crossFade: false, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
             self.enqueueTransition(transition)
         }
         
@@ -1882,56 +1917,190 @@ public final class VoiceChatController: ViewController {
 //            if let callState = self.callState, case .connected = callState.networkState, let muteState = callState.muteState, !muteState.canUnmute {
 //                return false
 //            }
-            if let recognizer = gestureRecognizer as? UIPanGestureRecognizer {
-                let location = recognizer.location(in: self.view)
-                if let view = super.hitTest(location, with: nil) {
-                    if let gestureRecognizers = view.gestureRecognizers, view != self.view {
-                        for gestureRecognizer in gestureRecognizers {
-                            if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
-                                if panGestureRecognizer.state != .began {
-                                    panGestureRecognizer.isEnabled = false
-                                    panGestureRecognizer.isEnabled = true
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+//            if let recognizer = gestureRecognizer as? UIPanGestureRecognizer {
+//                let location = recognizer.location(in: self.view)
+//                if let view = super.hitTest(location, with: nil) {
+//                    if let gestureRecognizers = view.gestureRecognizers, view != self.view {
+//                        for gestureRecognizer in gestureRecognizers {
+//                            if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
+//                                if panGestureRecognizer.state != .began {
+//                                    panGestureRecognizer.isEnabled = false
+//                                    panGestureRecognizer.isEnabled = true
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
             return true
         }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
+                return true
+            }
+            return false
+        }
+        
+        private var isExpanded = false
+        private var animatingExpansion = false
+        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
         
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
                 case .began:
-                    break
+                    let topInset: CGFloat
+                    if self.isExpanded {
+                        topInset = 0.0
+                    } else if let currentTopInset = self.topInset {
+                        topInset = currentTopInset
+                    } else {
+                        topInset = self.listNode.frame.height
+                    }
+                    self.panGestureArguments = (topInset, 0.0)
                 case .changed:
+                    var translation = recognizer.translation(in: self.contentContainer.view).y
+                    var topInset: CGFloat = 0.0
+                    if let (currentTopInset, currentPanOffset) = self.panGestureArguments {
+                        topInset = currentTopInset
+                        
+                        if case let .known(value) = self.listNode.visibleContentOffset(), value > 0 {
+                            translation = currentPanOffset
+                            if self.isExpanded {
+                                recognizer.setTranslation(CGPoint(), in: self.contentContainer.view)
+                            }
+                        }
+                        
+                        self.panGestureArguments = (currentTopInset, translation)
+                    }
+                
+                    let currentOffset = topInset + translation
+                    if currentOffset < 20.0 {
+                        self.updateIsFullscreen(true)
+                    } else if currentOffset > 40.0 {
+                        self.updateIsFullscreen(false)
+                    }
+                
+                    if self.isExpanded {
+                        
+                    } else {
+                        if currentOffset > 0.0 {
+                            self.listNode.scroller.panGestureRecognizer.setTranslation(CGPoint(), in: self.listNode.scroller)
+                        }
+                    }
+                    
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                        self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .immediate)
+                    }
+                    
+                    if !self.isExpanded {
+                        var bounds = self.contentContainer.bounds
+                        bounds.origin.y = -translation
+                        bounds.origin.y = min(0.0, bounds.origin.y)
+                        self.contentContainer.bounds = bounds
+                    }
+                case .ended:
                     let translation = recognizer.translation(in: self.contentContainer.view)
+                    var velocity = recognizer.velocity(in: self.contentContainer.view)
+                    
+                    if case let .known(value) = self.listNode.visibleContentOffset(), value > 0 {
+                        velocity = CGPoint()
+                    }
+                    
                     var bounds = self.contentContainer.bounds
                     bounds.origin.y = -translation.y
                     bounds.origin.y = min(0.0, bounds.origin.y)
-                    self.contentContainer.bounds = bounds
-                case .ended:
-                    let translation = recognizer.translation(in: self.contentContainer.view)
-                    var bounds = self.contentContainer.bounds
-                    bounds.origin.y = -translation.y
                     
-                    let velocity = recognizer.velocity(in: self.contentContainer.view)
-                    
-                    if (bounds.minY < -60.0 || velocity.y > 300.0) {
-                        self.controller?.dismiss(closing: false)
+                    let offset: CGFloat
+                    if let (inset, panOffset) = self.panGestureArguments {
+                        offset = inset + panOffset
                     } else {
-                        var bounds = self.contentContainer.bounds
-                        let previousBounds = bounds
-                        bounds.origin.y = 0.0
-                        self.contentContainer.bounds = bounds
-                        self.contentContainer.layer.animateBounds(from: previousBounds, to: self.contentContainer.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                        offset = 0.0
+                    }
+                    
+                    let topInset: CGFloat
+                    if let currentTopInset = self.topInset {
+                        topInset = currentTopInset
+                    } else {
+                        topInset = self.listNode.frame.height
+                    }
+                    
+                    if self.isExpanded {
+                        self.panGestureArguments = nil
+                        if velocity.y > 300.0 || offset > topInset / 2.0 {
+                            self.isExpanded = false
+                            self.updateIsFullscreen(false)
+                            self.animatingExpansion = true
+                            
+                            if let (layout, navigationHeight) = self.validLayout {
+                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                            }
+                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                                self.animatingExpansion = false
+                            })
+                        } else {
+                            self.updateIsFullscreen(true)
+                            self.animatingExpansion = true
+                            
+                            if let (layout, navigationHeight) = self.validLayout {
+                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                            }
+                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                                self.animatingExpansion = false
+                            })
+                        }
+                    } else {
+                        self.panGestureArguments = nil
+                        var dismissing = false
+                        if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
+                            self.controller?.dismiss(closing: false)
+                            dismissing = true
+                        } else if velocity.y < -300.0 || offset < topInset / 2.0 {
+                            self.isExpanded = true
+                            self.updateIsFullscreen(true)
+                            self.animatingExpansion = true
+                            
+                            if let (layout, navigationHeight) = self.validLayout {
+                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                            }
+                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                                self.animatingExpansion = false
+                            })
+                        } else {
+                            self.updateIsFullscreen(false)
+                            self.animatingExpansion = true
+                                                        
+                            if let (layout, navigationHeight) = self.validLayout {
+                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                            }
+                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                                self.animatingExpansion = false
+                            })
+                        }
+                        if !dismissing {
+                            var bounds = self.contentContainer.bounds
+                            let previousBounds = bounds
+                            bounds.origin.y = 0.0
+                            self.contentContainer.bounds = bounds
+                            self.contentContainer.layer.animateBounds(from: previousBounds, to: self.contentContainer.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                        }
                     }
                 case .cancelled:
+                    self.panGestureArguments = nil
+                    
                     let previousBounds = self.contentContainer.bounds
                     var bounds = self.contentContainer.bounds
                     bounds.origin.y = 0.0
                     self.contentContainer.bounds = bounds
                     self.contentContainer.layer.animateBounds(from: previousBounds, to: self.contentContainer.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                    
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                    }
+                    self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                        self.animatingExpansion = false
+                    })
                 default:
                     break
             }
@@ -1941,7 +2110,7 @@ public final class VoiceChatController: ViewController {
             let result = super.hitTest(point, with: event)
 
             if result === self.topPanelNode.view {
-                return self.listNode.view
+                return self.view
             }
             
             if result === self.bottomPanelNode.view {
@@ -2071,7 +2240,11 @@ public final class VoiceChatController: ViewController {
             if let navigationController = self.navigationController as? NavigationController {
                 let count = navigationController.viewControllers.count
                 if count == 2 || navigationController.viewControllers[count - 2] is ChatController {
-                    self.detachActionButton()
+                    if case .active(.cantSpeak) = self.controllerNode.actionButton.stateValue {
+                    } else if let chatController = navigationController.viewControllers[count - 2] as? ChatController, chatController.isSendButtonVisible {
+                    } else {
+                        self.detachActionButton()
+                    }
                 }
             }
         } else {

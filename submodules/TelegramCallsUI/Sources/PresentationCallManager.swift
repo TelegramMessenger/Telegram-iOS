@@ -82,8 +82,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         |> distinctUntilChanged
     }
     
-    public var hasActiveGroupCall: Bool {
-        return self.currentGroupCall != nil
+    public var hasActiveCall: Bool {
+        return self.currentCall != nil || self.currentGroupCall != nil
     }
     
     private let currentCallPromise = Promise<PresentationCall?>(nil)
