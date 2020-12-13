@@ -5962,7 +5962,7 @@ Sorry for the inconvenience.";
 "VoiceChat.InvitedPeerText" = "You invited %@ to the voice chat";
 "VoiceChat.RemovedPeerText" = "You removed %@ from this group";
 
-"Notification.VoiceChatStarted" = "Voice chat started";
+"Notification.VoiceChatStarted" = "%1$@ started a voice chat";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";
 
 "VoiceChat.Panel.TapToJoin" = "Tap to join";

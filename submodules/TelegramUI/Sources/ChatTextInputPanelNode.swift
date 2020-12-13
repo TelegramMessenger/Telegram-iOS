@@ -1236,7 +1236,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         let searchLayoutClearButtonSize = CGSize(width: 44.0, height: minimalHeight)
         var textFieldInsets = self.textFieldInsets(metrics: metrics)
-        if additionalSideInsets.right > 0.0 && self.text.isEmpty {
+        if additionalSideInsets.right > 0.0 {
             textFieldInsets.right += additionalSideInsets.right / 3.0
         }
         self.actionButtons.micButton.isHidden = additionalSideInsets.right > 0.0
