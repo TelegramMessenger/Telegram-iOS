@@ -1726,7 +1726,8 @@ public final class VoiceChatController: ViewController {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            if self.isFirstTime {
+            let isFirstTime = self.isFirstTime
+            if isFirstTime {
                 self.isFirstTime = false
             } else {
                 if transition.crossFade {
@@ -1739,7 +1740,7 @@ public final class VoiceChatController: ViewController {
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
             
-            var itemsHeight: CGFloat = 46.0 + CGFloat(transition.count - 1) * 56.0
+            let itemsHeight: CGFloat = 46.0 + CGFloat(transition.count - 1) * 56.0
            
             let bottomAreaHeight: CGFloat = 268.0
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
@@ -1755,8 +1756,13 @@ public final class VoiceChatController: ViewController {
             
             self.topInset = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
             
-            if !self.isExpanded {
-                let targetY = listTopInset + (self.topInset ?? listSize.height)
+            let targetY = listTopInset + (self.topInset ?? listSize.height)
+            
+            if isFirstTime {
+                var frame = self.listNode.frame
+                frame.origin.y = targetY
+                self.listNode.frame = frame
+            } else if !self.isExpanded {
                 if self.listNode.frame.minY != targetY && !self.animatingExpansion && self.panGestureArguments == nil {
                     self.animation = ListViewAnimation(from: self.listNode.frame.minY, to: targetY, duration: 0.4, curve: listViewAnimationCurveEaseInOut, beginAt: CACurrentMediaTime(), update: { [weak self] _, currentValue in
                         if let strongSelf = self {
