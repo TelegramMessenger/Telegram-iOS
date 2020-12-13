@@ -3753,6 +3753,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
                     pinnedMessageId = cachedData.pinnedMessageId
+                    if let activeCall = cachedData.activeCall {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
+                    }
                 } else if let _ = combinedInitialData.cachedData as? CachedSecretChatData {
                 }
                 
@@ -3908,6 +3911,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = cachedData as? CachedGroupData {
                     pinnedMessageId = cachedData.pinnedMessageId
+                    if let activeCall = cachedData.activeCall {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
+                    }
                 } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 

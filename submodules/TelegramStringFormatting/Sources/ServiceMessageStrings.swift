@@ -409,7 +409,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if let duration = duration {
                     titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
                 } else {
-                    titleString = strings.Notification_VoiceChatStarted
+                    titleString = strings.Notification_VoiceChatStarted(message.author?.compactDisplayTitle ?? "").0
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .customText(text, entities):

@@ -7241,12 +7241,12 @@ public extension Api {
                     })
                 }
             
-                public static func createGroupCall(channel: Api.InputChannel, randomId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func createGroupCall(peer: Api.InputPeer, randomId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-467076606)
-                    channel.serialize(buffer, true)
+                    buffer.appendInt32(-1120031776)
+                    peer.serialize(buffer, true)
                     serializeInt32(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "phone.createGroupCall", parameters: [("channel", channel), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "phone.createGroupCall", parameters: [("peer", peer), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

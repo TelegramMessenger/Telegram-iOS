@@ -280,10 +280,13 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 if case let .peer(peerId) = groupCallPanelSource {
                     availableGroupCall = context.account.viewTracker.peerView(peerId)
                     |> map { peerView -> CachedChannelData.ActiveCall? in
-                        guard let cachedData = peerView.cachedData as? CachedChannelData else {
+                        if let cachedData = peerView.cachedData as? CachedChannelData {
+                            return cachedData.activeCall
+                        } else if let cachedData = peerView.cachedData as? CachedGroupData {
+                            return cachedData.activeCall
+                        } else {
                             return nil
                         }
-                        return cachedData.activeCall
                     }
                     |> distinctUntilChanged
                     |> mapToSignal { activeCall -> Signal<GroupCallPanelData?, NoError> in

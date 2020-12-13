@@ -50,7 +50,7 @@ extension StickerPackCollectionInfo {
                 }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
-                if let thumb = thumb, let thumbDcId = thumbDcId {
+                if let thumb = thumb?.first, let thumbDcId = thumbDcId {
                     thumbnailRepresentation = telegramStickerPackThumbnailRepresentationFromApiSize(datacenterId: thumbDcId, size: thumb)
                 }
                 
