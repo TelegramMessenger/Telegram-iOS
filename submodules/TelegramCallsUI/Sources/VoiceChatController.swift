@@ -910,7 +910,7 @@ public final class VoiceChatController: ViewController {
                     
                     if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
                         let addressName = channel.addressName ?? ""
-                        if !addressName.isEmpty || (channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers)) {
+                        if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                             if addressName.isEmpty {
                                 let _ = ensuredExistingPeerExportedInvitation(account: strongSelf.context.account, peerId: call.peerId).start()
                             }
@@ -1020,36 +1020,6 @@ public final class VoiceChatController: ViewController {
                 if !items.isEmpty {
                     items.append(.separator)
                 }
-                
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
-                }, action: { [weak self] _, f in
-                    f(.dismissWithoutContent)
-                  
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
-                        if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
-                            return "https://t.me/\(addressName)"
-                        } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
-                            if let cachedData = cachedData as? CachedChannelData {
-                                return cachedData.exportedInvitation?.link
-                            } else if let cachedData = cachedData as? CachedGroupData {
-                                return cachedData.exportedInvitation?.link
-                            }
-                        }
-                        return nil
-                    } |> deliverOnMainQueue).start(next: { link in
-                        if let link = link {
-                            if let strongSelf = self {
-                                let shareController = ShareController(context: strongSelf.context, subject: .url(link), forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_CopyInviteLink)
-                                strongSelf.controller?.present(shareController, in: .window(.root))
-                            }
-                        }
-                    })
-                })))
                 
                 if let callState = strongSelf.callState, callState.canManageCall {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
