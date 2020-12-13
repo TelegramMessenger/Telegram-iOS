@@ -20,8 +20,8 @@ private let areaSize = CGSize(width: 440.0, height: 440.0)
 private let blobSize = CGSize(width: 244.0, height: 244.0)
 
 final class VoiceChatActionButton: HighlightTrackingButtonNode {
-    enum State {
-        enum ActiveState {
+    enum State: Equatable {
+        enum ActiveState: Equatable {
             case cantSpeak
             case muted
             case on
@@ -29,6 +29,14 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
 
         case connecting
         case active(state: ActiveState)
+    }
+    
+    var stateValue: State {
+        return self.currentParams?.state ?? .connecting
+    }
+    var statePromise = ValuePromise<State>()
+    var state: Signal<State, NoError> {
+        return self.statePromise.get()
     }
     
     private let containerNode: ASDisplayNode
@@ -167,7 +175,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 110.0), size: titleSize)
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 112.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -209,7 +217,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     
     private func applyIconParams() {
-        guard let (size, _, state, _, small, title, subtitle, snap) = self.currentParams else {
+        guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
             return
         }
         
@@ -250,6 +258,8 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let previousState = previous?.state
         self.currentParams = (size, buttonSize, state, dark, small, title, subtitle, previous?.snap ?? false)
 
+        self.statePromise.set(state)
+        
         var backgroundState: VoiceChatActionButtonBackgroundNode.State
         switch state {
             case let .active(state):
@@ -392,6 +402,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     private var state: State
     private var hasState = false
+    
     private var transition: State?
     
     var audioLevel: CGFloat = 0.0  {

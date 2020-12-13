@@ -109,6 +109,7 @@ public final class NotificationContainerController: ViewController {
                 let toAlpha: CGFloat = value ? 0.0 : 1.0
                 self.controllerNode.alpha = toAlpha
                 self.controllerNode.layer.animateAlpha(from: fromAlpha, to: toAlpha, duration: 0.2)
+                self.controllerNode.isUserInteractionEnabled = !value
             }
         }
     }

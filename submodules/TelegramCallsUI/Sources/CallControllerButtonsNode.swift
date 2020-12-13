@@ -51,6 +51,7 @@ private enum ButtonDescription: Equatable {
         case bluetooth
         case airpods
         case airpodsPro
+        case headphones
     }
     
     enum EndType {
@@ -205,7 +206,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 case .speaker:
                     soundOutput = .speaker
                 case .headphones:
-                    soundOutput = .bluetooth
+                    soundOutput = .headphones
                 case let .bluetooth(type):
                     switch type {
                         case .generic:
@@ -296,7 +297,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     case .speaker:
                         soundOutput = .speaker
                     case .headphones:
-                        soundOutput = .builtin
+                        soundOutput = .headphones
                     case let .bluetooth(type):
                         switch type {
                             case .generic:
@@ -466,6 +467,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     title = strings.Call_Audio
                 case .airpodsPro:
                     image = .airpodsPro
+                    title = strings.Call_Audio
+                case .headphones:
+                    image = .headphones
                     title = strings.Call_Audio
                 }
                 buttonContent = CallControllerButtonItemNode.Content(

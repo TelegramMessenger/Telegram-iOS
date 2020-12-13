@@ -53,6 +53,7 @@ public final class VoiceChatOverlayController: ViewController {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                 if hidden {
                     if slide {
+                        actionButton.isHidden = false
                         transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint(x: slideOffset, y: 0.0))
                     } else {
                         actionButton.layer.removeAllAnimations()
@@ -64,10 +65,10 @@ public final class VoiceChatOverlayController: ViewController {
                     }
                 } else {
                     actionButton.isHidden = false
+                    actionButton.layer.removeAllAnimations()
                     if slide {
                         transition.updateSublayerTransformOffset(layer: actionButton.layer, offset: CGPoint())
                     } else {
-                        actionButton.layer.removeAllAnimations()
                         actionButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
                     }
                 }
@@ -91,9 +92,12 @@ public final class VoiceChatOverlayController: ViewController {
                 return
             }
             
-            actionButton.update(snap: true, animated: !self.isSlidOffscreen)
+            actionButton.update(snap: true, animated: !self.isSlidOffscreen && !self.isButtonHidden)
             if self.isSlidOffscreen {
                 actionButton.layer.sublayerTransform = CATransform3DMakeTranslation(slideOffset, 0.0, 0.0)
+                return
+            } else if self.isButtonHidden {
+                actionButton.isHidden = true
                 return
             }
             
@@ -125,16 +129,25 @@ public final class VoiceChatOverlayController: ViewController {
         }
         
         private var animating = false
+        private var dismissed = false
         func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
             guard let actionButton = self.controller?.actionButton, let layout = self.validLayout else {
                 return
             }
             
             if reclaim {
+                self.dismissed = true
                 let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 268.0 / 2.0)
                 if self.isSlidOffscreen {
                     self.isSlidOffscreen = false
                     self.isButtonHidden = true
+                    actionButton.layer.sublayerTransform = CATransform3DIdentity
+                    actionButton.update(snap: false, animated: false)
+                    actionButton.position = CGPoint(x: targetPosition.x, y: 268.0 / 2.0)
+                    completion(true)
+                } else if self.isButtonHidden {
+                    actionButton.isHidden = false
+                    actionButton.layer.removeAllAnimations()
                     actionButton.layer.sublayerTransform = CATransform3DIdentity
                     actionButton.update(snap: false, animated: false)
                     actionButton.position = CGPoint(x: targetPosition.x, y: 268.0 / 2.0)
@@ -193,17 +206,18 @@ public final class VoiceChatOverlayController: ViewController {
             return nil
         }
         
+        private var didAnimateIn = false
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
-            if let actionButton = self.controller?.actionButton, !self.animating {
+            if let actionButton = self.controller?.actionButton, !self.animating && !self.dismissed {
                 let convertedRect = actionButton.view.convert(actionButton.bounds, to: self.view)
                 let insets = layout.insets(options: [.input])                
                 transition.updatePosition(node: actionButton, position: CGPoint(x: layout.size.width - layout.safeInsets.right - 21.0, y: layout.size.height - insets.bottom - 22.0))
                 
-                if actionButton.supernode !== self {
+                if actionButton.supernode !== self && !self.didAnimateIn {
+                    self.didAnimateIn = true
                     self.addSubnode(actionButton)
-
                     self.animateIn(from: convertedRect)
                 }
             }
@@ -224,15 +238,18 @@ public final class VoiceChatOverlayController: ViewController {
         super.init(navigationBarPresentationData: nil)
                          
         self.statusBar.statusBarStyle = .Ignore
-        self.additionalSideInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 75.0)
         
+        if case .active(.cantSpeak) = actionButton.stateValue {
+        } else {
+            self.additionalSideInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 75.0)
+        }
         if let navigationController = navigationController {
             let controllers: Signal<[UIViewController], NoError> = .single([])
             |> then(navigationController.viewControllersSignal)
             let overlayControllers: Signal<[UIViewController], NoError> = .single([])
             |> then(navigationController.overlayControllersSignal)
             
-            self.disposable = (combineLatest(queue: Queue.mainQueue(), controllers, overlayControllers)).start(next: { [weak self] controllers, overlayControllers in
+            self.disposable = (combineLatest(queue: Queue.mainQueue(), controllers, overlayControllers, actionButton.state)).start(next: { [weak self] controllers, overlayControllers, state in
                 if let strongSelf = self {
                     var hasVoiceChatController = false
                     var overlayControllersCount = 0
@@ -248,19 +265,37 @@ public final class VoiceChatOverlayController: ViewController {
                         }
                     }
                     
+                    var slide = true
                     var hidden = true
                     var animated = true
                     if controllers.count == 1 || controllers.last is ChatController {
-                        hidden = false
+                        if let chatController = controllers.last as? ChatController, chatController.isSendButtonVisible {
+                            slide = false
+                            animated = false
+                        } else {
+                            hidden = false
+                        }
                     }
                     if overlayControllersCount > 0 {
+                        hidden = true
+                    }
+                    
+                    if case .active(.cantSpeak) = state {
                         hidden = true
                     }
                     if hasVoiceChatController {
                         hidden = false
                         animated = false
                     }
-                    strongSelf.controllerNode.update(hidden: hidden, slide: true, animated: animated)
+                    
+                    strongSelf.controllerNode.update(hidden: hidden, slide: slide, animated: animated)
+                    
+                    let previousInsets = strongSelf.additionalSideInsets
+                    strongSelf.additionalSideInsets = hidden ? UIEdgeInsets() : UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 75.0)
+                    
+                    if previousInsets != strongSelf.additionalSideInsets {
+                        navigationController.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
+                    }
                 }
             })
         }
