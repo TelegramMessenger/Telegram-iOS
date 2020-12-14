@@ -1102,13 +1102,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.callContext = nil
         self._canBeRemoved.set(.single(true))
         
-        let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
-        self.toneRenderer = toneRenderer
-        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
-        
-        Queue.mainQueue().after(0.5, {
-            self.wasRemoved.set(.single(true))
-        })
+        if self.didConnectOnce {
+            let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
+            self.toneRenderer = toneRenderer
+            toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
+            
+            Queue.mainQueue().after(0.5, {
+                self.wasRemoved.set(.single(true))
+            })
+        }
     }
     
     public func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError> {
