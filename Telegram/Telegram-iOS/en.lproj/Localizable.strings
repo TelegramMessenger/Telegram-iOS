@@ -6021,3 +6021,5 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MutedNewMembers" = "%1$@ muted new members";
 
 "Group.GroupMembersHeader" = "GROUP MEMBERS";
+
+"Conversation.VoiceChatMediaRecordingRestricted" = "You can't record voice and video messages during a voice chat.";
