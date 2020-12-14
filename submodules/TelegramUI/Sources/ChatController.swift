@@ -229,6 +229,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var shareStatusDisposable: MetaDisposable?
     private var clearCacheDisposable: MetaDisposable?
     private var bankCardDisposable: MetaDisposable?
+    private var hasActiveGroupCallDisposable: Disposable?
 
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -429,7 +430,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: false)
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
@@ -3338,6 +3339,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.keepPeerInfoScreenDataHotDisposable.dispose()
         self.preloadAvatarDisposable.dispose()
         self.peekTimerDisposable.dispose()
+        self.hasActiveGroupCallDisposable?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -6253,6 +6255,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let hasActiveCalls: Signal<Bool, NoError>
         if let callManager = self.context.sharedContext.callManager as? PresentationCallManagerImpl {
             hasActiveCalls = callManager.hasActiveCalls
+            
+            self.hasActiveGroupCallDisposable = ((callManager.currentGroupCallSignal
+            |> map { call -> Bool in
+                return call != nil
+            }) |> deliverOnMainQueue).start(next: { [weak self] hasActiveGroupCall in
+                self?.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
+                    return state.updatedHasActiveGroupCall(hasActiveGroupCall)
+                })
+            })
         } else {
             hasActiveCalls = .single(false)
         }

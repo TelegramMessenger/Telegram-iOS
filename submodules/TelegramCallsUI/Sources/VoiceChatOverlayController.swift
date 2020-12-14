@@ -114,12 +114,16 @@ public final class VoiceChatOverlayController: ViewController {
             let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
             leftButton.layer.animatePosition(from: leftButton.position, to: center, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak leftButton] _ in
                 leftButton?.isHidden = true
+                leftButton?.textNode.layer.removeAllAnimations()
                 leftButton?.layer.removeAllAnimations()
             })
             rightButton.layer.animatePosition(from: rightButton.position, to: center, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak rightButton] _ in
                 rightButton?.isHidden = true
+                rightButton?.textNode.layer.removeAllAnimations()
                 rightButton?.layer.removeAllAnimations()
             })
+            leftButton.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
+            rightButton.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
             
             let targetPosition = actionButton.position
             let sourcePoint = CGPoint(x: from.midX, y: from.midY)
@@ -226,6 +230,9 @@ public final class VoiceChatOverlayController: ViewController {
                         
                         rightButton.isHidden = false
                         rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.25, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        
+                        leftButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.1)
+                        rightButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.1)
                     }
                     
                     actionButton.update(snap: false, animated: true)
