@@ -585,7 +585,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                         audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
                                     }
-                                    print(value)
                                     
                                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
                                     transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)

@@ -363,6 +363,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let peekData: ChatPeekTimeout?
     private let peekTimerDisposable = MetaDisposable()
     
+    private let createVoiceChatDisposable = MetaDisposable()
+    
     private var shouldDisplayDownButton = false
 
     private var hasEmbeddedTitleContent = false
@@ -502,14 +504,66 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                        case let .groupPhoneCall(callId, accessHash, nil), let .inviteToGroupPhoneCall(callId, accessHash, _):
-                            guard strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall.id == callId else {
-                                return true
+                        case let .groupPhoneCall(callId, accessHash, _), let .inviteToGroupPhoneCall(callId, accessHash, _):
+                            if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
+                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash))
+                            } else {
+                                var canManageGroupCalls = false
+                                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
+                                    if case .group = channel.info, channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+                                        canManageGroupCalls = true
+                                    }
+                                } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramGroup {
+                                    if case .creator = group.role {
+                                        canManageGroupCalls = true
+                                    } else if case let .admin(rights, _) = group.role {
+                                        if rights.flags.contains(.canManageCalls) {
+                                            canManageGroupCalls = true
+                                        }
+                                    }
+                                }
+                                
+                                if canManageGroupCalls {
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatStart, action: {
+                                        if let strongSelf = self {
+                                            var dismissStatus: (() -> Void)?
+                                            let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
+                                                dismissStatus?()
+                                            }))
+                                            dismissStatus = { [weak self, weak statusController] in
+                                                self?.createVoiceChatDisposable.set(nil)
+                                                statusController?.dismiss()
+                                            }
+                                            strongSelf.present(statusController, in: .window(.root))
+                                            strongSelf.createVoiceChatDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: message.id.peerId)
+                                            |> deliverOnMainQueue).start(next: { [weak self] info in
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                                            }, error: { [weak self] error in
+                                                dismissStatus?()
+                                                
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                            
+                                                let text: String
+                                                switch error {
+                                                case .generic:
+                                                    text = strongSelf.presentationData.strings.Login_UnknownError
+                                                case .anonymousNotAllowed:
+                                                    text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                                                }
+                                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            }, completed: { [weak self] in
+                                                dismissStatus?()
+                                            }))
+                                        }
+                                    })]), in: .window(.root))
+                                }
                             }
-                            
-                            let peerId = message.id.peerId
-                            
-                            strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash))
+                            return true
                         default:
                             break
                     }
@@ -3340,6 +3394,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.preloadAvatarDisposable.dispose()
         self.peekTimerDisposable.dispose()
         self.hasActiveGroupCallDisposable?.dispose()
+        self.createVoiceChatDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
