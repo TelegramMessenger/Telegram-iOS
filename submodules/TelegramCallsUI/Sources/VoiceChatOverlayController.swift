@@ -199,7 +199,7 @@ public final class VoiceChatOverlayController: ViewController {
                 } else {
                     self.animating = true
                     let sourcePoint = actionButton.position
-                    var midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 30.0, y: (sourcePoint.y + targetPosition.y) / 2.0 + 25.0)
+                    var midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 30.0, y: (sourcePoint.y + targetPosition.y) / 2.0 + 30.0)
                     if sourcePoint.y < layout.size.height - 100.0 {
                         midPoint.x = (sourcePoint.x + targetPosition.x) / 2.0 + 30.0
                         midPoint.y = (sourcePoint.y + targetPosition.y) / 2.0 + 40.0
@@ -228,10 +228,10 @@ public final class VoiceChatOverlayController: ViewController {
                         let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
                         
                         leftButton.isHidden = false
-                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.28, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                         
                         rightButton.isHidden = false
-                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.28, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                         
                         leftButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                         rightButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
@@ -242,7 +242,7 @@ public final class VoiceChatOverlayController: ViewController {
                     
                     actionButton.update(snap: false, animated: true)
                     actionButton.position = targetPosition
-                    actionButton.layer.animateKeyframes(values: keyframes, duration: 0.48, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.5, 1.1+Float(1.0/3.0), 1, 1), completion: { _ in
+                    actionButton.layer.animateKeyframes(values: keyframes, duration: 0.5, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.5, 1.1 + Float(1.0 / 3.0), 1, 1), completion: { _ in
                         self.animating = false
                         completion(false)
                     })
