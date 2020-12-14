@@ -294,8 +294,10 @@ public final class VoiceChatOverlayController: ViewController {
                 
                 if actionButton.supernode !== self && !self.didAnimateIn {
                     self.didAnimateIn = true
+                    actionButton.ignoreHierarchyChanges = true
                     self.addSubnode(actionButton)
                     self.animateIn(from: convertedRect)
+                    actionButton.ignoreHierarchyChanges = false
                 }
             }
         }

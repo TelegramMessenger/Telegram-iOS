@@ -64,6 +64,14 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     
     var isDisabled: Bool = false
     
+    var ignoreHierarchyChanges: Bool {
+        get {
+            return self.backgroundNode.ignoreHierarchyChanges
+        } set {
+            self.backgroundNode.ignoreHierarchyChanges = newValue
+        }
+    }
+    
     var wasActiveWhenPressed = false
     var pressing: Bool = false {
         didSet {
@@ -439,6 +447,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
     private var isCurrentlyInHierarchy = false
+    var ignoreHierarchyChanges = false
         
     override init() {
         self.state = .connecting
@@ -500,7 +509,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskCircleLayer.isHidden = true
         
         updateInHierarchy = { [weak self] value in
-            if let strongSelf = self {
+            if let strongSelf = self, !strongSelf.ignoreHierarchyChanges {
                 strongSelf.isCurrentlyInHierarchy = value
                 strongSelf.updateAnimations()
             }

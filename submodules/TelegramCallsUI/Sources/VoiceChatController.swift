@@ -1778,6 +1778,7 @@ public final class VoiceChatController: ViewController {
                 self.contentContainer.view.bounds = initialBounds
             }, completion: { _ in
                 if self.actionButton.supernode !== self.bottomPanelNode {
+                    self.actionButton.ignoreHierarchyChanges = true
                     self.audioOutputNode.isHidden = false
                     self.leaveNode.isHidden = false
                     self.audioOutputNode.layer.removeAllAnimations()
@@ -1786,6 +1787,7 @@ public final class VoiceChatController: ViewController {
                     self.bottomPanelNode.addSubnode(self.leaveNode)
                     self.bottomPanelNode.addSubnode(self.actionButton)
                     self.containerLayoutUpdated(layout, navigationHeight :navigationHeight, transition: .immediate)
+                    self.actionButton.ignoreHierarchyChanges = false
                 }
                 
                 self.controller?.currentOverlayController?.dismiss()
@@ -2366,6 +2368,7 @@ public final class VoiceChatController: ViewController {
             if let strongSelf = self {
                 overlayController?.animateOut(reclaim: true, completion: { [weak self] immediate in
                     if let strongSelf = self, immediate {
+                        strongSelf.controllerNode.actionButton.ignoreHierarchyChanges = true
                         strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.actionButton)
                         strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.audioOutputNode)
                         strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.leaveNode)
@@ -2373,6 +2376,7 @@ public final class VoiceChatController: ViewController {
                         if immediate, let layout = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                         }
+                        strongSelf.controllerNode.actionButton.ignoreHierarchyChanges = false
                     }
                 })
                 strongSelf.reclaimActionButton = nil
