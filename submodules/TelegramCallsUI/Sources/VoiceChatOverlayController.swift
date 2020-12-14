@@ -292,11 +292,15 @@ public final class VoiceChatOverlayController: ViewController {
     }
     
     private var disposable: Disposable?
-        
+    
+    private weak var parentNavigationController: NavigationController?
+    private var currentParams: ([UIViewController], [UIViewController], VoiceChatActionButton.State)?
+    
     init(actionButton: VoiceChatActionButton, audioOutputNode: CallControllerButtonItemNode, leaveNode: CallControllerButtonItemNode, navigationController: NavigationController?) {
         self.actionButton = actionButton
         self.audioOutputNode = audioOutputNode
         self.leaveNode = leaveNode
+        self.parentNavigationController = navigationController
         
         super.init(navigationBarPresentationData: nil)
                          
@@ -314,51 +318,8 @@ public final class VoiceChatOverlayController: ViewController {
             
             self.disposable = (combineLatest(queue: Queue.mainQueue(), controllers, overlayControllers, actionButton.state)).start(next: { [weak self] controllers, overlayControllers, state in
                 if let strongSelf = self {
-                    var hasVoiceChatController = false
-                    var overlayControllersCount = 0
-                    for controller in controllers {
-                        if controller is VoiceChatController {
-                            hasVoiceChatController = true
-                        }
-                    }
-                    for controller in overlayControllers {
-                        if controller is TooltipController || controller is TooltipScreen || controller is AlertController {
-                        } else {
-                            overlayControllersCount += 1
-                        }
-                    }
-                    
-                    var slide = true
-                    var hidden = true
-                    var animated = true
-                    if controllers.count == 1 || controllers.last is ChatController {
-                        if let chatController = controllers.last as? ChatController, chatController.isSendButtonVisible {
-                            slide = false
-                            animated = false
-                        } else {
-                            hidden = false
-                        }
-                    }
-                    if overlayControllersCount > 0 {
-                        hidden = true
-                    }
-                    
-                    if case .active(.cantSpeak) = state {
-                        hidden = true
-                    }
-                    if hasVoiceChatController {
-                        hidden = false
-                        animated = false
-                    }
-                    
-                    strongSelf.controllerNode.update(hidden: hidden, slide: slide, animated: animated)
-                    
-                    let previousInsets = strongSelf.additionalSideInsets
-                    strongSelf.additionalSideInsets = hidden ? UIEdgeInsets() : UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 75.0)
-                    
-                    if previousInsets != strongSelf.additionalSideInsets {
-                        navigationController.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
-                    }
+                    strongSelf.currentParams = (controllers, overlayControllers, state)
+                    strongSelf.updateVisibility()
                 }
             })
         }
@@ -387,7 +348,64 @@ public final class VoiceChatOverlayController: ViewController {
         self.controllerNode.animateOut(reclaim: reclaim, completion: completion)
     }
     
+    public func updateVisibility() {
+        guard let (controllers, overlayControllers, state) = self.currentParams else {
+            return
+        }
+        var hasVoiceChatController = false
+        var overlayControllersCount = 0
+        for controller in controllers {
+            if controller is VoiceChatController {
+                hasVoiceChatController = true
+            }
+        }
+        for controller in overlayControllers {
+            if controller is TooltipController || controller is TooltipScreen || controller is AlertController {
+            } else {
+                overlayControllersCount += 1
+            }
+        }
+        
+        var slide = true
+        var hidden = true
+        var animated = true
+        if controllers.count == 1 || controllers.last is ChatController {
+            if let chatController = controllers.last as? ChatController, chatController.isSendButtonVisible {
+                slide = false
+            } else {
+                hidden = false
+            }
+        }
+        if let tabBarController = controllers.last as? TabBarController {
+            if let chatListController = tabBarController.controllers[tabBarController.selectedIndex] as? ChatListController, chatListController.isSearchActive {
+                hidden = true
+            }
+        }
+        if overlayControllersCount > 0 {
+            hidden = true
+        }
+        
+        if case .active(.cantSpeak) = state {
+            hidden = true
+        }
+        if hasVoiceChatController {
+            hidden = false
+            animated = false
+        }
+        
+        self.controllerNode.update(hidden: hidden, slide: slide, animated: animated)
+        
+        let previousInsets = self.additionalSideInsets
+        self.additionalSideInsets = hidden ? UIEdgeInsets() : UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 75.0)
+        
+        if previousInsets != self.additionalSideInsets {
+            self.parentNavigationController?.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
+        }
+    }
+    
+    private let hiddenPromise = ValuePromise<Bool>()
     public func update(hidden: Bool, slide: Bool, animated: Bool) {
+        self.hiddenPromise.set(hidden)
         self.controllerNode.update(hidden: hidden, slide: slide, animated: animated)
     }
     

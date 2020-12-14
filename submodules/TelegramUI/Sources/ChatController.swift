@@ -7083,7 +7083,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let controller = voiceChatOverlayController {
-                controller.update(hidden: self.isSendButtonVisible, slide: false, animated: true)
+                controller.updateVisibility()
             }
         }
     }

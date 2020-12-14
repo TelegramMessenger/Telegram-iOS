@@ -334,6 +334,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 titleAttributedString = NSAttributedString(string: channel.title, font: currentBoldFont, textColor: titleColor)
             }
             
+            var wavesColor = UIColor(rgb: 0x34c759)
             switch item.text {
             case .presence:
                 if let user = item.peer as? TelegramUser, let botInfo = user.botInfo {
@@ -358,6 +359,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
                 case .accent:
                     textColorValue = item.presentationData.theme.list.itemAccentColor
+                    wavesColor = textColorValue
                 case .constructive:
                     textColorValue = UIColor(rgb: 0x34c759)
                 }
@@ -561,7 +563,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     playbackMaskLayer.path = maskPath.cgPath
                                     audioLevelView.layer.mask = playbackMaskLayer
                                     
-                                    audioLevelView.setColor(UIColor(rgb: 0x34c759))
+                                    audioLevelView.setColor(wavesColor)
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
                                 }
@@ -574,10 +576,12 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     if value > 0.0 {
                                         audioLevelView.startAnimating()
                                         avatarScale = 1.03 + level * 0.13
+                                        audioLevelView.setColor(wavesColor, animated: true)
                                     } else {
                                         audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
                                     }
+                                    print(value)
                                     
                                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
                                     transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
