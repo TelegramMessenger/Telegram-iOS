@@ -117,11 +117,13 @@ public final class VoiceChatOverlayController: ViewController {
                 leftButton?.textNode.layer.removeAllAnimations()
                 leftButton?.layer.removeAllAnimations()
             })
+            leftButton.layer.animateScale(from: 1.0, to: 0.5, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             rightButton.layer.animatePosition(from: rightButton.position, to: center, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak rightButton] _ in
                 rightButton?.isHidden = true
                 rightButton?.textNode.layer.removeAllAnimations()
                 rightButton?.layer.removeAllAnimations()
             })
+            rightButton.layer.animateScale(from: 1.0, to: 0.5, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             leftButton.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
             rightButton.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
             
@@ -197,7 +199,7 @@ public final class VoiceChatOverlayController: ViewController {
                 } else {
                     self.animating = true
                     let sourcePoint = actionButton.position
-                    var midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 25.0, y: (sourcePoint.y + targetPosition.y) / 2.0 + 25.0)
+                    var midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 30.0, y: (sourcePoint.y + targetPosition.y) / 2.0 + 25.0)
                     if sourcePoint.y < layout.size.height - 100.0 {
                         midPoint.x = (sourcePoint.x + targetPosition.x) / 2.0 + 30.0
                         midPoint.y = (sourcePoint.y + targetPosition.y) / 2.0 + 40.0
@@ -226,18 +228,21 @@ public final class VoiceChatOverlayController: ViewController {
                         let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
                         
                         leftButton.isHidden = false
-                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.25, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.28, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                         
                         rightButton.isHidden = false
-                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.25, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.28, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                         
-                        leftButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.1)
-                        rightButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.1)
+                        leftButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                        rightButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                        
+                        leftButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.15)
+                        rightButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.15)
                     }
                     
                     actionButton.update(snap: false, animated: true)
                     actionButton.position = targetPosition
-                    actionButton.layer.animateKeyframes(values: keyframes, duration: 0.37, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
+                    actionButton.layer.animateKeyframes(values: keyframes, duration: 0.48, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.5, 1.1+Float(1.0/3.0), 1, 1), completion: { _ in
                         self.animating = false
                         completion(false)
                     })
