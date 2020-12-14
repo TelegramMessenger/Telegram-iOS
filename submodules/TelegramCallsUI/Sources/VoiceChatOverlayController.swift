@@ -39,10 +39,16 @@ public final class VoiceChatOverlayController: ViewController {
                 return
             }
             
-            if self.isButtonHidden == hidden || (!slide && self.isSlidOffscreen) {
+            if self.isButtonHidden == hidden {
                 return
             }
             self.isButtonHidden = hidden
+            
+            var slide = slide
+            if self.isSlidOffscreen && !hidden {
+                slide = true
+            }
+            
             self.isSlidOffscreen = hidden && slide
             
             guard actionButton.supernode === self else {
@@ -382,8 +388,11 @@ public final class VoiceChatOverlayController: ViewController {
         var hidden = true
         var animated = true
         if controllers.count == 1 || controllers.last is ChatController {
-            if let chatController = controllers.last as? ChatController, chatController.isSendButtonVisible {
+            if let chatController = controllers.last as? ChatController {
                 slide = false
+                if !chatController.isSendButtonVisible {
+                   hidden = false
+                }
             } else {
                 hidden = false
             }
