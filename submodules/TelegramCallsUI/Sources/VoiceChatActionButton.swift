@@ -39,6 +39,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         return self.statePromise.get()
     }
     
+    let bottomNode: ASDisplayNode
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatMicrophoneNode
@@ -93,6 +94,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
         
     init() {
+        self.bottomNode = ASDisplayNode()
         self.containerNode = ASDisplayNode()
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
         self.iconNode = VoiceChatMicrophoneNode()
@@ -102,6 +104,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         super.init()
     
+        self.addSubnode(self.bottomNode)
         self.addSubnode(self.titleLabel)
         self.addSubnode(self.subtitleLabel)
 
@@ -178,6 +181,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 112.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
+        self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         
         self.backgroundNode.bounds = CGRect(origin: CGPoint(), size: size)

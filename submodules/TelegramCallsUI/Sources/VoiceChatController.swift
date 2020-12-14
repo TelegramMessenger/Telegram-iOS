@@ -393,8 +393,8 @@ public final class VoiceChatController: ViewController {
         fileprivate let bottomPanelNode: ASDisplayNode
         private let bottomPanelBackgroundNode: ASDisplayNode
         private let bottomCornersNode: ASImageNode
-        private let audioOutputNode: CallControllerButtonItemNode
-        private let leaveNode: CallControllerButtonItemNode
+        fileprivate let audioOutputNode: CallControllerButtonItemNode
+        fileprivate let leaveNode: CallControllerButtonItemNode
         fileprivate let actionButton: VoiceChatActionButton
         private let leftBorderNode: ASDisplayNode
         private let rightBorderNode: ASDisplayNode
@@ -1731,9 +1731,10 @@ public final class VoiceChatController: ViewController {
             let sideButtonOffset = min(36.0, floor((((layout.size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))
             let sideButtonOrigin = max(sideButtonMinimalInset, floor((layout.size.width - 144.0) / 2.0) - sideButtonOffset - sideButtonSize.width)
             
-            transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
-            transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: layout.size.width - sideButtonOrigin - sideButtonSize.width, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
-            
+            if self.audioOutputNode.supernode === self.bottomPanelNode {
+                transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+                transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: layout.size.width - sideButtonOrigin - sideButtonSize.width, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+            }
             if isFirstTime {
                 while !self.enqueuedTransitions.isEmpty {
                     self.dequeueTransition()
@@ -1756,6 +1757,10 @@ public final class VoiceChatController: ViewController {
                 self.contentContainer.view.bounds = initialBounds
             }, completion: { _ in
                 if self.actionButton.supernode !== self.bottomPanelNode {
+                    self.audioOutputNode.layer.removeAllAnimations()
+                    self.leaveNode.layer.removeAllAnimations()
+                    self.bottomPanelNode.addSubnode(self.audioOutputNode)
+                    self.bottomPanelNode.addSubnode(self.leaveNode)
                     self.bottomPanelNode.addSubnode(self.actionButton)
                     self.containerLayoutUpdated(layout, navigationHeight :navigationHeight, transition: .immediate)
                 }
@@ -1950,6 +1955,17 @@ public final class VoiceChatController: ViewController {
                     canManageCall: callState?.canManageCall ?? false
                 )))
                 index += 1
+            }
+            
+            if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
+                entries.insert(.peer(PeerEntry(
+                    peer: accountPeer,
+                    presence: nil,
+                    activityTimestamp: Int32.max - 1 - index,
+                    state: .listening,
+                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
+                    canManageCall: callState?.canManageCall ?? false
+                )), at: 1)
             }
             
             for peer in invitedPeers {
@@ -2322,7 +2338,7 @@ public final class VoiceChatController: ViewController {
             return
         }
         
-        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, navigationController: self.navigationController as? NavigationController)
+        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, audioOutputNode: self.controllerNode.audioOutputNode, leaveNode: self.controllerNode.leaveNode, navigationController: self.navigationController as? NavigationController)
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
         }
