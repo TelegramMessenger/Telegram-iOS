@@ -278,7 +278,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             var audioLevels: [(PeerId, Float, Bool)] = []
             for (peerId, level, hasVoice) in levels {
-                if level > 0.1 {
+                if level > 0.001 {
                     audioLevels.append((peerId, level, hasVoice))
                 }
             }

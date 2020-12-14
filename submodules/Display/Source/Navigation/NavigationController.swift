@@ -611,10 +611,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
             }
         }
-        
-        layout.additionalInsets.left = max(layout.intrinsicInsets.left, additionalSideInsets.left)
-        layout.additionalInsets.right = max(layout.intrinsicInsets.right, additionalSideInsets.right)
-        
+                
         if self.currentTopVisibleOverlayContainerStatusBar !== topVisibleOverlayContainerWithStatusBar {
             animateStatusBarStyleTransition = true
             self.currentTopVisibleOverlayContainerStatusBar = topVisibleOverlayContainerWithStatusBar
@@ -721,6 +718,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
             }
         }
+        
+        layout.additionalInsets.left = max(layout.intrinsicInsets.left, additionalSideInsets.left)
+        layout.additionalInsets.right = max(layout.intrinsicInsets.right, additionalSideInsets.right)
         
         switch navigationLayout.root {
         case let .flat(controllers):

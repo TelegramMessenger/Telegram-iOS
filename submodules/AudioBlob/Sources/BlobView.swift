@@ -84,9 +84,13 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     public func setColor(_ color: UIColor) {
-        smallBlob.setColor(color)
-        mediumBlob.setColor(color.withAlphaComponent(0.3))
-        bigBlob.setColor(color.withAlphaComponent(0.15))
+        self.setColor(color, animated: false)
+    }
+    
+    public func setColor(_ color: UIColor, animated: Bool) {
+        smallBlob.setColor(color, animated: animated)
+        mediumBlob.setColor(color.withAlphaComponent(0.3), animated: animated)
+        bigBlob.setColor(color.withAlphaComponent(0.15), animated: animated)
     }
     
     public func updateLevel(_ level: CGFloat) {
@@ -250,8 +254,12 @@ final class BlobView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func setColor(_ color: UIColor) {
+    func setColor(_ color: UIColor, animated: Bool) {
+        let previousColor = shapeLayer.fillColor
         shapeLayer.fillColor = color.cgColor
+        if animated, let previousColor = previousColor {
+            shapeLayer.animate(from: previousColor, to: color.cgColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        }
     }
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {

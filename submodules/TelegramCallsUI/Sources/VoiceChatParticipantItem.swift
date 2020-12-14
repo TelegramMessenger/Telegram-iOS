@@ -169,7 +169,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (VoiceChatParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
-            
+    private var wavesColor: UIColor?
+    
     init() {
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -334,6 +335,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 titleAttributedString = NSAttributedString(string: channel.title, font: currentBoldFont, textColor: titleColor)
             }
             
+            var wavesColor = UIColor(rgb: 0x34c759)
             switch item.text {
             case .presence:
                 if let user = item.peer as? TelegramUser, let botInfo = user.botInfo {
@@ -358,6 +360,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
                 case .accent:
                     textColorValue = item.presentationData.theme.list.itemAccentColor
+                    wavesColor = textColorValue
                 case .constructive:
                     textColorValue = UIColor(rgb: 0x34c759)
                 }
@@ -435,6 +438,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, first, last)
+                    strongSelf.wavesColor = wavesColor
                     
                     let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width - 16.0, height: layout.contentSize.height))
                     let extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
@@ -561,7 +565,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     playbackMaskLayer.path = maskPath.cgPath
                                     audioLevelView.layer.mask = playbackMaskLayer
                                     
-                                    audioLevelView.setColor(UIColor(rgb: 0x34c759))
+                                    audioLevelView.setColor(wavesColor)
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
                                 }
@@ -574,6 +578,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     if value > 0.0 {
                                         audioLevelView.startAnimating()
                                         avatarScale = 1.03 + level * 0.13
+                                        if let wavesColor = strongSelf.wavesColor {
+                                            audioLevelView.setColor(wavesColor, animated: true)
+                                        }
                                     } else {
                                         audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0

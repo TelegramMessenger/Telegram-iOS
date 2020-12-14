@@ -964,7 +964,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let immediateThumbnailData = file?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
-                        placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0x748391, alpha: 0.2), shimmeringColor: UIColor(rgb: 0x748391, alpha: 0.35), data: immediateThumbnailData, size: animationNodeFrame.size)
+                        let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
+                        let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size)
                         placeholderNode.frame = animationNodeFrame
                     }
                     

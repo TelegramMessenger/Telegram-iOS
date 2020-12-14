@@ -1365,7 +1365,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         let mediaInputDisabled: Bool
-        if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendMedia) != nil {
+        if interfaceState.hasActiveGroupCall {
+            mediaInputDisabled = true
+        } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendMedia) != nil {
             mediaInputDisabled = true
         } else if let group = interfaceState.renderedPeer?.peer as? TelegramGroup, group.hasBannedPermission(.banSendMedia) {
             mediaInputDisabled = true
@@ -1485,7 +1487,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
         }
         
-        if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, _) = self.validLayout {
+        if let (width, leftInset, rightInset, _, maxHeight, metrics, _) = self.validLayout {
             var composeButtonsOffset: CGFloat = 0.0
             if self.extendedSearchLayout {
                 composeButtonsOffset = 44.0
