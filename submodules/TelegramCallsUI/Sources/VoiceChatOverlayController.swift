@@ -86,24 +86,44 @@ public final class VoiceChatOverlayController: ViewController {
                 }
             }
         }
-    
+        
+        private var initialLeftButtonPosition: CGPoint?
+        private var initialRightButtonPosition: CGPoint?
+        
         func animateIn(from: CGRect) {
-            guard let actionButton = self.controller?.actionButton else {
+            guard let actionButton = self.controller?.actionButton, let leftButton = self.controller?.audioOutputNode, let rightButton = self.controller?.leaveNode else {
                 return
             }
             
             actionButton.update(snap: true, animated: !self.isSlidOffscreen && !self.isButtonHidden)
             if self.isSlidOffscreen {
+                leftButton.isHidden = false
+                rightButton.isHidden = false
                 actionButton.layer.sublayerTransform = CATransform3DMakeTranslation(slideOffset, 0.0, 0.0)
                 return
             } else if self.isButtonHidden {
+                leftButton.isHidden = false
+                rightButton.isHidden = false
                 actionButton.isHidden = true
                 return
             }
+                        
+            self.initialLeftButtonPosition = leftButton.position
+            self.initialRightButtonPosition = rightButton.position
+            
+            let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
+            leftButton.layer.animatePosition(from: leftButton.position, to: center, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak leftButton] _ in
+                leftButton?.isHidden = true
+                leftButton?.layer.removeAllAnimations()
+            })
+            rightButton.layer.animatePosition(from: rightButton.position, to: center, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak rightButton] _ in
+                rightButton?.isHidden = true
+                rightButton?.layer.removeAllAnimations()
+            })
             
             let targetPosition = actionButton.position
             let sourcePoint = CGPoint(x: from.midX, y: from.midY)
-            let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y + 120.0)
+            let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y + 90.0)
             
             let x1 = sourcePoint.x
             let y1 = sourcePoint.y
@@ -131,7 +151,7 @@ public final class VoiceChatOverlayController: ViewController {
         private var animating = false
         private var dismissed = false
         func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
-            guard let actionButton = self.controller?.actionButton, let layout = self.validLayout else {
+            guard let actionButton = self.controller?.actionButton, let leftButton = self.controller?.audioOutputNode, let rightButton = self.controller?.leaveNode, let layout = self.validLayout else {
                 return
             }
             
@@ -155,7 +175,7 @@ public final class VoiceChatOverlayController: ViewController {
                 } else {
                     self.animating = true
                     let sourcePoint = actionButton.position
-                    var midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 60.0, y: sourcePoint.y)
+                    var midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0 - 25.0, y: (sourcePoint.y + targetPosition.y) / 2.0 + 25.0)
                     if sourcePoint.y < layout.size.height - 100.0 {
                         midPoint.x = (sourcePoint.x + targetPosition.x) / 2.0 + 30.0
                         midPoint.y = (sourcePoint.y + targetPosition.y) / 2.0 + 40.0
@@ -180,9 +200,19 @@ public final class VoiceChatOverlayController: ViewController {
                         keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
                     }
                     
+                    if let leftButtonPosition = self.initialLeftButtonPosition, let rightButtonPosition = self.initialRightButtonPosition {
+                        let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
+                        
+                        leftButton.isHidden = false
+                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.25, delay: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        
+                        rightButton.isHidden = false
+                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.25, delay: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                    }
+                    
                     actionButton.update(snap: false, animated: true)
                     actionButton.position = targetPosition
-                    actionButton.layer.animateKeyframes(values: keyframes, duration: 0.34, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
+                    actionButton.layer.animateKeyframes(values: keyframes, duration: 0.37, keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { _ in
                         self.animating = false
                         completion(false)
                     })
@@ -210,9 +240,20 @@ public final class VoiceChatOverlayController: ViewController {
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
-            if let actionButton = self.controller?.actionButton, !self.animating && !self.dismissed {
+            if let actionButton = self.controller?.actionButton, let leftButton = self.controller?.audioOutputNode, let rightButton = self.controller?.leaveNode, !self.animating && !self.dismissed {
                 let convertedRect = actionButton.view.convert(actionButton.bounds, to: self.view)
-                let insets = layout.insets(options: [.input])                
+                let insets = layout.insets(options: [.input])
+                
+                if !self.didAnimateIn {
+                    let leftButtonFrame = leftButton.view.convert(leftButton.bounds, to: actionButton.bottomNode.view)
+                    actionButton.bottomNode.addSubnode(leftButton)
+                    leftButton.frame = leftButtonFrame
+                    
+                    let rightButtonFrame = rightButton.view.convert(rightButton.bounds, to: actionButton.bottomNode.view)
+                    actionButton.bottomNode.addSubnode(rightButton)
+                    rightButton.frame = rightButtonFrame
+                }
+                
                 transition.updatePosition(node: actionButton, position: CGPoint(x: layout.size.width - layout.safeInsets.right - 21.0, y: layout.size.height - insets.bottom - 22.0))
                 
                 if actionButton.supernode !== self && !self.didAnimateIn {
@@ -225,6 +266,8 @@ public final class VoiceChatOverlayController: ViewController {
     }
     
     private weak var actionButton: VoiceChatActionButton?
+    private weak var audioOutputNode: CallControllerButtonItemNode?
+    private weak var leaveNode: CallControllerButtonItemNode?
     
     private var controllerNode: Node {
         return self.displayNode as! Node
@@ -232,8 +275,10 @@ public final class VoiceChatOverlayController: ViewController {
     
     private var disposable: Disposable?
         
-    init(actionButton: VoiceChatActionButton, navigationController: NavigationController?) {
+    init(actionButton: VoiceChatActionButton, audioOutputNode: CallControllerButtonItemNode, leaveNode: CallControllerButtonItemNode, navigationController: NavigationController?) {
         self.actionButton = actionButton
+        self.audioOutputNode = audioOutputNode
+        self.leaveNode = leaveNode
         
         super.init(navigationBarPresentationData: nil)
                          
