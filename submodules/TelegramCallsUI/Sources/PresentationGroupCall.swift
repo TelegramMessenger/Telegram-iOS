@@ -831,10 +831,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     case .connected:
                         mappedState = .connected
                     }
+                    let wasConnecting = strongSelf.stateValue.networkState == .connecting
                     if strongSelf.stateValue.networkState != mappedState {
                         strongSelf.stateValue.networkState = mappedState
                     }
-                    
                     let isConnecting = mappedState == .connecting
                     
                     if strongSelf.isCurrentlyConnecting != isConnecting {
@@ -847,12 +847,24 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
                     
-                    if case .connected = state, !strongSelf.didConnectOnce {
-                        strongSelf.didConnectOnce = true
-                        
-                        let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
-                        strongSelf.toneRenderer = toneRenderer
-                        toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                    if wasConnecting != isConnecting && strongSelf.didConnectOnce {
+                        if isConnecting {
+                            let toneRenderer = PresentationCallToneRenderer(tone: .groupConnecting)
+                            strongSelf.toneRenderer = toneRenderer
+                            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        } else {
+                            strongSelf.toneRenderer = nil
+                        }
+                    }
+                    
+                    if case .connected = state {
+                        if !strongSelf.didConnectOnce {
+                            strongSelf.didConnectOnce = true
+                            
+                            let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
+                            strongSelf.toneRenderer = toneRenderer
+                            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        }
                     }
                 }))
                 
@@ -1099,7 +1111,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private func markAsCanBeRemoved() {
         self.callContext?.stop()
-        self.callContext = nil
         self._canBeRemoved.set(.single(true))
         
         if self.didConnectOnce {
@@ -1107,7 +1118,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.toneRenderer = toneRenderer
             toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
             
-            Queue.mainQueue().after(0.5, {
+            Queue.mainQueue().after(1.0, {
                 self.wasRemoved.set(.single(true))
             })
         }
