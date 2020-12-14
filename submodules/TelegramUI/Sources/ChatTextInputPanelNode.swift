@@ -1365,7 +1365,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         let mediaInputDisabled: Bool
-        if let _ = interfaceState.hasActiveGroupCall {
+        if interfaceState.hasActiveGroupCall {
             mediaInputDisabled = true
         } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendMedia) != nil {
             mediaInputDisabled = true
