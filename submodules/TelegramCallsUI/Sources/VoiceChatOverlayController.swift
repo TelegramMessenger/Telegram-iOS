@@ -95,21 +95,21 @@ public final class VoiceChatOverlayController: ViewController {
                 return
             }
             
+            self.initialLeftButtonPosition = leftButton.position
+            self.initialRightButtonPosition = rightButton.position
+            
             actionButton.update(snap: true, animated: !self.isSlidOffscreen && !self.isButtonHidden)
             if self.isSlidOffscreen {
-                leftButton.isHidden = false
-                rightButton.isHidden = false
+                leftButton.isHidden = true
+                rightButton.isHidden = true
                 actionButton.layer.sublayerTransform = CATransform3DMakeTranslation(slideOffset, 0.0, 0.0)
                 return
             } else if self.isButtonHidden {
-                leftButton.isHidden = false
-                rightButton.isHidden = false
+                leftButton.isHidden = true
+                rightButton.isHidden = true
                 actionButton.isHidden = true
                 return
             }
-                        
-            self.initialLeftButtonPosition = leftButton.position
-            self.initialRightButtonPosition = rightButton.position
             
             let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
             leftButton.layer.animatePosition(from: leftButton.position, to: center, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak leftButton] _ in
@@ -164,6 +164,15 @@ public final class VoiceChatOverlayController: ViewController {
                     actionButton.layer.sublayerTransform = CATransform3DIdentity
                     actionButton.update(snap: false, animated: false)
                     actionButton.position = CGPoint(x: targetPosition.x, y: 268.0 / 2.0)
+                    
+                    leftButton.isHidden = false
+                    rightButton.isHidden = false
+                    if let leftButtonPosition = self.initialLeftButtonPosition {
+                        leftButton.position = CGPoint(x: actionButton.position.x + leftButtonPosition.x, y: actionButton.position.y)
+                    }
+                    if let rightButtonPosition = self.initialRightButtonPosition {
+                        rightButton.position = CGPoint(x: actionButton.position.x + rightButtonPosition.x, y: actionButton.position.y)
+                    }
                     completion(true)
                 } else if self.isButtonHidden {
                     actionButton.isHidden = false
@@ -171,6 +180,15 @@ public final class VoiceChatOverlayController: ViewController {
                     actionButton.layer.sublayerTransform = CATransform3DIdentity
                     actionButton.update(snap: false, animated: false)
                     actionButton.position = CGPoint(x: targetPosition.x, y: 268.0 / 2.0)
+                   
+                    leftButton.isHidden = false
+                    rightButton.isHidden = false
+                    if let leftButtonPosition = self.initialLeftButtonPosition {
+                        leftButton.position = CGPoint(x: actionButton.position.x + leftButtonPosition.x, y: actionButton.position.y)
+                    }
+                    if let rightButtonPosition = self.initialRightButtonPosition {
+                        rightButton.position = CGPoint(x: actionButton.position.x + rightButtonPosition.x, y: actionButton.position.y)
+                    }
                     completion(true)
                 } else {
                     self.animating = true
@@ -204,10 +222,10 @@ public final class VoiceChatOverlayController: ViewController {
                         let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
                         
                         leftButton.isHidden = false
-                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.25, delay: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.25, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                         
                         rightButton.isHidden = false
-                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.25, delay: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.25, delay: 0.12, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                     }
                     
                     actionButton.update(snap: false, animated: true)

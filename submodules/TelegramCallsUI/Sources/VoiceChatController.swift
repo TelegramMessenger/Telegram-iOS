@@ -1757,6 +1757,8 @@ public final class VoiceChatController: ViewController {
                 self.contentContainer.view.bounds = initialBounds
             }, completion: { _ in
                 if self.actionButton.supernode !== self.bottomPanelNode {
+                    self.audioOutputNode.isHidden = false
+                    self.leaveNode.isHidden = false
                     self.audioOutputNode.layer.removeAllAnimations()
                     self.leaveNode.layer.removeAllAnimations()
                     self.bottomPanelNode.addSubnode(self.audioOutputNode)
@@ -1993,24 +1995,12 @@ public final class VoiceChatController: ViewController {
         }
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-//            if let callState = self.callState, case .connected = callState.networkState, let muteState = callState.muteState, !muteState.canUnmute {
-//                return false
-//            }
-//            if let recognizer = gestureRecognizer as? UIPanGestureRecognizer {
-//                let location = recognizer.location(in: self.view)
-//                if let view = super.hitTest(location, with: nil) {
-//                    if let gestureRecognizers = view.gestureRecognizers, view != self.view {
-//                        for gestureRecognizer in gestureRecognizers {
-//                            if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
-//                                if panGestureRecognizer.state != .began {
-//                                    panGestureRecognizer.isEnabled = false
-//                                    panGestureRecognizer.isEnabled = true
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
+            if gestureRecognizer is DirectionalPanGestureRecognizer {
+                let location = gestureRecognizer.location(in: self.bottomPanelNode.view)
+                if self.audioOutputNode.frame.contains(location) || self.leaveNode.frame.contains(location) {
+                    return false
+                }
+            }
             return true
         }
         
@@ -2350,6 +2340,12 @@ public final class VoiceChatController: ViewController {
                 overlayController?.animateOut(reclaim: true, completion: { [weak self] immediate in
                     if let strongSelf = self, immediate {
                         strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.actionButton)
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.audioOutputNode)
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.leaveNode)
+                        
+                        if immediate, let layout = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                        }
                     }
                 })
                 strongSelf.reclaimActionButton = nil
