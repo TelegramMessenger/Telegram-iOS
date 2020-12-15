@@ -27,6 +27,7 @@ swift_library(
         "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/UrlEscaping:UrlEscaping",
     ],
     visibility = [
         "//visibility:public",
