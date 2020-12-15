@@ -39,6 +39,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         return self.statePromise.get()
     }
     
+    let bottomNode: ASDisplayNode
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatMicrophoneNode
@@ -62,6 +63,14 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     var activeDisposable = MetaDisposable()
     
     var isDisabled: Bool = false
+    
+    var ignoreHierarchyChanges: Bool {
+        get {
+            return self.backgroundNode.ignoreHierarchyChanges
+        } set {
+            self.backgroundNode.ignoreHierarchyChanges = newValue
+        }
+    }
     
     var wasActiveWhenPressed = false
     var pressing: Bool = false {
@@ -93,6 +102,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
         
     init() {
+        self.bottomNode = ASDisplayNode()
         self.containerNode = ASDisplayNode()
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
         self.iconNode = VoiceChatMicrophoneNode()
@@ -102,6 +112,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         super.init()
     
+        self.addSubnode(self.bottomNode)
         self.addSubnode(self.titleLabel)
         self.addSubnode(self.subtitleLabel)
 
@@ -178,6 +189,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 112.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
+        self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         
         self.backgroundNode.bounds = CGRect(origin: CGPoint(), size: size)
@@ -196,18 +208,20 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 break
         }
         
-        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        
         if snap {
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
             transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.75 : 0.5)
             transition.updateTransformScale(node: self.iconNode, scale: 0.5)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
-            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0)
-            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0)
-            transition.updateAlpha(node: self.titleLabel, alpha: 1.0)
-            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.35, curve: .easeInOut) : .immediate
+            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0, delay: 0.12)
+            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.12)
+            transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.1)
+            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.1)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
@@ -433,6 +447,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
     private var isCurrentlyInHierarchy = false
+    var ignoreHierarchyChanges = false
         
     override init() {
         self.state = .connecting
@@ -494,7 +509,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskCircleLayer.isHidden = true
         
         updateInHierarchy = { [weak self] value in
-            if let strongSelf = self {
+            if let strongSelf = self, !strongSelf.ignoreHierarchyChanges {
                 strongSelf.isCurrentlyInHierarchy = value
                 strongSelf.updateAnimations()
             }

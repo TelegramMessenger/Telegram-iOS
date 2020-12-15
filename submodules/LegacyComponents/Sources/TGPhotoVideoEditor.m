@@ -102,7 +102,7 @@
     }
 }
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
++ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext snapshots:(NSArray *)snapshots immediate:(bool)immediate appeared:(void (^)(void))appeared completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     id<LegacyComponentsContext> windowContext = [windowManager context];
@@ -112,6 +112,10 @@
     
     TGModernGalleryController *galleryController = [[TGModernGalleryController alloc] initWithContext:windowContext];
     galleryController.adjustsStatusBarVisibility = true;
+    galleryController.animateTransition = !immediate;
+    galleryController.finishedTransitionIn = ^(id<TGModernGalleryItem> item, TGModernGalleryItemView *itemView) {
+        appeared();
+    };
     //galleryController.hasFadeOutTransition = true;
     
     id<TGModernGalleryEditableItem> galleryItem = nil;
@@ -199,14 +203,20 @@
             dismissed();
         }
     };
-        
+    
+    [model.interfaceView immediateEditorTransitionIn];
+    
+    for (UIView *view in snapshots) {
+        [galleryController.view addSubview:view];
+    }
+    
     TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:controller contentController:galleryController];
     controllerWindow.hidden = false;
     galleryController.view.clipsToBounds = true;
     
     if (paint) {
         TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
-            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab];
+            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab snapshots:snapshots];
         });
     }
 }
