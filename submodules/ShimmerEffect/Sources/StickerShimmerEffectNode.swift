@@ -168,7 +168,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.effectNode.updateAbsoluteRect(rect, within: containerSize)
     }
     
-    public func update(backgroundColor: UIColor?, foregroundColor: UIColor, shimmeringColor: UIColor, data: Data?, size: CGSize) {
+    public func update(backgroundColor: UIColor?, foregroundColor: UIColor, shimmeringColor: UIColor, data: Data?, size: CGSize, small: Bool = false) {
         if data == nil {
             return
         }
@@ -205,7 +205,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
                 let reader = PathDataReader(input: path)
                 let segments = reader.read()
 
-                let scale = size.width / 512.0
+                let scale = size.width / (small ? 100.0 : 512.0)
                 context.scaleBy(x: scale, y: scale)
                 renderPath(segments, context: context)
             } else {

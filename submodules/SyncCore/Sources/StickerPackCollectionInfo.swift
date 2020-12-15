@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public struct StickerPackCollectionInfoFlags: OptionSet {
@@ -40,16 +41,18 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     public let title: String
     public let shortName: String
     public let thumbnail: TelegramMediaImageRepresentation?
+    public let immediateThumbnailData: Data?
     public let hash: Int32
     public let count: Int32
     
-    public init(id: ItemCollectionId, flags: StickerPackCollectionInfoFlags, accessHash: Int64, title: String, shortName: String, thumbnail: TelegramMediaImageRepresentation?, hash: Int32, count: Int32) {
+    public init(id: ItemCollectionId, flags: StickerPackCollectionInfoFlags, accessHash: Int64, title: String, shortName: String, thumbnail: TelegramMediaImageRepresentation?, immediateThumbnailData: Data?, hash: Int32, count: Int32) {
         self.id = id
         self.flags = flags
         self.accessHash = accessHash
         self.title = title
         self.shortName = shortName
         self.thumbnail = thumbnail
+        self.immediateThumbnailData = immediateThumbnailData
         self.hash = hash
         self.count = count
     }
@@ -60,6 +63,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         self.title = decoder.decodeStringForKey("t", orElse: "")
         self.shortName = decoder.decodeStringForKey("s", orElse: "")
         self.thumbnail = decoder.decodeObjectForKey("th", decoder: { TelegramMediaImageRepresentation(decoder: $0) }) as? TelegramMediaImageRepresentation
+        self.immediateThumbnailData = decoder.decodeDataForKey("itd")
         self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
         self.flags = StickerPackCollectionInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.count = decoder.decodeInt32ForKey("n", orElse: 0)
@@ -75,6 +79,11 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
             encoder.encodeObject(thumbnail, forKey: "th")
         } else {
             encoder.encodeNil(forKey: "th")
+        }
+        if let immediateThumbnailData = self.immediateThumbnailData {
+            encoder.encodeData(immediateThumbnailData, forKey: "itd")
+        } else {
+            encoder.encodeNil(forKey: "itd")
         }
         encoder.encodeInt32(self.hash, forKey: "h")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
@@ -95,6 +104,10 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         }
         
         if lhs.hash != rhs.hash {
+            return false
+        }
+        
+        if lhs.immediateThumbnailData != rhs.immediateThumbnailData {
             return false
         }
         
