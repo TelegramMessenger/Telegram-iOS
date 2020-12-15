@@ -234,16 +234,16 @@ public final class VoiceChatOverlayController: ViewController {
                         let center = CGPoint(x: actionButton.frame.width / 2.0, y: actionButton.frame.height / 2.0)
                         
                         leftButton.isHidden = false
-                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        leftButton.layer.animatePosition(from: center, to: leftButtonPosition, duration: 0.28, delay: 0.05, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                         
                         rightButton.isHidden = false
-                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                        rightButton.layer.animatePosition(from: center, to: rightButtonPosition, duration: 0.28, delay: 0.05, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                         
-                        leftButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
-                        rightButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                        leftButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.05, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                        rightButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.28, delay: 0.05, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                         
-                        leftButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.15)
-                        rightButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.15)
+                        leftButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.05)
+                        rightButton.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.05)
                     }
                     
                     actionButton.update(snap: false, animated: true)

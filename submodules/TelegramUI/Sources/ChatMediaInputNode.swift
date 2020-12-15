@@ -535,7 +535,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
-                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
                             } else {
                                 return false
                             }
@@ -806,7 +806,7 @@ final class ChatMediaInputNode: ChatInputNode {
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
             let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                 if let strongSelf = self {
-                    return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
+                    return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
                 } else {
                     return false
                 }
@@ -1088,7 +1088,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                     menuItems = [
                                         PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                             if let strongSelf = self {
-                                                return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                                return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), nil, false, node, rect)
                                             } else {
                                                 return false
                                             }
@@ -1111,7 +1111,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         if let packReference = packReference {
                                                             let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
-                                                                    return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                    return strongSelf.controllerInteraction.sendSticker(file, nil, false, sourceNode, sourceRect)
                                                                 } else {
                                                                     return false
                                                                 }
@@ -1172,7 +1172,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                         menuItems = [
                                             PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                                 if let strongSelf = self {
-                                                    return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                                    return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), nil, false, node, rect)
                                                 } else {
                                                     return false
                                                 }
@@ -1195,7 +1195,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                                 if let packReference = packReference {
                                                                     let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                                                                                                if let strongSelf = self {
-                                                                                                                                                   return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                                                                                                   return strongSelf.controllerInteraction.sendSticker(file, nil, false, sourceNode, sourceRect)
                                                                                                                                                } else {
                                                                                                                                                    return false
                                                                                                                                                }
