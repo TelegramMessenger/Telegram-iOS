@@ -848,7 +848,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
                     
-                    if wasConnecting != isConnecting && strongSelf.didConnectOnce {
+                    if (wasConnecting != isConnecting && strongSelf.didConnectOnce) { //|| !strongSelf.didStartConnectingOnce {
                         if isConnecting {
                             let toneRenderer = PresentationCallToneRenderer(tone: .groupConnecting)
                             strongSelf.toneRenderer = toneRenderer
