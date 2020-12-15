@@ -1114,13 +1114,27 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self._canBeRemoved.set(.single(true))
         
         if self.didConnectOnce {
-            let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
-            self.toneRenderer = toneRenderer
-            toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
-            
-            Queue.mainQueue().after(1.0, {
-                self.wasRemoved.set(.single(true))
-            })
+            if let callManager = self.accountContext.sharedContext.callManager {
+                let _ = (callManager.currentGroupCallSignal
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] call in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let call = call, call !== strongSelf {
+                        strongSelf.wasRemoved.set(.single(true))
+                        return
+                    }
+                    
+                    let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
+                    strongSelf.toneRenderer = toneRenderer
+                    toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                    
+                    Queue.mainQueue().after(1.0, {
+                        strongSelf.wasRemoved.set(.single(true))
+                    })
+                })
+            }
         }
     }
     
