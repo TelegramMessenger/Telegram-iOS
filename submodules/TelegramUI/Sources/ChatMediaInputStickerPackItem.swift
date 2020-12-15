@@ -110,6 +110,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
                 
         self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset - UIScreenPixel, y: floor((boundingSize.height - highlightSize.height) / 2.0) - UIScreenPixel), size: highlightSize)
         
@@ -131,6 +132,9 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             }
             if image != nil {
                 strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             firstTime = false
         }
@@ -228,12 +232,11 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             }
                         
             if let placeholderNode = self.placeholderNode {
-                let size = boundingSize
                 let imageSize = boundingImageSize
                 let placeholderFrame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
-                placeholderNode.frame = CGRect(origin: CGPoint(), size: size)
+                placeholderNode.frame = placeholderFrame
                 
-                placeholderNode.update(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: bounds.size, small: true)
+                placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: imageSize, small: true)
             }
             
             self.updateIsHighlighted()
