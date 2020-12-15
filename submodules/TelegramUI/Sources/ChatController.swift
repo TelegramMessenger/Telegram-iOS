@@ -653,7 +653,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
                 if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openUrl(url, concealed, nil, nil)
+                    strongSelf.openUrl(url, concealed: concealed, message: nil)
                 }
             }, openUrlIn: { [weak self] url in
                 if let strongSelf = self {
