@@ -1122,7 +1122,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = "10.0",
     provisioning_profile = "//build-input/data/provisioning-profiles:NotificationContent.mobileprovision",
     deps = [":NotificationContentExtensionLib"],
     frameworks = [
@@ -1263,7 +1263,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = "10.0",
     provisioning_profile = "//build-input/data/provisioning-profiles:Intents.mobileprovision",
     deps = [":IntentsExtensionLib"],
     frameworks = [
@@ -1519,7 +1519,6 @@ ios_application(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        #":TelegramApiFramework",
         ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",
