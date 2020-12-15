@@ -1447,13 +1447,14 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }
-            
+                        
             let listMaxY = listTopInset + listSize.height
             if bottomEdge.isZero {
                 bottomEdge = listMaxY
             }
+            
             var bottomOffset: CGFloat = 0.0
-            if bottomEdge < listMaxY {
+            if bottomEdge < listMaxY && (self.panGestureArguments != nil || self.isExpanded) {
                 bottomOffset = bottomEdge - listMaxY
             }
         
