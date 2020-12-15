@@ -71,14 +71,16 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
     switch inputQueryResult {
         case let .stickers(results):
             if !results.isEmpty {
+                let query = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.string
+                
                 if let currentPanel = currentPanel as? InlineReactionSearchPanel {
-                    currentPanel.updateResults(results: results.map({ $0.file }))
+                    currentPanel.updateResults(results: results.map({ $0.file }), query: query)
                     return currentPanel
                 } else {
                     let panel = InlineReactionSearchPanel(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
                     panel.controllerInteraction = controllerInteraction
                     panel.interfaceInteraction = interfaceInteraction
-                    panel.updateResults(results: results.map({ $0.file }))
+                    panel.updateResults(results: results.map({ $0.file }), query: query)
                     return panel
                 }
             }

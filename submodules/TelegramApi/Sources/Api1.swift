@@ -11531,13 +11531,13 @@ public extension Api {
         case inputMediaUploadedPhoto(flags: Int32, file: Api.InputFile, stickers: [Api.InputDocument]?, ttlSeconds: Int32?)
         case inputMediaUploadedDocument(flags: Int32, file: Api.InputFile, thumb: Api.InputFile?, mimeType: String, attributes: [Api.DocumentAttribute], stickers: [Api.InputDocument]?, ttlSeconds: Int32?)
         case inputMediaPhoto(flags: Int32, id: Api.InputPhoto, ttlSeconds: Int32?)
-        case inputMediaDocument(flags: Int32, id: Api.InputDocument, ttlSeconds: Int32?)
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
         case inputMediaDice(emoticon: String)
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?)
+        case inputMediaDocument(flags: Int32, id: Api.InputDocument, ttlSeconds: Int32?, query: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11632,14 +11632,6 @@ public extension Api {
                     id.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
-                case .inputMediaDocument(let flags, let id, let ttlSeconds):
-                    if boxed {
-                        buffer.appendInt32(598418386)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    id.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
-                    break
                 case .inputMediaPhotoExternal(let flags, let url, let ttlSeconds):
                     if boxed {
                         buffer.appendInt32(-440664550)
@@ -11699,6 +11691,15 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(period!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(proximityNotificationRadius!, buffer: buffer, boxed: false)}
                     break
+                case .inputMediaDocument(let flags, let id, let ttlSeconds, let query):
+                    if boxed {
+                        buffer.appendInt32(860303448)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    id.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(query!, buffer: buffer, boxed: false)}
+                    break
     }
     }
     
@@ -11722,8 +11723,6 @@ public extension Api {
                 return ("inputMediaUploadedDocument", [("flags", flags), ("file", file), ("thumb", thumb), ("mimeType", mimeType), ("attributes", attributes), ("stickers", stickers), ("ttlSeconds", ttlSeconds)])
                 case .inputMediaPhoto(let flags, let id, let ttlSeconds):
                 return ("inputMediaPhoto", [("flags", flags), ("id", id), ("ttlSeconds", ttlSeconds)])
-                case .inputMediaDocument(let flags, let id, let ttlSeconds):
-                return ("inputMediaDocument", [("flags", flags), ("id", id), ("ttlSeconds", ttlSeconds)])
                 case .inputMediaPhotoExternal(let flags, let url, let ttlSeconds):
                 return ("inputMediaPhotoExternal", [("flags", flags), ("url", url), ("ttlSeconds", ttlSeconds)])
                 case .inputMediaDocumentExternal(let flags, let url, let ttlSeconds):
@@ -11736,6 +11735,8 @@ public extension Api {
                 return ("inputMediaDice", [("emoticon", emoticon)])
                 case .inputMediaGeoLive(let flags, let geoPoint, let heading, let period, let proximityNotificationRadius):
                 return ("inputMediaGeoLive", [("flags", flags), ("geoPoint", geoPoint), ("heading", heading), ("period", period), ("proximityNotificationRadius", proximityNotificationRadius)])
+                case .inputMediaDocument(let flags, let id, let ttlSeconds, let query):
+                return ("inputMediaDocument", [("flags", flags), ("id", id), ("ttlSeconds", ttlSeconds), ("query", query)])
     }
     }
     
@@ -11931,25 +11932,6 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_inputMediaDocument(_ reader: BufferReader) -> InputMedia? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.InputDocument?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.InputDocument
-            }
-            var _3: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputMedia.inputMediaDocument(flags: _1!, id: _2!, ttlSeconds: _3)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_inputMediaPhotoExternal(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -12064,6 +12046,28 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.InputMedia.inputMediaGeoLive(flags: _1!, geoPoint: _2!, heading: _3, period: _4, proximityNotificationRadius: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMediaDocument(_ reader: BufferReader) -> InputMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.InputDocument?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputDocument
+            }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputMedia.inputMediaDocument(flags: _1!, id: _2!, ttlSeconds: _3, query: _4)
             }
             else {
                 return nil

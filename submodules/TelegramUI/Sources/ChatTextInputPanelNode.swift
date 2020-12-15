@@ -668,8 +668,19 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        let previousAdditionalSideInsets = self.validLayout?.3
         self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
         let baseWidth = width - leftInset - rightInset
+        
+        var transition = transition
+        var additionalOffset: CGFloat = 0.0
+        if let previousAdditionalSideInsets = previousAdditionalSideInsets, previousAdditionalSideInsets.right != additionalSideInsets.right {
+            additionalOffset = (previousAdditionalSideInsets.right - additionalSideInsets.right) / 3.0
+            
+            if case let .animated(duration, curve) = transition {
+                transition = .animated(duration: 0.2, curve: .easeInOut)
+            }
+        }
         
         var wasEditingMedia = false
         if let interfaceState = self.presentationInterfaceState, let editMessageState = interfaceState.editMessageState {
@@ -1330,7 +1341,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let buttonFrame = CGRect(origin: CGPoint(x: nextButtonTopRight.x - buttonSize.width, y: nextButtonTopRight.y + floor((minimalInputHeight - buttonSize.height) / 2.0)), size: buttonSize)
             if button.superview == nil {
                 self.view.addSubview(button)
-                button.frame = buttonFrame
+                button.frame = buttonFrame.offsetBy(dx: -additionalOffset, dy: 0.0)
                 transition.updateFrame(layer: button.layer, frame: buttonFrame)
                 if animatedTransition {
                     button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -1345,7 +1356,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         if let removeAccessoryButtons = removeAccessoryButtons {
             for button in removeAccessoryButtons {
-                let buttonFrame = CGRect(origin: CGPoint(x: button.frame.origin.x, y: panelHeight - textFieldInsets.bottom - minimalInputHeight), size: button.frame.size)
+                let buttonFrame = CGRect(origin: CGPoint(x: button.frame.origin.x + additionalOffset, y: panelHeight - textFieldInsets.bottom - minimalInputHeight), size: button.frame.size)
                 transition.updateFrame(layer: button.layer, frame: buttonFrame)
                 button.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
                 button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak button] _ in

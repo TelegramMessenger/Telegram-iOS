@@ -93,6 +93,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as EmbeddedMediaStickersMessageAttribute:
                 return true
+            case _ as EmojiSearchQueryMessageAttribute:
+                return true
             default:
                 return false
         }
