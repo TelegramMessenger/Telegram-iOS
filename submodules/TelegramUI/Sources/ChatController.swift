@@ -688,7 +688,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
                 }
                 let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
-            }, editMedia: { [weak self] messageId in
+            }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
                 guard let strongSelf = self else {
                     return
                 }
@@ -708,7 +708,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, snapshots: snapshots, transitionCompletion: {
+                            transitionCompletion()
+                        }, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
                                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
                                     completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
@@ -2377,7 +2379,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, snapshots: [], transitionCompletion: nil, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
                                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
                                     completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)

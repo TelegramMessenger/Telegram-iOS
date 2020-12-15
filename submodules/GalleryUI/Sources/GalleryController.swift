@@ -913,8 +913,19 @@ public class GalleryController: ViewController, StandalonePresentableController 
             }
         }, editMedia: { [weak self] messageId in
             if let strongSelf = self {
-                strongSelf.dismiss(forceAway: true)
-                strongSelf.actionInteraction?.editMedia(messageId)
+                var snapshots: [UIView] = []
+                if let navigationBar = strongSelf.navigationBar, let snapshotView = navigationBar.view.snapshotContentTree() {
+                    snapshotView.frame = navigationBar.frame
+                    snapshots.append(snapshotView)
+                }
+                if let snapshotView = strongSelf.galleryNode.footerNode.view.snapshotContentTree() {
+                    snapshotView.frame = strongSelf.galleryNode.footerNode.frame
+                    snapshots.append(snapshotView)
+                }
+                
+                strongSelf.actionInteraction?.editMedia(messageId, snapshots, { [weak self] in
+                    self?.dismiss(forceAway: true)
+                })
             }
         })
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
