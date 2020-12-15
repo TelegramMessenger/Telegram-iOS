@@ -7,6 +7,7 @@ public protocol ChatListController: ViewController {
     var context: AccountContext { get }
     var lockViewFrame: CGRect? { get }
     
+    var isSearchActive: Bool { get }
     func activateSearch()
     func deactivateSearch(animated: Bool)
     func activateCompose()

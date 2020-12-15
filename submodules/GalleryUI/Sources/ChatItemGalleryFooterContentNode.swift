@@ -18,6 +18,7 @@ import OpenInExternalAppUI
 import AppBundle
 import LocalizedPeerData
 import TextSelectionNode
+import UrlEscaping
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -331,13 +332,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             return nil
         }
-        self.textNode.tapAttributeAction = { [weak self] attributes, _ in
-            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
+        self.textNode.tapAttributeAction = { [weak self] attributes, index in
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index) {
                 strongSelf.performAction?(action)
             }
         }
-        self.textNode.longTapAttributeAction = { [weak self] attributes, _ in
-            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
+        self.textNode.longTapAttributeAction = { [weak self] attributes, index in
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index) {
                 strongSelf.openActionOptions?(action)
             }
         }
@@ -391,9 +392,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.scrollNode.view.showsVerticalScrollIndicator = false
     }
     
-    private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any]) -> GalleryControllerInteractionTapAction? {
+    private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any], _ index: Int) -> GalleryControllerInteractionTapAction? {
         if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-            return .url(url: url, concealed: false)
+            var concealed = true
+            if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
+            }
+            return .url(url: url, concealed: concealed)
         } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
             return .peerMention(peerMention.peerId, peerMention.mention)
         } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {

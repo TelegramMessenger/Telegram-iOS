@@ -58,6 +58,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         
         super.init(layerBacked: false)
         
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
+        
         self.containerNode.shouldBegin = { [weak self] location in
             guard let strongSelf = self else {
                 return false
@@ -212,6 +223,19 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         
         if self.telegramFile == nil && item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
             self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text))
+        }
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+        if !self.contextSourceNode.isExtractedToContextPreview {
+            var rect = rect
+            rect.origin.y = containerSize.height - rect.maxY + self.insets.top
+
+            if let placeholderNode = self.placeholderNode {
+                placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
+            }
         }
     }
     
@@ -577,6 +601,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     imageApply()
+                    
+                    if let immediateThumbnailData = telegramFile?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
+                        let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
+                        let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
+                        
+                        let placeholderFrame = updatedImageFrame.insetBy(dx: innerImageInset, dy: innerImageInset)
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: placeholderFrame.size)
+                        placeholderNode.frame = placeholderFrame
+                    }
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)

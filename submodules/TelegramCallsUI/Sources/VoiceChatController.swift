@@ -393,8 +393,8 @@ public final class VoiceChatController: ViewController {
         fileprivate let bottomPanelNode: ASDisplayNode
         private let bottomPanelBackgroundNode: ASDisplayNode
         private let bottomCornersNode: ASImageNode
-        private let audioOutputNode: CallControllerButtonItemNode
-        private let leaveNode: CallControllerButtonItemNode
+        fileprivate let audioOutputNode: CallControllerButtonItemNode
+        fileprivate let leaveNode: CallControllerButtonItemNode
         fileprivate let actionButton: VoiceChatActionButton
         private let leftBorderNode: ASDisplayNode
         private let rightBorderNode: ASDisplayNode
@@ -562,7 +562,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    guard let groupPeer = groupPeer as? TelegramChannel else {
+                    guard let groupPeer = groupPeer else {
                         return
                     }
                     
@@ -570,8 +570,14 @@ public final class VoiceChatController: ViewController {
                     if let currentCallMembers = strongSelf.currentCallMembers {
                         filters.append(.disable(Array(currentCallMembers.map { $0.peer.id })))
                     }
-                    if !groupPeer.hasPermission(.inviteMembers) {
-                        filters.append(.excludeNonMembers)
+                    if let groupPeer = groupPeer as? TelegramChannel {
+                        if !groupPeer.hasPermission(.inviteMembers) {
+                            filters.append(.excludeNonMembers)
+                        }
+                    } else if let groupPeer = groupPeer as? TelegramGroup {
+                        if !groupPeer.hasBannedPermission(.banAddMembers) {
+                            filters.append(.excludeNonMembers)
+                        }
                     }
                     filters.append(.excludeBots)
                     
@@ -598,73 +604,143 @@ public final class VoiceChatController: ViewController {
                                     return
                                 }
                                 
-                                let selfController = strongSelf.controller
-                                let inviteDisposable = strongSelf.inviteDisposable
-                                var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(account: strongSelf.context.account, peerId: groupPeer.id, memberIds: [peer.id])
-                                var cancelImpl: (() -> Void)?
-                                let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
-                                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                        cancelImpl?()
-                                    }))
-                                    selfController?.present(controller, in: .window(.root))
-                                    return ActionDisposable { [weak controller] in
-                                        Queue.mainQueue().async() {
-                                            controller?.dismiss()
+                                if let groupPeer = groupPeer as? TelegramChannel {
+                                    let selfController = strongSelf.controller
+                                    let inviteDisposable = strongSelf.inviteDisposable
+                                    var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(account: strongSelf.context.account, peerId: groupPeer.id, memberIds: [peer.id])
+                                    var cancelImpl: (() -> Void)?
+                                    let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
+                                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                                            cancelImpl?()
+                                        }))
+                                        selfController?.present(controller, in: .window(.root))
+                                        return ActionDisposable { [weak controller] in
+                                            Queue.mainQueue().async() {
+                                                controller?.dismiss()
+                                            }
                                         }
                                     }
-                                }
-                                |> runOn(Queue.mainQueue())
-                                |> delay(0.15, queue: Queue.mainQueue())
-                                let progressDisposable = progressSignal.start()
-                                
-                                inviteSignal = inviteSignal
-                                |> afterDisposed {
-                                    Queue.mainQueue().async {
-                                        progressDisposable.dispose()
-                                    }
-                                }
-                                cancelImpl = {
-                                    inviteDisposable.set(nil)
-                                }
-                                
-                                inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
-                                    dismissController?()
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                    |> runOn(Queue.mainQueue())
+                                    |> delay(0.15, queue: Queue.mainQueue())
+                                    let progressDisposable = progressSignal.start()
                                     
-                                    let text: String
-                                    switch error {
-                                        case .limitExceeded:
-                                            text = presentationData.strings.Channel_ErrorAddTooMuch
-                                        case .tooMuchJoined:
-                                            text = presentationData.strings.Invite_ChannelsTooMuch
-                                        case .generic:
-                                            text = presentationData.strings.Login_UnknownError
-                                        case .restricted:
-                                            text = presentationData.strings.Channel_ErrorAddBlocked
-                                        case .notMutualContact:
-                                            text = presentationData.strings.GroupInfo_AddUserLeftError
-                                        case .botDoesntSupportGroups:
-                                            text = presentationData.strings.Channel_BotDoesntSupportGroups
-                                        case .tooMuchBots:
-                                            text = presentationData.strings.Channel_TooMuchBots
-                                        case .bot:
-                                            text = presentationData.strings.Login_UnknownError
+                                    inviteSignal = inviteSignal
+                                    |> afterDisposed {
+                                        Queue.mainQueue().async {
+                                            progressDisposable.dispose()
+                                        }
                                     }
-                                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                }, completed: {
-                                    guard let strongSelf = self else {
+                                    cancelImpl = {
+                                        inviteDisposable.set(nil)
+                                    }
+                                    
+                                    inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
                                         dismissController?()
-                                        return
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        
+                                        let text: String
+                                        switch error {
+                                            case .limitExceeded:
+                                                text = presentationData.strings.Channel_ErrorAddTooMuch
+                                            case .tooMuchJoined:
+                                                text = presentationData.strings.Invite_ChannelsTooMuch
+                                            case .generic:
+                                                text = presentationData.strings.Login_UnknownError
+                                            case .restricted:
+                                                text = presentationData.strings.Channel_ErrorAddBlocked
+                                            case .notMutualContact:
+                                                text = presentationData.strings.GroupInfo_AddUserLeftError
+                                            case .botDoesntSupportGroups:
+                                                text = presentationData.strings.Channel_BotDoesntSupportGroups
+                                            case .tooMuchBots:
+                                                text = presentationData.strings.Channel_TooMuchBots
+                                            case .bot:
+                                                text = presentationData.strings.Login_UnknownError
+                                        }
+                                        strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }, completed: {
+                                        guard let strongSelf = self else {
+                                            dismissController?()
+                                            return
+                                        }
+                                        dismissController?()
+                                        
+                                        if strongSelf.call.invitePeer(peer.id) {
+                                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                        }
+                                    }))
+                                } else if let groupPeer = groupPeer as? TelegramGroup {
+                                    let selfController = strongSelf.controller
+                                    let inviteDisposable = strongSelf.inviteDisposable
+                                    var inviteSignal = addGroupMember(account: strongSelf.context.account, peerId: groupPeer.id, memberId: peer.id)
+                                    var cancelImpl: (() -> Void)?
+                                    let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
+                                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                                            cancelImpl?()
+                                        }))
+                                        selfController?.present(controller, in: .window(.root))
+                                        return ActionDisposable { [weak controller] in
+                                            Queue.mainQueue().async() {
+                                                controller?.dismiss()
+                                            }
+                                        }
                                     }
-                                    dismissController?()
+                                    |> runOn(Queue.mainQueue())
+                                    |> delay(0.15, queue: Queue.mainQueue())
+                                    let progressDisposable = progressSignal.start()
                                     
-                                    if strongSelf.call.invitePeer(peer.id) {
-                                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    inviteSignal = inviteSignal
+                                    |> afterDisposed {
+                                        Queue.mainQueue().async {
+                                            progressDisposable.dispose()
+                                        }
                                     }
-                                }))
+                                    cancelImpl = {
+                                        inviteDisposable.set(nil)
+                                    }
+                                    
+                                    inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
+                                        dismissController?()
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        let context = strongSelf.context
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        
+                                        switch error {
+                                        case .privacy:
+                                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
+                                            |> deliverOnMainQueue).start(next: { peer in
+                                                self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            })
+                                        case .notMutualContact:
+                                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
+                                            |> deliverOnMainQueue).start(next: { peer in
+                                                self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            })
+                                        case .tooManyChannels:
+                                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
+                                            |> deliverOnMainQueue).start(next: { peer in
+                                                self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            })
+                                        case .groupFull, .generic:
+                                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        }
+                                    }, completed: {
+                                        guard let strongSelf = self else {
+                                            dismissController?()
+                                            return
+                                        }
+                                        dismissController?()
+                                        
+                                        if strongSelf.call.invitePeer(peer.id) {
+                                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                        }
+                                    }))
+                                }
                             })]), in: .window(.root))
                         }
                     })
@@ -921,13 +997,24 @@ public final class VoiceChatController: ViewController {
                     strongSelf.controller?.dataReady.set(true)
                 }
                 
-                if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
-                    if channel.hasPermission(.manageCalls) {
-                        strongSelf.optionsButton.isUserInteractionEnabled = true
-                        strongSelf.optionsButton.alpha = 1.0
-                    } else {
-                        strongSelf.optionsButton.isUserInteractionEnabled = false
-                        strongSelf.optionsButton.alpha = 0.0
+                if let peer = peerViewMainPeer(view) {
+                    if let channel = peer as? TelegramChannel {
+                        if channel.hasPermission(.manageCalls) {
+                            strongSelf.optionsButton.isUserInteractionEnabled = true
+                            strongSelf.optionsButton.alpha = 1.0
+                        } else {
+                            strongSelf.optionsButton.isUserInteractionEnabled = false
+                            strongSelf.optionsButton.alpha = 0.0
+                        }
+                    } else if let group = peer as? TelegramGroup {
+                        switch group.role {
+                        case .creator, .admin:
+                            strongSelf.optionsButton.isUserInteractionEnabled = true
+                            strongSelf.optionsButton.alpha = 1.0
+                        default:
+                            strongSelf.optionsButton.isUserInteractionEnabled = false
+                            strongSelf.optionsButton.alpha = 0.0
+                        }
                     }
                 }
             })
@@ -1291,7 +1378,13 @@ public final class VoiceChatController: ViewController {
             let listTopInset = layoutTopInset + topPanelHeight
             let bottomAreaHeight: CGFloat = 268.0
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
-            let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
+            
+            var size = layout.size
+            if case .regular = layout.metrics.widthClass {
+                size.width = floor(min(size.width, size.height) * 0.5)
+            }
+            
+            let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             let topInset: CGFloat
             if let (panInitialTopInset, panOffset) = self.panGestureArguments {
                 if self.isExpanded {
@@ -1312,12 +1405,12 @@ public final class VoiceChatController: ViewController {
                     
             let rawPanelOffset = offset + listTopInset - topPanelHeight
             let panelOffset = max(layoutTopInset, rawPanelOffset)
-            let topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelOffset), size: CGSize(width: layout.size.width, height: topPanelHeight))
+            let topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelOffset), size: CGSize(width: size.width, height: topPanelHeight))
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: layout.size.width, height: layout.size.height))
+            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: size.width, height: layout.size.height))
             let sideInset: CGFloat = 16.0
             let leftBorderFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY - 16.0), size: CGSize(width: sideInset, height: layout.size.height))
-            let rightBorderFrame = CGRect(origin: CGPoint(x: layout.size.width - sideInset, y: topPanelFrame.maxY - 16.0), size: CGSize(width: sideInset, height: layout.size.height))
+            let rightBorderFrame = CGRect(origin: CGPoint(x: size.width - sideInset, y: topPanelFrame.maxY - 16.0), size: CGSize(width: sideInset, height: layout.size.height))
             
             let previousTopPanelFrame = self.topPanelNode.frame
             let previousBackgroundFrame = self.backgroundNode.frame
@@ -1343,7 +1436,7 @@ public final class VoiceChatController: ViewController {
             } else {
                 completion?()
             }
-            self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: layout.size.width, height: 24.0)
+            self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: 24.0)
                         
             var bottomEdge: CGFloat = 0.0
             self.listNode.forEachItemNode { itemNode in
@@ -1354,21 +1447,22 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }
-            
+                        
             let listMaxY = listTopInset + listSize.height
             if bottomEdge.isZero {
                 bottomEdge = listMaxY
             }
+            
             var bottomOffset: CGFloat = 0.0
-            if bottomEdge < listMaxY {
+            if bottomEdge < listMaxY && (self.panGestureArguments != nil || self.isExpanded) {
                 bottomOffset = bottomEdge - listMaxY
             }
         
-            let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: layout.size.width - sideInset * 2.0, height: 50.0))
+            let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
                 self.bottomCornersNode.frame = bottomCornersFrame
-                self.bottomPanelBackgroundNode.frame = CGRect(x: 0.0, y: bottomOffset, width: layout.size.width, height: 2000.0)
+                self.bottomPanelBackgroundNode.frame = CGRect(x: 0.0, y: bottomOffset, width: size.width, height: 2000.0)
                 
                 let positionDelta = CGPoint(x: 0.0, y: previousBottomCornersFrame.minY - bottomCornersFrame.minY)
                 transition.animatePositionAdditive(node: self.bottomCornersNode, offset: positionDelta)
@@ -1385,6 +1479,11 @@ public final class VoiceChatController: ViewController {
             
             self.controller?.statusBar.statusBarStyle = isFullscreen ? .White : .Ignore
                         
+            var size = layout.size
+            if case .regular = layout.metrics.widthClass {
+                size.width = floor(min(size.width, size.height) * 0.5)
+            }
+            
             let topPanelHeight: CGFloat = 63.0
             let topEdgeFrame: CGRect
             if isFullscreen {
@@ -1394,9 +1493,9 @@ public final class VoiceChatController: ViewController {
                 } else {
                     offset = 44.0
                 }
-                topEdgeFrame = CGRect(x: 0.0, y: -offset, width: layout.size.width, height: topPanelHeight + offset)
+                topEdgeFrame = CGRect(x: 0.0, y: -offset, width: size.width, height: topPanelHeight + offset)
             } else {
-                topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: topPanelHeight)
+                topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: topPanelHeight)
             }
             
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .linear)
@@ -1451,7 +1550,12 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            self.titleNode.update(size: CGSize(width: layout.size.width, height: 44.0), title: title, subtitle: self.currentSubtitle, transition: transition)
+            var size = layout.size
+            if case .regular = layout.metrics.widthClass {
+                size.width = floor(min(size.width, size.height) * 0.5)
+            }
+            
+            self.titleNode.update(size: CGSize(width: size.width, height: 44.0), title: title, subtitle: self.currentSubtitle, transition: transition)
         }
         
         private func updateButtons(transition: ContainedViewLayoutTransition) {
@@ -1522,14 +1626,19 @@ public final class VoiceChatController: ViewController {
             let isFirstTime = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
 
+            var size = layout.size
+            if case .regular = layout.metrics.widthClass {
+                size.width = floor(min(size.width, size.height) * 0.5)
+            }
+            
             self.updateTitle(transition: transition)
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: CGSize(width: layout.size.width, height: 44.0)))
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: CGSize(width: size.width, height: 44.0)))
             transition.updateFrame(node: self.optionsButton, frame: CGRect(origin: CGPoint(x: 20.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
-            transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: layout.size.width - 20.0 - 28.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
+            transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: size.width - 20.0 - 28.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
             
             transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             
-            transition.updateFrame(node: self.contentContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
+            transition.updateFrame(node: self.contentContainer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: 0.0), size: size))
             
             let bottomAreaHeight: CGFloat = 268.0
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
@@ -1550,16 +1659,16 @@ public final class VoiceChatController: ViewController {
                     } else {
                         offset = 44.0
                     }
-                    topEdgeFrame = CGRect(x: 0.0, y: -offset, width: layout.size.width, height: topPanelHeight + offset)
+                    topEdgeFrame = CGRect(x: 0.0, y: -offset, width: size.width, height: topPanelHeight + offset)
                 } else {
-                    topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: topPanelHeight)
+                    topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: topPanelHeight)
                 }
                 transition.updateFrame(node: self.topPanelEdgeNode, frame: topEdgeFrame)
             }
             
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             let listTopInset = layoutTopInset + topPanelHeight
-            let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
+            let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
                  
             let topInset: CGFloat
             if let (panInitialTopInset, panOffset) = self.panGestureArguments {
@@ -1583,15 +1692,15 @@ public final class VoiceChatController: ViewController {
             
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
-            transition.updateFrame(node: self.topCornersNode, frame: CGRect(origin: CGPoint(x: sideInset, y: 63.0), size: CGSize(width: layout.size.width - sideInset * 2.0, height: 50.0)))
+            transition.updateFrame(node: self.topCornersNode, frame: CGRect(origin: CGPoint(x: sideInset, y: 63.0), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0)))
             
-            let bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: layout.size.width, height: bottomPanelHeight))
+            let bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: size.width, height: bottomPanelHeight))
             transition.updateFrame(node: self.bottomPanelNode, frame: bottomPanelFrame)
             
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
             let centralButtonSize = CGSize(width: 440.0, height: 440.0)
                         
-            let actionButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - centralButtonSize.width) / 2.0), y: floorToScreenPixels((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - centralButtonSize.width) / 2.0), y: floorToScreenPixels((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
             
             let actionButtonState: VoiceChatActionButton.State
             let actionButtonTitle: String
@@ -1632,7 +1741,7 @@ public final class VoiceChatController: ViewController {
             }
             
             self.actionButton.isDisabled = !actionButtonEnabled
-            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: layout.size.width < 330.0, animated: true)
+            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: size.width < 330.0, animated: true)
             
             if self.actionButton.supernode === self.bottomPanelNode {
                 transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
@@ -1641,12 +1750,13 @@ public final class VoiceChatController: ViewController {
             self.updateButtons(transition: transition)
             
             let sideButtonMinimalInset: CGFloat = 16.0
-            let sideButtonOffset = min(36.0, floor((((layout.size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))
-            let sideButtonOrigin = max(sideButtonMinimalInset, floor((layout.size.width - 144.0) / 2.0) - sideButtonOffset - sideButtonSize.width)
+            let sideButtonOffset = min(36.0, floor((((size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))
+            let sideButtonOrigin = max(sideButtonMinimalInset, floor((size.width - 144.0) / 2.0) - sideButtonOffset - sideButtonSize.width)
             
-            transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
-            transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: layout.size.width - sideButtonOrigin - sideButtonSize.width, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
-            
+            if self.audioOutputNode.supernode === self.bottomPanelNode {
+                transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+                transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: size.width - sideButtonOrigin - sideButtonSize.width, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+            }
             if isFirstTime {
                 while !self.enqueuedTransitions.isEmpty {
                     self.dequeueTransition()
@@ -1669,8 +1779,16 @@ public final class VoiceChatController: ViewController {
                 self.contentContainer.view.bounds = initialBounds
             }, completion: { _ in
                 if self.actionButton.supernode !== self.bottomPanelNode {
+                    self.actionButton.ignoreHierarchyChanges = true
+                    self.audioOutputNode.isHidden = false
+                    self.leaveNode.isHidden = false
+                    self.audioOutputNode.layer.removeAllAnimations()
+                    self.leaveNode.layer.removeAllAnimations()
+                    self.bottomPanelNode.addSubnode(self.audioOutputNode)
+                    self.bottomPanelNode.addSubnode(self.leaveNode)
                     self.bottomPanelNode.addSubnode(self.actionButton)
                     self.containerLayoutUpdated(layout, navigationHeight :navigationHeight, transition: .immediate)
+                    self.actionButton.ignoreHierarchyChanges = false
                 }
                 
                 self.controller?.currentOverlayController?.dismiss()
@@ -1750,9 +1868,14 @@ public final class VoiceChatController: ViewController {
             insets.left = layout.safeInsets.left + sideInset
             insets.right = layout.safeInsets.right + sideInset
             
+            var size = layout.size
+            if case .regular = layout.metrics.widthClass {
+                size.width = floor(min(size.width, size.height) * 0.5)
+            }
+            
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             let listTopInset = layoutTopInset + 63.0
-            let listSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
+            let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             
             self.topInset = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
             
@@ -1865,6 +1988,17 @@ public final class VoiceChatController: ViewController {
                 index += 1
             }
             
+            if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
+                entries.insert(.peer(PeerEntry(
+                    peer: accountPeer,
+                    presence: nil,
+                    activityTimestamp: Int32.max - 1 - index,
+                    state: .listening,
+                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
+                    canManageCall: callState?.canManageCall ?? false
+                )), at: 1)
+            }
+            
             for peer in invitedPeers {
                 if processedPeerIds.contains(peer.id) {
                     continue
@@ -1890,24 +2024,12 @@ public final class VoiceChatController: ViewController {
         }
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-//            if let callState = self.callState, case .connected = callState.networkState, let muteState = callState.muteState, !muteState.canUnmute {
-//                return false
-//            }
-//            if let recognizer = gestureRecognizer as? UIPanGestureRecognizer {
-//                let location = recognizer.location(in: self.view)
-//                if let view = super.hitTest(location, with: nil) {
-//                    if let gestureRecognizers = view.gestureRecognizers, view != self.view {
-//                        for gestureRecognizer in gestureRecognizers {
-//                            if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
-//                                if panGestureRecognizer.state != .began {
-//                                    panGestureRecognizer.isEnabled = false
-//                                    panGestureRecognizer.isEnabled = true
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
+            if gestureRecognizer is DirectionalPanGestureRecognizer {
+                let location = gestureRecognizer.location(in: self.bottomPanelNode.view)
+                if self.audioOutputNode.frame.contains(location) || self.leaveNode.frame.contains(location) {
+                    return false
+                }
+            }
             return true
         }
         
@@ -2218,6 +2340,7 @@ public final class VoiceChatController: ViewController {
                 if count == 2 || navigationController.viewControllers[count - 2] is ChatController {
                     if case .active(.cantSpeak) = self.controllerNode.actionButton.stateValue {
                     } else if let chatController = navigationController.viewControllers[count - 2] as? ChatController, chatController.isSendButtonVisible {
+                    } else if let tabBarController = navigationController.viewControllers[count - 2] as? TabBarController, let chatListController = tabBarController.controllers[tabBarController.selectedIndex] as? ChatListController, chatListController.isSearchActive {
                     } else {
                         self.detachActionButton()
                     }
@@ -2235,7 +2358,7 @@ public final class VoiceChatController: ViewController {
             return
         }
         
-        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, navigationController: self.navigationController as? NavigationController)
+        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, audioOutputNode: self.controllerNode.audioOutputNode, leaveNode: self.controllerNode.leaveNode, navigationController: self.navigationController as? NavigationController)
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
         }
@@ -2246,7 +2369,15 @@ public final class VoiceChatController: ViewController {
             if let strongSelf = self {
                 overlayController?.animateOut(reclaim: true, completion: { [weak self] immediate in
                     if let strongSelf = self, immediate {
+                        strongSelf.controllerNode.actionButton.ignoreHierarchyChanges = true
                         strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.actionButton)
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.audioOutputNode)
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.leaveNode)
+                        
+                        if immediate, let layout = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                        }
+                        strongSelf.controllerNode.actionButton.ignoreHierarchyChanges = false
                     }
                 })
                 strongSelf.reclaimActionButton = nil
