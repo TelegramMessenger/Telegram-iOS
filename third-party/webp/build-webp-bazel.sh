@@ -42,7 +42,7 @@ SDKROOT="$(xcrun --sdk $PLATFORM --show-sdk-path 2>/dev/null)"
 DEVROOT="${DEVELOPER}/Toolchains/XcodeDefault.xctoolchain"
 
 CFLAGS="-pipe -isysroot ${SDKROOT} -O3 -DNDEBUG $EXTRA_CFLAGS"
-CFLAGS+="-miphoneos-version-min=9.0"
+CFLAGS+=" -miphoneos-version-min=9.0"
 
 PATH="${DEVROOT}/usr/bin:${PATH}" ./configure \
   ${EXTRA_CONFIG} \
