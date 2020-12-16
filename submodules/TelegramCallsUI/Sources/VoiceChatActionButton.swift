@@ -158,7 +158,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         }
         
         let updatedTitle = self.titleLabel.attributedText?.string != title
-        let updatedSubtitle = self.subtitleLabel.attributedText?.string != title
+        let updatedSubtitle = self.subtitleLabel.attributedText?.string != subtitle
         
         self.titleLabel.attributedText = NSAttributedString(string: title, font: titleFont, textColor: .white)
         self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, font: subtitleFont, textColor: .white)

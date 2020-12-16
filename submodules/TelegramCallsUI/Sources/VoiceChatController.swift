@@ -1570,9 +1570,9 @@ public final class VoiceChatController: ViewController {
         private func updateButtons(transition: ContainedViewLayoutTransition) {
             let audioButtonAppearance: CallControllerButtonItemNode.Content.Appearance
             if let color = self.currentAudioButtonColor {
-                audioButtonAppearance = .color(.custom(color.rgb))
+                audioButtonAppearance = .color(.custom(color.rgb, 1.0))
             } else {
-                audioButtonAppearance = .color(.custom(self.isFullscreen ? 0x1c1c1e : 0x2c2c2e))
+                audioButtonAppearance = .color(.custom(self.isFullscreen ? 0x1c1c1e : 0x2c2c2e, 1.0))
             }
                         
             var audioMode: CallControllerButtonsSpeakerMode = .none
@@ -1628,7 +1628,7 @@ public final class VoiceChatController: ViewController {
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
             self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: soundTitle, transition: .animated(duration: 0.3, curve: .linear))
             
-            self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0x602522)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
+            self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
