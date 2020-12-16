@@ -474,6 +474,8 @@ public protocol ChatController: ViewController {
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)
+    
+    var isSendButtonVisible: Bool { get }
 }
 
 public protocol ChatMessagePreviewItemNode: class {

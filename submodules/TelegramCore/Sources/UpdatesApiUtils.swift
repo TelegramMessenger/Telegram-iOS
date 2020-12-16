@@ -251,6 +251,8 @@ extension Api.Update {
         switch self {
             case let .updateChannel(channelId):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
+            case let .updateChat(chatId):
+                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)]
             case let .updateChannelTooLong(_, channelId, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateChatParticipantAdd(chatId, userId, inviterId, _, _):

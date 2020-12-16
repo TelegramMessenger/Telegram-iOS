@@ -411,9 +411,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         }
         
         let spacing: CGFloat = 5.0
-        let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: size.height))
-        let subtitleSize = self.subtitleNode.updateLayout(size: CGSize(width: 160.0, height: size.height), animated: true)
-        let speakerSize = self.speakerNode.updateLayout(CGSize(width: 160.0, height: size.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: 150.0, height: size.height))
+        let subtitleSize = self.subtitleNode.updateLayout(size: CGSize(width: 150.0, height: size.height), animated: true)
+        let speakerSize = self.speakerNode.updateLayout(CGSize(width: 150.0, height: size.height))
         
         let totalWidth = titleSize.width + spacing + subtitleSize.width
         let horizontalOrigin: CGFloat = floor((size.width - totalWidth) / 2.0)

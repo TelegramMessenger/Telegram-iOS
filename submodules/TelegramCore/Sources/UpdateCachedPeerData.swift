@@ -292,6 +292,14 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     hasScheduledMessages = true
                                 }
                                 
+                                var updatedActiveCall: CachedChannelData.ActiveCall?
+                                if let inputCall = chatFull.call {
+                                    switch inputCall {
+                                    case let .inputGroupCall(id, accessHash):
+                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash)
+                                    }
+                                }
+                                
                                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                     let previous: CachedGroupData
                                     if let current = current as? CachedGroupData {
@@ -309,6 +317,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         .withUpdatedHasScheduledMessages(hasScheduledMessages)
                                         .withUpdatedInvitedBy(invitedBy)
                                         .withUpdatedPhoto(photo)
+                                        .withUpdatedActiveCall(updatedActiveCall)
                                 })
                             case .channelFull:
                                 break

@@ -18,7 +18,7 @@ public func addStickerPackInteractively(postbox: Postbox, info: StickerPackColle
         if let namespace = namespace {
             var mappedInfo = info
             if items.isEmpty {
-                mappedInfo = StickerPackCollectionInfo(id: info.id, flags: info.flags, accessHash: info.accessHash, title: info.title, shortName: info.shortName, thumbnail: info.thumbnail, hash: Int32(bitPattern: arc4random()), count: info.count)
+                mappedInfo = StickerPackCollectionInfo(id: info.id, flags: info.flags, accessHash: info.accessHash, title: info.title, shortName: info.shortName, thumbnail: info.thumbnail, immediateThumbnailData: info.immediateThumbnailData, hash: Int32(bitPattern: arc4random()), count: info.count)
             }
             addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .add([mappedInfo.id]), noDelay: items.isEmpty)
             var updatedInfos = transaction.getItemCollectionsInfos(namespace: mappedInfo.id.namespace).map { $0.1 as! StickerPackCollectionInfo }

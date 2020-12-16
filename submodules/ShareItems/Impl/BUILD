@@ -24,6 +24,8 @@ objc_library(
         "MobileCoreServices",
         "AddressBook",
         "AVFoundation",
+    ],
+    weak_sdk_frameworks = [
         "PassKit",
     ],
     visibility = [

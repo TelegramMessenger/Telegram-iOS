@@ -229,6 +229,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var shareStatusDisposable: MetaDisposable?
     private var clearCacheDisposable: MetaDisposable?
     private var bankCardDisposable: MetaDisposable?
+    private var hasActiveGroupCallDisposable: Disposable?
 
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -362,6 +363,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let peekData: ChatPeekTimeout?
     private let peekTimerDisposable = MetaDisposable()
     
+    private let createVoiceChatDisposable = MetaDisposable()
+    
     private var shouldDisplayDownButton = false
 
     private var hasEmbeddedTitleContent = false
@@ -429,7 +432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: false)
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
@@ -501,14 +504,66 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                        case let .groupPhoneCall(callId, accessHash, nil), let .inviteToGroupPhoneCall(callId, accessHash, _):
-                            guard strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall.id == callId else {
-                                return true
+                        case let .groupPhoneCall(callId, accessHash, _), let .inviteToGroupPhoneCall(callId, accessHash, _):
+                            if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
+                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash))
+                            } else {
+                                var canManageGroupCalls = false
+                                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
+                                    if case .group = channel.info, channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+                                        canManageGroupCalls = true
+                                    }
+                                } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramGroup {
+                                    if case .creator = group.role {
+                                        canManageGroupCalls = true
+                                    } else if case let .admin(rights, _) = group.role {
+                                        if rights.flags.contains(.canManageCalls) {
+                                            canManageGroupCalls = true
+                                        }
+                                    }
+                                }
+                                
+                                if canManageGroupCalls {
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatStart, action: {
+                                        if let strongSelf = self {
+                                            var dismissStatus: (() -> Void)?
+                                            let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
+                                                dismissStatus?()
+                                            }))
+                                            dismissStatus = { [weak self, weak statusController] in
+                                                self?.createVoiceChatDisposable.set(nil)
+                                                statusController?.dismiss()
+                                            }
+                                            strongSelf.present(statusController, in: .window(.root))
+                                            strongSelf.createVoiceChatDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: message.id.peerId)
+                                            |> deliverOnMainQueue).start(next: { [weak self] info in
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                                            }, error: { [weak self] error in
+                                                dismissStatus?()
+                                                
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                            
+                                                let text: String
+                                                switch error {
+                                                case .generic:
+                                                    text = strongSelf.presentationData.strings.Login_UnknownError
+                                                case .anonymousNotAllowed:
+                                                    text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                                                }
+                                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            }, completed: { [weak self] in
+                                                dismissStatus?()
+                                            }))
+                                        }
+                                    })]), in: .window(.root))
+                                }
                             }
-                            
-                            let peerId = message.id.peerId
-                            
-                            strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: callId, accessHash: accessHash))
+                            return true
                         default:
                             break
                     }
@@ -555,7 +610,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, enqueueMessage: { message in
                 self?.sendMessages([message])
             }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference, sourceNode, sourceRect in
-                return self?.controllerInteraction?.sendSticker(fileReference, false, sourceNode, sourceRect) ?? false
+                return self?.controllerInteraction?.sendSticker(fileReference, nil, false, sourceNode, sourceRect) ?? false
             } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                 if let strongSelf = self {
                     strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
@@ -598,7 +653,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
                 if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openUrl(url, concealed, nil, nil)
+                    strongSelf.openUrl(url, concealed: concealed, message: nil)
                 }
             }, openUrlIn: { [weak self] url in
                 if let strongSelf = self {
@@ -633,7 +688,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
                 }
                 let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
-            }, editMedia: { [weak self] messageId in
+            }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
                 guard let strongSelf = self else {
                     return
                 }
@@ -653,7 +708,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, snapshots: snapshots, transitionCompletion: {
+                            transitionCompletion()
+                        }, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
                                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
                                     completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
@@ -855,7 +912,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
             }
             strongSelf.sendMessages([.message(text: text, attributes: attributes, mediaReference: nil, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
-        }, sendSticker: { [weak self] fileReference, clearInput, sourceNode, sourceRect in
+        }, sendSticker: { [weak self] fileReference, query, clearInput, sourceNode, sourceRect in
             guard let strongSelf = self else {
                 return false
             }
@@ -887,7 +944,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }
             })
-            strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+            
+            var attributes: [MessageAttribute] = []
+            if let query = query {
+                attributes.append(EmojiSearchQueryMessageAttribute(query: query))
+            }
+            
+            strongSelf.sendMessages([.message(text: "", attributes: attributes, mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
             return true
         }, sendGif: { [weak self] fileReference, sourceNode, sourceRect in
             if let strongSelf = self {
@@ -2322,7 +2385,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, snapshots: [], transitionCompletion: nil, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
                                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
                                     completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
@@ -3338,6 +3401,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.keepPeerInfoScreenDataHotDisposable.dispose()
         self.preloadAvatarDisposable.dispose()
         self.peekTimerDisposable.dispose()
+        self.hasActiveGroupCallDisposable?.dispose()
+        self.createVoiceChatDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -3753,6 +3818,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
                     pinnedMessageId = cachedData.pinnedMessageId
+                    if let activeCall = cachedData.activeCall {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
+                    }
                 } else if let _ = combinedInitialData.cachedData as? CachedSecretChatData {
                 }
                 
@@ -3908,6 +3976,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = cachedData as? CachedGroupData {
                     pinnedMessageId = cachedData.pinnedMessageId
+                    if let activeCall = cachedData.activeCall {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
+                    }
                 } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 
@@ -5036,6 +5107,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     subjectFlags = .banSendMedia
             }
             
+            if case .mediaRecording = subject, let _ = strongSelf.presentationInterfaceState.activeGroupCallInfo {
+                let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
+                if let rect = rect {
+                    strongSelf.mediaRestrictedTooltipController?.dismiss()
+                    let tooltipController = TooltipController(content: .text(strongSelf.presentationInterfaceState.strings.Conversation_VoiceChatMediaRecordingRestricted), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                    strongSelf.mediaRestrictedTooltipController = tooltipController
+                    strongSelf.mediaRestrictedTooltipControllerMode = false
+                    tooltipController.dismissed = { [weak tooltipController] _ in
+                        if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
+                            strongSelf.mediaRestrictedTooltipController = nil
+                        }
+                    }
+                    strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                        if let strongSelf = self {
+                            return (strongSelf.chatDisplayNode, rect)
+                        }
+                        return nil
+                    }))
+                }
+                
+                return
+            }
+            
             let bannedPermission: (Int32, Bool)?
             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                 bannedPermission = channel.hasBannedPermission(subjectFlags)
@@ -5193,7 +5287,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, sendSticker: { [weak self] file, sourceNode, sourceRect in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                return strongSelf.controllerInteraction?.sendSticker(file, true, sourceNode, sourceRect) ?? false
+                return strongSelf.controllerInteraction?.sendSticker(file, nil, true, sourceNode, sourceRect) ?? false
             } else {
                 return false
             }
@@ -6221,9 +6315,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        let shouldBeActive = combineLatest(self.context.sharedContext.mediaManager.audioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
-        |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes -> Signal<Bool, NoError> in
-            if hasVisiblePlayableItemNodes && !isPlaybackActive {
+        let hasActiveCalls: Signal<Bool, NoError>
+        if let callManager = self.context.sharedContext.callManager as? PresentationCallManagerImpl {
+            hasActiveCalls = callManager.hasActiveCalls
+            
+            self.hasActiveGroupCallDisposable = ((callManager.currentGroupCallSignal
+            |> map { call -> Bool in
+                return call != nil
+            }) |> deliverOnMainQueue).start(next: { [weak self] hasActiveGroupCall in
+                self?.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
+                    return state.updatedHasActiveGroupCall(hasActiveGroupCall)
+                })
+            })
+        } else {
+            hasActiveCalls = .single(false)
+        }
+        
+        let shouldBeActive = combineLatest(self.context.sharedContext.mediaManager.audioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes, hasActiveCalls)
+        |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes, hasActiveCalls -> Signal<Bool, NoError> in
+            if hasVisiblePlayableItemNodes && !isPlaybackActive && !hasActiveCalls {
                 return Signal<Bool, NoError> { [weak self] subscriber in
                     guard let strongSelf = self else {
                         subscriber.putCompletion()
@@ -7060,7 +7170,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.saveInterfaceState(includeScrollState: false)
         }
         
-        if let navigationController = self.navigationController as? NavigationController {
+        if let navigationController = self.navigationController as? NavigationController, isTopmostChatController(self) {
             var voiceChatOverlayController: VoiceChatOverlayController?
             for controller in navigationController.globalOverlayControllers {
                 if let controller = controller as? VoiceChatOverlayController {
@@ -7070,11 +7180,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let controller = voiceChatOverlayController {
-                var hidden = false
-                if self.presentationInterfaceState.interfaceState.editMessage != nil || self.presentationInterfaceState.interfaceState.forwardMessageIds != nil || self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
-                    hidden = true
-                }
-                controller.update(hidden: hidden, slide: false, animated: true)
+                controller.updateVisibility()
             }
         }
     }
@@ -7669,11 +7775,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             }, openCamera: { [weak self] cameraView, menuController in
                 if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                    if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveGroupCall {
-                        return
+                    var photoOnly = false
+                    if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveCall {
+                        photoOnly = true
                     }
                     
-                    presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: settings.storeEditedPhotos, mediaGrouping: true, initialCaption: inputText.string, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
+                    presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: settings.storeEditedPhotos, mediaGrouping: true, initialCaption: inputText.string, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, photoOnly: photoOnly, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                         if let strongSelf = self {
                             if editMediaOptions != nil {
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
@@ -11306,6 +11413,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func acceptPossibleControllerDropContent(content: NavigationControllerDropContent) -> Bool {
         //return self.chatDisplayNode.acceptEmbeddedTitlePeekContent(content: content)
         return false
+    }
+    
+    public var isSendButtonVisible: Bool {
+        if self.presentationInterfaceState.interfaceState.editMessage != nil || self.presentationInterfaceState.interfaceState.forwardMessageIds != nil || self.presentationInterfaceState.interfaceState.composeInputState.inputText.string.count > 0 {
+            return true
+        } else {
+            return false
+        }
     }
 }
 

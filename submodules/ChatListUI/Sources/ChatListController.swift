@@ -1678,6 +1678,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.present(actionSheet, in: .window(.root))
     }
     
+    public private(set) var isSearchActive: Bool = false
     public func activateSearch() {
         if self.displayNavigationBar {
             let _ = (combineLatest(self.chatListDisplayNode.containerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(tagSummary: nil, actionsSummary: nil)) |> take(1))
@@ -1729,17 +1730,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 (strongSelf.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
             })
             
+            self.isSearchActive = true
             if let navigationController = self.navigationController as? NavigationController {
-                var voiceChatOverlayController: VoiceChatOverlayController?
                 for controller in navigationController.globalOverlayControllers {
                     if let controller = controller as? VoiceChatOverlayController {
-                        voiceChatOverlayController = controller
+                        controller.updateVisibility()
                         break
                     }
-                }
-                
-                if let controller = voiceChatOverlayController {
-                    controller.update(hidden: true, slide: true, animated: true)
                 }
             }
         }
@@ -1785,17 +1782,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }
             
+            self.isSearchActive = false
             if let navigationController = self.navigationController as? NavigationController {
-                var voiceChatOverlayController: VoiceChatOverlayController?
                 for controller in navigationController.globalOverlayControllers {
                     if let controller = controller as? VoiceChatOverlayController {
-                        voiceChatOverlayController = controller
+                        controller.updateVisibility()
                         break
                     }
-                }
-                
-                if let controller = voiceChatOverlayController {
-                    controller.update(hidden: false, slide: true, animated: true)
                 }
             }
         }

@@ -459,7 +459,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
-        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil)
+        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false)
         let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: UIEdgeInsets(), maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
@@ -1838,7 +1838,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
-        }, sendSticker: { _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _ in
             return false
         }, sendGif: { _, _, _ in
             return false
@@ -3036,7 +3036,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             } else if let group = peer as? TelegramGroup {
+                var canManageGroupCalls = false
                 if case .creator = group.role {
+                    canManageGroupCalls = true
+                } else if case let .admin(rights, _) = group.role {
+                    if rights.flags.contains(.canManageCalls) {
+                        canManageGroupCalls = true
+                    }
+                }
+                if canManageGroupCalls {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_CreateVoiceChat, color: .accent, action: { [weak self] in
                         dismissAction()
                         
@@ -3044,18 +3052,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             return
                         }
                         
-                        strongSelf.activeActionDisposable.set((convertGroupToSupergroup(account: strongSelf.context.account, peerId: group.id)
-                        |> deliverOnMainQueue).start(next: { peerId in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            if let controller = strongSelf.controller, let navigationController = controller.navigationController as? NavigationController {
-                                rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
-                                
-                                strongSelf.createAndJoinGroupCall(peerId: peerId)
-                            }
-                        }))
+                        strongSelf.createAndJoinGroupCall(peerId: group.id)
                     }))
                 }
                 
@@ -3212,6 +3209,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.createAndJoinGroupCall(peerId: peer.id)
             }
             return
+        } else if let peer = self.data?.peer as? TelegramGroup {
+            guard let cachedGroupData = self.data?.cachedData as? CachedGroupData else {
+                return
+            }
+            
+            if let activeCall = cachedGroupData.activeCall {
+                self.context.joinGroupCall(peerId: peer.id, activeCall: activeCall)
+            } else {
+                self.createAndJoinGroupCall(peerId: peer.id)
+            }
+            return
         }
         
         guard let peer = self.data?.peer as? TelegramUser, let cachedUserData = self.data?.cachedData as? CachedUserData else {
@@ -3226,7 +3234,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func createAndJoinGroupCall(peerId: PeerId) {
-        if let callManager = self.context.sharedContext.callManager {
+        if let _ = self.context.sharedContext.callManager {
             let startCall: (Bool) -> Void = { [weak self] endCurrentIfAny in
                 guard let strongSelf = self else {
                     return
@@ -3273,34 +3281,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }))
             }
             
-            let _ = (callManager.currentGroupCallSignal
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] activeCall in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                if let activeCall = activeCall {
-                    let currentPeerId = activeCall.peerId
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                        return (transaction.getPeer(peerId), transaction.getPeer(currentPeerId))
-                    } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                        if let peer = peer {
-                            if let strongSelf = self, let current = current {
-                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        startCall(true)
-                                })]), in: .window(.root))
-                            } else {
-                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                })]), in: .window(.root))
-                            }
-                        }
-                    })
-                } else {
-                    startCall(false)
-                }
-            })
+            startCall(true)
         }
     }
     

@@ -19,6 +19,9 @@ objc_library(
     sdk_frameworks = [
         "Foundation",
         "UIKit",
+        "AddressBook",
+    ],
+    weak_sdk_frameworks = [
         "PassKit",
     ],
     visibility = [
