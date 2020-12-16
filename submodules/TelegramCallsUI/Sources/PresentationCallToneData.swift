@@ -1,7 +1,7 @@
 import Foundation
 import AVFoundation
 
-private func loadToneData(name: String) -> Data? {
+private func loadToneData(name: String, addSilenceDuration: Double = 0.0) -> Data? {
     let outputSettings: [String: Any] = [
         AVFormatIDKey: kAudioFormatLinearPCM as NSNumber,
         AVSampleRateKey: 44100.0 as NSNumber,
@@ -62,6 +62,15 @@ private func loadToneData(name: String) -> Data? {
         }
     }
     
+    if !addSilenceDuration.isZero {
+        let sampleRate = 44100
+        let numberOfSamples = Int(Double(sampleRate) * addSilenceDuration)
+        let numberOfChannels = 2
+        let numberOfBytes = numberOfSamples * 2 * numberOfChannels
+        
+        data.append(Data(count: numberOfBytes))
+    }
+    
     return data
 }
 
@@ -110,6 +119,6 @@ func presentationCallToneData(_ tone: PresentationCallTone) -> Data? {
         case .groupLeft:
             return loadToneData(name: "voip_group_left.mp3")
         case .groupConnecting:
-            return loadToneData(name: "voip_group_connecting.mp3")
+            return loadToneData(name: "voip_group_connecting.mp3", addSilenceDuration: 2.0)
     }
 }

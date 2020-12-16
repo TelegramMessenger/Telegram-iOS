@@ -444,6 +444,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var removedChannelMembersDisposable: Disposable?
     
+    private var didStartConnectingOnce: Bool = false
     private var didConnectOnce: Bool = false
     private var toneRenderer: PresentationCallToneRenderer?
     
@@ -847,7 +848,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
                     
-                    if wasConnecting != isConnecting && strongSelf.didConnectOnce {
+                    if (wasConnecting != isConnecting && strongSelf.didConnectOnce) { //|| !strongSelf.didStartConnectingOnce {
                         if isConnecting {
                             let toneRenderer = PresentationCallToneRenderer(tone: .groupConnecting)
                             strongSelf.toneRenderer = toneRenderer
@@ -855,6 +856,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         } else {
                             strongSelf.toneRenderer = nil
                         }
+                    }
+                    
+                    if isConnecting {
+                        strongSelf.didStartConnectingOnce = true
                     }
                     
                     if case .connected = state {
