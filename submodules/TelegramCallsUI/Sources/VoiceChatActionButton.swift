@@ -217,11 +217,11 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.35, curve: .easeInOut) : .immediate
-            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0, delay: 0.12)
-            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.12)
-            transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.1)
-            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.1)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0, delay: 0.05)
+            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+            transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
+            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         

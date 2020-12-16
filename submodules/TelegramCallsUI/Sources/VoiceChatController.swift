@@ -1826,6 +1826,7 @@ public final class VoiceChatController: ViewController {
             }
             
             let topPanelFrame = self.topPanelNode.view.convert(self.topPanelNode.bounds, to: self.view)
+            let offset: CGFloat = self.contentContainer.bounds.minY
             
             self.contentContainer.layer.animateBoundsOriginYAdditive(from: self.contentContainer.bounds.origin.y, to: -(layout.size.height - topPanelFrame.minY) - 44.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 offsetCompleted = true
@@ -2161,7 +2162,7 @@ public final class VoiceChatController: ViewController {
                         self.panGestureArguments = nil
                         var dismissing = false
                         if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
-                            self.controller?.dismiss(closing: false)
+                            self.controller?.dismiss(closing: false, manual: true)
                             dismissing = true
                         } else if velocity.y < -300.0 || offset < topInset / 2.0 {
                             self.isExpanded = true
@@ -2342,8 +2343,11 @@ public final class VoiceChatController: ViewController {
         }
     }
         
-    public func dismiss(closing: Bool) {
-        if !closing {
+    private var dismissedManually: Bool = false
+    public func dismiss(closing: Bool, manual: Bool = false) {
+        if closing {
+            self.isDisconnected = true
+        } else {
             if let navigationController = self.navigationController as? NavigationController {
                 let count = navigationController.viewControllers.count
                 if count == 2 || navigationController.viewControllers[count - 2] is ChatController {
@@ -2351,12 +2355,17 @@ public final class VoiceChatController: ViewController {
                     } else if let chatController = navigationController.viewControllers[count - 2] as? ChatController, chatController.isSendButtonVisible {
                     } else if let tabBarController = navigationController.viewControllers[count - 2] as? TabBarController, let chatListController = tabBarController.controllers[tabBarController.selectedIndex] as? ChatListController, chatListController.isSearchActive {
                     } else {
-                        self.detachActionButton()
+                        if manual {
+                            self.dismissedManually = true
+                            Queue.mainQueue().after(0.05) {
+                                self.detachActionButton()
+                            }
+                        } else {
+                            self.detachActionButton()
+                        }
                     }
                 }
             }
-        } else {
-            self.isDisconnected = true
         }
         
         self.dismiss()
@@ -2367,12 +2376,13 @@ public final class VoiceChatController: ViewController {
             return
         }
         
-        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, audioOutputNode: self.controllerNode.audioOutputNode, leaveNode: self.controllerNode.leaveNode, navigationController: self.navigationController as? NavigationController)
+        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, audioOutputNode: self.controllerNode.audioOutputNode, leaveNode: self.controllerNode.leaveNode, navigationController: self.navigationController as? NavigationController, initiallyHidden: self.dismissedManually)
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
         }
         
         self.currentOverlayController = overlayController
+        self.dismissedManually = false
         
         self.reclaimActionButton = { [weak self, weak overlayController] in
             if let strongSelf = self {
