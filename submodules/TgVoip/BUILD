@@ -95,6 +95,7 @@ objc_library(
     ] + ["-D{symbol}={symbol}1".format(symbol=symbol) for symbol in replace_symbols] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": copts_arm,
         "@build_bazel_rules_apple//apple:ios_arm64": copts_arm,
+        "//build-system:ios_sim_arm64": copts_arm,
         "@build_bazel_rules_apple//apple:ios_x86_64": copts_x86,
     }),
     includes = [
@@ -102,7 +103,7 @@ objc_library(
     ],
     deps = [
         "//submodules/MtProtoKit:MtProtoKit",
-        "//submodules/Opus:opus",
+        "//third-party/opus:opus",
     ],
     sdk_frameworks = [
         "Foundation",

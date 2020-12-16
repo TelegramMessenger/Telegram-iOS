@@ -406,6 +406,16 @@ bazel_app_debug_arm64:
 	--watchos_cpus=armv7k,arm64_32 \
 	--verbose_failures
 
+bazel_app_debug_sim_arm64:
+	APP_VERSION="${APP_VERSION}" \
+	TELEGRAM_DISABLE_EXTENSIONS="0" \
+	build-system/prepare-build.sh Telegram distribution
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_DEBUG_FLAGS} \
+	-c dbg \
+	--ios_multi_cpus=sim_arm64 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--verbose_failures
+
 bazel_app_arm64:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \

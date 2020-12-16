@@ -12,7 +12,7 @@ static_library(
         "PublicHeaders/**/*.h",
     ]),
     deps = [
-        "//submodules/webp:webp",
+        "//third-party/webp:webp",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

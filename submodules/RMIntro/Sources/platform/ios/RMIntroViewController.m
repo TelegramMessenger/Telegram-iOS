@@ -236,6 +236,10 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 
 - (void)loadGL
 {
+#if TARGET_OS_SIMULATOR && defined(__aarch64__)
+    return;
+#endif
+    
     if (/*[[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground*/true && !_isOpenGLLoaded)
     {
         context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
