@@ -263,6 +263,16 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 var entries: [ChannelMembersSearchEntry] = []
                 
+                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                    if case .excludeNonMembers = filter {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    entries.append(.copyInviteLink)
+                }
+                
                 var index = 0
                 for participant in participants.participants {
                     guard let peer = peerView.peers[participant.peerId] else {
@@ -484,7 +494,13 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     index += 1
                 }
                 
-                if case .inviteToCall = mode {
+                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                    if case .excludeNonMembers = filter {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
                     for peer in contactsView.peers {
                         entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.peerPresences[peer.id] as? TelegramUserPresence))
                         index += 1

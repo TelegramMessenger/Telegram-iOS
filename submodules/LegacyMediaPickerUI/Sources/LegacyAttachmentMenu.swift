@@ -59,7 +59,7 @@ public enum LegacyAttachmentMenuMediaEditing {
     case file
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMediaReference, initialCaption: String, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMediaReference, initialCaption: String, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -103,8 +103,9 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, completion: { result, editingContext in
-            let intent: TGMediaAssetsControllerIntent = TGMediaAssetsControllerSendMediaIntent
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as? [Any], immediate: transitionCompletion != nil, appeared: {
+            transitionCompletion?()
+        }, completion: { result, editingContext in
             let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: legacyAssetPickerItemGenerator())
             sendMessagesWithSignals(signals, false, 0)
         }, dismissed: { [weak legacyController] in
@@ -294,16 +295,8 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 navigationController.setNavigationBarHidden(true, animated: false)
                 legacyController.bind(controller: navigationController)
                 
-                var hasTimer = false
-                var hasSilentPosting = false
-                if peer.id != context.account.peerId {
-                    if peer is TelegramUser {
-                        hasTimer = true
-                    }
-                    hasSilentPosting = true
-                }
                 let recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                
+
                 legacyController.enableSizeClassSignal = true
                 
                 let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak legacyController] presentationData in
@@ -315,8 +308,8 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 
                 present(legacyController, nil)
                 
-                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, completion: { result, editingContext in
-                    let intent: TGMediaAssetsControllerIntent = TGMediaAssetsControllerSendMediaIntent
+                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: [], immediate: false, appeared: {
+                }, completion: { result, editingContext in
                     let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: legacyAssetPickerItemGenerator())
                     sendMessagesWithSignals(signals, false, 0)
                 }, dismissed: { [weak legacyController] in

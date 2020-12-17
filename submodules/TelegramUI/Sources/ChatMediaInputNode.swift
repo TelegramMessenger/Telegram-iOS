@@ -238,7 +238,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
     if view.lower == nil {
         var savedStickerIds = Set<Int64>()
         if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", thumbnail: nil, hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             for i in 0 ..< savedStickers.items.count {
                 if let item = savedStickers.items[i].contents as? SavedStickerItem {
                     savedStickerIds.insert(item.file.fileId.id)
@@ -250,7 +250,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         }
         
         if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", thumbnail: nil, hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             var addedCount = 0
             for i in 0 ..< recentStickers.items.count {
                 if addedCount >= 20 {
@@ -278,7 +278,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         
         if let peerSpecificPack = peerSpecificPack {
             for i in 0 ..< peerSpecificPack.items.count {
-                let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, hash: 0, count: 0)
+                let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
                 
                 if let item = peerSpecificPack.items[i] as? StickerPackItem {
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
@@ -535,7 +535,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
-                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
                             } else {
                                 return false
                             }
@@ -806,7 +806,7 @@ final class ChatMediaInputNode: ChatInputNode {
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
             let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                 if let strongSelf = self {
-                    return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
+                    return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
                 } else {
                     return false
                 }
@@ -1088,7 +1088,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                     menuItems = [
                                         PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                             if let strongSelf = self {
-                                                return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                                return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), nil, false, node, rect)
                                             } else {
                                                 return false
                                             }
@@ -1111,7 +1111,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         if let packReference = packReference {
                                                             let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
-                                                                    return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                    return strongSelf.controllerInteraction.sendSticker(file, nil, false, sourceNode, sourceRect)
                                                                 } else {
                                                                     return false
                                                                 }
@@ -1172,7 +1172,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                         menuItems = [
                                             PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                                 if let strongSelf = self {
-                                                    return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                                    return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), nil, false, node, rect)
                                                 } else {
                                                     return false
                                                 }
@@ -1195,7 +1195,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                                 if let packReference = packReference {
                                                                     let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                                                                                                if let strongSelf = self {
-                                                                                                                                                   return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                                                                                                   return strongSelf.controllerInteraction.sendSticker(file, nil, false, sourceNode, sourceRect)
                                                                                                                                                } else {
                                                                                                                                                    return false
                                                                                                                                                }

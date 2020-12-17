@@ -224,10 +224,10 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         action = .endGroupCall
                                     case let .channelAdminLogEventActionParticipantMute(participant):
                                         let parsedParticipant = GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(participant)
-                                        action = .groupCallUpdateParticipantMuteStatus(peerId: parsedParticipant.peerId, isMuted: parsedParticipant.muteState != nil)
+                                        action = .groupCallUpdateParticipantMuteStatus(peerId: parsedParticipant.peerId, isMuted: true)
                                     case let .channelAdminLogEventActionParticipantUnmute(participant):
                                         let parsedParticipant = GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(participant)
-                                        action = .groupCallUpdateParticipantMuteStatus(peerId: parsedParticipant.peerId, isMuted: parsedParticipant.muteState != nil)
+                                        action = .groupCallUpdateParticipantMuteStatus(peerId: parsedParticipant.peerId, isMuted: false)
                                     case let .channelAdminLogEventActionToggleGroupCallSetting(joinMuted):
                                         action = .updateGroupCallSettings(joinMuted: joinMuted == .boolTrue)
                                 }

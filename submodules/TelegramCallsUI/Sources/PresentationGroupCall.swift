@@ -278,7 +278,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             var audioLevels: [(PeerId, Float, Bool)] = []
             for (peerId, level, hasVoice) in levels {
-                if level > 0.1 {
+                if level > 0.001 {
                     audioLevels.append((peerId, level, hasVoice))
                 }
             }
@@ -444,6 +444,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var removedChannelMembersDisposable: Disposable?
     
+    private var didStartConnectingOnce: Bool = false
     private var didConnectOnce: Bool = false
     private var toneRenderer: PresentationCallToneRenderer?
     
@@ -831,10 +832,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     case .connected:
                         mappedState = .connected
                     }
+                    let wasConnecting = strongSelf.stateValue.networkState == .connecting
                     if strongSelf.stateValue.networkState != mappedState {
                         strongSelf.stateValue.networkState = mappedState
                     }
-                    
                     let isConnecting = mappedState == .connecting
                     
                     if strongSelf.isCurrentlyConnecting != isConnecting {
@@ -847,12 +848,28 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
                     
-                    if case .connected = state, !strongSelf.didConnectOnce {
-                        strongSelf.didConnectOnce = true
-                        
-                        let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
-                        strongSelf.toneRenderer = toneRenderer
-                        toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                    if (wasConnecting != isConnecting && strongSelf.didConnectOnce) { //|| !strongSelf.didStartConnectingOnce {
+                        if isConnecting {
+                            let toneRenderer = PresentationCallToneRenderer(tone: .groupConnecting)
+                            strongSelf.toneRenderer = toneRenderer
+                            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        } else {
+                            strongSelf.toneRenderer = nil
+                        }
+                    }
+                    
+                    if isConnecting {
+                        strongSelf.didStartConnectingOnce = true
+                    }
+                    
+                    if case .connected = state {
+                        if !strongSelf.didConnectOnce {
+                            strongSelf.didConnectOnce = true
+                            
+                            let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
+                            strongSelf.toneRenderer = toneRenderer
+                            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        }
                     }
                 }))
                 
@@ -1099,16 +1116,31 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private func markAsCanBeRemoved() {
         self.callContext?.stop()
-        self.callContext = nil
         self._canBeRemoved.set(.single(true))
         
-        let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
-        self.toneRenderer = toneRenderer
-        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
-        
-        Queue.mainQueue().after(0.5, {
-            self.wasRemoved.set(.single(true))
-        })
+        if self.didConnectOnce {
+            if let callManager = self.accountContext.sharedContext.callManager {
+                let _ = (callManager.currentGroupCallSignal
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] call in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let call = call, call !== strongSelf {
+                        strongSelf.wasRemoved.set(.single(true))
+                        return
+                    }
+                    
+                    let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
+                    strongSelf.toneRenderer = toneRenderer
+                    toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                    
+                    Queue.mainQueue().after(1.0, {
+                        strongSelf.wasRemoved.set(.single(true))
+                    })
+                })
+            }
+        }
     }
     
     public func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError> {

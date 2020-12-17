@@ -405,13 +405,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .groupPhoneCall(_, _, duration):
-                let titleString: String
                 if let duration = duration {
-                    titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
+                    let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
+                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    titleString = strings.Notification_VoiceChatStarted
+                    var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                    let titleString = strings.Notification_VoiceChatStarted(authorName)
+                    attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                 }
-                attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .customText(text, entities):
                 attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false)
             case let .botDomainAccessGranted(domain):

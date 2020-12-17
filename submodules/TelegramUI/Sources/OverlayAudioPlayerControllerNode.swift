@@ -74,7 +74,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, toggleMessagesSelection: { _, _ in
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
-        }, sendSticker: { _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _ in
             return false
         }, sendGif: { _, _, _ in
             return false

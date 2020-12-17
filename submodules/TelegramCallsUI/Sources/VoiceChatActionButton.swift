@@ -20,8 +20,8 @@ private let areaSize = CGSize(width: 440.0, height: 440.0)
 private let blobSize = CGSize(width: 244.0, height: 244.0)
 
 final class VoiceChatActionButton: HighlightTrackingButtonNode {
-    enum State {
-        enum ActiveState {
+    enum State: Equatable {
+        enum ActiveState: Equatable {
             case cantSpeak
             case muted
             case on
@@ -31,6 +31,15 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         case active(state: ActiveState)
     }
     
+    var stateValue: State {
+        return self.currentParams?.state ?? .connecting
+    }
+    var statePromise = ValuePromise<State>()
+    var state: Signal<State, NoError> {
+        return self.statePromise.get()
+    }
+    
+    let bottomNode: ASDisplayNode
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatMicrophoneNode
@@ -54,6 +63,14 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     var activeDisposable = MetaDisposable()
     
     var isDisabled: Bool = false
+    
+    var ignoreHierarchyChanges: Bool {
+        get {
+            return self.backgroundNode.ignoreHierarchyChanges
+        } set {
+            self.backgroundNode.ignoreHierarchyChanges = newValue
+        }
+    }
     
     var wasActiveWhenPressed = false
     var pressing: Bool = false {
@@ -85,6 +102,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
         
     init() {
+        self.bottomNode = ASDisplayNode()
         self.containerNode = ASDisplayNode()
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
         self.iconNode = VoiceChatMicrophoneNode()
@@ -94,6 +112,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         super.init()
     
+        self.addSubnode(self.bottomNode)
         self.addSubnode(self.titleLabel)
         self.addSubnode(self.subtitleLabel)
 
@@ -139,7 +158,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         }
         
         let updatedTitle = self.titleLabel.attributedText?.string != title
-        let updatedSubtitle = self.subtitleLabel.attributedText?.string != title
+        let updatedSubtitle = self.subtitleLabel.attributedText?.string != subtitle
         
         self.titleLabel.attributedText = NSAttributedString(string: title, font: titleFont, textColor: .white)
         self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, font: subtitleFont, textColor: .white)
@@ -167,9 +186,10 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 110.0), size: titleSize)
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 112.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
+        self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         
         self.backgroundNode.bounds = CGRect(origin: CGPoint(), size: size)
@@ -188,18 +208,20 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 break
         }
         
-        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        
         if snap {
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
             transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.75 : 0.5)
             transition.updateTransformScale(node: self.iconNode, scale: 0.5)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
-            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0)
-            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0)
-            transition.updateAlpha(node: self.titleLabel, alpha: 1.0)
-            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0, delay: 0.05)
+            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+            transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
+            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
@@ -209,7 +231,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     
     private func applyIconParams() {
-        guard let (size, _, state, _, small, title, subtitle, snap) = self.currentParams else {
+        guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
             return
         }
         
@@ -250,6 +272,8 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let previousState = previous?.state
         self.currentParams = (size, buttonSize, state, dark, small, title, subtitle, previous?.snap ?? false)
 
+        self.statePromise.set(state)
+        
         var backgroundState: VoiceChatActionButtonBackgroundNode.State
         switch state {
             case let .active(state):
@@ -392,6 +416,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     private var state: State
     private var hasState = false
+    
     private var transition: State?
     
     var audioLevel: CGFloat = 0.0  {
@@ -422,6 +447,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
     private var isCurrentlyInHierarchy = false
+    var ignoreHierarchyChanges = false
         
     override init() {
         self.state = .connecting
@@ -483,7 +509,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskCircleLayer.isHidden = true
         
         updateInHierarchy = { [weak self] value in
-            if let strongSelf = self {
+            if let strongSelf = self, !strongSelf.ignoreHierarchyChanges {
                 strongSelf.isCurrentlyInHierarchy = value
                 strongSelf.updateAnimations()
             }

@@ -1001,6 +1001,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.readOutbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId), timestamp: nil)
             case let .updateChannel(channelId):
                 updatedState.addExternallyUpdatedPeerId(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
+            case let .updateChat(chatId):
+                updatedState.addExternallyUpdatedPeerId(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
             case let .updateReadHistoryInbox(_, folderId, peer, maxId, stillUnreadCount, pts, _):
                 updatedState.resetIncomingReadState(groupId: PeerGroupId(rawValue: folderId ?? 0), peerId: peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxId, count: stillUnreadCount, pts: pts)
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
@@ -1334,6 +1336,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
             case let .updateGroupCall(channelId, call):
                 updatedState.updateGroupCall(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), call: call)
+                updatedState.updateGroupCall(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: channelId), call: call)
             case let .updateLangPackTooLong(langCode):
                 updatedState.updateLangPack(langCode: langCode, difference: nil)
             case let .updateLangPack(difference):
@@ -2966,6 +2969,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                             if let current = current as? CachedChannelData {
                                 return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                            } else if let current = current as? CachedGroupData {
+                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
                             } else {
                                 return current
                             }
@@ -2992,6 +2997,12 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                         if let current = current as? CachedChannelData {
+                            if let activeCall = current.activeCall, activeCall.id == callId {
+                                return current.withUpdatedActiveCall(nil)
+                            } else {
+                                return current
+                            }
+                        } else if let current = current as? CachedGroupData {
                             if let activeCall = current.activeCall, activeCall.id == callId {
                                 return current.withUpdatedActiveCall(nil)
                             } else {

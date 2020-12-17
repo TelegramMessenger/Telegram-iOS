@@ -127,7 +127,7 @@ public extension CALayer {
         self.add(animationGroup, forKey: key)
     }
     
-    func animateKeyframes(values: [AnyObject], duration: Double, keyPath: String, timingFunction: String = CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateKeyframes(values: [AnyObject], duration: Double, keyPath: String, timingFunction: String = CAMediaTimingFunctionName.linear.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let k = Float(UIView.animationDurationFactor())
         var speed: Float = 1.0
         if k != 0 && k != 1 {
@@ -150,7 +150,11 @@ public extension CALayer {
         animation.speed = speed
         animation.duration = duration
         animation.isAdditive = additive
-        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName(rawValue: timingFunction))
+        if let mediaTimingFunction = mediaTimingFunction {
+            animation.timingFunction = mediaTimingFunction
+        } else {
+            animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName(rawValue: timingFunction))
+        }
         animation.isRemovedOnCompletion = removeOnCompletion
         if let completion = completion {
             animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
