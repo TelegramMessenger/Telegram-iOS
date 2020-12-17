@@ -7,6 +7,7 @@ copts_arm = [
     "-DWEBRTC_NS_FLOAT",
     "-DWEBRTC_IOS",
     "-DWEBRTC_HAS_NEON",
+    "-DTGVOIP_NO_DSP",
 ]
 
 copts_x86 = [
@@ -14,50 +15,9 @@ copts_x86 = [
     "-DWEBRTC_APM_DEBUG_DUMP=0",
     "-DWEBRTC_POSIX",
     "-DTGVOIP_HAVE_TGLOG",
+    "-DTGVOIP_NO_DSP",
     "-DWEBRTC_NS_FLOAT",
     "-DWEBRTC_IOS",
-]
-
-replace_symbols = [
-    "WebRtcAgc_Process",
-    "rtc_FatalMessage",
-    "WebRtcAgc_UpdateAgcThresholds",
-    "WebRtcAgc_Init",
-    "WebRtcAgc_GetAddFarendError",
-    "WebRtcAgc_ZeroCtrl",
-    "WebRtcAgc_SaturationCtrl",
-    "WebRtcAgc_SpeakerInactiveCtrl",
-    "WebRtcAgc_ProcessAnalog",
-    "WebRtcAgc_set_config",
-    "WebRtcAgc_get_config",
-    "WebRtcAgc_ExpCurve",
-    "WebRtcAgc_Create",
-    "WebRtcAgc_Free",
-    "WebRtcAgc_AddFarend",
-    "WebRtcAgc_VirtualMic",
-    "WebRtcAgc_AddMic",
-    "WebRtcAgc_InitDigital",
-    "WebRtcAgc_AddFarendToDigital",
-    "WebRtcAgc_CalculateGainTable",
-    "WebRtcAgc_InitVad",
-    "WebRtcAgc_ProcessVad",
-    "TimeDiff",
-    "TimeAfter",
-    "TimeMicros",
-    "TimeUTCMicros",
-    "SystemTimeNanos",
-    "TimeNanos",
-    "SystemTimeMillis",
-    "TimeMillis",
-    "TimeUTCMillis",
-    "GetClockForTesting",
-    "TimestampWrapAroundHandler",
-    "Time32",
-    "TmToSeconds",
-    "TimeDiff32",
-    "TimestampWrapAroundHandler",
-    "g_clock",
-    "SetClockForTesting",
 ]
 
 objc_library(
@@ -77,9 +37,6 @@ objc_library(
         "libtgvoip/os/darwin/*.mm",
         "libtgvoip/os/darwin/*.cpp",
         "libtgvoip/os/posix/*.cpp",
-        "libtgvoip/webrtc_dsp/**/*.c",
-        "libtgvoip/webrtc_dsp/**/*.cc",
-        "libtgvoip/webrtc_dsp/**/*.cpp",
     ], exclude = ["libtgvoip/os/darwin/*OSX*"]),
     hdrs = glob([
         "PublicHeaders/**/*.h",
@@ -87,14 +44,15 @@ objc_library(
     copts = [
         "-I{}/PublicHeaders/TgVoip".format(package_name()),
         "-I{}/libtgvoip".format(package_name()),
-        "-I{}/libtgvoip/webrtc_dsp".format(package_name()),
+        "-I{}/third-party/webrtc/webrtc-ios/src".format(package_name()),
         "-Isubmodules/Opus/Public/opus",
         "-DTGVOIP_USE_INSTALLED_OPUS",
         "-Drtc=rtc1",
         "-Dwebrtc=webrtc1",
-    ] + ["-D{symbol}={symbol}1".format(symbol=symbol) for symbol in replace_symbols] + select({
+    ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": copts_arm,
         "@build_bazel_rules_apple//apple:ios_arm64": copts_arm,
+        "//build-system:ios_sim_arm64": copts_arm,
         "@build_bazel_rules_apple//apple:ios_x86_64": copts_x86,
     }),
     includes = [
@@ -102,7 +60,7 @@ objc_library(
     ],
     deps = [
         "//submodules/MtProtoKit:MtProtoKit",
-        "//submodules/Opus:opus",
+        "//third-party/opus:opus",
     ],
     sdk_frameworks = [
         "Foundation",

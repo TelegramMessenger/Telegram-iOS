@@ -89,3 +89,9 @@ sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1
 	--genconfig "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj:${APP_TARGET}" \
 	--bazel "$BAZEL" \
 	--outputfolder "$GEN_DIRECTORY" \
+	--no-open-xcode \
+
+sed -i '' -e '1h;2,$H;$!d;g' -e 's/BUILD_SETTINGS = BazelBuildSettings(/import os\nBUILD_SETTINGS = BazelBuildSettings(/g' "$GEN_DIRECTORY/${APP_TARGET}.xcodeproj/.tulsi/Scripts/bazel_build_settings.py"
+sed -i '' -e '1h;2,$H;$!d;g' -e "s/'--cpu=ios_arm64'/'--cpu=ios_arm64'.replace('ios_arm64', 'ios_sim_arm64' if os.environ.get('EFFECTIVE_PLATFORM_NAME') == '-iphonesimulator' else 'ios_arm64')/g" "$GEN_DIRECTORY/${APP_TARGET}.xcodeproj/.tulsi/Scripts/bazel_build_settings.py"
+
+open "$GEN_DIRECTORY/${APP_TARGET}.xcodeproj"

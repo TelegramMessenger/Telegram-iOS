@@ -20,7 +20,7 @@ objc_library(
         "-I{}/PublicHeaders/OpusBinding".format(package_name()),
     ],
     deps = [
-        "//submodules/Opus:opus",
+        "//third-party/opus:opus",
     ],
     sdk_frameworks = [
         "Foundation",
