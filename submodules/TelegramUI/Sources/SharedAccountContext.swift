@@ -1176,7 +1176,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeComposeController(context: AccountContext) -> ViewController {
-        return ComposeController(context: context)
+        return ComposeControllerImpl(context: context)
     }
     
     public func makeProxySettingsController(context: AccountContext) -> ViewController {

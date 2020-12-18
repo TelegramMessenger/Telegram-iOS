@@ -9778,7 +9778,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func forwardMessages(messages: [Message], resetCurrent: Bool) {
-        var filter: ChatListNodePeersFilter = [.onlyWriteable, .includeSavedMessages, .excludeDisabled]
+        var filter: ChatListNodePeersFilter = [.onlyWriteable, .includeSavedMessages, .excludeDisabled, .doNotSearchMessages]
         var hasPublicPolls = false
         var hasPublicQuiz = false
         for message in messages {

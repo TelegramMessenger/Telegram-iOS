@@ -50,8 +50,8 @@ final class ChatMessageSelectionNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize) {
+    func updateLayout(size: CGSize, leftInset: CGFloat) {
         let checkSize = CGSize(width: 32.0, height: 32.0)
-        self.checkNode.frame = CGRect(origin: CGPoint(x: 4.0, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
+        self.checkNode.frame = CGRect(origin: CGPoint(x: 4.0 + leftInset, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
     }
 }

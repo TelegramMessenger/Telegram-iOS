@@ -452,7 +452,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     
                     strongSelf.appliedItem = item
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
-                    
+                
                     let transition: ContainedViewLayoutTransition
                     if animation.isAnimated {
                         transition = .animated(duration: 0.2, curve: .spring)
@@ -886,7 +886,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             if let selectionNode = self.selectionNode {
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 selectionNode.updateSelected(selected, animated: animated)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
@@ -897,7 +897,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 })
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.addSubnode(selectionNode)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)

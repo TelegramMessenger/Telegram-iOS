@@ -853,7 +853,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
     
-    actionsDisposable.add((context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<Void, NoError> in
+    actionsDisposable.add((context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<String?, NoError> in
         return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
     }).start())
     

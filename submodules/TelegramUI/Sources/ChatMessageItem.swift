@@ -424,6 +424,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
+            node.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
             
             node.updateSelectionState(animated: false)
             node.updateHighlightedState(animated: false)
@@ -493,6 +494,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                         completion(layout, { _ in
                             apply(animation, false)
                             if let nodeValue = node() as? ChatMessageItemView {
+                                nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
                                 nodeValue.updateSelectionState(animated: false)
                                 nodeValue.updateHighlightedState(animated: false)
                             }

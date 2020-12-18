@@ -1799,8 +1799,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     @objc private func composePressed() {
-        let controller = self.context.sharedContext.makeComposeController(context: self.context)
-        (self.navigationController as? NavigationController)?.pushViewController(controller)
+        guard let navigationController = self.navigationController as? NavigationController else {
+            return
+        }
+        var hasComposeController = false
+        navigationController.viewControllers.forEach { controller in
+            if controller is ComposeController {
+                hasComposeController = true
+            }
+        }
+        
+        if !hasComposeController {
+            let controller = self.context.sharedContext.makeComposeController(context: self.context)
+            navigationController.pushViewController(controller)
+        }
     }
     
     public override var keyShortcuts: [KeyShortcut] {

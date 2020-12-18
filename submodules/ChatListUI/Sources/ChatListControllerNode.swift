@@ -893,6 +893,14 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
+        if isEditing {
+            if !layout.safeInsets.left.isZero {
+                insets.bottom += 34.0
+            } else {
+                insets.bottom += 49.0
+            }
+        }
+        
         transition.updateAlpha(node: self, alpha: isReorderingFilters ? 0.5 : 1.0)
         self.isUserInteractionEnabled = !isReorderingFilters
         
