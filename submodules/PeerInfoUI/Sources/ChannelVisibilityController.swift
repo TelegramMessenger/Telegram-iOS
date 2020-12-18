@@ -855,7 +855,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     actionsDisposable.add((context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<String?, NoError> in
         return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
-        |> mapToSignal { _ -> Signal<Void, NoError> in
+        |> mapToSignal { _ -> Signal<String?, NoError> in
             return .complete()
         }
     }).start())
