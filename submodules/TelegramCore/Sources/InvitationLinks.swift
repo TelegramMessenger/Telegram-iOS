@@ -6,8 +6,8 @@ import MtProtoKit
 
 import SyncCore
 
-public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId, revokeExisted: Bool = false) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId, revokeExisted: Bool = false) -> Signal<String?, NoError> {
+    return account.postbox.transaction { transaction -> Signal<String?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             if let _ = peer as? TelegramChannel {
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, cachedData.exportedInvitation != nil && !revokeExisted {
@@ -15,8 +15,8 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                 } else {
                     return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
                     |> retryRequest
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        return account.postbox.transaction { transaction -> Void in
+                    |> mapToSignal { result -> Signal<String?, NoError> in
+                        return account.postbox.transaction { transaction -> String? in
                             if let invitation = ExportedInvitation(apiExportedInvite: result) {
                                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                     if let current = current as? CachedChannelData {
@@ -25,6 +25,9 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                                         return CachedChannelData().withUpdatedExportedInvitation(invitation)
                                     }
                                 })
+                                return invitation.link
+                            } else {
+                                return nil
                             }
                         }
                     }
@@ -35,8 +38,8 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                 } else {
                     return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
                     |> retryRequest
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        return account.postbox.transaction { transaction -> Void in
+                    |> mapToSignal { result -> Signal<String?, NoError> in
+                        return account.postbox.transaction { transaction -> String? in
                             if let invitation = ExportedInvitation(apiExportedInvite: result) {
                                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                     if let current = current as? CachedGroupData {
@@ -45,6 +48,9 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                                         return current
                                     }
                                 })
+                                return invitation.link
+                            } else {
+                                return nil
                             }
                         }
                     }
