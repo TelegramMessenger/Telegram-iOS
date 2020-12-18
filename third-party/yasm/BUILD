@@ -23,8 +23,8 @@ set -x
     pushd "$$BUILD_DIR/yasm-1.3.0"
     mkdir build
     cd build
-    PATH="$$PATH:$$CMAKE_DIR/cmake-3.18.4-Darwin-x86_64/CMake.app/Contents/bin" arch -x86_64 cmake .. -DYASM_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
-    arch -x86_64 make -j $$core_count
+    PATH="$$PATH:$$CMAKE_DIR/cmake-3.19.2-macos-universal/CMake.app/Contents/bin" cmake .. -DYASM_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+    make -j $$core_count
     popd
 
     tar -cf "$(location yasm.tar)" -C "$$BUILD_DIR/yasm-1.3.0/build" .

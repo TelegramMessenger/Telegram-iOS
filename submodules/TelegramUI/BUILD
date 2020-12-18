@@ -164,7 +164,7 @@ swift_library(
         "//submodules/DeviceProximity:DeviceProximity",
         "//submodules/RaiseToListen:RaiseToListen",
         "//submodules/OpusBinding:OpusBinding",
-        "//submodules/Opus:opus",
+        "//third-party/opus:opus",
         "//submodules/WatchBridgeAudio:WatchBridgeAudio",
         "//submodules/WatchBridge:WatchBridge",
         "//submodules/LegacyDataImport:LegacyDataImport",
