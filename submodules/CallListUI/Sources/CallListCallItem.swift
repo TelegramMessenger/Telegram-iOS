@@ -12,6 +12,7 @@ import PresentationDataUtils
 import AvatarNode
 import TelegramStringFormatting
 import AccountContext
+import ChatListSearchItemHeader
 
 private func callDurationString(strings: PresentationStrings, duration: Int32) -> String {
     if duration < 60 {
@@ -78,7 +79,7 @@ class CallListCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
+    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, displayHeader: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.context = context
@@ -90,7 +91,11 @@ class CallListCallItem: ListViewItem {
         self.interaction = interaction
         
         self.headerAccessoryItem = nil
-        self.header = nil
+        if displayHeader {
+            self.header = ChatListSearchItemHeader(type: .recentCalls, theme: presentationData.theme, strings: presentationData.strings)
+        } else {
+            self.header = nil
+        }
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -319,7 +324,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 updatedInfoIcon = true
             }
             
-            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let titleFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
             let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             let avatarDiameter = min(40.0, floor(item.presentationData.fontSize.itemListBaseFontSize * 40.0 / 17.0))

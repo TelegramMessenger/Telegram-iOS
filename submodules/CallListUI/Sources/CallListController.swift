@@ -144,7 +144,7 @@ public final class CallListController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallListControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId, isVideo in
+        self.displayNode = CallListControllerNode(controller: self, context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId, isVideo in
             if let strongSelf = self {
                 strongSelf.call(peerId, isVideo: isVideo)
             }

@@ -451,6 +451,8 @@ public final class VoiceChatController: ViewController {
                 
         private let inviteDisposable = MetaDisposable()
         
+        private let memberEventsDisposable = MetaDisposable()
+        
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
             self.sharedContext = sharedContext
@@ -596,7 +598,7 @@ public final class VoiceChatController: ViewController {
                             dismissController?()
                             
                             if strongSelf.call.invitePeer(participant.peer.id) {
-                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                             }
                         } else {
                             strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
@@ -669,7 +671,7 @@ public final class VoiceChatController: ViewController {
                                         dismissController?()
                                         
                                         if strongSelf.call.invitePeer(peer.id) {
-                                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                            strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                                         }
                                     }))
                                 } else if let groupPeer = groupPeer as? TelegramGroup {
@@ -737,7 +739,7 @@ public final class VoiceChatController: ViewController {
                                         dismissController?()
                                         
                                         if strongSelf.call.invitePeer(peer.id) {
-                                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                            strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                                         }
                                     }))
                                 }
@@ -771,7 +773,7 @@ public final class VoiceChatController: ViewController {
                             if let link = link {
                                 UIPasteboard.general.string = link
                                 
-                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .linkCopied(text: strongSelf.presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                strongSelf.presentUndoOverlay(content: .linkCopied(text: strongSelf.presentationData.strings.VoiceChat_InviteLinkCopiedText), action: { _ in return false })
                             }
                         })
                     }
@@ -856,7 +858,7 @@ public final class VoiceChatController: ViewController {
                                     let _ = strongSelf.context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: strongSelf.context.account, peerId: strongSelf.call.peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
                                     strongSelf.call.removedPeer(peer.id)
                                     
-                                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    strongSelf.presentUndoOverlay(content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                                 }))
 
                                 actionSheet.setItemGroups([
@@ -1170,6 +1172,16 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }
+            
+            self.memberEventsDisposable.set((self.call.memberEvents
+            |> deliverOnMainQueue).start(next: { [weak self] event in
+                guard let strongSelf = self else {
+                    return
+                }
+                if event.joined {
+                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
+                }
+            }))
         }
         
         deinit {
@@ -1228,6 +1240,18 @@ public final class VoiceChatController: ViewController {
             if case .ended = recognizer.state {
                 self.controller?.dismiss(closing: false)
             }
+        }
+        
+        private func presentUndoOverlay(content: UndoOverlayContent, action: @escaping (UndoOverlayAction) -> Bool) {
+            var animateInAsReplacement = false
+            self.controller?.forEachController { c in
+                if let c = c as? UndoOverlayController {
+                    animateInAsReplacement = true
+                    c.dismiss()
+                }
+                return true
+            }
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: action), in: .current)
         }
         
         private var pressTimer: SwiftSignalKit.Timer?

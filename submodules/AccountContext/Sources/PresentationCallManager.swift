@@ -261,6 +261,16 @@ public struct PresentationGroupCallMembers: Equatable {
     }
 }
 
+public final class PresentationGroupCallMemberEvent {
+    public let peer: Peer
+    public let joined: Bool
+    
+    public init(peer: Peer, joined: Bool) {
+        self.peer = peer
+        self.joined = joined
+    }
+}
+
 public protocol PresentationGroupCall: class {
     var account: Account { get }
     var accountContext: AccountContext { get }
@@ -276,6 +286,8 @@ public protocol PresentationGroupCall: class {
     var audioLevels: Signal<[(PeerId, Float, Bool)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
+    
+    var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     
     func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>
     

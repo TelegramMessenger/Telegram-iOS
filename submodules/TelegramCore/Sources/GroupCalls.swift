@@ -681,6 +681,16 @@ public final class GroupCallParticipantsContext {
         case call(isTerminated: Bool, defaultParticipantsAreMuted: State.DefaultParticipantsAreMuted)
     }
     
+    public final class MemberEvent {
+        public let peerId: PeerId
+        public let joined: Bool
+        
+        public init(peerId: PeerId, joined: Bool) {
+            self.peerId = peerId
+            self.joined = joined
+        }
+    }
+    
     private let account: Account
     private let id: Int64
     private let accessHash: Int64
@@ -722,6 +732,11 @@ public final class GroupCallParticipantsContext {
     private let activeSpeakersPromise = ValuePromise<Set<PeerId>>(Set())
     public var activeSpeakers: Signal<Set<PeerId>, NoError> {
         return self.activeSpeakersPromise.get()
+    }
+    
+    private let memberEventsPipe = ValuePipe<MemberEvent>()
+    public var memberEvents: Signal<MemberEvent, NoError> {
+        return self.memberEventsPipe.signal()
     }
     
     private var updateQueue: [Update.StateUpdate] = []
@@ -964,6 +979,7 @@ public final class GroupCallParticipantsContext {
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         updatedParticipants.remove(at: index)
                         updatedTotalCount = max(0, updatedTotalCount - 1)
+                        strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, joined: false))
                     } else if isVersionUpdate {
                         updatedTotalCount = max(0, updatedTotalCount - 1)
                     }
@@ -976,8 +992,9 @@ public final class GroupCallParticipantsContext {
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         previousActivityTimestamp = updatedParticipants[index].activityTimestamp
                         updatedParticipants.remove(at: index)
-                    } else if case .left = participantUpdate.participationStatusChange {
+                    } else if case .joined = participantUpdate.participationStatusChange {
                         updatedTotalCount += 1
+                        strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, joined: true))
                     }
                     
                     var activityTimestamp: Double?
@@ -1250,6 +1267,15 @@ public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64
             account.stateManager.addUpdates(result)
             
             return .complete()
+        }
+    }
+}
+
+public func updatedCurrentPeerGroupCall(account: Account, peerId: PeerId) -> Signal<CachedChannelData.ActiveCall?, NoError> {
+    return fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)
+    |> mapToSignal { _ -> Signal<CachedChannelData.ActiveCall?, NoError> in
+        return account.postbox.transaction { transaction -> CachedChannelData.ActiveCall? in
+            return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.activeCall
         }
     }
 }

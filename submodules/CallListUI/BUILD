@@ -23,6 +23,8 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/MergeLists:MergeLists",
+        "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
+        "//submodules/PeerOnlineMarkerNode:PeerOnlineMarkerNode",
     ],
     visibility = [
         "//visibility:public",
