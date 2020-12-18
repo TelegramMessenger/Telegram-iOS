@@ -427,6 +427,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.inivitedPeersPromise.get()
     }
     
+    private let memberEventsPipe = ValuePipe<PresentationGroupCallMemberEvent>()
+    public var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> {
+        return self.memberEventsPipe.signal()
+    }
+    private let memberEventsPipeDisposable = MetaDisposable()
+    
     private let requestDisposable = MetaDisposable()
     private var groupCallParticipantUpdatesDisposable: Disposable?
     
@@ -732,6 +738,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.audioLevelsDisposable.dispose()
         self.participantsContextStateDisposable.dispose()
         self.myAudioLevelDisposable.dispose()
+        self.memberEventsPipeDisposable.dispose()
         
         self.myAudioLevelTimer?.invalidate()
         self.typingDisposable.dispose()
@@ -1067,6 +1074,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if didUpdateInvitedPeers {
                         strongSelf.invitedPeersValue = updatedInvitedPeers
                     }
+                }))
+                
+                let postbox = self.accountContext.account.postbox
+                self.memberEventsPipeDisposable.set((participantsContext.memberEvents
+                |> mapToSignal { event -> Signal<PresentationGroupCallMemberEvent, NoError> in
+                    return postbox.transaction { transaction -> Signal<PresentationGroupCallMemberEvent, NoError> in
+                        if let peer = transaction.getPeer(event.peerId) {
+                            return .single(PresentationGroupCallMemberEvent(peer: peer, joined: event.joined))
+                        } else {
+                            return .complete()
+                        }
+                    }
+                    |> switchToLatest
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] event in
+                    self?.memberEventsPipe.putNext(event)
                 }))
                 
                 if let isCurrentlyConnecting = self.isCurrentlyConnecting, isCurrentlyConnecting {

@@ -6026,3 +6026,8 @@ Sorry for the inconvenience.";
 "Group.GroupMembersHeader" = "GROUP MEMBERS";
 
 "Conversation.VoiceChatMediaRecordingRestricted" = "You can't record voice and video messages during a voice chat.";
+
+"CallList.ActiveVoiceChatsHeader" = "ACTIVE VOICE CHATS";
+"CallList.RecentCallsHeader" = "RECENT CALLS";
+
+"VoiceChat.PeerJoinedText" = "%@ joined the voice chat";
