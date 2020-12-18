@@ -148,8 +148,12 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     rawAlternativeSegments = rawSegments
                 } else if dateReplies > 0 {
                     var commentsPart = item.presentationData.strings.Conversation_MessageViewComments(Int32(dateReplies))
-                    if let startIndex = commentsPart.firstIndex(of: "["), let endIndex = commentsPart.firstIndex(of: "]") {
-                        commentsPart.removeSubrange(startIndex ... endIndex)
+                    if commentsPart.contains("[") && commentsPart.contains("]") {
+                        if let startIndex = commentsPart.firstIndex(of: "["), let endIndex = commentsPart.firstIndex(of: "]") {
+                            commentsPart.removeSubrange(startIndex ... endIndex)
+                        }
+                    } else {
+                        commentsPart = commentsPart.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,. "))
                     }
                     
                     var segments: [AnimatedCountLabelNode.Segment] = []
@@ -170,7 +174,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                         }
                         latestIndex = range.upperBound
                         
-                        let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.upperBound)])
+                        let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: min(rawText.count, range.upperBound))])
                         if index == 0 {
                             segments.append(.number(dateReplies, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))
                         } else {

@@ -974,6 +974,13 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
                 displayMore = false
             }
         }
+        var canReport = true
+        if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
+            canReport = false
+        }
+        if !canReport && !canViewStats && displayLeave {
+            displayMore = false
+        }
         if displayMore {
             result.append(.more)
         }

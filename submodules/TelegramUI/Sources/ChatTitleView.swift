@@ -152,8 +152,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             case .replies:
                                 commentsPart = self.strings.Conversation_TitleReplies(Int32(count))
                             }
-                            if let startIndex = commentsPart.firstIndex(of: "["), let endIndex = commentsPart.firstIndex(of: "]") {
-                                commentsPart.removeSubrange(startIndex ... endIndex)
+                            
+                            if commentsPart.contains("[") && commentsPart.contains("]") {
+                                if let startIndex = commentsPart.firstIndex(of: "["), let endIndex = commentsPart.firstIndex(of: "]") {
+                                    commentsPart.removeSubrange(startIndex ... endIndex)
+                                }
+                            } else {
+                                commentsPart = commentsPart.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
                             }
                             
                             let rawTextAndRanges: (String, [(Int, NSRange)])
