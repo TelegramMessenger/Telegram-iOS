@@ -173,4 +173,14 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 @end
 
+@interface GroupCallCustomThreadLocalContext : NSObject
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue sendPacket:(void (^ _Nonnull)(NSData * _Nonnull))sendPacket;
+
+- (void)stop;
+
+- (void)receivePacket:(NSData * _Nonnull)data;
+
+@end
+
 #endif

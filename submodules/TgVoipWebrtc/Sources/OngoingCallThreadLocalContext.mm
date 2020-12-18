@@ -22,6 +22,7 @@
 #endif
 
 #import "group/GroupInstanceImpl.h"
+#import "group/GroupInstanceCustomImpl.h"
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
@@ -1065,3 +1066,42 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @end
 
+
+@interface GroupCallCustomThreadLocalContext () {
+    std::unique_ptr<tgcalls::GroupInstanceCustomImpl> _impl;
+}
+
+@end
+
+@implementation GroupCallCustomThreadLocalContext
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue sendPacket:(void (^ _Nonnull)(NSData * _Nonnull))sendPacket {
+    self = [super init];
+    if (self != nil) {
+        tgcalls::GroupInstanceCustomDescriptor descriptor;
+        descriptor.sendPacket = [sendPacket](std::vector<uint8_t> const &data) {
+            if (sendPacket) {
+                sendPacket([[NSData alloc] initWithBytes:data.data() length:data.size()]);
+            }
+        };
+        _impl.reset(new tgcalls::GroupInstanceCustomImpl(std::move(descriptor)));
+    }
+    return self;
+}
+
+- (void)stop {
+    if (_impl) {
+        _impl->stop();
+    }
+}
+
+- (void)receivePacket:(NSData * _Nonnull)data {
+    if (_impl) {
+        std::vector<uint8_t> mappedData;
+        mappedData.resize(data.length);
+        memcpy(mappedData.data(), data.bytes, data.length);
+        _impl->receivePacket(std::move(mappedData));
+    }
+}
+
+@end
