@@ -49,7 +49,16 @@ jobs:
 
       - name: Build the App
         run: |
+          if [ ! -z "$(security list-keychains | grep "$MY_KEYCHAIN")" ]; then
+            security delete-keychain "$MY_KEYCHAIN" || true
+          fi
           cd /Users/telegram/telegram-ios
+          security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
+          security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
+          security set-keychain-settings "$MY_KEYCHAIN"
+          security login-keychain -d user -s "$MY_KEYCHAIN"
+          security default-keychain -s "$MY_KEYCHAIN"
+          security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
           mkdir /Users/telegram/telegram-ios/codesigning_data
           export USE_BAZEL_VERSION=3.7.0
           export BUILD_ENV_SCRIPT="build-system/verify.sh"
@@ -62,13 +71,6 @@ jobs:
           export BUILD_NUMBER="$COMMIT_COUNT"
           export MY_KEYCHAIN="temp.keychain"
           export MY_KEYCHAIN_PASSWORD="secret"
-          if [ ! -z "$(security list-keychains | grep "$MY_KEYCHAIN")" ]; then
-            security delete-keychain "$MY_KEYCHAIN" || true
-          fi
-          security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
-          security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
-          security set-keychain-settings "$MY_KEYCHAIN"
-          security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
           export CERTS_PATH="build-system/fake-codesigning/certs/distribution"
           export PROFILES_PATH="build-system/fake-codesigning/profiles"
           for f in "$CERTS_PATH"/*.p12; do
