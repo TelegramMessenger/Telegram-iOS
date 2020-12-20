@@ -59,6 +59,7 @@ jobs:
           security set-keychain-settings "$MY_KEYCHAIN"
           security default-keychain -s "$MY_KEYCHAIN"
           security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
+          echo "default-keychain now=$(security default-keychain)"
           mkdir /Users/telegram/telegram-ios/codesigning_data
           export USE_BAZEL_VERSION=3.7.0
           export BUILD_ENV_SCRIPT="build-system/verify.sh"
