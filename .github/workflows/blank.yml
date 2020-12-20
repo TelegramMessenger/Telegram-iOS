@@ -49,10 +49,9 @@ jobs:
 
       - name: Build the App
         run: |
-          if [ ! -z "$(security list-keychains | grep "$MY_KEYCHAIN")" ]; then
-            security delete-keychain "$MY_KEYCHAIN" || true
-          fi
           cd /Users/telegram/telegram-ios
+          export MY_KEYCHAIN="temp.keychain"
+          export MY_KEYCHAIN_PASSWORD="secret"
           security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
           security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
           security set-keychain-settings "$MY_KEYCHAIN"
@@ -69,8 +68,6 @@ jobs:
           export COMMIT_COUNT=$(git rev-list --count HEAD)
           export COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
           export BUILD_NUMBER="$COMMIT_COUNT"
-          export MY_KEYCHAIN="temp.keychain"
-          export MY_KEYCHAIN_PASSWORD="secret"
           export CERTS_PATH="build-system/fake-codesigning/certs/distribution"
           export PROFILES_PATH="build-system/fake-codesigning/profiles"
           for f in "$CERTS_PATH"/*.p12; do
