@@ -41,11 +41,8 @@ jobs:
       - name: Prepare canonical user home directory permissions
         run: sudo chown -R $(whoami) /Users/telegram
 
-      - name: Create canonical source directory
-        run: mkdir /Users/telegram/telegram-ios
-
       - name: Move source code to the canonical directory
-        run: mv $GITHUB_WORKSPACE/* /Users/telegram/telegram-ios
+        run: mv $GITHUB_WORKSPACE /Users/telegram/telegram-ios
 
       - name: Build the App
         run: |
@@ -67,9 +64,6 @@ jobs:
           export CODESIGNING_DATA_PATH="build-system/fake-codesigning"
           export CODESIGNING_CERTS_VARIANT="distribution"
           export CODESIGNING_PROFILES_VARIANT="appstore"
-          export COMMIT_COUNT=$(git rev-list --count HEAD)
-          export COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
-          export BUILD_NUMBER="$COMMIT_COUNT"
           export CERTS_PATH="build-system/fake-codesigning/certs/distribution"
           export PROFILES_PATH="build-system/fake-codesigning/profiles"
           for f in "$CERTS_PATH"/*.p12; do
