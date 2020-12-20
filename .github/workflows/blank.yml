@@ -56,7 +56,6 @@ jobs:
           security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
           security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
           security set-keychain-settings "$MY_KEYCHAIN"
-          security login-keychain -d user -s "$MY_KEYCHAIN"
           security default-keychain -s "$MY_KEYCHAIN"
           security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
           mkdir /Users/telegram/telegram-ios/codesigning_data
