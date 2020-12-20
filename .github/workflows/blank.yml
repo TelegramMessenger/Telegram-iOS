@@ -53,6 +53,9 @@ jobs:
           set -x
           echo "default-keychain=$(security default-keychain)"
           cd /Users/telegram/telegram-ios
+          export COMMIT_COUNT=$(git rev-list --count HEAD)
+          export COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
+          export BUILD_NUMBER="$COMMIT_COUNT"
           export MY_KEYCHAIN="temp.keychain"
           export MY_KEYCHAIN_PASSWORD="secret"
           security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
