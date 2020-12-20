@@ -78,4 +78,4 @@ jobs:
           for f in "$CERTS_PATH"/*.cer; do
             sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$MY_KEYCHAIN" "$f"
           done
-          HOME=/Users/telegram/telegram-ios PATH="$PATH:$(pwd)/tools" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
+          PATH="$PATH:$(pwd)/tools" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
