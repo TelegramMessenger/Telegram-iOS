@@ -42,7 +42,9 @@ jobs:
         run: sudo chown -R $(whoami) /Users/telegram
 
       - name: Move source code to the canonical directory
-        run: mv $GITHUB_WORKSPACE /Users/telegram/telegram-ios
+        run: |
+          set -x
+          mv $GITHUB_WORKSPACE /Users/telegram/telegram-ios
 
       - name: Build the App
         run: |
