@@ -49,6 +49,7 @@ jobs:
 
       - name: Build the App
         run: |
+          set -x
           cd /Users/telegram/telegram-ios
           export MY_KEYCHAIN="temp.keychain"
           export MY_KEYCHAIN_PASSWORD="secret"
