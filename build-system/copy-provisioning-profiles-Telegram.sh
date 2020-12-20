@@ -1,6 +1,8 @@
 #!/bin/sh
 
 copy_provisioning_profiles () {	
+	echo "default-keychain=$(security default-keychain)"
+
 	if [ "$CODESIGNING_DATA_PATH" = "" ]; then
 		>&2 echo "CODESIGNING_DATA_PATH not defined"
 		exit 1
