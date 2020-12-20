@@ -50,7 +50,7 @@ jobs:
       - name: Build the App
         run: |
           set -x
-          echo "default-keychain=$(security default-keychain)""
+          echo "default-keychain=$(security default-keychain)"
           cd /Users/telegram/telegram-ios
           export MY_KEYCHAIN="temp.keychain"
           export MY_KEYCHAIN_PASSWORD="secret"
