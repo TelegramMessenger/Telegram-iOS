@@ -28,7 +28,7 @@ jobs:
         run: brew install bazelisk
 
       - name: Rename Xcode folder
-        run: sudo mv /Applications/Xcode_12.2.app /Applications/Xcode.app
+        run: cd /Applications && sudo mv Xcode_12.2.app Xcode.app
 
       - name: Set active Xcode path
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
