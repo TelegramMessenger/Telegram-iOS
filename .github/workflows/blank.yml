@@ -54,4 +54,7 @@ jobs:
           export USE_BAZEL_VERSION=3.7.0
           export BUILD_ENV_SCRIPT="build-system/verify.sh"
           export APP_TARGET="bazel_app"
+          export COMMIT_COUNT=$(git rev-list --count HEAD)
+          export COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
+          export BUILD_NUMBER="$COMMIT_COUNT"
           HOME=/Users/telegram/telegram-ios PATH="$PATH:$(pwd)/tools" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
