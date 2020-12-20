@@ -22,13 +22,15 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
 
       # Runs a single command using the runners shell
       - name: Install Bazelisk
         run: brew install bazelisk
 
       - name: Rename Xcode folder
-        run: cd /Applications && sudo mv Xcode_12.2.app Xcode.app
+        run: cd /Applications && sudo mv Xcode.app Xcode-old.app && sudo mv Xcode_12.2.app Xcode.app
 
       - name: Set active Xcode path
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
