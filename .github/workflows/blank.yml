@@ -46,6 +46,7 @@ jobs:
           set -x
           mv $GITHUB_WORKSPACE /Users/telegram/
           mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
+          ls -la /Users/telegram/telegram-ios
 
       - name: Build the App
         run: |
