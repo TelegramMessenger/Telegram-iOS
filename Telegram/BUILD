@@ -1162,11 +1162,20 @@ swift_library(
     module_name = "WidgetExtensionLib",
     srcs = glob([
         "WidgetKitWidget/**/*.swift",
+        "Generated/**/*.swift",
     ]),
+    data = [
+        "SiriIntents/Intents.intentdefinition",
+    ],
     deps = [
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/WidgetItems:WidgetItems",
         "//submodules/AppLockState:AppLockState",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/SyncCore:SyncCore",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
 )
 
@@ -1188,7 +1197,12 @@ ios_extension(
     provides_main = True,
     provisioning_profile = "//build-input/data/provisioning-profiles:Widget.mobileprovision",
     deps = [":WidgetExtensionLib"],
-    frameworks = [],
+    frameworks = [
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+        ":SyncCoreFramework",
+        ":TelegramCoreFramework",
+    ],
 )
 
 plist_fragment(
@@ -1219,6 +1233,7 @@ plist_fragment(
                 <string>INSearchForMessagesIntent</string>
                 <string>INSetMessageAttributeIntent</string>
                 <string>INSearchCallHistoryIntent</string>
+                <string>SelectFriendsIntent</string>
             </array>
         </dict>
         <key>NSExtensionPointIdentifier</key>
@@ -1236,7 +1251,11 @@ swift_library(
     module_name = "IntentsExtensionLib",
     srcs = glob([
         "SiriIntents/**/*.swift",
+        "Generated/**/*.swift",
     ]),
+    data = [
+        "SiriIntents/Intents.intentdefinition",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
@@ -1528,12 +1547,13 @@ ios_application(
     strings = [
         ":AppStringResources",
     ],
-    extensions = [] if telegram_disable_extensions else [
+    extensions = [
+    ] if telegram_disable_extensions else [
         ":ShareExtension",
         ":NotificationContentExtension",
         ":NotificationServiceExtension",
         ":IntentsExtension",
-        #":WidgetExtension",
+        ":WidgetExtension",
     ],
     watch_application = ":TelegramWatchApp",
     deps = [

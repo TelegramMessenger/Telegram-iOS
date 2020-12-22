@@ -60,45 +60,55 @@ public func widgetPresentationDataPath(rootPath: String) -> String {
     return rootPath + "/widgetPresentationData.json"
 }
 
-public enum WidgetData: Codable, Equatable {
-    private enum CodingKeys: CodingKey {
-        case discriminator
-        case peers
-    }
-    
-    private enum Cases: Int32, Codable {
+public struct WidgetData: Codable, Equatable {
+    public enum Content: Codable, Equatable {
+        private enum CodingKeys: CodingKey {
+            case discriminator
+            case peers
+        }
+        
+        private enum Cases: Int32, Codable {
+            case notAuthorized
+            case disabled
+            case peers
+        }
+        
         case notAuthorized
         case disabled
-        case peers
-    }
-    
-    case notAuthorized
-    case disabled
-    case peers(WidgetDataPeers)
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let discriminator = try container.decode(Cases.self, forKey: .discriminator)
-        switch discriminator {
-        case .notAuthorized:
-            self = .notAuthorized
-        case .disabled:
-            self = .disabled
-        case .peers:
-            self = .peers(try container.decode(WidgetDataPeers.self, forKey: .peers))
+        case peers(WidgetDataPeers)
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let discriminator = try container.decode(Cases.self, forKey: .discriminator)
+            switch discriminator {
+            case .notAuthorized:
+                self = .notAuthorized
+            case .disabled:
+                self = .disabled
+            case .peers:
+                self = .peers(try container.decode(WidgetDataPeers.self, forKey: .peers))
+            }
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            switch self {
+            case .notAuthorized:
+                try container.encode(Cases.notAuthorized, forKey: .discriminator)
+            case .disabled:
+                try container.encode(Cases.disabled, forKey: .discriminator)
+            case let .peers(peers):
+                try container.encode(Cases.peers, forKey: .discriminator)
+                try container.encode(peers, forKey: .peers)
+            }
         }
     }
     
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
-        case .notAuthorized:
-            try container.encode(Cases.notAuthorized, forKey: .discriminator)
-        case .disabled:
-            try container.encode(Cases.disabled, forKey: .discriminator)
-        case let .peers(peers):
-            try container.encode(Cases.peers, forKey: .discriminator)
-            try container.encode(peers, forKey: .peers)
-        }
+    public var accountId: Int64
+    public var content: Content
+    
+    public init(accountId: Int64, content: Content) {
+        self.accountId = accountId
+        self.content = content
     }
 }

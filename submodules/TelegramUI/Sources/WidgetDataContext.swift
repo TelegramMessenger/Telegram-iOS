@@ -22,7 +22,7 @@ final class WidgetDataContext {
         })
         |> mapToSignal { account -> Signal<WidgetData, NoError> in
             guard let account = account else {
-                return .single(.notAuthorized)
+                return .single(WidgetData(accountId: 0, content: .notAuthorized))
             }
             
             enum CombinedRecentPeers {
@@ -106,9 +106,9 @@ final class WidgetDataContext {
             |> map { result -> WidgetData in
                 switch result {
                 case .disabled:
-                    return .disabled
+                    return WidgetData(accountId: account.id.int64, content: .disabled)
                 case let .peers(peers, unread):
-                    return .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: peers.compactMap { peer -> WidgetDataPeer? in
+                    return WidgetData(accountId: account.id.int64, content: .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: peers.compactMap { peer -> WidgetDataPeer? in
                         var name: String = ""
                         var lastName: String?
                         
@@ -136,7 +136,7 @@ final class WidgetDataContext {
                         return WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return account.postbox.mediaBox.resourcePath(representation.resource)
                         }, badge: badge)
-                    }))
+                    })))
                 }
             }
             |> distinctUntilChanged
