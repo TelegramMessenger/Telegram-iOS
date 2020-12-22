@@ -80,6 +80,7 @@ BAZEL_OPT_FLAGS=\
 	--features=dead_strip \
     --objc_enable_binary_stripping \
     --apple_bitcode=watchos=embedded \
+    --experimental_ui_max_stdouterr_bytes=100 \
 
 
 build_arm64: check_env
