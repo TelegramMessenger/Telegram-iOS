@@ -248,39 +248,51 @@ struct WidgetView: View {
     }
     
     func peersView(geometry: GeometryProxy, peers: WidgetDataPeers) -> some View {
-        let defaultItemSize: CGFloat = 60.0
-        let defaultPaddingFraction: CGFloat = 0.36
-        
+        let columnCount: Int
         let rowCount: Int
-        let rowHeight: CGFloat
-        let topOffset: CGFloat
+        
+        let itemSizeFraction: CGFloat
+        let horizontalInsetFraction: CGFloat
+        let verticalInsetFraction: CGFloat
+        let horizontalSpacingFraction: CGFloat
+        let verticalSpacingFraction: CGFloat
+        
         switch self.widgetFamily {
         case .systemLarge:
+            itemSizeFraction = 0.1762917933
+            horizontalInsetFraction = 0.04863221884
+            verticalInsetFraction = 0.04863221884
+            horizontalSpacingFraction = 0.06079027356
+            verticalSpacingFraction = 0.06079027356
+            columnCount = 4
             rowCount = 4
-            rowHeight = 80.0
-            topOffset = 10.0
         case .systemMedium:
+            itemSizeFraction = 0.1762917933
+            horizontalInsetFraction = 0.04863221884
+            verticalInsetFraction = 0.1032258065
+            horizontalSpacingFraction = 0.06079027356
+            verticalSpacingFraction = 0.07741935484
+            columnCount = 4
             rowCount = 2
-            rowHeight = 70.0
-            topOffset = 0.0
         case .systemSmall:
+            itemSizeFraction = 0.335483871
+            horizontalInsetFraction = 0.1032258065
+            verticalInsetFraction = 0.1032258065
+            horizontalSpacingFraction = 0.1161290323
+            verticalSpacingFraction = 0.1161290323
+            columnCount = 2
             rowCount = 2
-            rowHeight = 72.0
-            topOffset = 0.0
         @unknown default:
+            itemSizeFraction = 0.335483871
+            horizontalInsetFraction = 0.1032258065
+            verticalInsetFraction = 0.1032258065
+            horizontalSpacingFraction = 0.1161290323
+            verticalSpacingFraction = 0.1161290323
+            columnCount = 2
             rowCount = 2
-            rowHeight = 72.0
-            topOffset = 0.0
         }
-        let columnCount = Int(round(geometry.size.width / (defaultItemSize * (1.0 + defaultPaddingFraction))))
-        let itemSize = floor(geometry.size.width / (CGFloat(columnCount) + defaultPaddingFraction * CGFloat(columnCount - 1)))
         
-        let rowOffset: [CGFloat] = [
-            topOffset + itemSize / 2.0,
-            topOffset + itemSize / 2.0 + rowHeight,
-            topOffset + itemSize / 2.0 + rowHeight * 2,
-            topOffset + itemSize / 2.0 + rowHeight * 3,
-        ]
+        let itemSize = floor(geometry.size.width * itemSizeFraction)
         
         return ZStack {
             ForEach(0 ..< min(peers.peers.count, columnCount * rowCount), content: { i in
@@ -291,7 +303,7 @@ struct WidgetView: View {
                         itemSize: itemSize
                     ).frame(width: itemSize, height: itemSize)
                 }).frame(width: itemSize, height: itemSize)
-                .position(x: itemSize / 2.0 + floor(CGFloat(i % columnCount) * itemSize * (1.0 + defaultPaddingFraction)), y: rowOffset[i / columnCount])
+                .position(x: floor(horizontalInsetFraction * geometry.size.width + itemSize / 2.0 + CGFloat(i % columnCount) * (itemSize + horizontalSpacingFraction * geometry.size.width)), y: floor(verticalInsetFraction * geometry.size.height + itemSize / 2.0 + CGFloat(i / columnCount) * (itemSize + verticalSpacingFraction * geometry.size.height)))
             })
         }
     }
@@ -321,7 +333,7 @@ struct WidgetView: View {
         ZStack {
             peerViews()
         }
-        .padding(.all)
+        .padding(0.0)
     }
 }
 
@@ -417,7 +429,7 @@ struct Static_Widget: Widget {
         return IntentConfiguration(kind: kind, intent: SelectFriendsIntent.self, provider: Provider(), content: { entry in
             WidgetView(data: getWidgetData(contents: entry.contents))
         })
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .configurationDisplayName(presentationData.widgetGalleryTitle)
         .description(presentationData.widgetGalleryDescription)
     }

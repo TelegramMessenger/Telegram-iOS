@@ -55,9 +55,9 @@
 	<key>INIntentDefinitionSystemVersion</key>
 	<string>20C69</string>
 	<key>INIntentDefinitionToolsBuildVersion</key>
-	<string>12B45b</string>
+	<string>12C33</string>
 	<key>INIntentDefinitionToolsVersion</key>
-	<string>12.2</string>
+	<string>12.3</string>
 	<key>INIntents</key>
 	<array>
 		<dict>
@@ -70,7 +70,7 @@
 			<key>INIntentIneligibleForSuggestions</key>
 			<true/>
 			<key>INIntentLastParameterTag</key>
-			<integer>5</integer>
+			<integer>19</integer>
 			<key>INIntentName</key>
 			<string>SelectFriends</string>
 			<key>INIntentParameters</key>
@@ -202,7 +202,7 @@
 					<key>INIntentParameterSupportsMultipleValues</key>
 					<true/>
 					<key>INIntentParameterTag</key>
-					<integer>3</integer>
+					<integer>19</integer>
 					<key>INIntentParameterType</key>
 					<string>Object</string>
 				</dict>
