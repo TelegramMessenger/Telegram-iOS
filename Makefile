@@ -58,6 +58,7 @@ BAZEL_SPLIT_MODULE_FLAGS=
 
 ifeq ($(shell expr $(CORE_COUNT) \<= 4), 1)
 	BAZEL_SPLIT_MODULE_FLAGS=--features=swift.split_derived_files_generation
+endif
 
 BAZEL_COMMON_FLAGS=\
 	--announce_rc \
