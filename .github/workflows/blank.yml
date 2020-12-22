@@ -67,7 +67,7 @@ jobs:
           mkdir /Users/telegram/telegram-ios/codesigning_data
           export USE_BAZEL_VERSION=3.7.0
           export BUILD_ENV_SCRIPT="build-system/verify.sh"
-          export APP_TARGET="bazel_app"
+          export APP_TARGET="bazel_app_arm64"
           export CODESIGNING_DATA_PATH="build-system/fake-codesigning"
           export CODESIGNING_CERTS_VARIANT="distribution"
           export CODESIGNING_PROFILES_VARIANT="appstore"
