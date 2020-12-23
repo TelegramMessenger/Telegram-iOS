@@ -29,30 +29,14 @@ jobs:
       - name: Install Bazelisk
         run: brew install bazelisk
 
-      - name: Rename Xcode folder
-        run: cd /Applications && sudo mv Xcode.app Xcode-old.app && sudo mv Xcode_12.2.app Xcode.app
-
       - name: Set active Xcode path
-        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-
-      - name: Create canonical user home directory
-        run: sudo mkdir /Users/telegram
-
-      - name: Prepare canonical user home directory permissions
-        run: sudo chown -R $(whoami) /Users/telegram
-
-      - name: Move source code to the canonical directory
-        run: |
-          set -x
-          cp -R $GITHUB_WORKSPACE /Users/telegram/
-          mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
-          ls -la /Users/telegram/telegram-ios
+        run: sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer
 
       - name: Build the App
         run: |
           set -x
           echo "default-keychain=$(security default-keychain)"
-          cd /Users/telegram/telegram-ios
+          cd $GITHUB_WORKSPACE
           export COMMIT_COUNT=$(git rev-list --count HEAD)
           export COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
           export BUILD_NUMBER="$COMMIT_COUNT"
@@ -64,7 +48,7 @@ jobs:
           security default-keychain -s "$MY_KEYCHAIN"
           security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
           echo "default-keychain now=$(security default-keychain)"
-          mkdir /Users/telegram/telegram-ios/codesigning_data
+          mkdir $GITHUB_WORKSPACE/codesigning_data
           export USE_BAZEL_VERSION=3.7.0
           export BUILD_ENV_SCRIPT="build-system/verify.sh"
           export APP_TARGET="bazel_app_arm64"
