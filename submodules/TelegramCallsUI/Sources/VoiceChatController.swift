@@ -2079,6 +2079,7 @@ public final class VoiceChatController: ViewController {
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
         
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
+            let contentOffset = self.listNode.visibleContentOffset()
             switch recognizer.state {
                 case .began:
                     let topInset: CGFloat
@@ -2096,7 +2097,8 @@ public final class VoiceChatController: ViewController {
                     if let (currentTopInset, currentPanOffset) = self.panGestureArguments {
                         topInset = currentTopInset
                         
-                        if case let .known(value) = self.listNode.visibleContentOffset(), value > 0 {
+                        if case let .known(value) = contentOffset, value <= 0.5 {
+                        } else {
                             translation = currentPanOffset
                             if self.isExpanded {
                                 recognizer.setTranslation(CGPoint(), in: self.contentContainer.view)
@@ -2114,7 +2116,6 @@ public final class VoiceChatController: ViewController {
                     }
                 
                     if self.isExpanded {
-                        
                     } else {
                         if currentOffset > 0.0 {
                             self.listNode.scroller.panGestureRecognizer.setTranslation(CGPoint(), in: self.listNode.scroller)
@@ -2136,7 +2137,9 @@ public final class VoiceChatController: ViewController {
                     let translation = recognizer.translation(in: self.contentContainer.view)
                     var velocity = recognizer.velocity(in: self.contentContainer.view)
                     
-                    if case let .known(value) = self.listNode.visibleContentOffset(), value > 0 {
+                    if case let .known(value) = contentOffset, value > 0.0 {
+                        velocity = CGPoint()
+                    } else if case .unknown = contentOffset {
                         velocity = CGPoint()
                     }
                     
@@ -2164,6 +2167,7 @@ public final class VoiceChatController: ViewController {
                             self.isExpanded = false
                             self.updateIsFullscreen(false)
                             self.animatingExpansion = true
+                            self.listNode.scroller.setContentOffset(CGPoint(), animated: false)
                             
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -2193,6 +2197,12 @@ public final class VoiceChatController: ViewController {
                             self.updateIsFullscreen(true)
                             self.animatingExpansion = true
                             
+                            if velocity.y > -1500.0 {
+                                DispatchQueue.main.async {
+                                    self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                                }
+                            }
+                            
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
@@ -2202,6 +2212,7 @@ public final class VoiceChatController: ViewController {
                         } else {
                             self.updateIsFullscreen(false)
                             self.animatingExpansion = true
+                            self.listNode.scroller.setContentOffset(CGPoint(), animated: false)
                                                         
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
