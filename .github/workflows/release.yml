@@ -13,8 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          submodules: 'recursive'
           fetch-depth: '0'
+          #submodules: 'recursive'
 
       - name: Build the App
         run: |
@@ -32,8 +32,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: build-{{ env.BUILD_NUMBER }}
-          release_name: Build {{ env.BUILD_NUMBER }}
+          tag_name: build-${{ env.BUILD_NUMBER }}
+          release_name: Build ${{ env.BUILD_NUMBER }}
           body: |
             Changes in this Release
             - First Change
