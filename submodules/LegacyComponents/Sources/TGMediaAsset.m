@@ -102,6 +102,11 @@
     return [self.uniformTypeIdentifier isEqualToString:(NSString *)kUTTypeGIF];
 }
 
+- (bool)isFavorite
+{
+    return _backingAsset.isFavorite;
+}
+
 - (TGMediaAssetType)type
 {
     if (_cachedType == nil)

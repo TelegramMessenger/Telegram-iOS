@@ -257,8 +257,4 @@ class VoiceChatActionItemNode: ListViewItemNode {
     override public func header() -> ListViewItemHeader? {
         return nil
     }
-    
-    override var preferredAnimationCurve: (CGFloat) -> CGFloat {
-        return listViewAnimationCurveEaseInOut
-    }
 }

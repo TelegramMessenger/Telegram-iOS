@@ -422,7 +422,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     public func addInsetsAnimationToValue(_ value: UIEdgeInsets, duration: Double, beginAt: Double) {
-        let animation = ListViewAnimation(from: self.insets, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
+        let animation = ListViewAnimation(from: self.insets, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {
                 strongSelf.insets = currentValue
             }
@@ -483,7 +483,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
                 duration = 0.0
             }
             
-            let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
+            let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] _, currentValue in
                 if let strongSelf = self {
                     strongSelf.apparentHeight = currentValue
                 }
