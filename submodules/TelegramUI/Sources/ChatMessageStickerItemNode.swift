@@ -65,6 +65,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             if image != nil {
                 strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             firstTime = false
         }
@@ -673,9 +676,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         replyInfoNode.frame = replyInfoFrame
                         strongSelf.replyBackgroundNode?.frame = replyBackgroundFrame ?? CGRect()
                         
-                        if let _ = item.controllerInteraction.selectionState, isEmoji {
-                            replyInfoNode.alpha = 0.0
-                            strongSelf.replyBackgroundNode?.alpha = 0.0
+                        if isEmoji && !incoming {
+                            if let _ = item.controllerInteraction.selectionState {
+                                replyInfoNode.alpha = 0.0
+                                strongSelf.replyBackgroundNode?.alpha = 0.0
+                            } else {
+                                replyInfoNode.alpha = 1.0
+                                strongSelf.replyBackgroundNode?.alpha = 1.0
+                            }
                         }
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
                         replyInfoNode.removeFromSupernode()
@@ -1007,7 +1015,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             if let selectionNode = self.selectionNode {
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 selectionNode.updateSelected(selected, animated: animated)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
@@ -1018,7 +1026,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 })
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.addSubnode(selectionNode)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)

@@ -1250,28 +1250,30 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             var credibilityIconOffset: CGFloat = 0.0
-            if displayAsMessage {
-                switch item.content {
-                case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _):
-                    if let peer = messages.last?.author {
-                        if peer.isScam {
-                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
-                            credibilityIconOffset = 2.0
-                        } else if peer.isVerified {
-                            currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                            credibilityIconOffset = 3.0
+            if !isPeerGroup {
+                if displayAsMessage {
+                    switch item.content {
+                    case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _):
+                        if let peer = messages.last?.author {
+                            if peer.isScam {
+                                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
+                                credibilityIconOffset = 2.0
+                            } else if peer.isVerified {
+                                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                                credibilityIconOffset = 3.0
+                            }
                         }
+                    default:
+                        break
                     }
-                default:
-                    break
-                }
-            } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
-                if peer.isScam {
-                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
-                    credibilityIconOffset = 2.0
-                } else if peer.isVerified {
-                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                    credibilityIconOffset = 3.0
+                } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
+                    if peer.isScam {
+                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
+                        credibilityIconOffset = 2.0
+                    } else if peer.isVerified {
+                        currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                        credibilityIconOffset = 3.0
+                    }
                 }
             }
             if let currentSecretIconImage = currentSecretIconImage {

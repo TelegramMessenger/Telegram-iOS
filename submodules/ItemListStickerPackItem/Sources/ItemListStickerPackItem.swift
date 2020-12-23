@@ -671,7 +671,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         if let placeholderNode = strongSelf.placeholderNode {
                             placeholderNode.frame = imageFrame
                             
-                            placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.packInfo.immediateThumbnailData, size: imageFrame.size, small: true)
+                            placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.packInfo.immediateThumbnailData, size: imageFrame.size, imageSize: CGSize(width: 100.0, height: 100.0))
                         }
                     }
                     

@@ -1105,7 +1105,7 @@ func debugRestoreState(basePath:String, name: String) {
 
 private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool) -> Signal<PostboxResult, NoError> {
     let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
@@ -1130,43 +1130,48 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
-                        if userVersion > currentUserVersion {
-                            postboxLog("Version \(userVersion) is newer than supported")
-                            assertionFailure("Version \(userVersion) is newer than supported")
-                            valueBox.drop()
-                            valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
-                                subscriber.putNext(.upgrading(progress))
-                            })
+                        if isTemporary {
+                            subscriber.putNext(.upgrading(0.0))
+                            return
                         } else {
-                            if let operation = registeredUpgrades()[userVersion] {
-                                switch operation {
-                                    case let .inplace(f):
-                                        valueBox.begin()
-                                        f(metadataTable, valueBox, { progress in
-                                            subscriber.putNext(.upgrading(progress))
-                                        })
-                                        valueBox.commit()
-                                    case let .standalone(f):
-                                        let updatedPath = f(queue, basePath, valueBox, encryptionParameters, { progress in
-                                            subscriber.putNext(.upgrading(progress))
-                                        })
-                                        if let updatedPath = updatedPath {
-                                            valueBox.internalClose()
-                                            let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
-                                            let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
-                                            valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
-                                                subscriber.putNext(.upgrading(progress))
-                                            })
-                                        }
-                                }
-                                continue loop
-                            } else {
-                                assertionFailure("Couldn't find any upgrade for \(userVersion)")
-                                postboxLog("Couldn't find any upgrade for \(userVersion)")
+                            if userVersion > currentUserVersion {
+                                postboxLog("Version \(userVersion) is newer than supported")
+                                assertionFailure("Version \(userVersion) is newer than supported")
                                 valueBox.drop()
                                 valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                     subscriber.putNext(.upgrading(progress))
                                 })
+                            } else {
+                                if let operation = registeredUpgrades()[userVersion] {
+                                    switch operation {
+                                        case let .inplace(f):
+                                            valueBox.begin()
+                                            f(metadataTable, valueBox, { progress in
+                                                subscriber.putNext(.upgrading(progress))
+                                            })
+                                            valueBox.commit()
+                                        case let .standalone(f):
+                                            let updatedPath = f(queue, basePath, valueBox, encryptionParameters, { progress in
+                                                subscriber.putNext(.upgrading(progress))
+                                            })
+                                            if let updatedPath = updatedPath {
+                                                valueBox.internalClose()
+                                                let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
+                                                let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
+                                                valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                                    subscriber.putNext(.upgrading(progress))
+                                                })
+                                            }
+                                    }
+                                    continue loop
+                                } else {
+                                    assertionFailure("Couldn't find any upgrade for \(userVersion)")
+                                    postboxLog("Couldn't find any upgrade for \(userVersion)")
+                                    valueBox.drop()
+                                    valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                        subscriber.putNext(.upgrading(progress))
+                                    })
+                                }
                             }
                         }
                     }
@@ -1177,7 +1182,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 let endTime = CFAbsoluteTimeGetCurrent()
                 print("Postbox load took \((endTime - startTime) * 1000.0) ms")
                 
-                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations)))
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations, isTemporary: isTemporary)))
                 subscriber.putCompletion()
                 break
             }
@@ -1330,7 +1335,7 @@ public final class Postbox {
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32) {
+    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1531,25 +1536,27 @@ public final class Postbox {
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: false)
             }
             
-            for id in self.messageHistoryUnsentTable.get() {
-                transaction.updateMessage(id, update: { message in
-                    if !message.flags.contains(.Failed) {
-                        if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
+            if !isTemporary {
+                for id in self.messageHistoryUnsentTable.get() {
+                    transaction.updateMessage(id, update: { message in
+                        if !message.flags.contains(.Failed) {
+                            if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
+                                return .skip
+                            }
+                            var flags = StoreMessageFlags(message.flags)
+                            flags.remove(.Unsent)
+                            flags.remove(.Sending)
+                            flags.insert(.Failed)
+                            var storeForwardInfo: StoreMessageForwardInfo?
+                            if let forwardInfo = message.forwardInfo {
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                            }
+                            return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
+                        } else {
                             return .skip
                         }
-                        var flags = StoreMessageFlags(message.flags)
-                        flags.remove(.Unsent)
-                        flags.remove(.Sending)
-                        flags.insert(.Failed)
-                        var storeForwardInfo: StoreMessageForwardInfo?
-                        if let forwardInfo = message.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
-                        }
-                        return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
-                    } else {
-                        return .skip
-                    }
-                })
+                    })
+                }
             }
         }).start()
     }

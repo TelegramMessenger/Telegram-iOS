@@ -243,6 +243,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             if image != nil {
                 strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             firstTime = false
         }
@@ -963,10 +966,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         file = telegramFile
                     }
                     
-                    if let immediateThumbnailData = file?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
+                    if let file = file, let immediateThumbnailData = file.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
                         let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
-                        placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size)
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
                         placeholderNode.frame = animationNodeFrame
                     }
                     
@@ -1528,7 +1531,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 selectionNode.updateSelected(selected, animated: false)
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
                 let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, toggle: { [weak self] value in
@@ -1539,7 +1542,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.addSubnode(selectionNode)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)

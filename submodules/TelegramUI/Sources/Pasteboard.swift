@@ -36,10 +36,12 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
     attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: [], using: { attributes, range, _ in
         if let value = attributes[.link], let url = (value as? URL)?.absoluteString {
             string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
-        }
-        else if let value = attributes[.font], let font = value as? UIFont {
+        } else if let value = attributes[.font], let font = value as? UIFont {
             let fontName = font.fontName.lowercased()
-            if fontName.contains("bold") {
+            if fontName.contains("bolditalic") {
+                string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
+                string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
+            } else if fontName.contains("bold") {
                 string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
             } else if fontName.contains("italic") {
                 string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)

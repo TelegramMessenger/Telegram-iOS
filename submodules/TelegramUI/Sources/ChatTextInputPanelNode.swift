@@ -677,7 +677,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if let previousAdditionalSideInsets = previousAdditionalSideInsets, previousAdditionalSideInsets.right != additionalSideInsets.right {
             additionalOffset = (previousAdditionalSideInsets.right - additionalSideInsets.right) / 3.0
             
-            if case let .animated(duration, curve) = transition {
+            if case let .animated(duration, _) = transition {
                 transition = .animated(duration: 0.2, curve: .easeInOut)
             }
         }

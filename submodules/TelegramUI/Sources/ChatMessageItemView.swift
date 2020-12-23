@@ -647,6 +647,7 @@ public class ChatMessageItemView: ListViewItemNode {
     
     var item: ChatMessageItem?
     var accessibilityData: ChatMessageAccessibilityData?
+    var safeInsets = UIEdgeInsets()
     
     var awaitingAppliedReaction: (String?, () -> Void)?
     

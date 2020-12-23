@@ -1595,6 +1595,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 
                 var items: [ContextMenuItem] = []
                 
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c.dismiss(completion: {
+                        if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
+                        }
+                    })
+                })))
+                
                 if let linkForCopying = linkForCopying {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss(completion: {})
@@ -1606,13 +1614,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     c.dismiss(completion: {
                         if let strongSelf = self {
                             strongSelf.forwardMessages(messageIds: Set([message.id]))
-                        }
-                    })
-                })))
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
-                    c.dismiss(completion: {
-                        if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
                         }
                     })
                 })))
@@ -4615,11 +4616,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     |> deliverOnMainQueue).start(next: { [weak self] activeSessionsContextAndCount in
                         if let strongSelf = self, let activeSessionsContextAndCount = activeSessionsContextAndCount {
                             let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
-                            if count == 0 && settings.enableQRLogin {
-                                strongSelf.controller?.push(AuthDataTransferSplashScreen(context: strongSelf.context, activeSessionsContext: activeSessionsContext))
-                            } else {
-                                strongSelf.controller?.push(recentSessionsController(context: strongSelf.context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
-                            }
+                            strongSelf.controller?.push(recentSessionsController(context: strongSelf.context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
                         }
                     })
                 }

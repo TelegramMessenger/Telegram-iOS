@@ -640,6 +640,9 @@ public final class TonContext {
 
 #endif
 
+public protocol ComposeController: ViewController {
+}
+
 public protocol ChatLocationContextHolder: class {
 }
 
