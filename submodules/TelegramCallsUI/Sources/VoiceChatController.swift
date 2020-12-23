@@ -942,9 +942,9 @@ public final class VoiceChatController: ViewController {
                 self.call.members,
                 invitedPeers
             )
-            |> mapToSignal { values in
+            |> mapToThrottled { values in
                 return .single(values)
-                |> delay(0.0, queue: .mainQueue())
+                |> then(.complete() |> delay(0.1, queue: Queue.mainQueue()))
             }).start(next: { [weak self] state, callMembers, invitedPeers in
                 guard let strongSelf = self else {
                     return
@@ -1850,8 +1850,6 @@ public final class VoiceChatController: ViewController {
             }
             
             let topPanelFrame = self.topPanelNode.view.convert(self.topPanelNode.bounds, to: self.view)
-            let offset: CGFloat = self.contentContainer.bounds.minY
-            
             self.contentContainer.layer.animateBoundsOriginYAdditive(from: self.contentContainer.bounds.origin.y, to: -(layout.size.height - topPanelFrame.minY) - 44.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 offsetCompleted = true
                 internalCompletion()
@@ -1885,7 +1883,7 @@ public final class VoiceChatController: ViewController {
                 if transition.crossFade {
                     options.insert(.AnimateCrossfade)
                 }
-                if transition.animated {
+                if transition.animated && self.animation == nil {
                     options.insert(.AnimateInsertion)
                 }
             }
@@ -1921,7 +1919,7 @@ public final class VoiceChatController: ViewController {
                 self.listNode.frame = frame
             } else if !self.isExpanded {
                 if self.listNode.frame.minY != targetY && !self.animatingExpansion && self.panGestureArguments == nil {
-                    self.animation = ListViewAnimation(from: self.listNode.frame.minY, to: targetY, duration: 0.4, curve: listViewAnimationCurveEaseInOut, beginAt: CACurrentMediaTime(), update: { [weak self] _, currentValue in
+                    self.animation = ListViewAnimation(from: self.listNode.frame.minY, to: targetY, duration: 0.4, curve: listViewAnimationCurveSystem, beginAt: CACurrentMediaTime(), update: { [weak self] _, currentValue in
                         if let strongSelf = self {
                             var frame = strongSelf.listNode.frame
                             frame.origin.y = currentValue
@@ -2193,15 +2191,15 @@ public final class VoiceChatController: ViewController {
                             self.controller?.dismiss(closing: false, manual: true)
                             dismissing = true
                         } else if velocity.y < -300.0 || offset < topInset / 2.0 {
-                            self.isExpanded = true
-                            self.updateIsFullscreen(true)
-                            self.animatingExpansion = true
-                            
-                            if velocity.y > -1500.0 {
+                            if velocity.y > -1500.0 && !self.isFullscreen {
                                 DispatchQueue.main.async {
                                     self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                                 }
                             }
+                            
+                            self.isExpanded = true
+                            self.updateIsFullscreen(true)
+                            self.animatingExpansion = true
                             
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))

@@ -787,8 +787,4 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
     }
-    
-    override var preferredAnimationCurve: (CGFloat) -> CGFloat {
-        return listViewAnimationCurveEaseInOut
-    }
 }
