@@ -185,9 +185,8 @@
 "PUSH_CHAT_MESSAGES_1" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGES_any" = "%2$@|%1$@ sent %3$d messages";
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
-"PUSH_CHAT_MESSAGE_DOCS" = "%2$@|%1$@ sent %3$d files";
-"PUSH_CHAT_MESSAGE_DOCS_1" = "%2$@|%1$@ sent a file";
-"PUSH_CHAT_MESSAGE_DOCS_any" = "%2$@|%1$@ sent %3$d files";
+"PUSH_CHAT_MESSAGE_DOCS_FIX1_1" = "%2$@|%1$@ sent a file";
+"PUSH_CHAT_MESSAGE_DOCS_FIX1_any" = "%2$@|%1$@ sent %3$d files";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -1974,6 +1973,7 @@
 
 "Conversation.PinMessageAlertGroup" = "Pin this message and notify all members of the group?";
 "Conversation.PinMessageAlert.OnlyPin" = "Only Pin";
+"Conversation.PinMessageAlert.PinAndNotifyMembers" = "Pin and notify all members";
 
 "Conversation.UnpinMessageAlert" = "Would you like to unpin this message?";
 
@@ -2277,6 +2277,19 @@ Unused sets are archived when you add more.";
 "Call.Minutes_any" = "%@ minutes";
 "Call.Minutes_many" = "%@ minutes";
 "Call.Minutes_0" = "%@ minutes";
+"Call.Hours_1" = "%@ hour";
+"Call.Hours_2" = "%@ hours";
+"Call.Hours_3_10" = "%@ hours";
+"Call.Hours_any" = "%@ hours";
+"Call.Hours_many" = "%@ hours";
+"Call.Hours_0" = "%@ hours";
+"Call.Days_1" = "%@ day";
+"Call.Days_2" = "%@ days";
+"Call.Days_3_10" = "%@ days";
+"Call.Days_any" = "%@ days";
+"Call.Days_many" = "%@ days";
+"Call.Days_0" = "%@ days";
+
 
 "Call.ShortSeconds_1" = "%@ sec";
 "Call.ShortSeconds_2" = "%@ sec";
@@ -2477,7 +2490,12 @@ Unused sets are archived when you add more.";
 
 "Call.CallInProgressTitle" = "Call in Progress";
 "Call.CallInProgressMessage" = "Finish call with %1$@ and start a new one with %2$@?";
+"Call.CallInProgressVoiceChatMessage" = "Finish call with %1$@ and start a voice chat with %2$@?";
 "Call.ExternalCallInProgressMessage" = "Please finish the current call first.";
+
+"Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
+"Call.VoiceChatInProgressMessage" = "Leave voice chat in %1$@ and start a new one with %2$@?";
+"Call.VoiceChatInProgressCallMessage" = "Leave voice chat in %1$@ and start a call with %2$@?";
 
 "Call.Message" = "Message";
 
@@ -2611,6 +2629,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
 "Channel.AdminLog.CanBeAnonymous" = "Remain Anonymous";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
+"Channel.AdminLog.CanManageCalls" = "Manage Voice Chats";
 
 "Channel.AdminLog.MessageToggleInvitesOn" = "%@ enabled group invites";
 "Channel.AdminLog.MessageToggleInvitesOff" = "%@ disabled group invites";
@@ -2668,6 +2687,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLogFilter.EventsEditedMessages" = "Edited Messages";
 "Channel.AdminLogFilter.EventsPinned" = "Pinned Messages";
 "Channel.AdminLogFilter.EventsLeaving" = "Members Removed";
+"Channel.AdminLogFilter.EventsCalls" = "Vocie Chats";
 "Channel.AdminLogFilter.AdminsTitle" = "ADMINS";
 "Channel.AdminLogFilter.AdminsAll" = "All Admins";
 
@@ -5889,4 +5909,120 @@ Sorry for the inconvenience.";
 "Stats.Message.PublicShares" = "Public Shares";
 "Stats.Message.PrivateShares" = "Private Shares";
 
+"ChatSettings.WidgetSettings" = "Widget";
+
+"Conversation.EditingPhotoPanelTitle" = "Edit Photo";
+
 "Conversation.TextCopied" = "Text copied to clipboard";
+
+"Media.LimitedAccessTitle" = "Limited Access to Media";
+"Media.LimitedAccessText" = "You've given Telegram access only to select number of photos.";
+"Media.LimitedAccessManage" = "Manage";
+
+"VoiceChat.StatusSpeaking" = "speaking";
+"VoiceChat.StatusListening" = "listening";
+"VoiceChat.StatusInvited" = "invited";
+
+"VoiceChat.Connecting" = "Connecting...";
+"VoiceChat.Reconnecting" = "Reconnecting...";
+
+"VoiceChat.Unmute" = "Unmute";
+"VoiceChat.UnmuteHelp" = "or hold and speak";
+"VoiceChat.Live" = "You're Live";
+"VoiceChat.Mute" = "Tap to Mute";
+"VoiceChat.Muted" = "Muted";
+"VoiceChat.MutedHelp" = "You are in Listen Only mode";
+
+"VoiceChat.Audio" = "audio";
+"VoiceChat.Leave" = "leave";
+
+"VoiceChat.SpeakPermissionEveryone" = "New participants can speak";
+"VoiceChat.SpeakPermissionAdmin" = "New paricipants are muted";
+"VoiceChat.Share" = "Share Invite Link";
+"VoiceChat.EndVoiceChat" = "End Voice Chat";
+
+"VoiceChat.CopyInviteLink" = "Copy Invite Link";
+"VoiceChat.InviteLinkCopiedText" = "Invite link copied to clipboard";
+
+"VoiceChat.UnmutePeer" = "Allow to Speak";
+"VoiceChat.MutePeer" = "Mute";
+"VoiceChat.RemovePeer" = "Remove";
+"VoiceChat.RemovePeerConfirmation" = "Are you sure you want to remove %@ from the group chat?";
+"VoiceChat.RemovePeerRemove" = "Remove";
+
+"VoiceChat.PanelJoin" = "Join";
+"VoiceChat.Title" = "Voice Chat";
+
+"VoiceChat.InviteMember" = "Invite Member";
+"VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
+
+"Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";
+"Notification.VoiceChatInvitationForYou" = "%1$@ invited you to the voice chat";
+
+"VoiceChat.InvitedPeerText" = "You invited %@ to the voice chat";
+"VoiceChat.RemovedPeerText" = "You removed %@ from this group";
+
+"Notification.VoiceChatStarted" = "%1$@ started a voice chat";
+"Notification.VoiceChatEnded" = "Voice chat ended (%@)";
+
+"VoiceChat.Panel.TapToJoin" = "Tap to join";
+"VoiceChat.Panel.Members_0" = "%@ participants";
+"VoiceChat.Panel.Members_1" = "%@ participant";
+"VoiceChat.Panel.Members_2" = "%@ participants";
+"VoiceChat.Panel.Members_3_10" = "%@ participants";
+"VoiceChat.Panel.Members_many" = "%@ participants";
+"VoiceChat.Panel.Members_any" = "%@ participants";
+
+"VoiceChat.Status.Members_0" = "[%@]participants";
+"VoiceChat.Status.Members_1" = "[%@]participant";
+"VoiceChat.Status.Members_2" = "[%@]participants";
+"VoiceChat.Status.Members_3_10" = "[%@]participants";
+"VoiceChat.Status.Members_many" = "[%@]participants";
+"VoiceChat.Status.Members_any" = "[%@]participants";
+"VoiceChat.Status.MembersFormat" = "%1$@ %2$@";
+
+"ChannelInfo.CreateVoiceChat" = "Start Voice Chat";
+
+"VoiceChat.AnonymousDisabledAlertText" = "Sorry, you can't join voice chat as an anonymous admin.";
+"VoiceChat.ChatFullAlertText" = "Sorry, this voice chat has too many participants at the moment.";
+
+"VoiceChat.EndConfirmationTitle" = "End voice chat";
+"VoiceChat.EndConfirmationText" = "Are you sure you want to end this voice chat?";
+"VoiceChat.EndConfirmationEnd" = "End";
+
+"VoiceChat.InviteMemberToGroupFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the group?";
+"VoiceChat.InviteMemberToGroupFirstAdd" = "Add";
+
+"VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";
+"VoiceChat.CreateNewVoiceChatStart" = "Start";
+
+"CHAT_VOICECHAT_START" = "%1$@ has started voice chat in the group %2$@";
+"CHAT_VOICECHAT_INVITE" = "%1$@ has invited %3$@ in the group %2$@";
+"CHAT_VOICECHAT_INVITE_YOU" = "%1$@ has invited you to voice chat in the group %2$@";
+
+"Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
+"Call.VoiceChatInProgressMessageCall" = "Leave voice chat in %1$@ and start a call with %2$@?";
+
+"Conversation.Dice.u1F3B3" = "Send a bowling emoji to try your luck.";
+
+"VoiceOver.Common.SwitchHint" = "Double Tap To Toggle";
+"VoiceOver.Common.On" = "On";
+"VoiceOver.Common.Off" = "Off";
+
+"VoiceOver.Chat.MessagesSelected_0" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_1" = "%@ message selected";
+"VoiceOver.Chat.MessagesSelected_2" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_3_10" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_many" = "%@ messages selected";
+"VoiceOver.Chat.MessagesSelected_any" = "%@ messages selected";
+
+"Channel.AdminLog.StartedVoiceChat" = "%1$@ started voice chat";
+"Channel.AdminLog.EndedVoiceChat" = "%1$@ ended voice chat";
+"Channel.AdminLog.MutedParticipant" = "%1$@ muted %2$@";
+"Channel.AdminLog.UnmutedMutedParticipant" = "%1$@ unmuted %2$@";
+"Channel.AdminLog.AllowedNewMembersToSpeak" = "%1$@ allowed new members to speak";
+"Channel.AdminLog.MutedNewMembers" = "%1$@ muted new members";
+
+"Group.GroupMembersHeader" = "GROUP MEMBERS";
+
+"Conversation.VoiceChatMediaRecordingRestricted" = "You can't record voice and video messages during a voice chat.";

@@ -251,6 +251,8 @@ extension Api.Update {
         switch self {
             case let .updateChannel(channelId):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
+            case let .updateChat(chatId):
+                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)]
             case let .updateChannelTooLong(_, channelId, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateChatParticipantAdd(chatId, userId, inviterId, _, _):
@@ -334,6 +336,21 @@ extension Api.Update {
                 return pts
             default:
                 return nil
+        }
+    }
+}
+
+extension Api.Updates {
+    var allUpdates: [Api.Update] {
+        switch self {
+        case let .updates(updates, _, _, _, _):
+            return updates
+        case let .updatesCombined(updates, _, _, _, _, _):
+            return updates
+        case let .updateShort(update, _):
+            return [update]
+        default:
+            return []
         }
     }
 }

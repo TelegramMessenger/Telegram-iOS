@@ -395,15 +395,24 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 if let discardReason = discardReason {
                     switch discardReason {
-                    case .busy, .disconnect:
+                    case .disconnect:
                         titleString = strings.Notification_CallCanceled
-                    case .missed:
+                    case .missed, .busy:
                         titleString = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
                     case .hangup:
                         break
                     }
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+            case let .groupPhoneCall(_, _, duration):
+                if let duration = duration {
+                    let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
+                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                } else {
+                    var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                    let titleString = strings.Notification_VoiceChatStarted(authorName)
+                    attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                }
             case let .customText(text, entities):
                 attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false)
             case let .botDomainAccessGranted(domain):
@@ -451,6 +460,22 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReached(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId), (2, toId)]))
                 }
+            case let .inviteToGroupPhoneCall(_, _, peerIds):
+                var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                let resultTitleString: (String, [(Int, NSRange)])
+                if peerIds.count == 1 {
+                    if peerIds[0] == accountPeerId {
+                        attributePeerIds.append((1, peerIds.first))
+                        resultTitleString = strings.Notification_VoiceChatInvitationForYou(authorName)
+                    } else {
+                        attributePeerIds.append((1, peerIds.first))
+                        resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                    }
+                } else {
+                    resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                }
+                
+                attributedString = addAttributesToStringWithRanges(resultTitleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case .unknown:
                 attributedString = nil
             }

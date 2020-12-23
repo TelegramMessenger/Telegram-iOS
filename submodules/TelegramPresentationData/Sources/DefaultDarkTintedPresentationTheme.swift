@@ -667,7 +667,9 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         mediaOverlayControlColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x000000, alpha: 0.6), foregroundColor: .white),
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: accentColor, strokeColor: .white, foregroundColor: .white),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff6767), foregroundColor: .white),
-        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
+        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
+        stickerPlaceholderColor: PresentationThemeVariableColor(color: mainBackgroundColor.withAlphaComponent(0.5)),
+        stickerPlaceholderShimmerColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff, alpha: 0.05))
     )
     
     let serviceMessage = PresentationThemeServiceMessage(

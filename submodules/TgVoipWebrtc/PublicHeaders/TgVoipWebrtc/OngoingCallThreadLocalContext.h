@@ -127,6 +127,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc, OngoingCallVideoStateWebrtc, OngoingCallRemoteVideoStateWebrtc, OngoingCallRemoteAudioStateWebrtc, OngoingCallRemoteBatteryLevelWebrtc, float);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
+@property (nonatomic, copy) void (^ _Nullable audioLevelUpdated)(float);
 
 - (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P allowTCP:(BOOL)allowTCP enableStunMarking:(BOOL)enableStunMarking logPath:(NSString * _Nonnull)logPath statsLogPath:(NSString * _Nonnull)statsLogPath sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec audioInputDeviceId: (NSString * _Nonnull)audioInputDeviceId;
 
@@ -147,6 +148,28 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setRequestedVideoAspect:(float)aspect;
 - (void)disableVideo;
 - (void)addSignalingData:(NSData * _Nonnull)data;
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId;
+@end
+
+typedef NS_ENUM(int32_t, GroupCallNetworkState) {
+    GroupCallNetworkStateConnecting,
+    GroupCallNetworkStateConnected
+};
+
+@interface GroupCallThreadLocalContext : NSObject
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId;
+
+- (void)stop;
+
+- (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
+- (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
+- (void)setIsMuted:(bool)isMuted;
+
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 
 @end
 

@@ -30,7 +30,7 @@ final class MultiplexedVideoPlaceholderNode: ASDisplayNode {
         }
         
         self.effectNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.effectNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.2), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.rect(rect: CGRect(origin: CGPoint(), size: size))], size: bounds.size)
+        self.effectNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.2), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.rect(rect: CGRect(origin: CGPoint(), size: size))], size: bounds.size)
     }
     
     func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {

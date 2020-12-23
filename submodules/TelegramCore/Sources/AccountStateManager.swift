@@ -148,6 +148,11 @@ public final class AccountStateManager {
         return self.threadReadStateUpdatesPipe.signal()
     }
     
+    private let groupCallParticipantUpdatesPipe = ValuePipe<[(Int64, GroupCallParticipantsContext.Update)]>()
+    public var groupCallParticipantUpdates: Signal<[(Int64, GroupCallParticipantsContext.Update)], NoError> {
+        return self.groupCallParticipantUpdatesPipe.signal()
+    }
+    
     private let deletedMessagesPipe = ValuePipe<[DeletedMessageId]>()
     public var deletedMessages: Signal<[DeletedMessageId], NoError> {
         return self.deletedMessagesPipe.signal()
@@ -672,6 +677,9 @@ public final class AccountStateManager {
                                 for (id, data) in events.addedCallSignalingData {
                                     strongSelf.callSessionManager.addCallSignalingData(id: id, data: data)
                                 }
+                            }
+                            if !events.updatedGroupCallParticipants.isEmpty {
+                                strongSelf.groupCallParticipantUpdatesPipe.putNext(events.updatedGroupCallParticipants)
                             }
                             if !events.updatedIncomingThreadReadStates.isEmpty || !events.updatedOutgoingThreadReadStates.isEmpty {
                                 strongSelf.threadReadStateUpdatesPipe.putNext((events.updatedIncomingThreadReadStates, events.updatedOutgoingThreadReadStates))

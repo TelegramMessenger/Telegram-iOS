@@ -188,7 +188,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -209,6 +209,10 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                 case let .messageActionGeoProximityReached(fromId, toId, _):
                     result.append(fromId.peerId)
                     result.append(toId.peerId)
+                case let .messageActionInviteToGroupCall(_, userIds):
+                    for id in userIds {
+                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: id))
+                    }
             }
         
             return result
@@ -634,6 +638,11 @@ extension StoreMessage {
                     var notificationFlags: NotificationInfoMessageAttributeFlags = []
                     if (flags & (1 << 4)) != 0 {
                         notificationFlags.insert(.personal)
+                    }
+                    if (flags & (1 << 4)) != 0 {
+                        notificationFlags.insert(.personal)
+                        let notConsumed = (flags & (1 << 5)) != 0
+                        attributes.append(ConsumablePersonalMentionMessageAttribute(consumed: !notConsumed, pending: false))
                     }
                     if (flags & (1 << 13)) != 0 {
                         notificationFlags.insert(.muted)

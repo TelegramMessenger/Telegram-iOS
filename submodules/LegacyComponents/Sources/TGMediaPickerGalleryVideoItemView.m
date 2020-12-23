@@ -504,8 +504,13 @@
     if (_attributesDisposable == nil)
         _attributesDisposable = [[SMetaDisposable alloc] init];
     
+    TGMediaAsset *asset = item.asset;
+    if ([asset isKindOfClass:[TGCameraCapturedVideo class]]) {
+        asset = [(TGCameraCapturedVideo *)asset originalAsset];
+    }
+    
     _fileInfoLabel.text = nil;
-    [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(TGMediaAssetImageFileAttributes *next)
+    [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:asset] deliverOn:[SQueue mainQueue]] startWithNext:^(TGMediaAssetImageFileAttributes *next)
     {
         __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
         if (strongSelf == nil)

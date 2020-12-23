@@ -2,6 +2,10 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
+public protocol AccessibilityFocusableNode {
+    func accessibilityElementDidBecomeFocused()
+}
+
 public final class AccessibilityAreaNode: ASDisplayNode {
     public var activate: (() -> Bool)?
     public var focused: (() -> Void)?
@@ -27,7 +31,7 @@ public final class AccessibilityAreaNode: ASDisplayNode {
             var supernode = self.supernode
             while true {
                 if let supernodeValue = supernode {
-                    if let listItemNode = supernodeValue as? ListViewItemNode {
+                    if let listItemNode = supernodeValue as? AccessibilityFocusableNode {
                         listItemNode.accessibilityElementDidBecomeFocused()
                         break
                     } else {

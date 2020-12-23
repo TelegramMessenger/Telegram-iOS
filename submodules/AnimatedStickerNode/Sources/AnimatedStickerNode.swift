@@ -1175,4 +1175,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     public func updateLayout(size: CGSize) {
         self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
     }
+    
+    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
+        self.renderer?.setOverlayColor(color, animated: animated)
+    }
 }

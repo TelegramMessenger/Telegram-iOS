@@ -9,6 +9,7 @@ typedef enum
     TGMediaLibraryAuthorizationStatusNotDetermined,
     TGMediaLibraryAuthorizationStatusRestricted,
     TGMediaLibraryAuthorizationStatusDenied,
+    TGMediaLibraryAuthorizationStatusLimited,
     TGMediaLibraryAuthorizationStatusAuthorized
 } TGMediaLibraryAuthorizationStatus;
 

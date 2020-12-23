@@ -292,6 +292,14 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     hasScheduledMessages = true
                                 }
                                 
+                                var updatedActiveCall: CachedChannelData.ActiveCall?
+                                if let inputCall = chatFull.call {
+                                    switch inputCall {
+                                    case let .inputGroupCall(id, accessHash):
+                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash)
+                                    }
+                                }
+                                
                                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                     let previous: CachedGroupData
                                     if let current = current as? CachedGroupData {
@@ -309,6 +317,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         .withUpdatedHasScheduledMessages(hasScheduledMessages)
                                         .withUpdatedInvitedBy(invitedBy)
                                         .withUpdatedPhoto(photo)
+                                        .withUpdatedActiveCall(updatedActiveCall)
                                 })
                             case .channelFull:
                                 break
@@ -346,7 +355,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts, inputCall):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -394,6 +403,14 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             var pinnedMessageId: MessageId?
                                             if let pinnedMsgId = pinnedMsgId {
                                                 pinnedMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: pinnedMsgId)
+                                            }
+                                            
+                                            var updatedActiveCall: CachedChannelData.ActiveCall?
+                                            if let inputCall = inputCall {
+                                                switch inputCall {
+                                                case let .inputGroupCall(id, accessHash):
+                                                    updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash)
+                                                }
                                             }
                                             
                                             var minAvailableMessageId: MessageId?
@@ -510,6 +527,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedStatsDatacenterId(statsDc ?? 0)
                                                     .withUpdatedInvitedBy(invitedBy)
                                                     .withUpdatedPhoto(photo)
+                                                    .withUpdatedActiveCall(updatedActiveCall)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

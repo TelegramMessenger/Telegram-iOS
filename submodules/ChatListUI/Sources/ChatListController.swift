@@ -23,6 +23,7 @@ import AppBundle
 import LocalizedPeerData
 import TelegramIntents
 import TooltipUI
+import TelegramCallsUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -171,7 +172,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.tabContainerNode = ChatListFilterTabContainerNode()
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: .all)
         
         self.tabBarItemContextActionType = .always
         
@@ -1285,6 +1286,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if hasFilters {
                                 text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
                                 let _ = markChatListFeaturedFiltersAsSeen(postbox: strongSelf.context.account.postbox).start()
+                                return
                             } else {
                                 text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
                             }
@@ -1676,6 +1678,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.present(actionSheet, in: .window(.root))
     }
     
+    public private(set) var isSearchActive: Bool = false
     public func activateSearch() {
         if self.displayNavigationBar {
             let _ = (combineLatest(self.chatListDisplayNode.containerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(tagSummary: nil, actionsSummary: nil)) |> take(1))
@@ -1726,6 +1729,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 (strongSelf.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
             })
+            
+            self.isSearchActive = true
+            if let navigationController = self.navigationController as? NavigationController {
+                for controller in navigationController.globalOverlayControllers {
+                    if let controller = controller as? VoiceChatOverlayController {
+                        controller.updateVisibility()
+                        break
+                    }
+                }
+            }
         }
     }
     
@@ -1766,6 +1779,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 if !tabsIsEmpty {
                     self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                }
+            }
+            
+            self.isSearchActive = false
+            if let navigationController = self.navigationController as? NavigationController {
+                for controller in navigationController.globalOverlayControllers {
+                    if let controller = controller as? VoiceChatOverlayController {
+                        controller.updateVisibility()
+                        break
+                    }
                 }
             }
         }
@@ -2617,6 +2640,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
 private final class ChatListTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -2638,6 +2662,7 @@ private final class ChatListTabBarContextExtractedContentSource: ContextExtracte
 private final class ChatListHeaderBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode

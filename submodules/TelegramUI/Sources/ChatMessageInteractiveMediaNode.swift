@@ -1035,7 +1035,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: string)
         }
         var animated: Bool = animated
-        if let updatingMedia = attributes.updatingMedia {
+        if let updatingMedia = attributes.updatingMedia, case .update = updatingMedia.media {
             state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(updatingMedia.progress), cancelEnabled: true)
         } else if var fetchStatus = self.fetchStatus {
             var playerPosition: Int32?

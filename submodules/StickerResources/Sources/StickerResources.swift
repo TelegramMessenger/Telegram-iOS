@@ -402,6 +402,10 @@ public func chatMessageSticker(postbox: Postbox, file: TelegramMediaFile, small:
                 return nil
             }
             
+            if file.immediateThumbnailData != nil && fullSizeData == nil {
+                return nil
+            }
+            
             let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
             
             let drawingRect = arguments.drawingRect

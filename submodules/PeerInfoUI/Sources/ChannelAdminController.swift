@@ -489,6 +489,8 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
         return strings.Channel_EditAdmin_PermissionAddAdmins
     } else if right.contains(.canBeAnonymous) {
         return strings.Channel_AdminLog_CanBeAnonymous
+    } else if right.contains(.canManageCalls) {
+        return strings.Channel_AdminLog_CanManageCalls
     } else {
         return ""
     }
@@ -510,6 +512,8 @@ private func rightDependencies(_ right: TelegramChatAdminRightsFlags) -> [Telegr
     } else if right.contains(.canPinMessages) {
         return []
     } else if right.contains(.canAddAdmins) {
+        return []
+    } else if right.contains(.canManageCalls) {
         return []
     } else if right.contains(.canBeAnonymous) {
         return []
@@ -611,6 +615,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canBanUsers,
                     .canInviteUsers,
                     .canPinMessages,
+                    .canManageCalls,
                     .canBeAnonymous,
                     .canAddAdmins
                 ]
@@ -1005,9 +1010,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 if updateFlags == nil {
                                     if member.adminInfo?.rights == nil {
                                         if channel.flags.contains(.isCreator) {
-                                            updateFlags = maskRightsFlags.subtracting(.canAddAdmins)
+                                            updateFlags = maskRightsFlags.subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else if let adminRights = channel.adminRights {
-                                            updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting(.canAddAdmins)
+                                            updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else {
                                             updateFlags = []
                                         }

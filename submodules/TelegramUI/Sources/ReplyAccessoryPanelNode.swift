@@ -256,7 +256,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.interfaceInteraction?.navigateToMessage(self.messageId, false, true)
+            self.interfaceInteraction?.navigateToMessage(self.messageId, false, true, .generic)
         }
     }
 }

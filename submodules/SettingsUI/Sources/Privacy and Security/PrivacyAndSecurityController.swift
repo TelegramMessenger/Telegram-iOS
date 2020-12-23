@@ -384,7 +384,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
             }
         case let .enableContacts(enableFor, disableFor):
             if !enableFor.isEmpty && !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(enableFor))", "\(countForSelectivePeers(disableFor))").0
+                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").0
             } else if !enableFor.isEmpty {
                 return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").0
             } else if !disableFor.isEmpty {

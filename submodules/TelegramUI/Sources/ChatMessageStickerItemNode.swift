@@ -12,6 +12,7 @@ import AccountContext
 import StickerResources
 import ContextUI
 import Markdown
+import ShimmerEffect
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -21,6 +22,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
+    private var placeholderNode: StickerShimmerEffectNode?
     var textNode: TextNode?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
@@ -50,9 +52,22 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.isUserInteractionEnabled = false
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
         
         self.containerNode.shouldBegin = { [weak self] location in
             guard let strongSelf = self else {
@@ -96,6 +111,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
+        if let placeholderNode = self.placeholderNode {
+            self.contextSourceNode.contentNode.addSubnode(placeholderNode)
+        }
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
         
@@ -113,6 +131,21 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     deinit {
         self.fetchDisposable.dispose()
+    }
+    
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     override func didLoad() {
@@ -190,6 +223,19 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         
         if self.telegramFile == nil && item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
             self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text))
+        }
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+        if !self.contextSourceNode.isExtractedToContextPreview {
+            var rect = rect
+            rect.origin.y = containerSize.height - rect.maxY + self.insets.top
+
+            if let placeholderNode = self.placeholderNode {
+                placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
+            }
         }
     }
     
@@ -431,7 +477,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            if item.message.id.peerId != item.context.account.peerId && !item.message.id.peerId.isReplies{
+            if item.message.id.peerId != item.context.account.peerId && !item.message.id.peerId.isReplies {
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
@@ -457,7 +503,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var updatedShareButtonNode: ChatMessageShareButton?
             if needShareButton {
-                if currentShareButtonNode != nil {
+                if let currentShareButtonNode = currentShareButtonNode {
                     updatedShareButtonNode = currentShareButtonNode
                 } else {
                     let buttonNode = ChatMessageShareButton()
@@ -555,6 +601,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     imageApply()
+                    
+                    if let immediateThumbnailData = telegramFile?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
+                        let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
+                        let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
+                        
+                        let placeholderFrame = updatedImageFrame.insetBy(dx: innerImageInset, dy: innerImageInset)
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: placeholderFrame.size)
+                        placeholderNode.frame = placeholderFrame
+                    }
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)

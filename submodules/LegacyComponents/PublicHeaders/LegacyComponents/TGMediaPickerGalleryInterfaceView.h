@@ -51,6 +51,7 @@
 - (void)setAllInterfaceHidden:(bool)hidden delay:(NSTimeInterval)__unused delay animated:(bool)animated;
 - (void)setToolbarsHidden:(bool)hidden animated:(bool)animated;
 
+- (void)immediateEditorTransitionIn;
 - (void)editorTransitionIn;
 - (void)editorTransitionOut;
 

@@ -12,6 +12,7 @@ import UniversalMediaPlayer
 import AccountContext
 import OverlayStatusController
 import PresentationDataUtils
+import TelegramCallsUI
 
 public enum MediaAccessoryPanelVisibility {
     case none
@@ -64,9 +65,11 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     
     public let mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility
     public let locationBroadcastPanelSource: LocationBroadcastPanelSource
+    public let groupCallPanelSource: GroupCallPanelSource
     
     private var mediaStatusDisposable: Disposable?
     private var locationBroadcastDisposable: Disposable?
+    private var currentGroupCallDisposable: Disposable?
     
     public private(set) var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
     private var playlistLocation: SharedMediaPlaylistLocation?
@@ -80,6 +83,9 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     private var locationBroadcastPeers: [Peer]?
     private var locationBroadcastMessages: [MessageId: Message]?
     private var locationBroadcastAccessoryPanel: LocationBroadcastNavigationAccessoryPanel?
+    
+    private var groupCallPanelData: GroupCallPanelData?
+    private var groupCallAccessoryPanel: GroupCallNavigationAccessoryPanel?
     
     private var dismissingPanel: ASDisplayNode?
     
@@ -101,6 +107,9 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     
     public var additionalHeight: CGFloat {
         var height: CGFloat = 0.0
+        if let _ = self.groupCallAccessoryPanel {
+            height += 50.0
+        }
         if let _ = self.mediaAccessoryPanel {
             height += MediaNavigationAccessoryHeaderNode.minimizedHeight
         }
@@ -114,11 +123,12 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         return super.navigationHeight
     }
     
-    public init(context: AccountContext, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
+    public init(context: AccountContext, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource, groupCallPanelSource: GroupCallPanelSource) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.mediaAccessoryPanelVisibility = mediaAccessoryPanelVisibility
         self.locationBroadcastPanelSource = locationBroadcastPanelSource
+        self.groupCallPanelSource = groupCallPanelSource
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
@@ -250,6 +260,85 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             }
         }
         
+        if let callManager = context.sharedContext.callManager {
+            switch groupCallPanelSource {
+            case .none, .all:
+                break
+            case let .peer(peerId):
+                let currentGroupCall: Signal<PresentationGroupCall?, NoError> = callManager.currentGroupCallSignal
+                |> distinctUntilChanged(isEqual: { lhs, rhs in
+                    return lhs?.internalId == rhs?.internalId
+                })
+                |> map { call -> PresentationGroupCall? in
+                    guard let call = call, call.peerId == peerId && call.account.peerId == context.account.peerId else {
+                        return nil
+                    }
+                    return call
+                }
+                
+                let availableGroupCall: Signal<GroupCallPanelData?, NoError>
+                if case let .peer(peerId) = groupCallPanelSource {
+                    availableGroupCall = context.account.viewTracker.peerView(peerId)
+                    |> map { peerView -> CachedChannelData.ActiveCall? in
+                        if let cachedData = peerView.cachedData as? CachedChannelData {
+                            return cachedData.activeCall
+                        } else if let cachedData = peerView.cachedData as? CachedGroupData {
+                            return cachedData.activeCall
+                        } else {
+                            return nil
+                        }
+                    }
+                    |> distinctUntilChanged
+                    |> mapToSignal { activeCall -> Signal<GroupCallPanelData?, NoError> in
+                        guard let activeCall = activeCall else {
+                            return .single(nil)
+                        }
+                        
+                        return Signal { [weak context] subscriber in
+                            guard let context = context, let callContextCache = context.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl else {
+                                return EmptyDisposable
+                            }
+                            
+                            let disposable = MetaDisposable()
+                            
+                            callContextCache.impl.syncWith { impl in
+                                let callContext = impl.get(account: context.account, peerId: peerId, call: activeCall)
+                                disposable.set((callContext.context.panelData
+                                |> deliverOnMainQueue).start(next: { panelData in
+                                    callContext.keep()
+                                    subscriber.putNext(panelData)
+                                }))
+                            }
+                            
+                            return ActionDisposable {
+                                disposable.dispose()
+                            }
+                        }
+                        |> runOn(.mainQueue())
+                    }
+                } else {
+                    availableGroupCall = .single(nil)
+                }
+                
+                self.currentGroupCallDisposable = combineLatest(queue: .mainQueue(), availableGroupCall, currentGroupCall).start(next: { [weak self] availableState, currentGroupCall in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    let panelData = currentGroupCall != nil ? nil : availableState
+                    
+                    let wasEmpty = strongSelf.groupCallPanelData == nil
+                    strongSelf.groupCallPanelData = panelData
+                    let isEmpty = strongSelf.groupCallPanelData == nil
+                    if wasEmpty != isEmpty {
+                        strongSelf.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+                    } else if let groupCallPanelData = strongSelf.groupCallPanelData {
+                        strongSelf.groupCallAccessoryPanel?.update(data: groupCallPanelData)
+                    }
+                })
+            }
+        }
+        
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
@@ -261,6 +350,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.mediaAccessoryPanel?.0.containerNode.updatePresentationData(presentationData)
                     strongSelf.locationBroadcastAccessoryPanel?.updatePresentationData(presentationData)
+                    strongSelf.groupCallAccessoryPanel?.updatePresentationData(presentationData)
                 }
             }
         })
@@ -269,6 +359,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     deinit {
         self.mediaStatusDisposable?.dispose()
         self.locationBroadcastDisposable?.dispose()
+        self.currentGroupCallDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
         self.playlistPreloadDisposable?.dispose()
     }
@@ -286,6 +377,52 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         }
         
         var additionalHeight: CGFloat = 0.0
+        
+        if let groupCallPanelData = self.groupCallPanelData {
+            let panelHeight: CGFloat = 50.0
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
+            additionalHeight += panelHeight
+            
+            let groupCallAccessoryPanel: GroupCallNavigationAccessoryPanel
+            if let current = self.groupCallAccessoryPanel {
+                groupCallAccessoryPanel = current
+                transition.updateFrame(node: groupCallAccessoryPanel, frame: panelFrame)
+                groupCallAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            } else {
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                groupCallAccessoryPanel = GroupCallNavigationAccessoryPanel(context: self.context, presentationData: presentationData, tapAction: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.joinGroupCall(
+                        peerId: groupCallPanelData.peerId,
+                        info: groupCallPanelData.info
+                    )
+                })
+                if let navigationBar = self.navigationBar {
+                    self.displayNode.insertSubnode(groupCallAccessoryPanel, aboveSubnode: navigationBar)
+                } else {
+                    self.displayNode.addSubnode(groupCallAccessoryPanel)
+                }
+                self.groupCallAccessoryPanel = groupCallAccessoryPanel
+                groupCallAccessoryPanel.frame = panelFrame
+                
+                groupCallAccessoryPanel.update(data: groupCallPanelData)
+                groupCallAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
+                if transition.isAnimated {
+                    groupCallAccessoryPanel.animateIn(transition)
+                }
+            }
+        } else if let groupCallAccessoryPanel = self.groupCallAccessoryPanel {
+            self.groupCallAccessoryPanel = nil
+            if transition.isAnimated {
+                groupCallAccessoryPanel.animateOut(transition, completion: { [weak groupCallAccessoryPanel] in
+                    groupCallAccessoryPanel?.removeFromSupernode()
+                })
+            } else {
+                groupCallAccessoryPanel.removeFromSupernode()
+            }
+        }
         
         if let locationBroadcastPeers = self.locationBroadcastPeers, let locationBroadcastMode = self.locationBroadcastMode {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
@@ -674,5 +811,9 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 _ = self?.navigationBar?.executeBack()
             }
         })]
+    }
+    
+    private func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
+        self.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
     }
 }

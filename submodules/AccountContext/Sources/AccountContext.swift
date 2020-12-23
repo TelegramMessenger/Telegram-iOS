@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -10,10 +11,6 @@ import AsyncDisplayKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
-
-#if ENABLE_WALLET
-import WalletCore
-#endif
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -646,13 +643,15 @@ public final class TonContext {
 public protocol ChatLocationContextHolder: class {
 }
 
+public protocol AccountGroupCallContext: class {
+}
+
+public protocol AccountGroupCallContextCache: class {
+}
+
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
-    
-    #if ENABLE_WALLET
-    var tonContext: StoredTonContext? { get }
-    #endif
     
     var liveLocationManager: LiveLocationManager? { get }
     var peersNearbyManager: PeersNearbyManager? { get }
@@ -662,14 +661,11 @@ public protocol AccountContext: class {
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
     
-    #if ENABLE_WALLET
-    var hasWallets: Signal<Bool, NoError> { get }
-    var hasWalletAccess: Signal<Bool, NoError> { get }
-    #endif
-    
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
+    
+    var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
@@ -677,4 +673,7 @@ public protocol AccountContext: class {
     func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput
     func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
+    
+    func joinGroupCall(peerId: PeerId, activeCall: CachedChannelData.ActiveCall)
+    func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
 }

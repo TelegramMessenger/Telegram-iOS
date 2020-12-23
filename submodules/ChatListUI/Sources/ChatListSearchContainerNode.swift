@@ -329,6 +329,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 }
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
             var existingPeerIds = Set<PeerId>()
             var peers = peers
             if let accountPeer = accountPeer, let lowercasedQuery = searchQuery?.lowercased(), lowercasedQuery.count > 1 && (presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery)) {
@@ -955,6 +956,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
 private final class MessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
     
     private let sourceNode: ContextExtractedContentContainingNode
     

@@ -83,7 +83,7 @@ public struct ListViewItemLayoutParams {
     }
 }
 
-open class ListViewItemNode: ASDisplayNode {
+open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     let rotated: Bool
     final var index: Int?
     
@@ -118,6 +118,10 @@ open class ListViewItemNode: ASDisplayNode {
     private final var animations: [(String, ListViewAnimation)] = []
     
     final let wantsScrollDynamics: Bool
+    
+    open var preferredAnimationCurve: (CGFloat) -> CGFloat {
+        return listViewAnimationCurveSystem
+    }
     
     public final var wantsTrailingItemSpaceUpdates: Bool = false
     
@@ -427,7 +431,7 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     public func addHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
-        let animation = ListViewAnimation(from: self.bounds.height, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] progress, currentValue in
+        let animation = ListViewAnimation(from: self.bounds.height, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 let frame = strongSelf.frame
                 strongSelf.frame = CGRect(origin: frame.origin, size: CGSize(width: frame.width, height: currentValue))
@@ -461,7 +465,7 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
-        let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] progress, currentValue in
+        let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 strongSelf.apparentHeight = currentValue
                 if let update = update {
@@ -494,7 +498,7 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     public func addTransitionOffsetAnimation(_ value: CGFloat, duration: Double, beginAt: Double) {
-        let animation = ListViewAnimation(from: self.transitionOffset, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
+        let animation = ListViewAnimation(from: self.transitionOffset, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {
                 strongSelf.transitionOffset = currentValue
             }

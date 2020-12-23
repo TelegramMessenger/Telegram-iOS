@@ -204,6 +204,8 @@ public final class LocationViewController: ViewController {
                             }
                         }
                     })
+                    
+                    strongSelf.dismissAllTooltips()
                     strongSelf.present(
                         UndoOverlayController(
                             presentationData: strongSelf.presentationData,
@@ -280,6 +282,7 @@ public final class LocationViewController: ViewController {
                                     text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
                                 }
                                 
+                                strongSelf.dismissAllTooltips()
                                 strongSelf.present(
                                     UndoOverlayController(
                                         presentationData: strongSelf.presentationData,
@@ -354,6 +357,7 @@ public final class LocationViewController: ViewController {
                             text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
                         }
                         
+                        strongSelf.dismissAllTooltips()
                         strongSelf.present(
                             UndoOverlayController(
                                 presentationData: strongSelf.presentationData,
@@ -448,6 +452,15 @@ public final class LocationViewController: ViewController {
     
     public func goToUserLocation(visibleRadius: Double? = nil) {
         
+    }
+    
+    private func dismissAllTooltips() {
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
     }
     
     override public func loadDisplayNode() {

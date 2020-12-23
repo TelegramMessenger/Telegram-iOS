@@ -178,7 +178,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 badgeSize += max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
             }
             
-            let (onlineLayout, onlineApply) = onlineLayout(online)
+            let (onlineLayout, onlineApply) = onlineLayout(online, false)
             var animateContent = false
             if let currentItem = currentItem, currentItem.peer.id == item.peer.id {
                 animateContent = true
@@ -209,7 +209,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                         strongSelf.badgeBackgroundNode.isHidden = true
                     }
                     
-                    strongSelf.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.theme, state: .regular))
+                    strongSelf.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.theme, state: .regular), color: nil, transition: .immediate)
                     strongSelf.onlineNode.frame = CGRect(x: itemLayout.size.width - onlineLayout.width - 18.0, y: itemLayout.size.height - onlineLayout.height - 18.0, width: onlineLayout.width, height: onlineLayout.height)
                     
                     let _ = badgeApply()

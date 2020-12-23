@@ -14,7 +14,6 @@ swift_library(
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/WalletUrl:WalletUrl",
     ],
     visibility = [
         "//visibility:public",

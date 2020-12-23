@@ -218,6 +218,7 @@ private final class AudioPlayerRendererContext {
     let lowWaterSizeInSeconds: Int = 2
     
     let audioSession: MediaPlayerAudioSessionControl
+    let useVoiceProcessingMode: Bool
     let controlTimebase: CMTimebase
     let updatedRate: () -> Void
     let audioPaused: () -> Void
@@ -250,7 +251,7 @@ private final class AudioPlayerRendererContext {
         }
     }
     
-    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, useVoiceProcessingMode: Bool, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         assert(audioPlayerRendererQueue.isCurrent())
         
         self.audioSession = audioSession
@@ -263,6 +264,7 @@ private final class AudioPlayerRendererContext {
         self.audioPaused = audioPaused
         
         self.playAndRecord = playAndRecord
+        self.useVoiceProcessingMode = useVoiceProcessingMode
         self.ambient = ambient
         
         self.audioStreamDescription = audioRendererNativeStreamDescription()
@@ -407,7 +409,11 @@ private final class AudioPlayerRendererContext {
             var outputNode: AUNode = 0
             var outputDesc = AudioComponentDescription()
             outputDesc.componentType = kAudioUnitType_Output
-            outputDesc.componentSubType = kAudioUnitSubType_RemoteIO
+            if self.useVoiceProcessingMode {
+                outputDesc.componentSubType = kAudioUnitSubType_VoiceProcessingIO
+            } else {
+                outputDesc.componentSubType = kAudioUnitSubType_RemoteIO
+            }
             outputDesc.componentFlags = 0
             outputDesc.componentFlagsMask = 0
             outputDesc.componentManufacturer = kAudioUnitManufacturer_Apple
@@ -753,7 +759,7 @@ public final class MediaPlayerAudioRenderer {
     private let audioClock: CMClock
     public let audioTimebase: CMTimebase
     
-    public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, useVoiceProcessingMode: Bool = false, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         var audioClock: CMClock?
         CMAudioClockCreate(allocator: nil, clockOut: &audioClock)
         if audioClock == nil {
@@ -766,7 +772,7 @@ public final class MediaPlayerAudioRenderer {
         self.audioTimebase = audioTimebase!
         
         audioPlayerRendererQueue.async {
-            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, ambient: ambient, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
+            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, useVoiceProcessingMode: useVoiceProcessingMode, ambient: ambient, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

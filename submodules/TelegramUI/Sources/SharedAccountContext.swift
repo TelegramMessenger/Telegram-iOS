@@ -29,11 +29,6 @@ import PresentationDataUtils
 import LocationUI
 import NGData
 
-private enum CallStatusText: Equatable {
-    case none
-    case inProgress(Double?)
-}
-
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
     let tokens = Bag<Void>()
@@ -99,12 +94,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private var callDisposable: Disposable?
     private var callStateDisposable: Disposable?
-    private var currentCallStatusText: CallStatusText = .none
-    private var currentCallStatusTextTimer: SwiftSignalKit.Timer?
+    
+    private(set) var currentCallStatusBarNode: CallStatusBarNodeImpl?
+    
+    private var groupCallDisposable: Disposable?
     
     private var callController: CallController?
     public let hasOngoingCall = ValuePromise<Bool>(false)
     private let callState = Promise<PresentationCallState?>(nil)
+    
+    private var groupCallController: VoiceChatController?
+    private let hasGroupCallOnScreen = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var immediateHasOngoingCallValue = Atomic<Bool>(value: false)
     public var immediateHasOngoingCall: Bool {
@@ -631,63 +631,101 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
             
-            self.callStateDisposable = (self.callState.get()
-            |> deliverOnMainQueue).start(next: { [weak self] state in
+            self.groupCallDisposable = (callManager.currentGroupCallSignal
+            |> deliverOnMainQueue).start(next: { [weak self] call in
                 if let strongSelf = self {
-                    let resolvedText: CallStatusText
-                    if let state = state {
-//                        if [.active, .paused].contains(state.videoState) || [.active, .paused].contains(state.remoteVideoState) {
-//                            resolvedText = .none
-//                        } else {
-                            switch state.state {
-                                case .connecting, .requesting, .terminating, .ringing, .waiting:
-                                    resolvedText = .inProgress(nil)
-                                case .terminated:
-                                    resolvedText = .none
-                                case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
-                                    resolvedText = .inProgress(timestamp)
+                    if call !== strongSelf.groupCallController?.call {
+                        strongSelf.groupCallController?.dismiss(closing: true)
+                        strongSelf.groupCallController = nil
+                        strongSelf.hasOngoingCall.set(false)
+                        
+                        if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
+                            mainWindow.hostView.containerView.endEditing(true)
+                            strongSelf.hasGroupCallOnScreen.set(true)
+                            let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                            groupCallController.onViewDidAppear = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.hasGroupCallOnScreen.set(true)
+                                }
                             }
-//                        }
+                            groupCallController.onViewDidDisappear = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.hasGroupCallOnScreen.set(false)
+                                }
+                            }
+                            groupCallController.navigationPresentation = .flatModal
+                            groupCallController.parentNavigationController = navigationController
+                            strongSelf.groupCallController = groupCallController
+                            navigationController.pushViewController(groupCallController)
+                            strongSelf.hasOngoingCall.set(true)
+                        } else {
+                            strongSelf.hasOngoingCall.set(false)
+                        }
+                    }
+                }
+            })
+            
+            let callSignal: Signal<PresentationCall?, NoError> = .single(nil)
+            |> then(
+                callManager.currentCallSignal
+            )
+            let groupCallSignal: Signal<PresentationGroupCall?, NoError> = .single(nil)
+            |> then(
+                callManager.currentGroupCallSignal
+            )
+            
+            self.callStateDisposable = combineLatest(queue: .mainQueue(),
+                callSignal,
+                groupCallSignal,
+                self.hasGroupCallOnScreen.get()
+            ).start(next: { [weak self] call, groupCall, hasGroupCallOnScreen in
+                if let strongSelf = self {
+                    let statusBarContent: CallStatusBarNodeImpl.Content?
+                    if let call = call {
+                        statusBarContent = .call(strongSelf, call.account, call)
+                    } else if let groupCall = groupCall, !hasGroupCallOnScreen {
+                        statusBarContent = .groupCall(strongSelf, groupCall.account, groupCall)
                     } else {
-                        resolvedText = .none
+                        statusBarContent = nil
                     }
                     
-                    if strongSelf.currentCallStatusText != resolvedText {
-                        strongSelf.currentCallStatusText = resolvedText
-                        
-                        var referenceTimestamp: Double?
-                        if case let .inProgress(timestamp) = resolvedText, let concreteTimestamp = timestamp {
-                            referenceTimestamp = concreteTimestamp
-                        }
-                        
-                        if let _ = referenceTimestamp {
-                            if strongSelf.currentCallStatusTextTimer == nil {
-                                let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: {
-                                    if let strongSelf = self {
-                                        strongSelf.updateStatusBarText()
-                                    }
-                                }, queue: Queue.mainQueue())
-                                strongSelf.currentCallStatusTextTimer = timer
-                                timer.start()
-                            }
+                    var resolvedCallStatusBarNode: CallStatusBarNodeImpl?
+                    if let statusBarContent = statusBarContent {
+                        if let current = strongSelf.currentCallStatusBarNode {
+                            resolvedCallStatusBarNode = current
                         } else {
-                            strongSelf.currentCallStatusTextTimer?.invalidate()
-                            strongSelf.currentCallStatusTextTimer = nil
+                            resolvedCallStatusBarNode = CallStatusBarNodeImpl()
+                            strongSelf.currentCallStatusBarNode = resolvedCallStatusBarNode
                         }
-                        
-                        strongSelf.updateStatusBarText()
+                        resolvedCallStatusBarNode?.update(content: statusBarContent)
+                    } else {
+                        strongSelf.currentCallStatusBarNode = nil
+                    }
+                    
+                    if let navigationController = strongSelf.mainWindow?.viewController as? NavigationController {
+                        navigationController.setForceInCallStatusBar(resolvedCallStatusBarNode)
                     }
                 }
             })
             
             mainWindow.inCallNavigate = { [weak self] in
-                if let strongSelf = self, let callController = strongSelf.callController {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let callController = strongSelf.callController {
                     if callController.isNodeLoaded {
                         mainWindow.hostView.containerView.endEditing(true)
                         if callController.view.superview == nil {
                             mainWindow.present(callController, on: .calls)
                         } else {
                             callController.expandFromPipIfPossible()
+                        }
+                    }
+                } else if let groupCallController = strongSelf.groupCallController {
+                    if groupCallController.isNodeLoaded {
+                        mainWindow.hostView.containerView.endEditing(true)
+                        if groupCallController.view.superview == nil {
+                            (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
                         }
                     }
                 }
@@ -741,8 +779,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.inAppNotificationSettingsDisposable?.dispose()
         self.mediaInputSettingsDisposable?.dispose()
         self.callDisposable?.dispose()
+        self.groupCallDisposable?.dispose()
         self.callStateDisposable?.dispose()
-        self.currentCallStatusTextTimer?.invalidate()
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
@@ -950,38 +988,19 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return openChatMessageImpl(params)
     }
     
-    private func updateStatusBarText() {
-        if case let .inProgress(timestamp) = self.currentCallStatusText {
-            let text: String
-            let presentationData = self.currentPresentationData.with { $0 }
-            if let timestamp = timestamp {
-                let duration = Int32(CFAbsoluteTimeGetCurrent() - timestamp)
-                let durationString: String
-                if duration > 60 * 60 {
-                    durationString = String(format: "%02d:%02d:%02d", arguments: [duration / 3600, (duration / 60) % 60, duration % 60])
-                } else {
-                    durationString = String(format: "%02d:%02d", arguments: [(duration / 60) % 60, duration % 60])
-                }
-                
-                text = presentationData.strings.Call_StatusBar(durationString).0
-            } else {
-                text = presentationData.strings.Call_StatusBar("").0
-            }
-            if let navigationController = self.mainWindow?.viewController as? NavigationController {
-                navigationController.setForceInCallStatusBar(text)
-            }
-        } else {
-            if let navigationController = self.mainWindow?.viewController as? NavigationController {
-                navigationController.setForceInCallStatusBar(nil)
-            }
-        }
-    }
-    
     public func navigateToCurrentCall() {
-        if let mainWindow = self.mainWindow, let callController = self.callController {
+        guard let mainWindow = self.mainWindow else {
+            return
+        }
+        if let callController = self.callController {
             if callController.isNodeLoaded && callController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
                 mainWindow.present(callController, on: .calls)
+            }
+        } else if let groupCallController = self.groupCallController {
+            if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
+                mainWindow.hostView.containerView.endEditing(true)
+                (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
             }
         }
     }
@@ -1198,7 +1217,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     tapMessage?(message)
             }, clickThroughMessage: {
                 clickThroughMessage?()
-            }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in
+            }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in
                 return false
             }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
             }, presentController: { _, _ in }, navigationController: {

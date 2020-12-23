@@ -872,24 +872,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 return
             }
-            
-            let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
-            if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                if currentPeerId == peer.id {
-                    context.sharedContext.navigateToCurrentCall()
-                } else {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                        return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
-                        } |> deliverOnMainQueue).start(next: { peer, current in
-                            if let peer = peer, let current = current {
-                                presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    let _ = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
-                                })]), nil)
-                            }
-                        })
-                }
-            }
+                
+            context.requestCall(peerId: peer.id, isVideo: isVideo, completion: {})
         })
     }
     

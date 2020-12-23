@@ -8,6 +8,7 @@ import Postbox
 import TelegramCore
 import SyncCore
 import AccountContext
+import AudioBlob
 
 public final class AnimatedAvatarSetContext {
     public final class Content {
@@ -45,10 +46,6 @@ public final class AnimatedAvatarSetContext {
     }
     
     public func update(peers: [Peer], animated: Bool) -> Content {
-        for peer in peers {
-            
-        }
-        
         var items: [(Content.Item.Key, Content.Item)] = []
         for peer in peers {
             items.append((Content.Item.Key(peerId: peer.id), Content.Item(peer: peer)))
@@ -60,6 +57,8 @@ public final class AnimatedAvatarSetContext {
 private let avatarFont = avatarPlaceholderFont(size: 12.0)
 
 private final class ContentNode: ASDisplayNode {
+    private var audioLevelView: VoiceBlobView?
+    private var audioLevelBlobOverlay: UIImageView?
     private let unclippedNode: ASImageNode
     private let clippedNode: ASImageNode
     
@@ -137,6 +136,55 @@ private final class ContentNode: ASDisplayNode {
             self.clippedNode.alpha = isClipped ? 1.0 : 0.0
         }
     }
+    
+    func updateAudioLevel(color: UIColor, backgroundColor: UIColor, value: Float) {
+        if self.audioLevelView == nil, value > 0.0 {
+            let blobFrame = self.unclippedNode.bounds.insetBy(dx: -8.0, dy: -8.0)
+            
+            let audioLevelView = VoiceBlobView(
+                frame: blobFrame,
+                maxLevel: 0.3,
+                smallBlobRange: (0, 0),
+                mediumBlobRange: (0.7, 0.8),
+                bigBlobRange: (0.8, 0.9)
+            )
+            
+            let maskRect = CGRect(origin: .zero, size: blobFrame.size)
+            let playbackMaskLayer = CAShapeLayer()
+            playbackMaskLayer.frame = maskRect
+            playbackMaskLayer.fillRule = .evenOdd
+            let maskPath = UIBezierPath()
+            maskPath.append(UIBezierPath(roundedRect: self.unclippedNode.bounds.offsetBy(dx: 8, dy: 8), cornerRadius: maskRect.width / 2.0))
+            maskPath.append(UIBezierPath(rect: maskRect))
+            playbackMaskLayer.path = maskPath.cgPath
+            //audioLevelView.layer.mask = playbackMaskLayer
+            
+            audioLevelView.setColor(color)
+            self.audioLevelView = audioLevelView
+            self.view.insertSubview(audioLevelView, at: 0)
+        }
+        
+        let level = min(1.0, max(0.0, CGFloat(value)))
+        if let audioLevelView = self.audioLevelView {
+            audioLevelView.updateLevel(CGFloat(value) * 2.0)
+            
+            let avatarScale: CGFloat
+            let audioLevelScale: CGFloat
+            if value > 0.0 {
+                audioLevelView.startAnimating()
+                avatarScale = 1.03 + level * 0.07
+                audioLevelScale = 1.0
+            } else {
+                audioLevelView.stopAnimating(duration: 0.5)
+                avatarScale = 1.0
+                audioLevelScale = 0.01
+            }
+            
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+            transition.updateSublayerTransformScale(node: self, scale: CGPoint(x: avatarScale, y: avatarScale), beginWithCurrentState: true)
+            transition.updateSublayerTransformScale(layer: audioLevelView.layer, scale: CGPoint(x: audioLevelScale, y: audioLevelScale), beginWithCurrentState: true)
+        }
+    }
 }
 
 public final class AnimatedAvatarSetNode: ASDisplayNode {
@@ -146,9 +194,7 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
         super.init()
     }
     
-    public func update(context: AccountContext, content: AnimatedAvatarSetContext.Content, animated: Bool, synchronousLoad: Bool) -> CGSize {
-        let itemSize = CGSize(width: 30.0, height: 30.0)
-        
+    public func update(context: AccountContext, content: AnimatedAvatarSetContext.Content, itemSize: CGSize = CGSize(width: 30.0, height: 30.0), animated: Bool, synchronousLoad: Bool) -> CGSize {
         var contentWidth: CGFloat = 0.0
         let contentHeight: CGFloat = itemSize.height
         
@@ -161,7 +207,9 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
         
         var validKeys: [AnimatedAvatarSetContext.Content.Item.Key] = []
         var index = 0
-        for (key, item) in content.items {
+        for i in 0 ..< content.items.count {
+            let (key, item) = content.items[i]
+            
             validKeys.append(key)
             
             let itemFrame = CGRect(origin: CGPoint(x: contentWidth, y: 0.0), size: itemSize)
@@ -182,6 +230,7 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
                     itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                 }
             }
+            itemNode.zPosition = CGFloat(100 - i)
             contentWidth += itemSize.width - 10.0
             index += 1
         }
@@ -202,5 +251,16 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
         }
         
         return CGSize(width: contentWidth, height: contentHeight)
+    }
+    
+    public func updateAudioLevels(color: UIColor, backgroundColor: UIColor, levels: [PeerId: Float]) {
+        //print("updateAudioLevels visible: \(self.contentNodes.keys.map(\.peerId.id)) data: \(levels)")
+        for (key, itemNode) in self.contentNodes {
+            if let value = levels[key.peerId] {
+                itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: value)
+            } else {
+                itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: 0.0)
+            }
+        }
     }
 }

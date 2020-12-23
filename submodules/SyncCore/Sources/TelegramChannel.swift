@@ -141,6 +141,8 @@ public struct TelegramChannelFlags: OptionSet {
     public static let isCreator = TelegramChannelFlags(rawValue: 1 << 1)
     public static let isScam = TelegramChannelFlags(rawValue: 1 << 2)
     public static let hasGeo = TelegramChannelFlags(rawValue: 1 << 3)
+    public static let hasVoiceChat = TelegramChannelFlags(rawValue: 1 << 4)
+    public static let hasActiveVoiceChat = TelegramChannelFlags(rawValue: 1 << 5)
 }
 
 public final class TelegramChannel: Peer {
@@ -296,5 +298,9 @@ public final class TelegramChannel: Peer {
     
     public func withUpdatedDefaultBannedRights(_ defaultBannedRights: TelegramChatBannedRights?) -> TelegramChannel {
         return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: defaultBannedRights)
+    }
+    
+    public func withUpdatedFlags(_ flags: TelegramChannelFlags) -> TelegramChannel {
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights)
     }
 }

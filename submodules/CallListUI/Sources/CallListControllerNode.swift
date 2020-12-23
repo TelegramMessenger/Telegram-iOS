@@ -118,6 +118,8 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
+            case let .groupCall(_, peer):
+                preconditionFailure()
             case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
@@ -135,6 +137,8 @@ private func mappedUpdateEntries(context: AccountContext, presentationData: Item
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
+            case let .groupCall(_, peer):
+                preconditionFailure()
             case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):

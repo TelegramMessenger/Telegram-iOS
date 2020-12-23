@@ -729,6 +729,8 @@ final class AuthorizedApplicationContext {
                 }
             }))
         })
+        
+        self.rootController.setForceInCallStatusBar((self.context.sharedContext as! SharedAccountContextImpl).currentCallStatusBarNode)
     }
     
     deinit {

@@ -163,10 +163,10 @@ public final class SelectablePeerNode: ASDisplayNode {
         self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
         
         let onlineLayout = self.onlineNode.asyncLayout()
-        let (onlineSize, onlineApply) = onlineLayout(online)
+        let (onlineSize, onlineApply) = onlineLayout(online, false)
         let _ = onlineApply(false)
         
-        self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel))
+        self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel), color: nil, transition: .immediate)
         self.onlineNode.frame = CGRect(origin: CGPoint(), size: onlineSize)
         
         self.setNeedsLayout()
