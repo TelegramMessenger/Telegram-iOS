@@ -1,8 +1,8 @@
 name: CI
 
 on:
-  #push:
-  #  branches: [ beta ]
+  push:
+    branches: [ beta ]
 
   workflow_dispatch:
 
@@ -16,7 +16,6 @@ jobs:
           submodules: 'recursive'
           fetch-depth: '0'
 
-      # Runs a single command using the runners shell
       - name: Install Bazelisk
         run: brew install bazelisk
 
@@ -30,6 +29,7 @@ jobs:
           export COMMIT_COUNT=$(git rev-list --count HEAD)
           export COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
           export BUILD_NUMBER="$COMMIT_COUNT"
+          echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
           export MY_KEYCHAIN="temp.keychain"
           export MY_KEYCHAIN_PASSWORD="secret"
           security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
@@ -69,14 +69,12 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: build-{{ env.BUILD_NUMBER }}
-          release_name: Build {{ env.BUILD_NUMBER }}
+          tag_name: build-${{ env.BUILD_NUMBER }}
+          release_name: Build ${{ env.BUILD_NUMBER }}
           body: |
-            Changes in this Release
-            - First Change
-            - Second Change
+            This is the result of building ${{ env.BUILD_NUMBER }}
           draft: false
           prerelease: false
 
@@ -86,7 +84,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: $GITHUB_WORKSPACE/build/artifacts/Telegram.ipa
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/artifacts/Telegram.ipa
           asset_name: Telegram.ipa
           asset_content_type: application/zip
