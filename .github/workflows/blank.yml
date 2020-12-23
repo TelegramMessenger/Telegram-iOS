@@ -1,8 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: [ beta ]
+  #push:
+  #  branches: [ beta ]
 
   workflow_dispatch:
 
