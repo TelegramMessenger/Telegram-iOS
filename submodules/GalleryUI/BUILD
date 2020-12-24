@@ -1,5 +1,7 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = ["//Nicegram/NGData:NGData"]
+
 swift_library(
     name = "GalleryUI",
     module_name = "GalleryUI",
@@ -28,7 +30,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/UrlEscaping:UrlEscaping",
-    ],
+    ] + NGDEPS,
     visibility = [
         "//visibility:public",
     ],

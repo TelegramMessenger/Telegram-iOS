@@ -1,5 +1,7 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = ["//Nicegram/NGWebUtils:NGWebUtils"]
+
 swift_library(
     name = "AvatarNode",
     module_name = "AvatarNode",
@@ -16,7 +18,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AccountContext:AccountContext",
         "//submodules/Emoji:Emoji",
-    ],
+    ] + NGDEPS,
     visibility = [
         "//visibility:public",
     ],

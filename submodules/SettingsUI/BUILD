@@ -1,5 +1,7 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = ["//Nicegram/NGData:NGData"]
+
 swift_library(
     name = "SettingsUI",
     module_name = "SettingsUI",
@@ -87,7 +89,7 @@ swift_library(
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/AuthTransferUI:AuthTransferUI",
         "//submodules/WidgetSetupScreen:WidgetSetupScreen",
-    ],
+    ] + NGDEPS,
     visibility = [
         "//visibility:public",
     ],

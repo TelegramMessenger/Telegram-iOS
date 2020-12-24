@@ -25,9 +25,14 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/PeersNearbyIconNode:PeersNearbyIconNode",
+        "//submodules/TelegramPermissionsUI:TelegramPermissionsUI",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/ContextUI:ContextUI",
         "//Nicegram/NGData:NGData",
         "//Nicegram/NGLogging:NGLogging",
-        "//Nicegram/NGStrings:NGStrings"
+        "//Nicegram/NGStrings:NGStrings",
+        "//Nicegram/NGIAP:NGIAP"
     ],
     visibility = [
         "//visibility:public",

@@ -1,5 +1,7 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = ["//Nicegram/NGData:NGData", "//Nicegram/NGWebUtils:NGWebUtils", "//Nicegram/NGUI:NGUI", "//Nicegram/NGStrings:NGStrings", "//Nicegram/NGTranslate:NGTranslate"]
+
 filegroup(
     name = "TelegramUIResources",
     srcs = glob([
@@ -21,7 +23,7 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
-    deps = [
+    deps = NGDEPS + [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

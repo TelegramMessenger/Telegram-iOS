@@ -5509,7 +5509,7 @@ public final class PresentationStrings: Equatable {
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[51 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func ChatList_MessageFiles(_ value: Int32) -> String {
+    public func VoiceOver_Chat_ContactEmailCount(_ value: Int32) -> String {
         let form = getPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[52 * 6 + Int(form.rawValue)]!, stringValue)
@@ -6093,4 +6093,3 @@ public final class PresentationStrings: Equatable {
         return lhs === rhs
     }
 }
-

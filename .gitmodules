@@ -14,6 +14,7 @@
 [submodule "submodules/TgVoip/libtgvoip"]
 	path = submodules/TgVoip/libtgvoip
 	url = https://github.com/telegramdesktop/libtgvoip.git
+	# branch = public
 [submodule "build-system/tulsi"]
 	path = build-system/tulsi
 url=https://github.com/bazelbuild/tulsi.git
@@ -26,6 +27,7 @@ url=https://github.com/bazelbuild/tulsi.git
 [submodule "submodules/TgVoipWebrtc/tgcalls"]
 	path = submodules/TgVoipWebrtc/tgcalls
 	url = https://github.com/TelegramMessenger/tgcalls.git
+	# branch = experiments/group-calls
 [submodule "third-party/libvpx/libvpx"]
 	path = third-party/libvpx/libvpx
 	url = https://github.com/webmproject/libvpx.git
