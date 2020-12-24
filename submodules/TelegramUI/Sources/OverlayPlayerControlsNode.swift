@@ -142,7 +142,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(account: Account, accountManager: AccountManager, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>) {
+    init(account: Account, accountManager: AccountManager, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
         self.accountManager = accountManager
         self.postbox = account.postbox
         self.presentationData = presentationData
@@ -232,7 +232,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let accountId = account.id
         let delayedStatus = status
-        |> mapToSignal { value -> Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> in
+        |> mapToSignal { value -> Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
             guard let value = value, value.0.id == accountId else {
                 return .single(nil)
             }
@@ -246,7 +246,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         }
         
         let mappedStatus = combineLatest(delayedStatus, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
-            if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
+            if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading {
                 return MediaPlayerStatus(generationTimestamp: scrubbingTimestamp != nil ? 0 : value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status, soundEnabled: value.status.soundEnabled)
             } else {
                 return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
@@ -275,7 +275,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 strongSelf.rightDurationLabelPushed = rightDurationLabelPushed
                 
                 if let layout = strongSelf.validLayout {
-                    strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .animated(duration: 0.35, curve: .spring))
+                    let _ = strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .animated(duration: 0.35, curve: .spring))
                 }
             }
         })
@@ -286,7 +286,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 return
             }
             var valueItemId: SharedMediaPlaylistItemId?
-            if let (_, value) = value, case let .state(state) = value {
+            if let (_, value, _) = value, case let .state(state) = value {
                 valueItemId = state.item.id
             }
             if !areSharedMediaPlaylistItemIdsEqual(valueItemId, strongSelf.currentItemId) {
@@ -297,7 +297,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             var rateButtonIsHidden = true
             strongSelf.shareNode.isHidden = false
             var displayData: SharedMediaPlaybackDisplayData?
-            if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
+            if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading {
                 let isPaused: Bool
                 switch value.status.status {
                     case .playing:
@@ -352,7 +352,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 if duration != strongSelf.currentDuration && !duration.isZero {
                     strongSelf.currentDuration = duration
                     if let layout = strongSelf.validLayout {
-                        strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .immediate)
+                        let _ = strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .immediate)
                     }
                 }
                 
@@ -368,7 +368,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             if strongSelf.displayData != displayData {
                 strongSelf.displayData = displayData
                                 
-                if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
+                if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                     switch source {
                         case let .telegramFile(fileReference):
                             strongSelf.currentFileReference = fileReference
@@ -635,10 +635,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: leftInset +  sideInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset, height: 10.0 + 8.0 * 2.0)))
         
-        var leftLabelVerticalOffset: CGFloat = self.leftDurationLabelPushed ? 6.0 : 0.0
+        let leftLabelVerticalOffset: CGFloat = self.leftDurationLabelPushed ? 6.0 : 0.0
         transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 14.0 + leftLabelVerticalOffset), size: CGSize(width: 100.0, height: 20.0)))
         
-        var rightLabelVerticalOffset: CGFloat = self.rightDurationLabelPushed ? 6.0 : 0.0
+        let rightLabelVerticalOffset: CGFloat = self.rightDurationLabelPushed ? 6.0 : 0.0
         transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 14.0 + rightLabelVerticalOffset), size: CGSize(width: 100.0, height: 20.0)))
         
         let rateRightOffset = timestampLabelWidthForDuration(self.currentDuration)

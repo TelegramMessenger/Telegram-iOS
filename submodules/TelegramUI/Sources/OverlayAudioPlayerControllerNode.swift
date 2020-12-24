@@ -166,6 +166,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .music
             case .voice:
                 tagMask = .voiceOrInstantVideo
+            case .file:
+                tagMask = .file
         }
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
@@ -511,6 +513,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .music
             case .voice:
                 tagMask = .voiceOrInstantVideo
+            case .file:
+                tagMask = .file
         }
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)

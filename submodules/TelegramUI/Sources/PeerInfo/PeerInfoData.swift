@@ -916,8 +916,10 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             if let cachedUserData = cachedData as? CachedUserData {
                 callsAvailable = cachedUserData.voiceCallsAvailable
                 videoCallsAvailable = cachedUserData.videoCallsAvailable
+            } else {
+                callsAvailable = true
+                videoCallsAvailable = true
             }
-            callsAvailable = true
         }
         if callsAvailable {
             result.append(.call)

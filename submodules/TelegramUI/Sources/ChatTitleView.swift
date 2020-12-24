@@ -67,7 +67,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     var inputActivities: (PeerId, [(Peer, PeerInputActivity)])? {
         didSet {
-            self.updateStatus()
+            let _ = self.updateStatus()
         }
     }
     
@@ -79,7 +79,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         didSet {
             if self.networkState != oldValue {
                 updateNetworkStatusNode(networkState: self.networkState, layout: self.layout)
-                self.updateStatus()
+                let _ = self.updateStatus()
             }
         }
     }
@@ -532,7 +532,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.addSubnode(self.button)
         
         self.presenceManager = PeerPresenceStatusManager(update: { [weak self] in
-            self?.updateStatus()
+            let _ = self?.updateStatus()
         })
         
         self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: [.touchUpInside])
@@ -575,7 +575,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         let titleContent = self.titleContent
         self.titleContent = titleContent
-        self.updateStatus()
+        let _ = self.updateStatus()
         
         if let (size, clearBounds) = self.validLayout {
             self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)

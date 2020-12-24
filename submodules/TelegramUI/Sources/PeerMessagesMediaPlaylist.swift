@@ -736,21 +736,6 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                         viewIndex = .lowerBound
                                     }
                                     return .single((nil, messages.count, false))
-//                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
-//                                        |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
-//                                            let position: NavigatedMessageFromViewPosition
-//                                            switch navigation {
-//                                                case .later, .random:
-//                                                    position = .earlier
-//                                                case .earlier:
-//                                                    position = .later
-//                                            }
-//                                            if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: MessageIndex.absoluteLowerBound(), position: position) {
-//                                                return .single((message, aroundMessages))
-//                                            } else {
-//                                                return .single(nil)
-//                                            }
-//                                    }
                                 } else {
                                     if hasMore {
                                         return .single((nil, messages.count, true))
