@@ -77,7 +77,7 @@ private enum SharedMediaPlaybackItem: Equatable {
     func togglePlayPause() {
         switch self {
             case let .audio(player):
-                player.togglePlayPause()
+                player.togglePlayPause(faded: true)
             case let .instantVideo(node):
                 node.togglePlayPause()
         }
