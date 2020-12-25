@@ -454,6 +454,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var didConnectOnce: Bool = false
     private var toneRenderer: PresentationCallToneRenderer?
     
+    private var videoCapturer: OngoingCallVideoCapturer?
+    
+    private let incomingVideoSourcePromise = Promise<Set<UInt32>>(Set())
+    public var incomingVideoSources: Signal<Set<UInt32>, NoError> {
+        return self.incomingVideoSourcePromise.get()
+    }
+    
     init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -476,6 +483,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.peer = peer
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        
+        self.videoCapturer = OngoingCallVideoCapturer()
         
         var didReceiveAudioOutputs = false
         
@@ -579,6 +588,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 return
             }
             if case let .estabilished(callInfo, _, _, _) = strongSelf.internalState {
+                var addedParticipants: [(UInt32, String?)] = []
                 var removedSsrc: [UInt32] = []
                 for (callId, update) in updates {
                     if callId == callInfo.id {
@@ -598,6 +608,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                         strongSelf._canBeRemoved.set(.single(true))
                                     }
                                 } else if case .joined = participantUpdate.participationStatusChange {
+                                    addedParticipants.append((participantUpdate.ssrc, participantUpdate.jsonParams))
                                 }
                             }
                         case let .call(isTerminated, _):
@@ -609,6 +620,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 if !removedSsrc.isEmpty {
                     strongSelf.callContext?.removeSsrcs(ssrcs: removedSsrc)
+                }
+                if !addedParticipants.isEmpty {
+                    strongSelf.callContext?.addParticipants(participants: addedParticipants)
                 }
             }
         })
@@ -667,6 +681,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             participants.append(GroupCallParticipantsContext.Participant(
                                 peer: accountPeer,
                                 ssrc: 0,
+                                jsonParams: nil,
                                 joinTimestamp: strongSelf.temporaryJoinTimestamp,
                                 activityTimestamp: nil,
                                 muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
@@ -785,7 +800,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             break
         default:
             if case let .active(callInfo) = internalState {
-                let callContext = OngoingGroupCallContext()
+                let callContext = OngoingGroupCallContext(video: self.videoCapturer)
+                self.incomingVideoSourcePromise.set(callContext.videoSources)
                 self.callContext = callContext
                 self.requestDisposable.set((callContext.joinPayload
                 |> take(1)
@@ -929,12 +945,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 
                 self.ssrcMapping.removeAll()
-                var ssrcs: [UInt32] = []
+                var addedParticipants: [(UInt32, String?)] = []
                 for participant in initialState.participants {
                     self.ssrcMapping[participant.ssrc] = participant.peer.id
-                    ssrcs.append(participant.ssrc)
+                    if participant.peer.id != self.accountContext.account.peerId {
+                        addedParticipants.append((participant.ssrc, participant.jsonParams))
+                    }
                 }
-                self.callContext?.setJoinResponse(payload: clientParams, ssrcs: ssrcs)
+                self.callContext?.setJoinResponse(payload: clientParams, participants: addedParticipants)
                 
                 let accountContext = self.accountContext
                 let peerId = self.peerId
@@ -1452,5 +1470,70 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public func updateDefaultParticipantsAreMuted(isMuted: Bool) {
         self.participantsContext?.updateDefaultParticipantsAreMuted(isMuted: isMuted)
+    }
+    
+    public func makeIncomingVideoView(source: UInt32, completion: @escaping (PresentationCallVideoView?) -> Void) {
+        self.callContext?.makeIncomingVideoView(source: source, completion: { view in
+            if let view = view {
+                let setOnFirstFrameReceived = view.setOnFirstFrameReceived
+                let setOnOrientationUpdated = view.setOnOrientationUpdated
+                let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                completion(PresentationCallVideoView(
+                    holder: view,
+                    view: view.view,
+                    setOnFirstFrameReceived: { f in
+                        setOnFirstFrameReceived(f)
+                    },
+                    getOrientation: { [weak view] in
+                        if let view = view {
+                            let mappedValue: PresentationCallVideoView.Orientation
+                            switch view.getOrientation() {
+                            case .rotation0:
+                                mappedValue = .rotation0
+                            case .rotation90:
+                                mappedValue = .rotation90
+                            case .rotation180:
+                                mappedValue = .rotation180
+                            case .rotation270:
+                                mappedValue = .rotation270
+                            }
+                            return mappedValue
+                        } else {
+                            return .rotation0
+                        }
+                    },
+                    getAspect: { [weak view] in
+                        if let view = view {
+                            return view.getAspect()
+                        } else {
+                            return 0.0
+                        }
+                    },
+                    setOnOrientationUpdated: { f in
+                        setOnOrientationUpdated { value, aspect in
+                            let mappedValue: PresentationCallVideoView.Orientation
+                            switch value {
+                            case .rotation0:
+                                mappedValue = .rotation0
+                            case .rotation90:
+                                mappedValue = .rotation90
+                            case .rotation180:
+                                mappedValue = .rotation180
+                            case .rotation270:
+                                mappedValue = .rotation270
+                            }
+                            f?(mappedValue, aspect)
+                        }
+                    },
+                    setOnIsMirroredUpdated: { f in
+                        setOnIsMirroredUpdated { value in
+                            f?(value)
+                        }
+                    }
+                ))
+            } else {
+                completion(nil)
+            }
+        })
     }
 }
