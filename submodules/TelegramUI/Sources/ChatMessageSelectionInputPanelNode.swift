@@ -59,30 +59,30 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.theme = theme
         self.peerMedia = peerMedia
         
-        self.deleteButton = HighlightableButtonNode()
+        self.deleteButton = HighlightableButtonNode(pointerStyle: .default)
         self.deleteButton.isEnabled = false
         self.deleteButton.isAccessibilityElement = true
         self.deleteButton.accessibilityLabel = strings.VoiceOver_MessageContextDelete
         
-        self.reportButton = HighlightableButtonNode()
+        self.reportButton = HighlightableButtonNode(pointerStyle: .default)
         self.reportButton.isEnabled = false
         self.reportButton.isAccessibilityElement = true
         self.reportButton.accessibilityLabel = strings.VoiceOver_MessageContextReport
         
-        self.forwardButton = HighlightableButtonNode()
+        self.forwardButton = HighlightableButtonNode(pointerStyle: .default)
         self.forwardButton.isAccessibilityElement = true
         self.forwardButton.accessibilityLabel = strings.VoiceOver_MessageContextForward
         
-        self.cloudButton = HighlightableButtonNode()
+        self.cloudButton = HighlightableButtonNode(pointerStyle: .default)
         self.cloudButton.isAccessibilityElement = true
         self.cloudButton.accessibilityLabel = "Save To Favourites"
         
-        self.copyForwardButton = HighlightableButtonNode()
+        self.copyForwardButton = HighlightableButtonNode(pointerStyle: .default)
         self.copyForwardButton.isEnabled = false
         self.copyForwardButton.isAccessibilityElement = true
         self.copyForwardButton.accessibilityLabel = "Forward As Copy"
         
-        self.shareButton = HighlightableButtonNode()
+        self.shareButton = HighlightableButtonNode(pointerStyle: .default)
         self.shareButton.isEnabled = false
         self.shareButton.isAccessibilityElement = true
         self.shareButton.accessibilityLabel = strings.VoiceOver_MessageContextShare
@@ -225,6 +225,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             width -= additionalSideInsets.right
         }
         
+        var buttons: [HighlightableButtonNode] = []
         if self.reportButton.isHidden {
             buttons = [
                 self.deleteButton,
