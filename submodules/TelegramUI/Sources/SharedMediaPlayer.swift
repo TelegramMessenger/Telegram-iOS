@@ -227,6 +227,8 @@ final class SharedMediaPlayer {
                                     rateValue = 1.0
                                 case .x2:
                                     rateValue = 1.8
+                                default:
+                                    rateValue = 1.0
                             }
                         }
                         
@@ -446,6 +448,12 @@ final class SharedMediaPlayer {
                             rateValue = 1.0
                         case .x2:
                             rateValue = 1.8
+                        case .x4:
+                            rateValue = 4.0
+                        case .x8:
+                            rateValue = 8.0
+                        case .x16:
+                            rateValue = 16.0
                     }
                     switch playbackItem {
                         case let .audio(player):

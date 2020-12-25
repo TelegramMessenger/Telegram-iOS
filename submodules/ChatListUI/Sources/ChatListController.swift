@@ -1679,7 +1679,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public private(set) var isSearchActive: Bool = false
-    public func activateSearch() {
+    public func activateSearch(filter: ChatListSearchFilter = .chats, query: String? = nil) {
         if self.displayNavigationBar {
             let _ = (combineLatest(self.chatListDisplayNode.containerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(tagSummary: nil, actionsSummary: nil)) |> take(1))
             |> deliverOnMainQueue).start(next: { [weak self] _, chatListView in
@@ -1703,7 +1703,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if let searchContentNode = strongSelf.searchContentNode {                    
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, navigationController: strongSelf.navigationController as? NavigationController) {
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
                         if displaySearchFilters {
                             strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
@@ -1713,6 +1713,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         
                         activate()
+                        
+                        if let searchContentNode = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
+                            searchContentNode.search(filter: filter, query: query)
+                        }
                         
                         if !tabsIsEmpty {
                             Queue.mainQueue().after(0.01) {
@@ -1738,6 +1742,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         break
                     }
                 }
+            }
+        } else if self.isSearchActive {
+            if let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
+                searchContentNode.search(filter: filter, query: query)
             }
         }
     }

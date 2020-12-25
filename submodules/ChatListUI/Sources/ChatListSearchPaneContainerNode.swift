@@ -316,7 +316,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                 self.currentPaneKey = nil
                 self.pendingSwitchToPaneKey = nil
             }
-        } else if self.currentPaneKey == nil {
+        } else if self.currentPaneKey == nil && self.pendingSwitchToPaneKey == nil {
             self.pendingSwitchToPaneKey = availablePanes.first
         }
         

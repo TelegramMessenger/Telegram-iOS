@@ -189,6 +189,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
                     self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateFast
                     self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
+                default:
+                    break
             }
         }
     }
@@ -383,6 +385,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
                 case .x2:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+                default:
+                    break
             }
         }
         if let (size, leftInset, rightInset) = self.validLayout {

@@ -5668,6 +5668,8 @@ Sorry for the inconvenience.";
 "Media.LimitedAccessTitle" = "Limited Access to Media";
 "Media.LimitedAccessText" = "You've given Telegram access only to select number of photos.";
 "Media.LimitedAccessManage" = "Manage";
+"Media.LimitedAccessSelectMore" = "Select More Photos...";
+"Media.LimitedAccessChangeSettings" = "Change Settings";
 
 "VoiceChat.StatusSpeaking" = "speaking";
 "VoiceChat.StatusListening" = "listening";
