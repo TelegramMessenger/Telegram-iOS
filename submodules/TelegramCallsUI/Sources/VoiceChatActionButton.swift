@@ -736,9 +736,15 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.maskBlobView.startAnimating()
         self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
-            self?.maskBlobView.isHidden = true
-            self?.maskBlobView.stopAnimating()
-            self?.maskBlobView.layer.removeAllAnimations()
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.state != .connecting && strongSelf.state != .disabled {
+                return
+            }
+            strongSelf.maskBlobView.isHidden = true
+            strongSelf.maskBlobView.stopAnimating()
+            strongSelf.maskBlobView.layer.removeAllAnimations()
         })
         
         CATransaction.begin()
@@ -750,6 +756,10 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         growthAnimation.isRemovedOnCompletion = false
         
         CATransaction.setCompletionBlock {
+            self.animatingDisappearance = false
+            if self.state != .connecting && self.state != .disabled {
+                return
+            }
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.disableGlowAnimations = false
@@ -757,7 +767,6 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             self.maskCircleLayer.isHidden = true
             self.growingForegroundCircleLayer.isHidden = true
             self.growingForegroundCircleLayer.removeAllAnimations()
-            self.animatingDisappearance = false
             CATransaction.commit()
         }
         
@@ -790,11 +799,13 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
         
         CATransaction.setCompletionBlock {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            self.disableGlowAnimations = false
-            self.foregroundCircleLayer.isHidden = true
-            CATransaction.commit()
+            if case .blob = self.state {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                self.disableGlowAnimations = false
+                self.foregroundCircleLayer.isHidden = true
+                CATransaction.commit()
+            }
         }
         
         self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
@@ -829,40 +840,44 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         groupAnimation.duration = duration
         
         CATransaction.setCompletionBlock {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            self.foregroundCircleLayer.isHidden = false
-            self.maskCircleLayer.isHidden = false
-            self.maskProgressLayer.isHidden = true
-            self.maskGradientLayer.isHidden = false
-            CATransaction.commit()
-            
-            completion()
-            
-            self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
-            
-            self.maskBlobView.isHidden = false
-            self.maskBlobView.startAnimating()
-            self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
-            
-            self.updatedActive?(true)
-            
-            CATransaction.begin()
-            let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
-            shrinkAnimation.fromValue = 1.0
-            shrinkAnimation.toValue = 0.0
-            shrinkAnimation.duration = 0.15
-            shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
-            
-            CATransaction.setCompletionBlock {
+            if case .blob = self.state {
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
-                self.foregroundCircleLayer.isHidden = true
+                self.foregroundCircleLayer.isHidden = false
+                self.maskCircleLayer.isHidden = false
+                self.maskProgressLayer.isHidden = true
+                self.maskGradientLayer.isHidden = false
+                CATransaction.commit()
+                
+                completion()
+                
+                self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
+                
+                self.maskBlobView.isHidden = false
+                self.maskBlobView.startAnimating()
+                self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                
+                self.updatedActive?(true)
+                
+                CATransaction.begin()
+                let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
+                shrinkAnimation.fromValue = 1.0
+                shrinkAnimation.toValue = 0.0
+                shrinkAnimation.duration = 0.15
+                shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+                
+                CATransaction.setCompletionBlock {
+                    if case .blob = self.state {
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        self.foregroundCircleLayer.isHidden = true
+                        CATransaction.commit()
+                    }
+                }
+                
+                self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
                 CATransaction.commit()
             }
-            
-            self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
-            CATransaction.commit()
         }
 
         self.maskProgressLayer.add(groupAnimation, forKey: "progressCompletion")
