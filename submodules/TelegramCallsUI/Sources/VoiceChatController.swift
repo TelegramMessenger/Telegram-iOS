@@ -118,6 +118,86 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
     }
 }
 
+final class GroupVideoNode: ASDisplayNode {
+    private let videoView: PresentationCallVideoView
+    
+    private var validLayout: CGSize?
+    
+    init(videoView: PresentationCallVideoView) {
+        self.videoView = videoView
+        
+        super.init()
+        
+        self.backgroundColor = .black
+        self.clipsToBounds = true
+        self.cornerRadius = 8.0
+        
+        self.view.addSubview(self.videoView.view)
+        
+        videoView.setOnFirstFrameReceived({ [weak self] _ in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let size = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, transition: .immediate)
+                }
+            }
+        })
+        
+        videoView.setOnOrientationUpdated({ [weak self] _, _ in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let size = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, transition: .immediate)
+                }
+            }
+        })
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = size
+        
+        let orientation = self.videoView.getOrientation()
+        var aspect = self.videoView.getAspect()
+        if aspect <= 0.01 {
+            aspect = 3.0 / 4.0
+        }
+        
+        let rotatedAspect: CGFloat
+        let angle: CGFloat
+        switch orientation {
+        case .rotation0:
+            angle = 0.0
+            rotatedAspect = aspect
+        case .rotation90:
+            angle = CGFloat.pi / 2.0
+            rotatedAspect = 1 / aspect
+        case .rotation180:
+            angle = CGFloat.pi
+            rotatedAspect = aspect
+        case .rotation270:
+            angle = CGFloat.pi * 3.0 / 2.0
+            rotatedAspect = 1 / aspect
+        }
+        
+        let rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0).aspectFilled(size)
+        var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
+        rotatedVideoFrame.origin.x = floor(rotatedVideoFrame.origin.x)
+        rotatedVideoFrame.origin.y = floor(rotatedVideoFrame.origin.y)
+        rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
+        rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
+        rotatedVideoFrame = rotatedVideoFrame.insetBy(dx: -1.0, dy: -1.0)
+        self.videoView.view.center = rotatedVideoFrame.center
+        self.videoView.view.bounds = CGRect(origin: CGPoint(), size: rotatedVideoFrame.size)
+        
+        let transition: ContainedViewLayoutTransition = .immediate
+        transition.updateTransformRotation(view: self.videoView.view, angle: angle)
+    }
+}
+
 public final class VoiceChatController: ViewController {
     private final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private struct ListTransition {
@@ -452,6 +532,10 @@ public final class VoiceChatController: ViewController {
         private let inviteDisposable = MetaDisposable()
         
         private let memberEventsDisposable = MetaDisposable()
+        private let voiceSourcesDisposable = MetaDisposable()
+        
+        private var requestedVideoSources = Set<UInt32>()
+        private var videoNodes: [GroupVideoNode] = []
         
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
@@ -1182,6 +1266,29 @@ public final class VoiceChatController: ViewController {
                     strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                 }
             }))
+            
+            self.voiceSourcesDisposable.set((self.call.incomingVideoSources
+            |> deliverOnMainQueue).start(next: { [weak self] sources in
+                guard let strongSelf = self else {
+                    return
+                }
+                for source in sources {
+                    if !strongSelf.requestedVideoSources.contains(source) {
+                        strongSelf.requestedVideoSources.insert(source)
+                        strongSelf.call.makeIncomingVideoView(source: source,  completion: { videoView in
+                            Queue.mainQueue().async {
+                                guard let strongSelf = self, let videoView = videoView else {
+                                    return
+                                }
+                                strongSelf.videoNodes.append(GroupVideoNode(videoView: videoView))
+                                if let (layout, navigationHeight) = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                                }
+                            }
+                        })
+                    }
+                }
+            }))
         }
         
         deinit {
@@ -1195,6 +1302,8 @@ public final class VoiceChatController: ViewController {
             self.audioLevelsDisposable?.dispose()
             self.myAudioLevelDisposable?.dispose()
             self.inviteDisposable.dispose()
+            self.memberEventsDisposable.dispose()
+            self.voiceSourcesDisposable.dispose()
         }
         
         override func didLoad() {
@@ -1781,6 +1890,23 @@ public final class VoiceChatController: ViewController {
             }
             
             self.updateButtons(transition: transition)
+            
+            var currentVideoOrigin = CGPoint(x: 4.0, y: (layout.statusBarHeight ?? 0.0) + 4.0)
+            for videoNode in self.videoNodes {
+                let videoSize = CGSize(width: 100.0, height: 100.0)
+                if currentVideoOrigin.x + videoSize.width > layout.size.width {
+                    currentVideoOrigin.x = 0.0
+                    currentVideoOrigin.y += videoSize.height
+                }
+                
+                videoNode.frame = CGRect(origin: currentVideoOrigin, size: videoSize)
+                videoNode.updateLayout(size: videoSize, transition: .immediate)
+                if videoNode.supernode == nil {
+                    self.contentContainer.addSubnode(videoNode)
+                }
+                
+                currentVideoOrigin.x += videoSize.width + 4.0
+            }
             
             let sideButtonMinimalInset: CGFloat = 16.0
             let sideButtonOffset = min(36.0, floor((((size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))

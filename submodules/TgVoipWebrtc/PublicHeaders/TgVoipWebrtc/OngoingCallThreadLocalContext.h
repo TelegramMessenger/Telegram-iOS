@@ -157,19 +157,40 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
     GroupCallNetworkStateConnected
 };
 
+@interface OngoingGroupCallParticipantDescription : NSObject
+
+@property (nonatomic, readonly) uint32_t audioSsrc;
+@property (nonatomic, strong, readonly) NSString * _Nullable jsonParams;
+
+- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc jsonParams:(NSString * _Nullable)jsonParams;
+
+@end
+
 @interface GroupCallThreadLocalContext : NSObject
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated;
 
 - (void)stop;
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
-- (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload participants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
+- (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)setIsMuted:(bool)isMuted;
 
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
+- (void)makeIncomingVideoViewWithSsrc:(uint32_t)ssrc completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
+
+@end
+
+@interface GroupCallCustomThreadLocalContext : NSObject
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue sendPacket:(void (^ _Nonnull)(NSData * _Nonnull))sendPacket;
+
+- (void)stop;
+
+- (void)receivePacket:(NSData * _Nonnull)data;
 
 @end
 
