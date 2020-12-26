@@ -25,8 +25,8 @@ public final class CachedUserData: CachedPeerData {
         self.pinnedMessageId = nil
         self.isBlocked = false
         self.commonGroupCount = 0
-        self.voiceCallsAvailable = false
-        self.videoCallsAvailable = false
+        self.voiceCallsAvailable = true
+        self.videoCallsAvailable = true
         self.callsPrivate = false
         self.canPinMessages = false
         self.hasScheduledMessages = false

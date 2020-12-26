@@ -30,8 +30,6 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return self.ready.get()
     }
     
-    let shouldReceiveExpandProgressUpdates: Bool
-    
     private let selectedMessagesPromise = Promise<Set<MessageId>?>(nil)
     private var selectedMessages: Set<MessageId>? {
         didSet {
@@ -61,13 +59,8 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast, hintLinks: tagMask == .webPage, isGlobalSearch: false))
         self.listNode.defaultToSynchronousTransactionWhileScrolling = true
-        
-        if tagMask == .music {
-            self.shouldReceiveExpandProgressUpdates = true
-        } else {
-            self.shouldReceiveExpandProgressUpdates = false
-        }
-        
+        self.listNode.scroller.bounces = false
+                
         self.mediaAccessoryPanelContainer = PassthroughContainerNode()
         self.mediaAccessoryPanelContainer.clipsToBounds = true
         
@@ -81,7 +74,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         |> take(1)
         |> map { _ -> Bool in true })
         
-        if tagMask == .music || tagMask == .voiceOrInstantVideo {
+        if [.file, .music, .voiceOrInstantVideo].contains(tagMask) {
             self.mediaStatusDisposable = (context.sharedContext.mediaManager.globalMediaPlayerState
             |> mapToSignal { playlistStateAndType -> Signal<(Account, SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> in
                 if let (account, state, type) = playlistStateAndType {
@@ -95,6 +88,10 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                 }
                             case .music:
                                 if tagMask != .music {
+                                    return .single(nil) |> delay(0.2, queue: .mainQueue())
+                                }
+                            case .file:
+                                if tagMask != .file {
                                     return .single(nil) |> delay(0.2, queue: .mainQueue())
                                 }
                             }

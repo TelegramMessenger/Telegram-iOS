@@ -258,7 +258,11 @@ private final class PollResultsOptionContext {
         }
         |> mapToSignal { inputPeer -> Signal<([RenderedPeer], Int, String?), NoError> in
             if let inputPeer = inputPeer {
-                let signal = account.network.request(Api.functions.messages.getPollVotes(flags: 1 << 0, peer: inputPeer, id: messageId.id, option: Buffer(data: opaqueIdentifier), offset: nextOffset, limit: nextOffset == nil ? 15 : 50))
+                var flags: Int32 = 1 << 0
+                if let _ = nextOffset {
+                    flags |= (1 << 1)
+                }
+                let signal = account.network.request(Api.functions.messages.getPollVotes(flags: flags, peer: inputPeer, id: messageId.id, option: Buffer(data: opaqueIdentifier), offset: nextOffset, limit: nextOffset == nil ? 10 : 50))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.VotesList?, NoError> in
                     return .single(nil)

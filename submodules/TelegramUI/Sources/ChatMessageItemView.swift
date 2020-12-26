@@ -814,7 +814,7 @@ public class ChatMessageItemView: ListViewItemNode {
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
                 case let .urlAuth(url, buttonId):
                     item.controllerInteraction.requestMessageActionUrlAuth(url, item.message.id, buttonId)
-                case let .setupPoll(isQuiz):
+                case .setupPoll:
                     break
             }
         }

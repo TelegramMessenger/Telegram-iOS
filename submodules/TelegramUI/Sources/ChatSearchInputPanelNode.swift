@@ -39,7 +39,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                         strongSelf.displayActivity = value
                         strongSelf.activityIndicator.isHidden = !value
                         if let interfaceState = strongSelf.presentationInterfaceState, let validLayout = strongSelf.validLayout {
-                            strongSelf.updateLayout(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, maxHeight: validLayout.4, isSecondary: validLayout.6, transition: .immediate, interfaceState: interfaceState, metrics: validLayout.5)
+                            let _ = strongSelf.updateLayout(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, maxHeight: validLayout.4, isSecondary: validLayout.6, transition: .immediate, interfaceState: interfaceState, metrics: validLayout.5)
                         }
                     }
                 }))
