@@ -2989,6 +2989,7 @@ ios_objc_sources = [
     "objc/base/RTCRtpFragmentationHeader.h",
     "objc/base/RTCRtpFragmentationHeader.m",
     "objc/api/peerconnection/RTCRtpFragmentationHeader+Private.h",
+    "objc/api/peerconnection/RTCRtpFragmentationHeader+Private.mm",
     "objc/base/RTCVideoCapturer.h",
     "objc/base/RTCVideoCapturer.m",
     "objc/base/RTCVideoCodecInfo.h",
