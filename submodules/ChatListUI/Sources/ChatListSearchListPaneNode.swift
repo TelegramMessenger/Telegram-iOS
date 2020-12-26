@@ -1730,6 +1730,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 nextRate = .x2
                             case .x2:
                                 nextRate = .x1
+                            default:
+                                nextRate = .x1
                         }
                         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
                             return settings.withUpdatedVoicePlaybackRate(nextRate)

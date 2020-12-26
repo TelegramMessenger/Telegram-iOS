@@ -950,6 +950,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
+    public func openSearch(filter: ChatListSearchFilter, query: String?) {
+        if let rootController = self.mainWindow?.viewController as? TelegramRootController {
+            rootController.openChatsController(activateSearch: true, filter: filter, query: query)
+        }
+    }
+    
     public func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?) {
         self.navigateToChatImpl(accountId, peerId, messageId)
     }

@@ -663,6 +663,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 nextRate = .x2
                             case .x2:
                                 nextRate = .x1
+                            default:
+                                nextRate = .x1
                         }
                         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
                             return settings.withUpdatedVoicePlaybackRate(nextRate)
@@ -813,7 +815,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         })]
     }
     
-    private func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
+    open func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
         self.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
     }
 }

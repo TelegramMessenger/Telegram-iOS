@@ -32,6 +32,7 @@ typedef enum
 @property (nonatomic, readonly) UIColor *textColor;
 @property (nonatomic, readonly) UIColor *secondaryTextColor;
 @property (nonatomic, readonly) UIColor *accentColor;
+@property (nonatomic, readonly) UIColor *destructiveColor;
 @property (nonatomic, readonly) UIColor *barBackgroundColor;
 @property (nonatomic, readonly) UIColor *barSeparatorColor;
 @property (nonatomic, readonly) UIColor *navigationTitleColor;
@@ -42,7 +43,7 @@ typedef enum
 
 @property (nonatomic, readonly) UIColor *maybeAccentColor;
 
-+ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor navigationTitleColor:(UIColor *)navigationTitleColor badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor sendIconImage:(UIImage *)sendIconImage doneIconImage:(UIImage *)doneIconImage maybeAccentColor:(UIColor *)maybeAccentColor;
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor navigationTitleColor:(UIColor *)navigationTitleColor badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor sendIconImage:(UIImage *)sendIconImage doneIconImage:(UIImage *)doneIconImage maybeAccentColor:(UIColor *)maybeAccentColor;
 
 @end
 

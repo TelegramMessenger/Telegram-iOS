@@ -109,8 +109,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var stateValue = ChatListSearchContainerNodeSearchState()
     private let statePromise = ValuePromise<ChatListSearchContainerNodeSearchState>()
     
-    private var selectedFilterKey: ChatListSearchFilterEntryId? = .filter(ChatListSearchFilter.chats.id)
-    private var selectedFilterKeyPromise = Promise<ChatListSearchFilterEntryId?>(.filter(ChatListSearchFilter.chats.id))
+    private var selectedFilterKey: ChatListSearchFilterEntryId?
+    private var selectedFilterKeyPromise = Promise<ChatListSearchFilterEntryId?>()
     private var transitionFraction: CGFloat = 0.0
     
     private var didSetReady: Bool = false
@@ -121,13 +121,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, displaySearchFilters: Bool, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, displaySearchFilters: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = filter
         self.groupId = groupId
         self.displaySearchFilters = displaySearchFilters
         self.navigationController = navigationController
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.selectedFilterKey = .filter(initialFilter.id)
+        self.selectedFilterKeyPromise.set(.single(self.selectedFilterKey))
         
         self.openMessage = originalOpenMessage
         self.present = present
@@ -292,6 +295,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 strongSelf.updateSearchOptions(strongSelf.currentSearchOptions.withUpdatedDate(date).withUpdatedPeer(peer), clearQuery: true)
             }
         }
+        
+        self.filterContainerNode.filterPressed?(initialFilter)
         
         let suggestedPeers = self.searchQuery.get()
         |> mapToSignal { query -> Signal<[Peer], NoError> in
@@ -488,6 +493,28 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.searchQueryValue = searchQuery
         
         self.suggestedDates.set(.single(suggestDates(for: text, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)))
+    }
+    
+    public func search(filter: ChatListSearchFilter, query: String?) {
+        let key: ChatListSearchPaneKey
+        switch filter {
+            case .media:
+                key = .media
+            case .links:
+                key = .links
+            case .files:
+                key = .files
+            case .music:
+                key = .music
+            case .voice:
+                key = .voice
+            default:
+                key = .chats
+        }
+        self.paneContainerNode.requestSelectPane(key)
+        self.updateSearchOptions(nil)
+        self.searchTextUpdated(text: query ?? "")
+        self.setQuery?(nil, [], query ?? "")
     }
 
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
