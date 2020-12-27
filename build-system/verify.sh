@@ -21,22 +21,16 @@ if [ -z "$BUILD_NUMBER" ]; then
 	exit 1
 fi
 
-export ENTITLEMENTS_APP="Telegram-iOS/Telegram-iOS-AppStoreLLC.entitlements"
 export DEVELOPMENT_PROVISIONING_PROFILE_APP="match Development ph.telegra.Telegraph"
 export DISTRIBUTION_PROVISIONING_PROFILE_APP="match AppStore ph.telegra.Telegraph"
-export ENTITLEMENTS_EXTENSION_SHARE="Share/Share-AppStoreLLC.entitlements"
 export DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_SHARE="match Development ph.telegra.Telegraph.Share"
 export DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_SHARE="match AppStore ph.telegra.Telegraph.Share"
-export ENTITLEMENTS_EXTENSION_WIDGET="Widget/Widget-AppStoreLLC.entitlements"
 export DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_WIDGET="match Development ph.telegra.Telegraph.Widget"
 export DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_WIDGET="match AppStore ph.telegra.Telegraph.Widget"
-export ENTITLEMENTS_EXTENSION_NOTIFICATIONSERVICE="NotificationService/NotificationService-AppStoreLLC.entitlements"
 export DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONSERVICE="match Development ph.telegra.Telegraph.NotificationService"
 export DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONSERVICE="match AppStore ph.telegra.Telegraph.NotificationService"
-export ENTITLEMENTS_EXTENSION_NOTIFICATIONCONTENT="NotificationContent/NotificationContent-AppStoreLLC.entitlements"
 export DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONCONTENT="match Development ph.telegra.Telegraph.NotificationContent"
 export DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONCONTENT="match AppStore ph.telegra.Telegraph.NotificationContent"
-export ENTITLEMENTS_EXTENSION_INTENTS="SiriIntents/SiriIntents-AppStoreLLC.entitlements"
 export DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_INTENTS="match Development ph.telegra.Telegraph.SiriIntents"
 export DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_INTENTS="match AppStore ph.telegra.Telegraph.SiriIntents"
 export DEVELOPMENT_PROVISIONING_PROFILE_WATCH_APP="match Development ph.telegra.Telegraph.watchkitapp"
@@ -47,6 +41,5 @@ export DISTRIBUTION_PROVISIONING_PROFILE_WATCH_EXTENSION="match AppStore ph.tele
 BUILDBOX_DIR="buildbox"
 
 export CODESIGNING_PROFILES_VARIANT="appstore"
-export PACKAGE_METHOD="appstore"
 
 $@
