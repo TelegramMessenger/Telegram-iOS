@@ -695,7 +695,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 infoIconRightInset -= 36.0
             }
             
-            transition.updateFrameAdditive(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
+            var avatarFrame = self.avatarNode.frame
+            avatarFrame.origin.x = revealOffset + leftInset - 52.0
+            transition.updateFrameAdditive(node: self.avatarNode, frame: avatarFrame)
             
             transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
             
