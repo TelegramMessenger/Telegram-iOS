@@ -1882,9 +1882,10 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
         return (network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: pollPts, limit: limit))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
-            if error.errorDescription == "CHANNEL_PRIVATE" {
+            switch error.errorDescription {
+            case "CHANNEL_PRIVATE", "CHANNEL_INVALID":
                 return .single(nil)
-            } else {
+            default:
                 return .fail(error)
             }
         })
