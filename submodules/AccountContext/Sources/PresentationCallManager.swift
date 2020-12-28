@@ -294,7 +294,6 @@ public protocol PresentationGroupCall: class {
     func toggleIsMuted()
     func setIsMuted(action: PresentationGroupCallMuteAction)
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
-    func setVolume(peerId: PeerId, volume: Double)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool)

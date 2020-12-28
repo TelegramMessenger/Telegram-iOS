@@ -57,12 +57,12 @@ func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType
                 return (CallListNodeViewUpdate(view: view, type: .Generic, scrollPosition: nil), locationAndType.type)
             }
         case let .changeType(index):
-            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
+            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 200) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
                 return (CallListNodeViewUpdate(view: view, type: .ReloadAnimated, scrollPosition: nil), locationAndType.type)
             }
         case let .navigation(index):
             var first = true
-            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
+            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 200) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
                 let genericType: CallListNodeViewUpdateType
                 if first {
                     first = false
@@ -76,7 +76,7 @@ func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let callScrollPosition: CallListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
+            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 200) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
                 let genericType: CallListNodeViewUpdateType
                 let scrollPosition: CallListNodeViewScrollPosition? = first ? callScrollPosition : nil
                 if first {

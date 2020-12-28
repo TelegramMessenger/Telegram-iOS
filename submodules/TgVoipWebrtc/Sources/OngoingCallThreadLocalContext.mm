@@ -1052,12 +1052,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)setVolumeForSsrc:(uint32_t)ssrc volume:(double)volume {
-    if (_instance) {
-        _instance->setVolume(ssrc, volume);
-    }
-}
-
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId {
     if (_instance) {
         _instance->setAudioOutputDevice(deviceId.UTF8String);
