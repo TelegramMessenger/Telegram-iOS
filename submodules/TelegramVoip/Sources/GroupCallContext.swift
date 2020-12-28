@@ -48,12 +48,15 @@ public final class OngoingGroupCallContext {
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String) {
+        let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
+        
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
             
+            let videoSources = self.videoSources
             self.context = GroupCallThreadLocalContext(
                 queue: ContextQueueImpl(queue: queue),
                 networkStateUpdated: { state in
@@ -63,7 +66,11 @@ public final class OngoingGroupCallContext {
                     audioLevelsUpdatedImpl?(levels)
                 },
                 inputDeviceId: inputDeviceId,
-                outputDeviceId: outputDeviceId
+                outputDeviceId: outputDeviceId,
+                videoCapturer: video?.impl,
+                incomingVideoSourcesUpdated: { ssrcs in
+                    videoSources.set(Set(ssrcs.map { $0.uint32Value }))
+                }
             )
             
             let queue = self.queue
@@ -116,9 +123,10 @@ public final class OngoingGroupCallContext {
             })
         }
         
-        func setJoinResponse(payload: String, ssrcs: [UInt32]) {
-            self.context.setJoinResponsePayload(payload)
-            self.addSsrcs(ssrcs: ssrcs)
+        func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
+            self.context.setJoinResponsePayload(payload, participants: participants.map { participant -> OngoingGroupCallParticipantDescription in
+                return OngoingGroupCallParticipantDescription(audioSsrc: participant.0, jsonParams: participant.1)
+            })
         }
         
         func addSsrcs(ssrcs: [UInt32]) {
@@ -137,6 +145,15 @@ public final class OngoingGroupCallContext {
             self.context.setVolumeForSsrc(ssrc, volume: volume)
         }
         
+        func addParticipants(participants: [(UInt32, String?)]) {
+            if participants.isEmpty {
+                return
+            }
+            self.context.addParticipants(participants.map { participant -> OngoingGroupCallParticipantDescription in
+                return OngoingGroupCallParticipantDescription(audioSsrc: participant.0, jsonParams: participant.1)
+            })
+        }
+        
         func stop() {
             self.context.stop()
         }
@@ -149,8 +166,48 @@ public final class OngoingGroupCallContext {
         func switchAudioInput(_ deviceId: String) {
             self.context.switchAudioInput(deviceId)
         }
+        
         func switchAudioOutput(_ deviceId: String) {
             self.context.switchAudioOutput(deviceId)
+        }
+        
+        func makeIncomingVideoView(source: UInt32, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+            self.context.makeIncomingVideoView(withSsrc: source, completion: { view in
+                if let view = view {
+                    completion(OngoingCallContextPresentationCallVideoView(
+                        view: view,
+                        setOnFirstFrameReceived: { [weak view] f in
+                            view?.setOnFirstFrameReceived(f)
+                        },
+                        getOrientation: { [weak view] in
+                            if let view = view {
+                                return OngoingCallVideoOrientation(view.orientation)
+                            } else {
+                                return .rotation0
+                            }
+                        },
+                        getAspect: { [weak view] in
+                            if let view = view {
+                                return view.aspect
+                            } else {
+                                return 0.0
+                            }
+                        },
+                        setOnOrientationUpdated: { [weak view] f in
+                            view?.setOnOrientationUpdated { value, aspect in
+                                f?(OngoingCallVideoOrientation(value), aspect)
+                            }
+                        },
+                        setOnIsMirroredUpdated: { [weak view] f in
+                            view?.setOnIsMirroredUpdated { value in
+                                f?(value)
+                            }
+                        }
+                    ))
+                } else {
+                    completion(nil)
+                }
+            })
         }
     }
     
@@ -205,10 +262,22 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "") {
+    public var videoSources: Signal<Set<UInt32>, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.videoSources.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video)
         })
     }
     
@@ -228,9 +297,9 @@ public final class OngoingGroupCallContext {
             impl.switchAudioOutput(deviceId)
         }
     }
-    public func setJoinResponse(payload: String, ssrcs: [UInt32]) {
+    public func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
         self.impl.with { impl in
-            impl.setJoinResponse(payload: payload, ssrcs: ssrcs)
+            impl.setJoinResponse(payload: payload, participants: participants)
         }
     }
     
@@ -252,9 +321,21 @@ public final class OngoingGroupCallContext {
         }
     }
     
+    public func addParticipants(participants: [(UInt32, String?)]) {
+        self.impl.with { impl in
+            impl.addParticipants(participants: participants)
+        }
+    }
+    
     public func stop() {
         self.impl.with { impl in
             impl.stop()
+        }
+    }
+    
+    public func makeIncomingVideoView(source: UInt32, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+        self.impl.with { impl in
+            impl.makeIncomingVideoView(source: source, completion: completion)
         }
     }
 }

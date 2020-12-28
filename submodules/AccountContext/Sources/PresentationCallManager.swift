@@ -96,6 +96,7 @@ public final class PresentationCallVideoView {
         case rotation270
     }
     
+    public let holder: AnyObject
     public let view: UIView
     public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     
@@ -105,6 +106,7 @@ public final class PresentationCallVideoView {
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
+        holder: AnyObject,
         view: UIView,
         setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> Orientation,
@@ -112,6 +114,7 @@ public final class PresentationCallVideoView {
         setOnOrientationUpdated: @escaping (((Orientation, CGFloat) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
     ) {
+        self.holder = holder
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
         self.getOrientation = getOrientation
@@ -302,6 +305,10 @@ public protocol PresentationGroupCall: class {
     func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
+    
+    var incomingVideoSources: Signal<Set<UInt32>, NoError> { get }
+    
+    func makeIncomingVideoView(source: UInt32, completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
 public protocol PresentationCallManager: class {
