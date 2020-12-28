@@ -785,13 +785,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         self.addSubnode(self.mediaNode)
-        self.addSubnode(self.shimmerNode)
-        self.addSubnode(self.mediaAccessoryPanelContainer)
         
         self.addSubnode(self.emptyResultsAnimationNode)
         self.addSubnode(self.emptyResultsTitleNode)
         self.addSubnode(self.emptyResultsTextNode)
 
+        self.addSubnode(self.shimmerNode)
+        self.addSubnode(self.mediaAccessoryPanelContainer)
+        
         let searchContext = Promise<ChatListSearchMessagesContext?>(nil)
         let searchContextValue = self.searchContextValue
         let updateSearchContext: ((ChatListSearchMessagesContext?) -> (ChatListSearchMessagesContext?, Bool)) -> Void = { f in

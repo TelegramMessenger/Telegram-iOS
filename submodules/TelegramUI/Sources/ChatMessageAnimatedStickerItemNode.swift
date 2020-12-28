@@ -242,12 +242,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 return
             }
             if image != nil {
-                strongSelf.removePlaceholder(animated: !firstTime)
                 if firstTime {
-                    strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
+                        self?.removePlaceholder(animated: false)
+                    })
+                } else {
+                    strongSelf.removePlaceholder(animated: true)
                 }
+                firstTime = false
             }
-            firstTime = false
         }
                 
         self.imageNode.displaysAsynchronously = false
