@@ -68,6 +68,18 @@ bazel_app_debug_arm64:
 	--watchos_cpus=armv7k,arm64_32 \
 	--verbose_failures
 
+bazel_webrtc:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	TELEGRAM_DISABLE_EXTENSIONS="0" \
+	build-system/prepare-build.sh Telegram distribution
+	"${BAZEL}" build third-party/webrtc:webrtc_lib ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_DEBUG_FLAGS} ${BAZEL_SANDBOX_FLAGS} \
+	-c dbg \
+	--ios_multi_cpus=arm64 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--verbose_failures
+
 bazel_app_debug_sim_arm64:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
@@ -128,7 +140,7 @@ check_sandbox_debug_build:
 	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	TELEGRAM_DISABLE_EXTENSIONS="0" \
 	build-system/prepare-build.sh Telegram distribution
-	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_DEBUG_FLAGS} ${BAZEL_SANDBOX_FLAGS} \
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_DEBUG_FLAGS} \
 	-c opt \
 	--ios_multi_cpus=arm64 \
 	--watchos_cpus=armv7k,arm64_32 \
