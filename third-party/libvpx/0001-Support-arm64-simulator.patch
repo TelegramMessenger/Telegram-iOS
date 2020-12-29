@@ -1,12 +1,12 @@
-From 45fdd3634f485c0a7b468b5861f777713260cad2 Mon Sep 17 00:00:00 2001
+From 012fe706a281cc5e9586dc0ad7b0c59baf84feb1 Mon Sep 17 00:00:00 2001
 From: Ali <>
-Date: Mon, 28 Dec 2020 23:03:15 +0400
+Date: Wed, 30 Dec 2020 00:13:06 +0400
 Subject: [PATCH] Support arm64 simulator
 
 ---
  build/make/configure.sh | 73 ++++++++++++++++++++++++++++++++++++++++-
- configure               |  2 +-
- 2 files changed, 73 insertions(+), 2 deletions(-)
+ configure               |  3 +-
+ 2 files changed, 74 insertions(+), 2 deletions(-)
 
 diff --git a/build/make/configure.sh b/build/make/configure.sh
 index c4e938fc7..ccd7066a5 100644
@@ -107,10 +107,18 @@ index c4e938fc7..ccd7066a5 100644
            enable_feature linux
            if enabled rvct; then
 diff --git a/configure b/configure
-index f7e11aaf2..1f358021e 100755
+index f7e11aaf2..af625ee35 100755
 --- a/configure
 +++ b/configure
-@@ -735,7 +735,7 @@ process_toolchain() {
+@@ -100,6 +100,7 @@ EOF
+ all_platforms="${all_platforms} arm64-android-gcc"
+ all_platforms="${all_platforms} arm64-darwin-gcc"
+ all_platforms="${all_platforms} arm64-darwin20-gcc"
++all_platforms="${all_platforms} arm64-iphonesimulator-gcc"
+ all_platforms="${all_platforms} arm64-linux-gcc"
+ all_platforms="${all_platforms} arm64-win64-gcc"
+ all_platforms="${all_platforms} arm64-win64-vs15"
+@@ -735,7 +736,7 @@ process_toolchain() {
              soft_enable libyuv
              # GTestLog must be modified to use Android logging utilities.
          ;;

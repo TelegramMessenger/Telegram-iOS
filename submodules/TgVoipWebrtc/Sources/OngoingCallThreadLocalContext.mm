@@ -1151,6 +1151,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         return;
     }
     
+    NSString *endpointId = dict[@"endpoint"];
+    if (![endpointId isKindOfClass:[NSString class]]) {
+        return;
+    }
+    
+    participant.endpointId = [endpointId UTF8String];
+    
     NSArray *ssrcGroups = dict[@"ssrc-groups"];
     if ([ssrcGroups isKindOfClass:[NSArray class]]) {
         for (NSDictionary *group in ssrcGroups) {
