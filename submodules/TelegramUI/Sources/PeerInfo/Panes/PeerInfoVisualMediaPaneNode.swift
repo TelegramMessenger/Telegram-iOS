@@ -781,9 +781,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
     }
-    
-    let shouldReceiveExpandProgressUpdates: Bool = false
-    
+        
     private let listDisposable = MetaDisposable()
     private var hiddenMediaDisposable: Disposable?
     private var mediaItems: [VisualMediaItem] = []

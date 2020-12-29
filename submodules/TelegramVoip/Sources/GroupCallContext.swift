@@ -141,6 +141,10 @@ public final class OngoingGroupCallContext {
             })
         }
         
+        func setVolume(ssrc: UInt32, volume: Double) {
+            self.context.setVolumeForSsrc(ssrc, volume: volume)
+        }
+        
         func addParticipants(participants: [(UInt32, String?)]) {
             if participants.isEmpty {
                 return
@@ -308,6 +312,12 @@ public final class OngoingGroupCallContext {
     public func removeSsrcs(ssrcs: [UInt32]) {
         self.impl.with { impl in
             impl.removeSsrcs(ssrcs: ssrcs)
+        }
+    }
+    
+    public func setVolume(ssrc: UInt32, volume: Double) {
+        self.impl.with { impl in
+            impl.setVolume(ssrc: ssrc, volume: volume)
         }
     }
     

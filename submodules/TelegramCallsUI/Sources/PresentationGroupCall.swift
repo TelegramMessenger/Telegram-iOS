@@ -1253,6 +1253,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    public func setVolume(peerId: PeerId, volume: Double) {
+        for (ssrc, id) in self.ssrcMapping {
+            if id == peerId {
+                self.callContext?.setVolume(ssrc: ssrc, volume: volume)
+                break
+            }
+        }
+    }
+    
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
         guard self.currentSelectedAudioOutputValue != output else {
             return

@@ -605,7 +605,7 @@ public final class AccountStateManager {
                                 if !events.isEmpty {
                                     strongSelf.insertProcessEvents(events)
                                 }
-                                if finalState.incomplete {
+                                if finalState.incomplete || !finalState.missingUpdatesFromChannels.isEmpty {
                                     strongSelf.addOperation(.collectUpdateGroups(groups, 2.0), position: .last)
                                 }
                             } else {
@@ -622,9 +622,6 @@ public final class AccountStateManager {
                             assertionFailure()
                         }
                     }
-                }, error: { _ in
-                    assertionFailure()
-                    Logger.shared.log("AccountStateManager", "processUpdateGroups signal completed with error")
                 })
             case let .custom(operationId, signal):
                 self.operationTimer?.invalidate()

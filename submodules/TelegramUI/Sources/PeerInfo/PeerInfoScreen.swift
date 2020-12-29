@@ -2192,7 +2192,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     
                     var items: [ActionSheetItem] = []
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Settings_CancelUpload, color: .destructive, action: { [weak self] in
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Settings_CancelUpload, color: .destructive, action: {
                         dismissAction()
                         proceed()
                     }))
@@ -2782,15 +2782,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self?.view.endEditing(true)
             }, contentContext: nil)
         })
-        
-        let disposable = self.resolveUrlDisposable
-        
-        let resolvedUrl: Signal<ResolvedUrl, NoError>
-        if external {
-            resolvedUrl = .single(.externalUrl(url))
-        } else {
-            resolvedUrl = self.context.sharedContext.resolveUrl(account: self.context.account, url: url)
-        }
     }
     
     private func openPeer(peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer) {
@@ -2901,7 +2892,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 actionSheet?.dismissAnimated()
             }
             var items: [ActionSheetItem] = []
-            if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled).contains(.search) || self.headerNode.isAvatarExpanded {
+            if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled).contains(.search) || (self.headerNode.isAvatarExpanded && self.peerId.namespace == Namespaces.Peer.CloudUser) {
                 items.append(ActionSheetButtonItem(title: presentationData.strings.ChatSearch_SearchPlaceholder, color: .accent, action: { [weak self] in
                     dismissAction()
                     self?.openChatWithMessageSearch()
@@ -4610,16 +4601,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             case .recentCalls:
                 self.controller?.push(CallListController(context: context, mode: .navigation))
             case .devices:
-                if let settings = self.data?.globalSettings {
-                    let _ = (self.activeSessionsContextAndCount.get()
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] activeSessionsContextAndCount in
-                        if let strongSelf = self, let activeSessionsContextAndCount = activeSessionsContextAndCount {
-                            let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
-                            strongSelf.controller?.push(recentSessionsController(context: strongSelf.context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
-                        }
-                    })
-                }
+                let _ = (self.activeSessionsContextAndCount.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] activeSessionsContextAndCount in
+                    if let strongSelf = self, let activeSessionsContextAndCount = activeSessionsContextAndCount {
+                        let (activeSessionsContext, _, webSessionsContext) = activeSessionsContextAndCount
+                        strongSelf.controller?.push(recentSessionsController(context: strongSelf.context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
+                    }
+                })
             case .chatFolders:
                 self.controller?.push(chatListFilterPresetListController(context: self.context, mode: .default))
             case .notificationsAndSounds:

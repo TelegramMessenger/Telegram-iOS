@@ -837,12 +837,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
                 }];
             },
-            .audioLevelsUpdated = [audioLevelsUpdated](std::vector<std::pair<uint32_t, std::pair<float, bool>>> const &levels) {
+            .audioLevelsUpdated = [audioLevelsUpdated](tgcalls::GroupLevelsUpdate const &levelsUpdate) {
                 NSMutableArray *result = [[NSMutableArray alloc] init];
-                for (auto &it : levels) {
-                    [result addObject:@(it.first)];
-                    [result addObject:@(it.second.first)];
-                    [result addObject:@(it.second.second)];
+                for (auto &it : levelsUpdate.updates) {
+                    [result addObject:@(it.ssrc)];
+                    [result addObject:@(it.value.level)];
+                    [result addObject:@(it.value.voice)];
                 }
                 audioLevelsUpdated(result);
             },
@@ -1151,6 +1151,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         return;
     }
     
+    NSString *endpointId = dict[@"endpoint"];
+    if (![endpointId isKindOfClass:[NSString class]]) {
+        return;
+    }
+    
+    participant.endpointId = [endpointId UTF8String];
+    
     NSArray *ssrcGroups = dict[@"ssrc-groups"];
     if ([ssrcGroups isKindOfClass:[NSArray class]]) {
         for (NSDictionary *group in ssrcGroups) {
@@ -1285,6 +1292,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
+    }
+}
+
+- (void)setVolumeForSsrc:(uint32_t)ssrc volume:(double)volume {
+    if (_instance) {
+        _instance->setVolume(ssrc, volume);
     }
 }
 

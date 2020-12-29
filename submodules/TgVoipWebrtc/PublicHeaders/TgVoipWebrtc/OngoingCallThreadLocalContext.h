@@ -178,6 +178,8 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 - (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)setIsMuted:(bool)isMuted;
 
+- (void)setVolumeForSsrc:(uint32_t)ssrc volume:(double)volume;
+
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 - (void)makeIncomingVideoViewWithSsrc:(uint32_t)ssrc completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;

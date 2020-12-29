@@ -110,7 +110,7 @@
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     
     CGSize frameSize = self.view.frame.size;
-    CGRect collectionViewFrame = CGRectMake(safeAreaInset.left, 0.0f, frameSize.width - safeAreaInset.left - safeAreaInset.right, frameSize.height);
+    CGRect collectionViewFrame = CGRectMake(safeAreaInset.left, _topInset, frameSize.width - safeAreaInset.left - safeAreaInset.right, frameSize.height - _topInset);
     _collectionViewWidth = collectionViewFrame.size.width;
     _collectionView.frame = collectionViewFrame;
 }
@@ -280,6 +280,11 @@
     [_collectionView setContentOffset:contentOffset animated:false];
 }
 
+- (void)setTopInset:(CGFloat)topInset {
+    _topInset = topInset;
+    [self layoutControllerForSize:self.view.frame.size duration:0.0];
+}
+
 - (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration
 {
     [super layoutControllerForSize:size duration:duration];
@@ -308,7 +313,7 @@
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     
-    CGRect frame = CGRectMake(safeAreaInset.left, 0, size.width - safeAreaInset.left - safeAreaInset.right, size.height);
+    CGRect frame = CGRectMake(safeAreaInset.left, _topInset, size.width - safeAreaInset.left - safeAreaInset.right, size.height - _topInset);
     _collectionViewWidth = frame.size.width;
     _collectionView.frame = frame;
     

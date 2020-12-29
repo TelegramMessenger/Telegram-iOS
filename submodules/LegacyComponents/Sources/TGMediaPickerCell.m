@@ -34,6 +34,10 @@
         if (iosMajorVersion() >= 11)
             _imageView.accessibilityIgnoresInvertColors = true;
         
+        _typeIconView = [[UIImageView alloc] init];
+        _typeIconView.contentMode = UIViewContentModeCenter;
+        [self addSubview:_typeIconView];
+        
         self.isAccessibilityElement = true;
     }
     return self;
@@ -211,6 +215,8 @@
     _imageView.transform = CGAffineTransformIdentity;
     _imageView.frame = self.bounds;
     _imageView.transform = transform;
+    
+    _typeIconView.frame = CGRectMake(2.0, self.frame.size.height - 19 - 2, 19, 19);
     
     _checkButton.frame = (CGRect){ { self.frame.size.width - _checkButton.frame.size.width - 2, 2 }, _checkButton.frame.size };
 }

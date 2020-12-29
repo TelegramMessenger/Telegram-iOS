@@ -60,7 +60,7 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
             if let message = apiMessages.first, let timestamp = message.timestamp {
                 return .single((message.rawId, timestamp))
             } else {
-                return .fail(.retry)
+                return .single(nil)
             }
         }
     }
@@ -333,7 +333,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
         return stateManager.addCustomOperation(postbox.transaction { transaction -> PeerReadStateValidationError? in
             if let readStates = transaction.getPeerReadStates(peerId) {
                 for (namespace, currentReadState) in readStates where namespace == namespaceAndReadState.0 {
-                    if currentReadState == namespaceAndReadState.1 {
+                    if currentReadState.count == namespaceAndReadState.1.count {
                         transaction.confirmSynchronizedIncomingReadState(peerId)
                         return nil
                     }

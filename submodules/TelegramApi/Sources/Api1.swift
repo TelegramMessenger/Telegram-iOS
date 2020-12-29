@@ -5438,19 +5438,21 @@ public extension Api {
     
     }
     public enum GroupCallParticipant: TypeConstructorDescription {
-        case groupCallParticipant(flags: Int32, userId: Int32, date: Int32, activeDate: Int32?, source: Int32, params: Api.DataJSON?)
+        case groupCallParticipant(flags: Int32, userId: Int32, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, mutedCnt: Int32?, params: Api.DataJSON?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let params):
+                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let mutedCnt, let params):
                     if boxed {
-                        buffer.appendInt32(-461437776)
+                        buffer.appendInt32(451104277)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(activeDate!, buffer: buffer, boxed: false)}
                     serializeInt32(source, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeInt32(mutedCnt!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 6) != 0 {params!.serialize(buffer, true)}
                     break
     }
@@ -5458,8 +5460,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let params):
-                return ("groupCallParticipant", [("flags", flags), ("userId", userId), ("date", date), ("activeDate", activeDate), ("source", source), ("params", params)])
+                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let mutedCnt, let params):
+                return ("groupCallParticipant", [("flags", flags), ("userId", userId), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("mutedCnt", mutedCnt), ("params", params)])
     }
     }
     
@@ -5474,18 +5476,24 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {_4 = reader.readInt32() }
             var _5: Int32?
             _5 = reader.readInt32()
-            var _6: Api.DataJSON?
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 7) != 0 {_6 = reader.readInt32() }
+            var _7: Int32?
+            if Int(_1!) & Int(1 << 8) != 0 {_7 = reader.readInt32() }
+            var _8: Api.DataJSON?
             if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.DataJSON
+                _8 = Api.parse(reader, signature: signature) as? Api.DataJSON
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
             let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 6) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, userId: _2!, date: _3!, activeDate: _4, source: _5!, params: _6)
+            let _c6 = (Int(_1!) & Int(1 << 7) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 8) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, userId: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6, mutedCnt: _7, params: _8)
             }
             else {
                 return nil
@@ -18909,7 +18917,7 @@ public extension Api {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
         case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
-        case inputPaymentCredentialsAndroidPay(paymentToken: Api.DataJSON, googleTransactionId: String)
+        case inputPaymentCredentialsGooglePay(paymentToken: Api.DataJSON)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18933,12 +18941,11 @@ public extension Api {
                     }
                     paymentData.serialize(buffer, true)
                     break
-                case .inputPaymentCredentialsAndroidPay(let paymentToken, let googleTransactionId):
+                case .inputPaymentCredentialsGooglePay(let paymentToken):
                     if boxed {
-                        buffer.appendInt32(-905587442)
+                        buffer.appendInt32(-1966921727)
                     }
                     paymentToken.serialize(buffer, true)
-                    serializeString(googleTransactionId, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -18951,8 +18958,8 @@ public extension Api {
                 return ("inputPaymentCredentials", [("flags", flags), ("data", data)])
                 case .inputPaymentCredentialsApplePay(let paymentData):
                 return ("inputPaymentCredentialsApplePay", [("paymentData", paymentData)])
-                case .inputPaymentCredentialsAndroidPay(let paymentToken, let googleTransactionId):
-                return ("inputPaymentCredentialsAndroidPay", [("paymentToken", paymentToken), ("googleTransactionId", googleTransactionId)])
+                case .inputPaymentCredentialsGooglePay(let paymentToken):
+                return ("inputPaymentCredentialsGooglePay", [("paymentToken", paymentToken)])
     }
     }
     
@@ -18999,17 +19006,14 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_inputPaymentCredentialsAndroidPay(_ reader: BufferReader) -> InputPaymentCredentials? {
+        public static func parse_inputPaymentCredentialsGooglePay(_ reader: BufferReader) -> InputPaymentCredentials? {
             var _1: Api.DataJSON?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
-            var _2: String?
-            _2 = parseString(reader)
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsAndroidPay(paymentToken: _1!, googleTransactionId: _2!)
+            if _c1 {
+                return Api.InputPaymentCredentials.inputPaymentCredentialsGooglePay(paymentToken: _1!)
             }
             else {
                 return nil

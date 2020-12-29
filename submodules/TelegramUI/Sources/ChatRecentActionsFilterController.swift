@@ -209,23 +209,23 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChatRecentActionsFilterControllerArguments
         switch self {
-            case let .actionsTitle(theme, text):
+            case let .actionsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .allActions(theme, text, value):
+            case let .allActions(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAllActions(value)
                 })
-            case let .actionItem(theme, _, events, text, value):
+            case let .actionItem(_, _, events, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .right, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.toggleAction(events)
                 })
-            case let .adminsTitle(theme, text):
+            case let .adminsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .allAdmins(theme, text, value):
+            case let .allAdmins(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAllAdmins(value)
                 })
-            case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, participant, checked):
+            case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, participant, checked):
                 let peerText: String
                 switch participant.participant {
                     case .creator:

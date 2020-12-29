@@ -276,7 +276,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let outgoing: PresentationThemeBubbleColorComponents = self.presentationData.chatWallpaper.isEmpty ? self.presentationData.theme.chat.message.outgoing.bubble.withoutWallpaper : self.presentationData.theme.chat.message.outgoing.bubble.withWallpaper
         
         let maxCornerRadius = self.presentationData.chatBubbleCorners.mainRadius
-        let minCornerRadius = self.presentationData.chatBubbleCorners.auxiliaryRadius
         self.messageBackgroundNode.image = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: maxCornerRadius, incoming: false, fillColor: outgoing.gradientFill, strokeColor: outgoing.fill == outgoing.gradientFill ? outgoing.stroke : .clear, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
         
         self.view.addSubview(self.effectView)

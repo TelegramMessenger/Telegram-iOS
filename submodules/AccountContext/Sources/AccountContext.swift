@@ -466,6 +466,38 @@ public final class ContactSelectionControllerParams {
     }
 }
 
+public enum ChatListSearchFilter: Equatable {
+    case chats
+    case media
+    case links
+    case files
+    case music
+    case voice
+    case peer(PeerId, Bool, String, String)
+    case date(Int32?, Int32, String)
+    
+    public var id: Int32 {
+        switch self {
+            case .chats:
+                return 0
+            case .media:
+                return 1
+            case .links:
+                return 2
+            case .files:
+                return 3
+            case .music:
+                return 4
+            case .voice:
+                return 5
+            case let .peer(peerId, _, _, _):
+                return peerId.id
+            case let .date(_, date, _):
+                return date
+        }
+    }
+}
+
 #if ENABLE_WALLET
 public enum OpenWalletContext {
     case generic
@@ -526,6 +558,7 @@ public protocol SharedAccountContext: class {
     func updateNotificationTokensRegistration()
     func setAccountUserInterfaceInUse(_ id: AccountRecordId) -> Disposable
     func handleTextLinkAction(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem)
+    func openSearch(filter: ChatListSearchFilter, query: String?)
     func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?)
     func openChatMessage(_ params: OpenChatMessageParams) -> Bool
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>

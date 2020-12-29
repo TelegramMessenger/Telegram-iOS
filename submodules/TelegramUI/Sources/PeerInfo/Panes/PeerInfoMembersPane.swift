@@ -28,15 +28,16 @@ enum PeerMembersListAction {
 }
 
 private struct PeerMembersListEntry: Comparable, Identifiable {
-    var index: Int
-    var member: PeerInfoMember
+    let theme: PresentationTheme
+    let index: Int
+    let member: PeerInfoMember
     
     var stableId: PeerId {
         return self.member.id
     }
     
     static func ==(lhs: PeerMembersListEntry, rhs: PeerMembersListEntry) -> Bool {
-        return lhs.member == rhs.member
+        return lhs.theme === rhs.theme && lhs.member == rhs.member
     }
     
     static func <(lhs: PeerMembersListEntry, rhs: PeerMembersListEntry) -> Bool {
@@ -110,16 +111,15 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private var canLoadMore: Bool = false
     private var enqueuedTransactions: [PeerMembersListTransaction] = []
     
-    private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool)?
+    private let presentationDataPromise = Promise<PresentationData>()
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
     }
-    
-    let shouldReceiveExpandProgressUpdates: Bool = false
-    
+        
     private var disposable: Disposable?
     
     init(context: AccountContext, peerId: PeerId, membersContext: PeerInfoMembersContext, action: @escaping (PeerInfoMember, PeerMembersListAction) -> Void) {
@@ -136,18 +136,17 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         
         self.disposable = (combineLatest(queue: .mainQueue(),
             membersContext.state,
+            self.presentationDataPromise.get(),
             context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
         )
-        |> deliverOnMainQueue).start(next: { [weak self] state, combinedView in
+        |> deliverOnMainQueue).start(next: { [weak self] state, presentationData, combinedView in
             guard let strongSelf = self, let basicPeerView = combinedView.views[.basicPeer(peerId)] as? BasicPeerView, let enclosingPeer = basicPeerView.peer else {
                 return
             }
             
             strongSelf.enclosingPeer = enclosingPeer
             strongSelf.currentState = state
-            if let (_, _, presentationData) = strongSelf.currentParams {
-                strongSelf.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
-            }
+            strongSelf.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
         })
         
         self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
@@ -174,7 +173,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
-        self.currentParams = (size, isScrollingLockedAtTop, presentationData)
+        self.currentParams = (size, isScrollingLockedAtTop)
+        self.presentationDataPromise.set(.single(presentationData))
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
@@ -200,7 +200,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private func updateState(enclosingPeer: Peer, state: PeerInfoMembersState, presentationData: PresentationData) {
         var entries: [PeerMembersListEntry] = []
         for member in state.members {
-            entries.append(PeerMembersListEntry(index: entries.count, member: member))
+            entries.append(PeerMembersListEntry(theme: presentationData.theme, index: entries.count, member: member))
         }
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, enclosingPeer: enclosingPeer, action: { [weak self] member, action in
             self?.action(member, action)
@@ -212,7 +212,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     }
     
     private func dequeueTransaction() {
-        guard let (layout, _, _) = self.currentParams, let transaction = self.enqueuedTransactions.first else {
+        guard let _ = self.currentParams, let transaction = self.enqueuedTransactions.first else {
             return
         }
         

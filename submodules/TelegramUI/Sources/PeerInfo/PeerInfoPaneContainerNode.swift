@@ -12,7 +12,6 @@ import ContextUI
 
 protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
-    var shouldReceiveExpandProgressUpdates: Bool { get }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool

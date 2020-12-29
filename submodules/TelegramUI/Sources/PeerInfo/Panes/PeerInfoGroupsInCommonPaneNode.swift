@@ -76,9 +76,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
     }
-    
-    let shouldReceiveExpandProgressUpdates: Bool = false
-    
+        
     private var disposable: Disposable?
     
     init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, groupsInCommonContext: GroupsInCommonContext) {

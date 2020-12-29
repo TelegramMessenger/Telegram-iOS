@@ -64,12 +64,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 return
             }
             if image != nil {
-                strongSelf.removePlaceholder(animated: !firstTime)
                 if firstTime {
-                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
+                        self?.removePlaceholder(animated: false)
+                    })
+                } else {
+                    strongSelf.removePlaceholder(animated: true)
                 }
+                firstTime = false
             }
-            firstTime = false
         }
         
         self.containerNode.shouldBegin = { [weak self] location in
