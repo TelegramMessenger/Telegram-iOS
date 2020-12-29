@@ -24,6 +24,7 @@ final class VoiceChatParticipantItem: ListViewItem {
             case generic
             case accent
             case constructive
+            case destructive
         }
         
         case presence
@@ -363,6 +364,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     wavesColor = textColorValue
                 case .constructive:
                     textColorValue = UIColor(rgb: 0x34c759)
+                case .destructive:
+                    textColorValue = UIColor(rgb: 0xff3b30)
+                    wavesColor = textColorValue
                 }
                 statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
             case .none:

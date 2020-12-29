@@ -36,12 +36,15 @@ private final class ContextActionsSelectionGestureRecognizer: UIPanGestureRecogn
 
 private enum ContextItemNode {
     case action(ContextActionNode)
+    case custom(ContextMenuCustomNode)
     case itemSeparator(ASDisplayNode)
     case separator(ASDisplayNode)
 }
 
 private final class InnerActionsContainerNode: ASDisplayNode {
+    private let blurBackground: Bool
     private let presentationData: PresentationData
+    private let containerNode: ASDisplayNode
     private var effectView: UIVisualEffectView?
     private var itemNodes: [ContextItemNode]
     private let feedbackTap: () -> Void
@@ -69,12 +72,25 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.presentationData = presentationData
         self.feedbackTap = feedbackTap
+        self.blurBackground = blurBackground
+        
+        self.containerNode = ASDisplayNode()
+        self.containerNode.clipsToBounds = true
+        self.containerNode.cornerRadius = 14.0
+        self.containerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
         
         var itemNodes: [ContextItemNode] = []
         for i in 0 ..< items.count {
             switch items[i] {
             case let .action(action):
                 itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected)))
+                if i != items.count - 1, case .action = items[i + 1] {
+                    let separatorNode = ASDisplayNode()
+                    separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
+                    itemNodes.append(.itemSeparator(separatorNode))
+                }
+            case let .custom(item):
+                itemNodes.append(.custom(item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)))
                 if i != items.count - 1, case .action = items[i + 1] {
                     let separatorNode = ASDisplayNode()
                     separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
@@ -90,24 +106,20 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.itemNodes = itemNodes
         
         super.init()
-        
-        self.clipsToBounds = true
-        self.cornerRadius = 14.0
-        
-        self.backgroundColor = presentationData.theme.contextMenu.backgroundColor
-        if !blurBackground {
-            self.backgroundColor = self.backgroundColor?.withAlphaComponent(1.0)
-        }
+                        
+        self.addSubnode(self.containerNode)
         
         self.itemNodes.forEach({ itemNode in
             switch itemNode {
             case let .action(actionNode):
                 actionNode.isUserInteractionEnabled = false
-                self.addSubnode(actionNode)
+                self.containerNode.addSubnode(actionNode)
+            case let .custom(itemNode):
+                self.containerNode.addSubnode(itemNode)
             case let .itemSeparator(separatorNode):
-                self.addSubnode(separatorNode)
+                self.containerNode.addSubnode(separatorNode)
             case let .separator(separatorNode):
-                self.addSubnode(separatorNode)
+                self.containerNode.addSubnode(separatorNode)
             }
         })
         
@@ -145,6 +157,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var minActionsWidth: CGFloat = 250.0
+        
         switch widthClass {
         case .compact:
             minActionsWidth = max(minActionsWidth, floor(constrainedWidth / 3.0))
@@ -167,7 +180,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                     effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
                 }
                 self.effectView = effectView
-                self.view.insertSubview(effectView, at: 0)
+                self.containerNode.view.insertSubview(effectView, at: 0)
             }
         }
         minActionsWidth = min(minActionsWidth, constrainedWidth)
@@ -199,6 +212,11 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                 maxWidth = max(maxWidth, minSize.width)
                 heightsAndCompletions.append((minSize.height, complete))
                 contentHeight += minSize.height
+            case let .custom(itemNode):
+                let (minSize, complete) = itemNode.updateLayout(constrainedWidth: constrainedWidth)
+                maxWidth = max(maxWidth, minSize.width)
+                heightsAndCompletions.append((minSize.height, complete))
+                contentHeight += minSize.height
             case .itemSeparator:
                 heightsAndCompletions.append(nil)
                 contentHeight += UIScreenPixel
@@ -220,6 +238,13 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                     itemCompletion(itemSize, transition)
                     verticalOffset += itemHeight
                 }
+            case let .custom(itemNode):
+                if let (itemHeight, itemCompletion) = heightsAndCompletions[i] {
+                    let itemSize = CGSize(width: maxWidth, height: itemHeight)
+                    transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: itemSize))
+                    itemCompletion(itemSize, transition)
+                    verticalOffset += itemHeight
+                }
             case let .itemSeparator(separatorNode):
                 transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: maxWidth, height: UIScreenPixel)))
                 verticalOffset += UIScreenPixel
@@ -230,8 +255,11 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         }
         
         let size = CGSize(width: maxWidth, height: verticalOffset)
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        
+        transition.updateFrame(node: self.containerNode, frame: bounds)
         if let effectView = self.effectView {
-            transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(view: effectView, frame: bounds)
         }
         return size
     }
@@ -241,6 +269,8 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             switch itemNode {
             case let .action(action):
                 action.updateTheme(presentationData: presentationData)
+            case let .custom(item):
+                item.updateTheme(presentationData: presentationData)
             case let .separator(separator):
                 separator.backgroundColor = presentationData.theme.contextMenu.sectionSeparatorColor
             case let .itemSeparator(itemSeparator):
@@ -248,7 +278,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             }
         }
         
-        self.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+        self.containerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
     }
     
     func actionNode(at point: CGPoint) -> ContextActionNode? {
@@ -393,6 +423,8 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
 }
 
 final class ContextActionsContainerNode: ASDisplayNode {
+    private let blurBackground: Bool
+    private let shadowNode: ASImageNode
     private let actionsNode: InnerActionsContainerNode
     private let textSelectionTipNode: InnerTextSelectionTipContainerNode?
     private let scrollNode: ASScrollNode
@@ -406,6 +438,14 @@ final class ContextActionsContainerNode: ASDisplayNode {
     }
     
     init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool, blurBackground: Bool) {
+        self.blurBackground = blurBackground
+        self.shadowNode = ASImageNode()
+        self.shadowNode.displaysAsynchronously = false
+        self.shadowNode.displayWithoutProcessing = true
+        self.shadowNode.image = UIImage(bundleImageName: "Components/Context Menu/Shadow")?.stretchableImage(withLeftCapWidth: 60, topCapHeight: 60)
+        self.shadowNode.contentMode = .scaleToFill
+        self.shadowNode.isHidden = true
+        
         self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
         if displayTextSelectionTip {
             let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData)
@@ -425,16 +465,26 @@ final class ContextActionsContainerNode: ASDisplayNode {
         
         super.init()
         
+        self.addSubnode(self.shadowNode)
         self.scrollNode.addSubnode(self.actionsNode)
         self.textSelectionTipNode.flatMap(self.scrollNode.addSubnode)
         self.addSubnode(self.scrollNode)
     }
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+        var widthClass = widthClass
+        if !self.blurBackground {
+            widthClass = .regular
+        }
+        
         let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, transition: transition)
+                
+        let bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actionsSize)
+        transition.updateFrame(node: self.shadowNode, frame: bounds.insetBy(dx: -30.0, dy: -30.0))
+        self.shadowNode.isHidden = widthClass == .compact
         
         var contentSize = actionsSize
-        transition.updateFrame(node: self.actionsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actionsSize))
+        transition.updateFrame(node: self.actionsNode, frame: bounds)
         
         if let textSelectionTipNode = self.textSelectionTipNode {
             contentSize.height += 8.0

@@ -873,6 +873,10 @@ public final class VoiceChatController: ViewController {
                             })
                         })))
                     }
+                    
+                    items.append(.custom(VoiceChatVolumeContextItem(value: 1.0, valueChanged: { newValue in
+                        strongSelf.call.setVolume(peerId: peer.id, volume: Double(newValue))
+                    })))
                 }
                 
                 guard !items.isEmpty else {

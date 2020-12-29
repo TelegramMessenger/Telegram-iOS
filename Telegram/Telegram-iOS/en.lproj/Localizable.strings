@@ -5783,3 +5783,21 @@ Sorry for the inconvenience.";
 "CallList.RecentCallsHeader" = "RECENT CALLS";
 
 "VoiceChat.PeerJoinedText" = "%@ joined the voice chat";
+
+"VoiceChat.Rec" = "REC";
+
+"VoiceChat.StartRecording" = "Start Recording";
+"VoiceChat.StopRecording" = "Stop Recording";
+
+"VoiceChat.StartRecordingTitle" = "Start Recording";
+"VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
+"VoiceChat.StartRecordingStart" = "Start";
+
+"VoiceChat.RecordingStarted" = "Voice chat recording started";
+"VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
+
+"VoiceChat.StartRecordingTitle" = "Stop Recording?";
+"VoiceChat.StartRecordingStop" = "Stop";
+
+"VoiceChat.StatusMutedForYou" = "muted for you";
+"VoiceChat.StatusMutedYou" = "put you on mute";
