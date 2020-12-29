@@ -146,7 +146,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private var scrubbingDisposable: Disposable?
     private var leftDurationLabelPushed = false
     private var rightDurationLabelPushed = false
+    
     private var currentDuration: Double = 0.0
+    private var currentPosition: Double = 0.0
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
@@ -309,7 +311,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             strongSelf.shareNode.isHidden = false
             var displayData: SharedMediaPlaybackDisplayData?
             if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading {
-                let isPaused: Bool
+                var isPaused: Bool
                 switch value.status.status {
                     case .playing:
                         isPaused = false
@@ -317,6 +319,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                         isPaused = true
                     case let .buffering(_, whilePlaying, _, _):
                         isPaused = !whilePlaying
+                }
+                if strongSelf.wasPlaying {
+                    isPaused = false
                 }
                 if strongSelf.currentIsPaused != isPaused {
                     strongSelf.currentIsPaused = isPaused
@@ -368,6 +373,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 }
                 
                 strongSelf.rateButton.isHidden = rateButtonIsHidden
+                
+                strongSelf.currentPosition = value.status.timestamp
             } else {
                 strongSelf.playPauseButton.isEnabled = false
                 strongSelf.backwardButton.isEnabled = false
@@ -440,7 +447,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         self.albumArtNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.albumArtTap(_:))))
         
-        let backwardLongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.seekForwardLongPress(_:)))
+        let backwardLongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.seekBackwardLongPress(_:)))
         backwardLongPressGestureRecognizer.minimumPressDuration = 0.3
         self.backwardButton.view.addGestureRecognizer(backwardLongPressGestureRecognizer)
         
@@ -449,34 +456,41 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.forwardButton.view.addGestureRecognizer(forwardLongPressGestureRecognizer)
     }
     
+    private var wasPlaying = false
     @objc private func seekBackwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         switch gestureRecognizer.state {
             case .began:
+                self.wasPlaying = !(self.currentIsPaused ?? true)
                 self.backwardButton.isPressing = true
                 self.previousRate = self.currentRate
-                self.seekRate = .x4
-                self.control?(.setBaseRate(self.seekRate))
-                let seekTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
+                self.control?(.playback(.pause))
+                
+                var time: Double = 0.0
+                let seekTimer = SwiftSignalKit.Timer(timeout: 0.1, repeat: true, completion: { [weak self] in
                     if let strongSelf = self {
-                        if strongSelf.seekRate == .x4 {
-                            strongSelf.seekRate = .x8
-                        } else if strongSelf.seekRate == .x8 {
-                            strongSelf.seekRate = .x16
+                        var delta: Double = 0.8
+                        if time >= 4.0 {
+                            delta = 3.2
+                        } else if time >= 2.0 {
+                            delta = 1.6
                         }
-                        strongSelf.control?(.setBaseRate(strongSelf.seekRate))
-                        if strongSelf.seekRate == .x16 {
-                            strongSelf.seekTimer?.invalidate()
-                            strongSelf.seekTimer = nil
-                        }
+                        time += 0.1
+                        
+                        let newPosition = strongSelf.currentPosition - delta
+                        strongSelf.currentPosition = newPosition
+                        strongSelf.control?(.seek(newPosition))
                     }
                 }, queue: Queue.mainQueue())
                 self.seekTimer = seekTimer
                 seekTimer.start()
             case .ended, .cancelled:
                 self.backwardButton.isPressing = false
-                self.control?(.setBaseRate(self.previousRate ?? .x1))
                 self.seekTimer?.invalidate()
                 self.seekTimer = nil
+                if self.wasPlaying {
+                    self.control?(.playback(.play))
+                    self.wasPlaying = false
+                }
             default:
                 break
         }
