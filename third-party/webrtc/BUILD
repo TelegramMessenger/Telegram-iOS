@@ -3178,6 +3178,7 @@ armv7_specific_sources = [webrtc_source_dir + "/" + path for path in [
 arm64_specific_sources = [webrtc_source_dir + "/" + path for path in [
     "common_audio/signal_processing/complex_bit_reverse.c",
     "common_audio/signal_processing/filter_ar_fast_q12.c",
+    "common_audio/third_party/ooura/fft_size_128/ooura_fft_neon.cc",
 ]]
 
 x86_specific_sources = [webrtc_source_dir + "/" + path for path in [
@@ -3209,6 +3210,7 @@ common_flags = [
     "-DWEBRTC_POSIX",
     "-DHAVE_WEBRTC_VIDEO",
     "-DRTC_ENABLE_VP9",
+    "-DHAVE_SCTP",
 ]
 
 arm_specific_flags = [
@@ -3326,6 +3328,7 @@ cc_library(
         "-D__Userspace__",
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION=''",
+        "-DHAVE_SCTP",
     ] + arch_specific_cflags,
     visibility = ["//visibility:public"],
 )
@@ -3403,6 +3406,7 @@ cc_library(
         "-DHAVE_SYS_TYPES_H",
         "-DHAVE_UNISTD_H",
         "-DPACKAGE_STRING='\"\"'",
+        "-DHAVE_SCTP",
     ] + arch_specific_cflags,
     deps = [
         "//third-party/boringssl:crypto",
@@ -3571,6 +3575,7 @@ objc_library(
         "-D__Userspace__",
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION='\"\"'",
+        "-DHAVE_SCTP",
     ] + arch_specific_cflags,
     deps = [
         "//third-party/boringssl:crypto",

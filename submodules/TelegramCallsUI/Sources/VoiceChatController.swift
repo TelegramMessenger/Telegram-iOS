@@ -1893,7 +1893,7 @@ public final class VoiceChatController: ViewController {
             
             var currentVideoOrigin = CGPoint(x: 4.0, y: (layout.statusBarHeight ?? 0.0) + 4.0)
             for videoNode in self.videoNodes {
-                let videoSize = CGSize(width: 100.0, height: 100.0)
+                let videoSize = CGSize(width: 300.0, height: 400.0)
                 if currentVideoOrigin.x + videoSize.width > layout.size.width {
                     currentVideoOrigin.x = 0.0
                     currentVideoOrigin.y += videoSize.height
