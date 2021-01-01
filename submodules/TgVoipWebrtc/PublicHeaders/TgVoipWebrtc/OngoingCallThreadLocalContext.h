@@ -179,6 +179,7 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 - (void)setIsMuted:(bool)isMuted;
 
 - (void)setVolumeForSsrc:(uint32_t)ssrc volume:(double)volume;
+- (void)setFullSizeVideoSsrc:(uint32_t)ssrc;
 
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;

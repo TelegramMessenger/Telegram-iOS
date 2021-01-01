@@ -1262,6 +1262,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    public func setFullSizeVideo(peerId: PeerId) {
+        var resolvedSsrc: UInt32?
+        for (ssrc, id) in self.ssrcMapping {
+            if id == peerId {
+                resolvedSsrc = ssrc
+                break
+            }
+        }
+        self.callContext?.setFullSizeVideoSsrc(ssrc: resolvedSsrc)
+    }
+    
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
         guard self.currentSelectedAudioOutputValue != output else {
             return

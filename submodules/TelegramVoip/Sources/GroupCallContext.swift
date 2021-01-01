@@ -145,6 +145,10 @@ public final class OngoingGroupCallContext {
             self.context.setVolumeForSsrc(ssrc, volume: volume)
         }
         
+        func setFullSizeVideoSsrc(ssrc: UInt32?) {
+            self.context.setFullSizeVideoSsrc(ssrc ?? 0)
+        }
+        
         func addParticipants(participants: [(UInt32, String?)]) {
             if participants.isEmpty {
                 return
@@ -318,6 +322,12 @@ public final class OngoingGroupCallContext {
     public func setVolume(ssrc: UInt32, volume: Double) {
         self.impl.with { impl in
             impl.setVolume(ssrc: ssrc, volume: volume)
+        }
+    }
+    
+    public func setFullSizeVideoSsrc(ssrc: UInt32?) {
+        self.impl.with { impl in
+            impl.setFullSizeVideoSsrc(ssrc: ssrc)
         }
     }
     

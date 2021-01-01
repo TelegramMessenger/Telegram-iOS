@@ -221,6 +221,7 @@ public final class VoiceChatController: ViewController {
             let openInvite: () -> Void
             let peerContextAction: (PeerEntry, ASDisplayNode, ContextGesture?) -> Void
             let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
+            let getPeerVideo: (UInt32) -> GroupVideoNode?
             
             private var audioLevels: [PeerId: ValuePipe<Float>] = [:]
             
@@ -229,13 +230,15 @@ public final class VoiceChatController: ViewController {
                 openPeer: @escaping (PeerId) -> Void,
                 openInvite: @escaping () -> Void,
                 peerContextAction: @escaping (PeerEntry, ASDisplayNode, ContextGesture?) -> Void,
-                setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void
+                setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void,
+                getPeerVideo: @escaping (UInt32) -> GroupVideoNode?
             ) {
                 self.updateIsMuted = updateIsMuted
                 self.openPeer = openPeer
                 self.openInvite = openInvite
                 self.peerContextAction = peerContextAction
                 self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
+                self.getPeerVideo = getPeerVideo
             }
             
             func getAudioLevel(_ peerId: PeerId) -> Signal<Float, NoError> {
@@ -283,6 +286,7 @@ public final class VoiceChatController: ViewController {
             }
             
             var peer: Peer
+            var ssrc: UInt32
             var presence: TelegramUserPresence?
             var activityTimestamp: Int32
             var state: State
@@ -296,6 +300,9 @@ public final class VoiceChatController: ViewController {
             
             static func ==(lhs: PeerEntry, rhs: PeerEntry) -> Bool {
                 if !lhs.peer.isEqual(rhs.peer) {
+                    return false
+                }
+                if lhs.ssrc != rhs.ssrc {
                     return false
                 }
                 if lhs.presence != rhs.presence {
@@ -431,7 +438,9 @@ public final class VoiceChatController: ViewController {
                         
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: peer.id != context.account.peerId, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: peer.id != context.account.peerId, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                            return interaction.getPeerVideo(peerEntry.ssrc)
+                        }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                             interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
                         }, action: {
                             interaction.openPeer(peer.id)
@@ -535,7 +544,7 @@ public final class VoiceChatController: ViewController {
         private let voiceSourcesDisposable = MetaDisposable()
         
         private var requestedVideoSources = Set<UInt32>()
-        private var videoNodes: [GroupVideoNode] = []
+        private var videoNodes: [(UInt32, GroupVideoNode)] = []
         
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
@@ -971,6 +980,16 @@ public final class VoiceChatController: ViewController {
                     updated.revealedPeerId = peerId
                     return updated
                 }
+            }, getPeerVideo: { [weak self] ssrc in
+                guard let strongSelf = self else {
+                    return nil
+                }
+                for (listSsrc, videoNode) in strongSelf.videoNodes {
+                    if listSsrc == ssrc {
+                        return videoNode
+                    }
+                }
+                return nil
             })
             
             self.topPanelNode.addSubnode(self.topPanelEdgeNode)
@@ -1272,7 +1291,10 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
+                var validSources = Set<UInt32>()
                 for source in sources {
+                    validSources.insert(source)
+                    
                     if !strongSelf.requestedVideoSources.contains(source) {
                         strongSelf.requestedVideoSources.insert(source)
                         strongSelf.call.makeIncomingVideoView(source: source,  completion: { videoView in
@@ -1280,12 +1302,53 @@ public final class VoiceChatController: ViewController {
                                 guard let strongSelf = self, let videoView = videoView else {
                                     return
                                 }
-                                strongSelf.videoNodes.append(GroupVideoNode(videoView: videoView))
+                                strongSelf.videoNodes.append((source, GroupVideoNode(videoView: videoView)))
                                 if let (layout, navigationHeight) = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                                    
+                                    loop: for i in 0 ..< strongSelf.currentEntries.count {
+                                        let entry = strongSelf.currentEntries[i]
+                                        switch entry {
+                                        case let .peer(peerEntry):
+                                            if peerEntry.ssrc == source {
+                                                strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: strongSelf.presentationData, interaction: strongSelf.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                break loop
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    }
                                 }
                             }
                         })
+                    }
+                }
+                
+                var updated = false
+                for i in (0 ..< strongSelf.videoNodes.count).reversed() {
+                    if !validSources.contains(strongSelf.videoNodes[i].0) {
+                        loop: for j in 0 ..< strongSelf.currentEntries.count {
+                            let entry = strongSelf.currentEntries[j]
+                            switch entry {
+                            case let .peer(peerEntry):
+                                if peerEntry.ssrc == strongSelf.videoNodes[i].0 {
+                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: strongSelf.presentationData, interaction: strongSelf.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                    break loop
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        
+                        //strongSelf.videoNodes[i].1.removeFromSupernode()
+                        strongSelf.videoNodes.remove(at: i)
+                        updated = true
+                    }
+                }
+                
+                if updated {
+                    if let (layout, navigationHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                     }
                 }
             }))
@@ -1891,9 +1954,9 @@ public final class VoiceChatController: ViewController {
             
             self.updateButtons(transition: transition)
             
-            var currentVideoOrigin = CGPoint(x: 4.0, y: (layout.statusBarHeight ?? 0.0) + 4.0)
-            for videoNode in self.videoNodes {
-                let videoSize = CGSize(width: 200.0, height: 200.0)
+            /*var currentVideoOrigin = CGPoint(x: 4.0, y: (layout.statusBarHeight ?? 0.0) + 4.0)
+            for (_, videoNode) in self.videoNodes {
+                let videoSize = CGSize(width: 300.0, height: 500.0)
                 if currentVideoOrigin.x + videoSize.width > layout.size.width {
                     currentVideoOrigin.x = 0.0
                     currentVideoOrigin.y += videoSize.height
@@ -1906,7 +1969,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 currentVideoOrigin.x += videoSize.width + 4.0
-            }
+            }*/
             
             let sideButtonMinimalInset: CGFloat = 16.0
             let sideButtonOffset = min(36.0, floor((((size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))
@@ -2137,6 +2200,7 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(.peer(PeerEntry(
                     peer: member.peer,
+                    ssrc: member.ssrc,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: memberState,
@@ -2149,6 +2213,7 @@ public final class VoiceChatController: ViewController {
             if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
                 entries.insert(.peer(PeerEntry(
                     peer: accountPeer,
+                    ssrc: 0,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: .listening,
@@ -2165,6 +2230,7 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(.peer(PeerEntry(
                     peer: peer,
+                    ssrc: 0,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: .invited,

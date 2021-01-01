@@ -1301,6 +1301,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+- (void)setFullSizeVideoSsrc:(uint32_t)ssrc {
+    if (_instance) {
+        _instance->setFullSizeVideoSsrc(ssrc);
+    }
+}
+
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId {
     if (_instance) {
         _instance->setAudioOutputDevice(deviceId.UTF8String);
