@@ -1311,7 +1311,8 @@ public final class VoiceChatController: ViewController {
                                         switch entry {
                                         case let .peer(peerEntry):
                                             if peerEntry.ssrc == source {
-                                                strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: strongSelf.presentationData, interaction: strongSelf.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
+                                                strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
                                                 break loop
                                             }
                                         default:
@@ -1332,7 +1333,8 @@ public final class VoiceChatController: ViewController {
                             switch entry {
                             case let .peer(peerEntry):
                                 if peerEntry.ssrc == strongSelf.videoNodes[i].0 {
-                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: strongSelf.presentationData, interaction: strongSelf.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                    let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
+                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
                                     break loop
                                 }
                             default:
