@@ -184,6 +184,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.withoutBlurDimNode.alpha = 0.0
         
         self.dismissNode = ASDisplayNode()
+        self.dismissNode.isAccessibilityElement = true
+        self.dismissNode.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
+        self.dismissNode.accessibilityTraits = .button
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true

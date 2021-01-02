@@ -2319,8 +2319,6 @@ Unused sets are archived when you add more.";
 "Notification.CallCanceledShort" = "Cancelled";
 "Notification.CallFormat" = "%1$@, %2$@"; // 1 - time, 2 - duration
 
-
-
 "Call.ConnectionErrorTitle" = "Unable to Call";
 "Call.ConnectionErrorMessage" = "Please check your internet connection and try again.";
 
@@ -5801,3 +5799,14 @@ Sorry for the inconvenience.";
 
 "VoiceChat.StatusMutedForYou" = "muted for you";
 "VoiceChat.StatusMutedYou" = "put you on mute";
+
+"VoiceOver.DismissContextMenu" = "Dismiss Context Menu";
+
+"Call.VoiceOver.VoiceCallOutgoing" = "Outgoing Voice Call";
+"Call.VoiceOver.VideoCallOutgoing" = "Outgoing Video Call";
+"Call.VoiceOver.VoiceCallIncoming" = "Incoming Voice Call";
+"Call.VoiceOver.VideoCallIncoming" = "Incoming Video Call";
+"Call.VoiceOver.VoiceCallMissed" = "Missed Voice Call";
+"Call.VoiceOver.VideoCallMissed" = "Missed Video Call";
+"Call.VoiceOver.VoiceCallCanceled" = "Cancelled Voice Call";
+"Call.VoiceOver.VideoCallCanceled" = "Cancelled Video Call";

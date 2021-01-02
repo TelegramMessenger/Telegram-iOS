@@ -427,6 +427,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.isOpaqueWhenInOverlay = true
+    controller.blocksBackgroundWhenInOverlay = true
     switch mode {
     case .default:
         controller.navigationPresentation = .default

@@ -1113,8 +1113,6 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
     }
-    controller.isOpaqueWhenInOverlay = true
-    controller.blocksBackgroundWhenInOverlay = true
     controller.acceptsFocusWhenInOverlay = true
     controller.experimentalSnapScrollToItem = true
     controller.alwaysSynchronous = true
