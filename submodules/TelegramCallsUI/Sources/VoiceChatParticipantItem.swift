@@ -297,8 +297,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             
             let statusFontSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0)
             
-            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
-            let statusFont = Font.regular(statusFontSize)
+            let titleFont = Font.regular(17.0)
+            let statusFont = Font.regular(14.0)
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?

@@ -7164,7 +7164,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.saveInterfaceState(includeScrollState: false)
         }
         
-        if let navigationController = self.navigationController as? NavigationController, self.traceVisibility() &&  isTopmostChatController(self) {
+        if let navigationController = self.navigationController as? NavigationController, isTopmostChatController(self) {
             var voiceChatOverlayController: VoiceChatOverlayController?
             for controller in navigationController.globalOverlayControllers {
                 if let controller = controller as? VoiceChatOverlayController {

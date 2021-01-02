@@ -149,7 +149,7 @@ class VoiceChatActionItemNode: ListViewItemNode {
                 updatedTheme = item.presentationData.theme
             }
             
-            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let titleFont = Font.regular(17.0)
             
             var leftInset: CGFloat = 16.0 + params.leftInset
             if case .generic = item.icon {
