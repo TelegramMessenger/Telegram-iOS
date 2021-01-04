@@ -2319,8 +2319,6 @@ Unused sets are archived when you add more.";
 "Notification.CallCanceledShort" = "Cancelled";
 "Notification.CallFormat" = "%1$@, %2$@"; // 1 - time, 2 - duration
 
-
-
 "Call.ConnectionErrorTitle" = "Unable to Call";
 "Call.ConnectionErrorMessage" = "Please check your internet connection and try again.";
 
@@ -5783,3 +5781,32 @@ Sorry for the inconvenience.";
 "CallList.RecentCallsHeader" = "RECENT CALLS";
 
 "VoiceChat.PeerJoinedText" = "%@ joined the voice chat";
+
+"VoiceChat.Rec" = "REC";
+
+"VoiceChat.StartRecording" = "Start Recording";
+"VoiceChat.StopRecording" = "Stop Recording";
+
+"VoiceChat.StartRecordingTitle" = "Start Recording";
+"VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
+"VoiceChat.StartRecordingStart" = "Start";
+
+"VoiceChat.RecordingStarted" = "Voice chat recording started";
+"VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
+
+"VoiceChat.StartRecordingTitle" = "Stop Recording?";
+"VoiceChat.StartRecordingStop" = "Stop";
+
+"VoiceChat.StatusMutedForYou" = "muted for you";
+"VoiceChat.StatusMutedYou" = "put you on mute";
+
+"VoiceOver.DismissContextMenu" = "Dismiss Context Menu";
+
+"Call.VoiceOver.VoiceCallOutgoing" = "Outgoing Voice Call";
+"Call.VoiceOver.VideoCallOutgoing" = "Outgoing Video Call";
+"Call.VoiceOver.VoiceCallIncoming" = "Incoming Voice Call";
+"Call.VoiceOver.VideoCallIncoming" = "Incoming Video Call";
+"Call.VoiceOver.VoiceCallMissed" = "Missed Voice Call";
+"Call.VoiceOver.VideoCallMissed" = "Missed Video Call";
+"Call.VoiceOver.VoiceCallCanceled" = "Cancelled Voice Call";
+"Call.VoiceOver.VideoCallCanceled" = "Cancelled Video Call";

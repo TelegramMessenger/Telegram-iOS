@@ -99,7 +99,7 @@ private final class NavigationControllerNode: ASDisplayNode {
     }
     
     override func accessibilityPerformEscape() -> Bool {
-        print("escape")
+        let _ = self.controller?.popViewController(animated: true)
         return true
     }
 }

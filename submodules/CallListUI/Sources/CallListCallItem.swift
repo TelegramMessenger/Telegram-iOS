@@ -255,7 +255,6 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             for media in item.topMessage.media {
                 if let action = media as? TelegramMediaAction {
                     if case let .phoneCall(_, _, _, isVideoValue) = action.action {
-                        break
                         isVideo = isVideoValue
                     }
                 }
@@ -369,6 +368,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             
+            var statusAccessibilityString = ""
+            
             var titleColor = item.presentationData.theme.list.itemPrimaryTextColor
             var hasMissed = false
             var hasIncoming = false
@@ -431,19 +432,26 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 
                 if hasMissed {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallMissedShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallMissed : item.presentationData.strings.Call_VoiceOver_VoiceCallMissed
                 } else if hasIncoming && hasOutgoing {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallOutgoingShort + ", " + item.presentationData.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    statusAccessibilityString = isVideo ? (item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing + ", " + item.presentationData.strings.Call_VoiceOver_VideoCallIncoming) : (item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing + ", " + item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming)
                 } else if hasIncoming {
                     if let callDuration = callDuration, callDuration != 0 {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallIncomingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallIncoming : item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0
+                        
                     } else {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallIncoming : item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming
                     }
                 } else {
                     if let callDuration = callDuration, callDuration != 0 {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallOutgoingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing : item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0
                     } else {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallOutgoingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing : item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing
                     }
                 }
             }
@@ -610,9 +618,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             
                             strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                             
-                            strongSelf.accessibilityArea.accessibilityTraits = .button
                             strongSelf.accessibilityArea.accessibilityLabel = titleAttributedString?.string
-                            strongSelf.accessibilityArea.accessibilityValue = statusAttributedString?.string
+                            strongSelf.accessibilityArea.accessibilityValue = statusAccessibilityString
                             strongSelf.accessibilityArea.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                             
                             strongSelf.infoButtonNode.accessibilityLabel = item.presentationData.strings.Conversation_Info

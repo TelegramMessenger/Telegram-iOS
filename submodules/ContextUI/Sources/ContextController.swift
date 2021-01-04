@@ -73,8 +73,18 @@ public final class ContextMenuActionItem {
     }
 }
 
+public protocol ContextMenuCustomNode: ASDisplayNode {
+    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void)
+    func updateTheme(presentationData: PresentationData)
+}
+
+public protocol ContextMenuCustomItem {
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
+}
+
 public enum ContextMenuItem {
     case action(ContextMenuActionItem)
+    case custom(ContextMenuCustomItem)
     case separator
 }
 
@@ -174,6 +184,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.withoutBlurDimNode.alpha = 0.0
         
         self.dismissNode = ASDisplayNode()
+        self.dismissNode.isAccessibilityElement = true
+        self.dismissNode.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
+        self.dismissNode.accessibilityTraits = .button
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true

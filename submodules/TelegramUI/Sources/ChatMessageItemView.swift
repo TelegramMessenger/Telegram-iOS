@@ -519,6 +519,7 @@ final class ChatMessageAccessibilityData {
             
             result += "\n\(dateString)"
             if !isIncoming && item.read {
+                result += "\n"
                 if announceIncomingAuthors {
                     result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
                 } else {

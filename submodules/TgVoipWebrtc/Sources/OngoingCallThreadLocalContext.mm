@@ -837,9 +837,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
                 }];
             },
-            .audioLevelsUpdated = [audioLevelsUpdated](tgcalls::GroupLevelsUpdate const &levelsUpdate) {
+            .audioLevelsUpdated = [audioLevelsUpdated](tgcalls::GroupLevelsUpdate const &levels) {
                 NSMutableArray *result = [[NSMutableArray alloc] init];
-                for (auto &it : levelsUpdate.updates) {
+                for (auto &it : levels.updates) {
                     [result addObject:@(it.ssrc)];
                     [result addObject:@(it.value.level)];
                     [result addObject:@(it.value.voice)];

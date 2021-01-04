@@ -1449,6 +1449,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.delaysContentTouches = false
+        self.scrollNode.canCancelAllTouchesInViews = true
         
         self.headerNode = PeerInfoHeaderNode(context: context, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, isSettings: isSettings)
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, peerId: peerId)
@@ -2679,7 +2680,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 membersUpdated = true
             }
             
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && membersUpdated ? .animated(duration: 0.3, curve: .spring) : .immediate)
+            let infoUpdated = false // previousData != nil && (previousData?.cachedData == nil) != (data.cachedData == nil)
+            
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && (membersUpdated || infoUpdated) ? .animated(duration: 0.3, curve: .spring) : .immediate)
         }
     }
     
