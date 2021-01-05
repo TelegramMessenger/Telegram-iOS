@@ -239,19 +239,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         }
         
-        private let audioLevelsPromise = Promise<[(PeerId, Float, Bool)]>()
+        private let audioLevelsPromise = Promise<[(PeerId, UInt32, Float, Bool)]>()
         
         init() {
         }
         
-        func update(levels: [(PeerId, Float, Bool)]) {
+        func update(levels: [(PeerId, UInt32, Float, Bool)]) {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             let currentParticipants: [PeerId: Participant] = self.participants
             
             var validSpeakers: [PeerId: Participant] = [:]
             var silentParticipants = Set<PeerId>()
             var speakingParticipants = Set<PeerId>()
-            for (peerId, level, hasVoice) in levels {
+            for (peerId, _, level, hasVoice) in levels {
                 if level > speakingLevelThreshold && hasVoice {
                     validSpeakers[peerId] = Participant(timestamp: timestamp, level: level)
                     speakingParticipants.insert(peerId)
@@ -276,10 +276,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }
             
-            var audioLevels: [(PeerId, Float, Bool)] = []
-            for (peerId, level, hasVoice) in levels {
+            var audioLevels: [(PeerId, UInt32, Float, Bool)] = []
+            for (peerId, source, level, hasVoice) in levels {
                 if level > 0.001 {
-                    audioLevels.append((peerId, level, hasVoice))
+                    audioLevels.append((peerId, source, level, hasVoice))
                 }
             }
             
@@ -292,7 +292,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return self.speakingParticipantsPromise.get() |> distinctUntilChanged
         }
         
-        func getAudioLevels() -> Signal<[(PeerId, Float, Bool)], NoError> {
+        func getAudioLevels() -> Signal<[(PeerId, UInt32, Float, Bool)], NoError> {
             return self.audioLevelsPromise.get()
         }
     }
@@ -361,7 +361,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private let speakingParticipantsContext = SpeakingParticipantsContext()
     private var speakingParticipantsReportTimestamp: [PeerId: Double] = [:]
-    public var audioLevels: Signal<[(PeerId, Float, Bool)], NoError> {
+    public var audioLevels: Signal<[(PeerId, UInt32, Float, Bool)], NoError> {
         return self.speakingParticipantsContext.getAudioLevels()
     }
     
@@ -456,8 +456,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var videoCapturer: OngoingCallVideoCapturer?
     
-    private let incomingVideoSourcePromise = Promise<Set<UInt32>>(Set())
-    public var incomingVideoSources: Signal<Set<UInt32>, NoError> {
+    private let incomingVideoSourcePromise = Promise<[PeerId: UInt32]>([:])
+    public var incomingVideoSources: Signal<[PeerId: UInt32], NoError> {
         return self.incomingVideoSourcePromise.get()
     }
     
@@ -608,6 +608,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                         strongSelf._canBeRemoved.set(.single(true))
                                     }
                                 } else if case .joined = participantUpdate.participationStatusChange {
+                                    addedParticipants.append((participantUpdate.ssrc, participantUpdate.jsonParams))
+                                } else if strongSelf.ssrcMapping[participantUpdate.ssrc] == nil {
                                     addedParticipants.append((participantUpdate.ssrc, participantUpdate.jsonParams))
                                 }
                             }
@@ -801,7 +803,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         default:
             if case let .active(callInfo) = internalState {
                 let callContext = OngoingGroupCallContext(video: self.videoCapturer)
-                self.incomingVideoSourcePromise.set(callContext.videoSources)
+                self.incomingVideoSourcePromise.set(callContext.videoSources
+                |> deliverOnMainQueue
+                |> map { [weak self] sources -> [PeerId: UInt32] in
+                    guard let strongSelf = self else {
+                        return [:]
+                    }
+                    var result: [PeerId: UInt32] = [:]
+                    for source in sources {
+                        if let peerId = strongSelf.ssrcMapping[source] {
+                            result[peerId] = source
+                        }
+                    }
+                    return result
+                })
                 self.callContext = callContext
                 self.requestDisposable.set((callContext.joinPayload
                 |> take(1)
@@ -901,16 +916,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let strongSelf = self else {
                         return
                     }
-                    var result: [(PeerId, Float, Bool)] = []
+                    var result: [(PeerId, UInt32, Float, Bool)] = []
                     var myLevel: Float = 0.0
                     var myLevelHasVoice: Bool = false
                     for (ssrcKey, level, hasVoice) in levels {
-                        var peerId: PeerId?
+                        let source: UInt32
+                        let peerId: PeerId?
                         switch ssrcKey {
                         case .local:
                             peerId = strongSelf.accountContext.account.peerId
+                            source = 0
                         case let .source(ssrc):
                             peerId = strongSelf.ssrcMapping[ssrc]
+                            source = ssrc
                         }
                         if let peerId = peerId {
                             if case .local = ssrcKey {
@@ -919,7 +937,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     myLevelHasVoice = hasVoice
                                 }
                             }
-                            result.append((peerId, level, hasVoice))
+                            result.append((peerId, source, level, hasVoice))
                         }
                     }
                     
@@ -1262,12 +1280,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    public func setFullSizeVideo(peerId: PeerId) {
+    public func setFullSizeVideo(peerId: PeerId?) {
         var resolvedSsrc: UInt32?
-        for (ssrc, id) in self.ssrcMapping {
-            if id == peerId {
-                resolvedSsrc = ssrc
-                break
+        if let peerId = peerId {
+            for (ssrc, id) in self.ssrcMapping {
+                if id == peerId {
+                    resolvedSsrc = ssrc
+                    break
+                }
             }
         }
         self.callContext?.setFullSizeVideoSsrc(ssrc: resolvedSsrc)

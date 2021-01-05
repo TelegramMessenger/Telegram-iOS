@@ -1336,7 +1336,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf && strongSelf->_instance) {
-                        strongSelf->_instance->setIncomingVideoOutput(ssrc, sink);
+                        strongSelf->_instance->addIncomingVideoOutput(ssrc, sink);
                     }
                 }];
                 
@@ -1349,7 +1349,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf && strongSelf->_instance) {
-                        strongSelf->_instance->setIncomingVideoOutput(ssrc, sink);
+                        strongSelf->_instance->addIncomingVideoOutput(ssrc, sink);
                     }
                 }];
                 

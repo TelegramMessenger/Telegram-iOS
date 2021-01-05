@@ -286,7 +286,7 @@ public protocol PresentationGroupCall: class {
     var state: Signal<PresentationGroupCallState, NoError> { get }
     var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> { get }
     var members: Signal<PresentationGroupCallMembers?, NoError> { get }
-    var audioLevels: Signal<[(PeerId, Float, Bool)], NoError> { get }
+    var audioLevels: Signal<[(PeerId, UInt32, Float, Bool)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
     
@@ -298,7 +298,7 @@ public protocol PresentationGroupCall: class {
     func setIsMuted(action: PresentationGroupCallMuteAction)
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
     func setVolume(peerId: PeerId, volume: Double)
-    func setFullSizeVideo(peerId: PeerId)
+    func setFullSizeVideo(peerId: PeerId?)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool)
@@ -307,7 +307,7 @@ public protocol PresentationGroupCall: class {
     func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
     
-    var incomingVideoSources: Signal<Set<UInt32>, NoError> { get }
+    var incomingVideoSources: Signal<[PeerId: UInt32], NoError> { get }
     
     func makeIncomingVideoView(source: UInt32, completion: @escaping (PresentationCallVideoView?) -> Void)
 }

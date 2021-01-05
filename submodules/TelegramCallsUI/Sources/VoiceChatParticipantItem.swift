@@ -199,7 +199,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.offsetContainerNode = ASDisplayNode()
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 40.0))
         
         self.titleNode = TextNode()
@@ -673,22 +672,24 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         })
                     }
                     
-                    let videoSize = CGSize(width: 38.0, height: 38.0)
+                    let videoSize = CGSize(width: avatarSize, height: avatarSize)
                     
                     let videoNode = item.getVideo()
                     if let current = strongSelf.videoNode, current !== videoNode {
                         current.removeFromSupernode()
                     }
-                    var actionOffset: CGFloat = 0.0
+                    let actionOffset: CGFloat = 0.0
                     strongSelf.videoNode = videoNode
                     if let videoNode = videoNode {
-                        videoNode.updateLayout(size: videoSize, transition: .immediate)
-                        if videoNode.supernode !== strongSelf.offsetContainerNode {
-                            strongSelf.offsetContainerNode.addSubnode(videoNode)
-                        }
-                        actionOffset = -videoSize.width - 6.0
                         
-                        videoNode.frame = CGRect(origin: CGPoint(x: params.width - videoSize.width - 6.0 - params.rightInset, y: (layout.contentSize.height - videoSize.height) / 2.0), size: videoSize)
+                        videoNode.updateLayout(size: videoSize, transition: .immediate)
+                        if videoNode.supernode !== strongSelf.avatarNode {
+                            videoNode.clipsToBounds = true
+                            videoNode.cornerRadius = avatarSize / 2.0
+                            strongSelf.avatarNode.addSubnode(videoNode)
+                        }
+                        
+                        videoNode.frame = CGRect(origin: CGPoint(), size: videoSize)
                     }
                     
                     let animationSize = CGSize(width: 36.0, height: 36.0)

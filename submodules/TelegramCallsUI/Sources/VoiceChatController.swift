@@ -119,20 +119,21 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
 }
 
 final class GroupVideoNode: ASDisplayNode {
+    private let videoViewContainer: UIView
     private let videoView: PresentationCallVideoView
     
     private var validLayout: CGSize?
     
+    var tapped: (() -> Void)?
+    
     init(videoView: PresentationCallVideoView) {
+        self.videoViewContainer = UIView()
         self.videoView = videoView
         
         super.init()
         
-        self.backgroundColor = .black
-        self.clipsToBounds = true
-        self.cornerRadius = 8.0
-        
-        self.view.addSubview(self.videoView.view)
+        self.videoViewContainer.addSubview(self.videoView.view)
+        self.view.addSubview(self.videoViewContainer)
         
         videoView.setOnFirstFrameReceived({ [weak self] _ in
             Queue.mainQueue().async {
@@ -155,10 +156,19 @@ final class GroupVideoNode: ASDisplayNode {
                 }
             }
         })
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.tapped?()
+        }
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
+        self.videoViewContainer.frame = CGRect(origin: CGPoint(), size: size)
         
         let orientation = self.videoView.getOrientation()
         var aspect = self.videoView.getAspect()
@@ -168,33 +178,106 @@ final class GroupVideoNode: ASDisplayNode {
         
         let rotatedAspect: CGFloat
         let angle: CGFloat
+        let switchOrientation: Bool
         switch orientation {
         case .rotation0:
             angle = 0.0
-            rotatedAspect = aspect
+            rotatedAspect = 1 / aspect
+            switchOrientation = false
         case .rotation90:
             angle = CGFloat.pi / 2.0
-            rotatedAspect = 1 / aspect
+            rotatedAspect = aspect
+            switchOrientation = true
         case .rotation180:
             angle = CGFloat.pi
-            rotatedAspect = aspect
+            rotatedAspect = 1 / aspect
+            switchOrientation = false
         case .rotation270:
             angle = CGFloat.pi * 3.0 / 2.0
-            rotatedAspect = 1 / aspect
+            rotatedAspect = aspect
+            switchOrientation = true
         }
         
-        let rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0).aspectFilled(size)
+        var rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0)
+        
+        if size.width < 100.0 {
+            rotatedVideoSize = rotatedVideoSize.aspectFilled(size)
+        } else {
+            rotatedVideoSize = rotatedVideoSize.aspectFitted(size)
+        }
+        
+        if switchOrientation {
+            rotatedVideoSize = CGSize(width: rotatedVideoSize.height, height: rotatedVideoSize.width)
+        }
         var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
         rotatedVideoFrame.origin.x = floor(rotatedVideoFrame.origin.x)
         rotatedVideoFrame.origin.y = floor(rotatedVideoFrame.origin.y)
         rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
         rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
-        rotatedVideoFrame = rotatedVideoFrame.insetBy(dx: -1.0, dy: -1.0)
         self.videoView.view.center = rotatedVideoFrame.center
         self.videoView.view.bounds = CGRect(origin: CGPoint(), size: rotatedVideoFrame.size)
         
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
+    }
+}
+
+private final class MainVideoContainerNode: ASDisplayNode {
+    private let context: AccountContext
+    private let call: PresentationGroupCall
+    
+    private var currentVideoNode: GroupVideoNode?
+    private var currentPeer: (PeerId, UInt32)?
+    
+    private var validLayout: CGSize?
+    
+    init(context: AccountContext, call: PresentationGroupCall) {
+        self.context = context
+        self.call = call
+        
+        super.init()
+        
+        self.backgroundColor = .black
+    }
+    
+    func updatePeer(peer: (peerId: PeerId, source: UInt32)?) {
+        if self.currentPeer?.0 == peer?.0 && self.currentPeer?.1 == peer?.1 {
+            return
+        }
+        self.currentPeer = peer
+        if let (peerId, source) = peer {
+            self.call.makeIncomingVideoView(source: source, completion: { [weak self] videoView in
+                Queue.mainQueue().async {
+                    guard let strongSelf = self, let videoView = videoView else {
+                        return
+                    }
+                    let videoNode = GroupVideoNode(videoView: videoView)
+                    if let currentVideoNode = strongSelf.currentVideoNode {
+                        currentVideoNode.removeFromSupernode()
+                        strongSelf.currentVideoNode = nil
+                    }
+                    strongSelf.currentVideoNode = videoNode
+                    strongSelf.addSubnode(videoNode)
+                    if let size = strongSelf.validLayout {
+                        strongSelf.update(size: size, transition: .immediate)
+                    }
+                }
+            })
+        } else {
+            if let currentVideoNode = self.currentVideoNode {
+                currentVideoNode.removeFromSupernode()
+                self.currentVideoNode = nil
+            }
+        }
+    }
+    
+    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = size
+        
+        if let currentVideoNode = self.currentVideoNode {
+            transition.updateFrame(node: currentVideoNode, frame: CGRect(origin: CGPoint(), size: size))
+            currentVideoNode.updateLayout(size: size, transition: .immediate)
+        }
     }
 }
 
@@ -256,9 +339,9 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            func updateAudioLevels(_ levels: [(PeerId, Float, Bool)], reset: Bool = false) {
+            func updateAudioLevels(_ levels: [(PeerId, UInt32, Float, Bool)], reset: Bool = false) {
                 var updated = Set<PeerId>()
-                for (peerId, level, _) in levels {
+                for (peerId, _, level, _) in levels {
                     if let pipe = self.audioLevels[peerId] {
                         if reset {
                             pipe.putNext(level)
@@ -472,6 +555,7 @@ public final class VoiceChatController: ViewController {
         private let dimNode: ASDisplayNode
         private let contentContainer: ASDisplayNode
         private let backgroundNode: ASDisplayNode
+        private let mainVideoContainer: MainVideoContainerNode
         private let listNode: ListView
         private let topPanelNode: ASDisplayNode
         private let topPanelEdgeNode: ASDisplayNode
@@ -544,7 +628,9 @@ public final class VoiceChatController: ViewController {
         private let voiceSourcesDisposable = MetaDisposable()
         
         private var requestedVideoSources = Set<UInt32>()
-        private var videoNodes: [(UInt32, GroupVideoNode)] = []
+        private var videoNodes: [(PeerId, UInt32, GroupVideoNode)] = []
+        
+        private var currentDominantSpeakerWithVideo: (PeerId, UInt32)?
         
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
@@ -565,6 +651,8 @@ public final class VoiceChatController: ViewController {
             self.backgroundNode = ASDisplayNode()
             self.backgroundNode.backgroundColor = secondaryPanelBackgroundColor
             self.backgroundNode.clipsToBounds = false
+            
+            self.mainVideoContainer = MainVideoContainerNode(context: call.accountContext, call: call)
             
             self.listNode = ListView()
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
@@ -988,7 +1076,7 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return nil
                 }
-                for (listSsrc, videoNode) in strongSelf.videoNodes {
+                for (_, listSsrc, videoNode) in strongSelf.videoNodes {
                     if listSsrc == ssrc {
                         return videoNode
                     }
@@ -1014,6 +1102,7 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.backgroundNode)
             
             self.contentContainer.addSubnode(self.listNode)
+            self.contentContainer.addSubnode(self.mainVideoContainer)
             self.contentContainer.addSubnode(self.topPanelNode)
             self.contentContainer.addSubnode(self.leftBorderNode)
             self.contentContainer.addSubnode(self.rightBorderNode)
@@ -1161,6 +1250,28 @@ public final class VoiceChatController: ViewController {
                 if strongSelf.effectiveMuteState != nil {
                     levels = levels.filter { $0.0 != strongSelf.context.account.peerId }
                 }
+                
+                var maxLevelWithVideo: (PeerId, UInt32, Float)?
+                for (peerId, source, level, hasSpeech) in levels {
+                    if hasSpeech && source != 0 {
+                        if let (_, _, currentLevel) = maxLevelWithVideo {
+                            if currentLevel < level {
+                                maxLevelWithVideo = (peerId, source, level)
+                            }
+                        } else {
+                            maxLevelWithVideo = (peerId, source, level)
+                        }
+                    }
+                }
+                
+                if let (peerId, source, _) = maxLevelWithVideo {
+                    if strongSelf.currentDominantSpeakerWithVideo?.0 != peerId || strongSelf.currentDominantSpeakerWithVideo?.1 != source {
+                        strongSelf.currentDominantSpeakerWithVideo = (peerId, source)
+                        strongSelf.call.setFullSizeVideo(peerId: peerId)
+                        strongSelf.mainVideoContainer.updatePeer(peer: (peerId: peerId, source: source))
+                    }
+                }
+                
                 strongSelf.itemInteraction?.updateAudioLevels(levels)
             })
             
@@ -1296,17 +1407,19 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 var validSources = Set<UInt32>()
-                for source in sources {
+                for (peerId, source) in sources {
                     validSources.insert(source)
                     
                     if !strongSelf.requestedVideoSources.contains(source) {
                         strongSelf.requestedVideoSources.insert(source)
-                        strongSelf.call.makeIncomingVideoView(source: source,  completion: { videoView in
+                        strongSelf.call.makeIncomingVideoView(source: source, completion: { videoView in
                             Queue.mainQueue().async {
                                 guard let strongSelf = self, let videoView = videoView else {
                                     return
                                 }
-                                strongSelf.videoNodes.append((source, GroupVideoNode(videoView: videoView)))
+                                let videoNode = GroupVideoNode(videoView: videoView)
+                                strongSelf.videoNodes.append((peerId, source, videoNode))
+                                //strongSelf.addSubnode(videoNode)
                                 if let (layout, navigationHeight) = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                                     
@@ -1331,12 +1444,15 @@ public final class VoiceChatController: ViewController {
                 
                 var updated = false
                 for i in (0 ..< strongSelf.videoNodes.count).reversed() {
-                    if !validSources.contains(strongSelf.videoNodes[i].0) {
+                    if !validSources.contains(strongSelf.videoNodes[i].1) {
+                        let ssrc = strongSelf.videoNodes[i].1
+                        strongSelf.videoNodes.remove(at: i)
+                        
                         loop: for j in 0 ..< strongSelf.currentEntries.count {
                             let entry = strongSelf.currentEntries[j]
                             switch entry {
                             case let .peer(peerEntry):
-                                if peerEntry.ssrc == strongSelf.videoNodes[i].0 {
+                                if peerEntry.ssrc == ssrc {
                                     let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
                                     strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
                                     break loop
@@ -1346,9 +1462,16 @@ public final class VoiceChatController: ViewController {
                             }
                         }
                         
-                        //strongSelf.videoNodes[i].1.removeFromSupernode()
-                        strongSelf.videoNodes.remove(at: i)
+                        //strongSelf.videoNodes[i].2.removeFromSupernode()
                         updated = true
+                    }
+                }
+                
+                if let (_, source) = strongSelf.currentDominantSpeakerWithVideo {
+                    if !validSources.contains(source) {
+                        strongSelf.currentDominantSpeakerWithVideo = nil
+                        strongSelf.call.setFullSizeVideo(peerId: nil)
+                        strongSelf.mainVideoContainer.updatePeer(peer: nil)
                     }
                 }
                 
@@ -1358,6 +1481,9 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }))
+            
+            self.isFullscreen = true
+            self.isExpanded = true
         }
         
         deinit {
@@ -1501,7 +1627,7 @@ public final class VoiceChatController: ViewController {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
                     }
                     
-                    self.itemInteraction?.updateAudioLevels([(self.context.account.peerId, 0.0, false)], reset: true)
+                    self.itemInteraction?.updateAudioLevels([(self.context.account.peerId, 0, 0.0, false)], reset: true)
                                         
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
@@ -1617,6 +1743,10 @@ public final class VoiceChatController: ViewController {
             let rawPanelOffset = offset + listTopInset - topPanelHeight
             let panelOffset = max(layoutTopInset, rawPanelOffset)
             let topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelOffset), size: CGSize(width: size.width, height: topPanelHeight))
+            
+            let videoContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: layout.size.width, height: 200.0))
+            transition.updateFrameAdditive(node: self.mainVideoContainer, frame: videoContainerFrame)
+            self.mainVideoContainer.update(size: videoContainerFrame.size, transition: transition)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: size.width, height: layout.size.height))
             let sideInset: CGFloat = 16.0
@@ -1878,7 +2008,7 @@ public final class VoiceChatController: ViewController {
             }
             
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
-            let listTopInset = layoutTopInset + topPanelHeight
+            let listTopInset = layoutTopInset + topPanelHeight + 200.0
             let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
                  
             let topInset: CGFloat
@@ -1961,7 +2091,7 @@ public final class VoiceChatController: ViewController {
             self.updateButtons(transition: transition)
             
             /*var currentVideoOrigin = CGPoint(x: 4.0, y: (layout.statusBarHeight ?? 0.0) + 4.0)
-            for (_, videoNode) in self.videoNodes {
+            for (_, _, videoNode) in self.videoNodes {
                 let videoSize = CGSize(width: 300.0, height: 500.0)
                 if currentVideoOrigin.x + videoSize.width > layout.size.width {
                     currentVideoOrigin.x = 0.0
@@ -2447,6 +2577,14 @@ public final class VoiceChatController: ViewController {
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
+            
+            if let result = result {
+                for (_, _, videoNode) in self.videoNodes {
+                    if videoNode.view === result || result.isDescendant(of: videoNode.view) {
+                        return result
+                    }
+                }
+            }
 
             if result === self.topPanelNode.view {
                 return self.view
