@@ -10,4 +10,3 @@ telegram_is_appstore_build = "true"
 telegram_appstore_id = "0"
 telegram_app_specific_url_scheme = "tg"
 telegram_aps_environment = "production"
-telegram_disable_extensions = False

@@ -1,3 +1,7 @@
+load("@bazel_skylib//rules:common_settings.bzl",
+    "bool_flag"
+)
+
 load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_application",
     "ios_extension",
@@ -24,13 +28,25 @@ load(
     "telegram_bundle_id",
     "telegram_aps_environment",
     "telegram_team_id",
-    "telegram_disable_extensions",
 )
 
 config_setting(
     name = "debug",
     values = {
         "compilation_mode": "dbg",
+    },
+)
+
+bool_flag(
+    name = "disableExtensions",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "disableExtensionsSetting",
+    flag_values = {
+        ":disableExtensions": "True",
     },
 )
 
@@ -482,7 +498,7 @@ watchos_extension(
         ":WatchExtensionNSExtensionInfoPlist",
     ],
     minimum_os_version = "5.0",
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:WatchExtension.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:WatchExtension.mobileprovision",
     resources = [
         ":TelegramWatchExtensionResources",
     ],
@@ -509,7 +525,7 @@ watchos_application(
         ":WatchAppCompanionInfoPlist",
     ],
     minimum_os_version = "5.0",
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:WatchApp.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:WatchApp.mobileprovision",
     resources = [
         ":TelegramWatchAppResources",
         ":TelegramWatchAppAssets",
@@ -1055,7 +1071,7 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "9.0",
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:Share.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:Share.mobileprovision",
     deps = [":ShareExtensionLib"],
     frameworks = [
         ":TelegramUIFramework"
@@ -1123,7 +1139,7 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:NotificationContent.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:NotificationContent.mobileprovision",
     deps = [":NotificationContentExtensionLib"],
     frameworks = [
         ":TelegramUIFramework"
@@ -1195,7 +1211,7 @@ ios_extension(
     ],
     minimum_os_version = "14.0",
     provides_main = True,
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:Widget.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:Widget.mobileprovision",
     deps = [":WidgetExtensionLib"],
     frameworks = [
         ":SwiftSignalKitFramework",
@@ -1283,7 +1299,7 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:Intents.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:Intents.mobileprovision",
     deps = [":IntentsExtensionLib"],
     frameworks = [
         ":SwiftSignalKitFramework",
@@ -1334,7 +1350,7 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:NotificationService.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:NotificationService.mobileprovision",
     deps = ["//Telegram/NotificationService:NotificationServiceExtensionLib"],
     frameworks = [
         ":MtProtoKitFramework",
@@ -1522,7 +1538,7 @@ ios_application(
     ),
     families = ["iphone", "ipad"],
     minimum_os_version = "9.0",
-    provisioning_profile = "@build_configuration//data/provisioning-profiles:Telegram.mobileprovision",
+    provisioning_profile = "@build_configuration//provisioning:Telegram.mobileprovision",
     entitlements = ":TelegramEntitlements.entitlements",
     infoplists = [
         ":TelegramInfoPlist",
@@ -1547,14 +1563,16 @@ ios_application(
     strings = [
         ":AppStringResources",
     ],
-    extensions = [
-    ] if telegram_disable_extensions else [
-        ":ShareExtension",
-        ":NotificationContentExtension",
-        ":NotificationServiceExtension",
-        ":IntentsExtension",
-        ":WidgetExtension",
-    ],
+    extensions = select({
+        ":disableExtensionsSetting": [],
+        "//conditions:default": [
+            ":ShareExtension",
+            ":NotificationContentExtension",
+            ":NotificationServiceExtension",
+            ":IntentsExtension",
+            ":WidgetExtension",
+        ],
+    }),
     watch_application = ":TelegramWatchApp",
     deps = [
         ":Main",
