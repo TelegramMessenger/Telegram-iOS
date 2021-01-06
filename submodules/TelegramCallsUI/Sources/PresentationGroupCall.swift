@@ -171,7 +171,7 @@ private extension PresentationGroupCallState {
             networkState: .connecting,
             canManageCall: false,
             adminIds: Set(),
-            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
+            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
             defaultParticipantMuteState: nil
         )
     }
@@ -669,7 +669,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 ssrc: 0,
                                 joinTimestamp: strongSelf.temporaryJoinTimestamp,
                                 activityTimestamp: nil,
-                                muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                                muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                                volume: nil
                             ))
                             participants.sort()
                         }
@@ -1042,7 +1043,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.stateValue.muteState = muteState
                             } else if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
                                 strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
-                                strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                                strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                 strongSelf.callContext?.setIsMuted(true)
                             }
                         }
@@ -1229,16 +1230,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.callContext?.setIsMuted(isEffectivelyMuted)
         
         if isVisuallyMuted {
-            self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+            self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
         } else {
             self.stateValue.muteState = nil
         }
     }
-    
-    public func setVolume(peerId: PeerId, volume: Double) {
+        
+    public func setVolume(peerId: PeerId, volume: Int32, sync: Bool) {
         for (ssrc, id) in self.ssrcMapping {
             if id == peerId {
-                self.callContext?.setVolume(ssrc: ssrc, volume: volume)
+                self.callContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
+                if sync {
+                    self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: volume)
+                }
                 break
             }
         }
@@ -1315,6 +1319,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public func updateMuteState(peerId: PeerId, isMuted: Bool) {
         let canThenUnmute: Bool
         if isMuted {
+            var mutedByYou = false
             if peerId == self.accountContext.account.peerId {
                 canThenUnmute = true
             } else if self.stateValue.canManageCall {
@@ -1326,14 +1331,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             } else if self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
                 canThenUnmute = true
             } else {
+                mutedByYou = true
                 canThenUnmute = true
             }
-            self.participantsContext?.updateMuteState(peerId: peerId, muteState: isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute) : nil)
+            self.participantsContext?.updateMuteState(peerId: peerId, muteState: isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute, mutedByYou: mutedByYou) : nil, volume: nil)
         } else {
             if peerId == self.accountContext.account.peerId {
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
+            } else if self.stateValue.canManageCall || self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false), volume: nil)
             } else {
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true))
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
             }
         }
     }
