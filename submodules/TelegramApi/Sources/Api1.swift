@@ -18152,18 +18152,12 @@ public extension Api {
     
     }
     public enum Message: TypeConstructorDescription {
-        case messageEmpty(id: Int32)
         case message(flags: Int32, id: Int32, fromId: Api.Peer?, peerId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyTo: Api.MessageReplyHeader?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, restrictionReason: [Api.RestrictionReason]?)
         case messageService(flags: Int32, id: Int32, fromId: Api.Peer?, peerId: Api.Peer, replyTo: Api.MessageReplyHeader?, date: Int32, action: Api.MessageAction)
+        case messageEmpty(flags: Int32, id: Int32, peerId: Api.Peer?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageEmpty(let id):
-                    if boxed {
-                        buffer.appendInt32(-2082087340)
-                    }
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    break
                 case .message(let flags, let id, let fromId, let peerId, let fwdFrom, let viaBotId, let replyTo, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let restrictionReason):
                     if boxed {
                         buffer.appendInt32(1487813065)
@@ -18208,31 +18202,28 @@ public extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
+                case .messageEmpty(let flags, let id, let peerId):
+                    if boxed {
+                        buffer.appendInt32(-1868117372)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {peerId!.serialize(buffer, true)}
+                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageEmpty(let id):
-                return ("messageEmpty", [("id", id)])
                 case .message(let flags, let id, let fromId, let peerId, let fwdFrom, let viaBotId, let replyTo, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let restrictionReason):
                 return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("peerId", peerId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyTo", replyTo), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("forwards", forwards), ("replies", replies), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("restrictionReason", restrictionReason)])
                 case .messageService(let flags, let id, let fromId, let peerId, let replyTo, let date, let action):
                 return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("peerId", peerId), ("replyTo", replyTo), ("date", date), ("action", action)])
+                case .messageEmpty(let flags, let id, let peerId):
+                return ("messageEmpty", [("flags", flags), ("id", id), ("peerId", peerId)])
     }
     }
     
-        public static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.Message.messageEmpty(id: _1!)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_message(_ reader: BufferReader) -> Message? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -18348,6 +18339,25 @@ public extension Api {
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.Message.messageService(flags: _1!, id: _2!, fromId: _3, peerId: _4!, replyTo: _5, date: _6!, action: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.Peer?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Message.messageEmpty(flags: _1!, id: _2!, peerId: _3)
             }
             else {
                 return nil
@@ -18911,7 +18921,7 @@ public extension Api {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
         case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
-        case inputPaymentCredentialsAndroidPay(paymentToken: Api.DataJSON, googleTransactionId: String)
+        case inputPaymentCredentialsGooglePay(paymentToken: Api.DataJSON)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18935,12 +18945,11 @@ public extension Api {
                     }
                     paymentData.serialize(buffer, true)
                     break
-                case .inputPaymentCredentialsAndroidPay(let paymentToken, let googleTransactionId):
+                case .inputPaymentCredentialsGooglePay(let paymentToken):
                     if boxed {
-                        buffer.appendInt32(-905587442)
+                        buffer.appendInt32(-1966921727)
                     }
                     paymentToken.serialize(buffer, true)
-                    serializeString(googleTransactionId, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -18953,8 +18962,8 @@ public extension Api {
                 return ("inputPaymentCredentials", [("flags", flags), ("data", data)])
                 case .inputPaymentCredentialsApplePay(let paymentData):
                 return ("inputPaymentCredentialsApplePay", [("paymentData", paymentData)])
-                case .inputPaymentCredentialsAndroidPay(let paymentToken, let googleTransactionId):
-                return ("inputPaymentCredentialsAndroidPay", [("paymentToken", paymentToken), ("googleTransactionId", googleTransactionId)])
+                case .inputPaymentCredentialsGooglePay(let paymentToken):
+                return ("inputPaymentCredentialsGooglePay", [("paymentToken", paymentToken)])
     }
     }
     
@@ -19001,17 +19010,14 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_inputPaymentCredentialsAndroidPay(_ reader: BufferReader) -> InputPaymentCredentials? {
+        public static func parse_inputPaymentCredentialsGooglePay(_ reader: BufferReader) -> InputPaymentCredentials? {
             var _1: Api.DataJSON?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
-            var _2: String?
-            _2 = parseString(reader)
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsAndroidPay(paymentToken: _1!, googleTransactionId: _2!)
+            if _c1 {
+                return Api.InputPaymentCredentials.inputPaymentCredentialsGooglePay(paymentToken: _1!)
             }
             else {
                 return nil

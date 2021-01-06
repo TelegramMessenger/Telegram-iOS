@@ -116,8 +116,12 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
         case let .message(message):
             let chatPeerId = message.peerId
             return chatPeerId.peerId
-        case .messageEmpty:
-            return nil
+        case let .messageEmpty(_, id, peerId):
+            if let peerId = peerId {
+                return peerId.peerId
+            } else {
+                return nil
+            }
         case let .messageService(flags, _, fromId, chatPeerId, _, _, _):
             return chatPeerId.peerId
     }
