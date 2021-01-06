@@ -793,7 +793,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let strongSelf = self, !isAnimated {
                         videoNode?.seek(0.0)
                         
-                        if strongSelf.actionAtEnd == .stop {
+                        if strongSelf.actionAtEnd == .stop && strongSelf.isCentral {
                             strongSelf.updateControlsVisibility(true)
                             strongSelf.controlsTimer?.invalidate()
                             strongSelf.controlsTimer = nil
@@ -900,6 +900,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                 } else {
+                    self.controlsTimer?.invalidate()
+                    self.controlsTimer = nil
+                    
                     self.dismissOnOrientationChange = false
                     if videoNode.ownsContentNode {
                         videoNode.pause()
