@@ -2850,6 +2850,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.requestCall(isVideo: false)
         case .videoCall:
             self.requestCall(isVideo: true)
+        case .voiceChat:
+            if let cachedData = self.data?.cachedData as? CachedChannelData, let activeCall = cachedData.activeCall {
+                self.context.joinGroupCall(peerId: self.peerId, activeCall: activeCall)
+            }
         case .mute:
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
                 let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: nil).start()
