@@ -1,5 +1,5 @@
 load("@bazel_skylib//rules:common_settings.bzl",
-    "bool_flag"
+    "bool_flag",
 )
 
 load("@build_bazel_rules_apple//apple:ios.bzl",
@@ -23,8 +23,6 @@ load("//build-system/bazel-utils:plist_fragment.bzl",
 
 load(
     "@build_configuration//:variables.bzl",
-    "telegram_build_number",
-    "telegram_version",
     "telegram_bundle_id",
     "telegram_aps_environment",
     "telegram_team_id",
@@ -40,6 +38,12 @@ config_setting(
 bool_flag(
     name = "disableExtensions",
     build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+string_flag(
+    name = "buildNumber",
+    build_setting_default = "10000",
     visibility = ["//visibility:public"],
 )
 
@@ -206,14 +210,20 @@ swift_library(
 )
 
 plist_fragment(
-    name = "AdditionalInfoPlist",
+    name = "BuildNumberInfoPlist",
     extension = "plist",
     template =
     """
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
+    <string>{buildNumber}</string>
+    """
+)
+
+plist_fragment(
+    name = "UrlTypesInfoPlist",
+    extension = "plist",
+    template =
+    """
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -230,16 +240,6 @@ plist_fragment(
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
             <key>CFBundleURLName</key>
-            <string>{telegram_bundle_id}.ton</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>ton</string>
-            </array>
-        </dict>
-        <dict>
-            <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
-            <key>CFBundleURLName</key>
             <string>{telegram_bundle_id}.compatibility</string>
             <key>CFBundleURLSchemes</key>
             <array>
@@ -248,8 +248,6 @@ plist_fragment(
         </dict>
     </array>
     """.format(
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
         telegram_bundle_id = telegram_bundle_id,
     )
 )
@@ -387,13 +385,8 @@ plist_fragment(
     template =
     """
     <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
-    """.format(
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
-    )
+    <string>{telegramVersion}</string>
+    """
 )
 
 plist_fragment(
@@ -494,6 +487,7 @@ watchos_extension(
     infoplists = [
         ":WatchExtensionInfoPlist",
         ":VersionInfoPlist",
+        ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
         ":WatchExtensionNSExtensionInfoPlist",
     ],
@@ -521,6 +515,7 @@ watchos_application(
     infoplists = [
         ":WatchAppInfoPlist",
         ":VersionInfoPlist",
+        "BuildNumberInfoPlist",
         ":AppNameInfoPlist",
         ":WatchAppCompanionInfoPlist",
     ],
@@ -544,20 +539,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.MtProtoKit</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>MtProtoKit</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -572,6 +561,8 @@ ios_framework(
     ],
     infoplists = [
         ":MtProtoKitInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -587,20 +578,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.SwiftSignalKit</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>SwiftSignalKit</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -615,6 +600,8 @@ ios_framework(
     ],
     infoplists = [
         ":SwiftSignalKitInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -630,20 +617,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Postbox</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>Postbox</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -658,6 +639,8 @@ ios_framework(
     ],
     infoplists = [
         ":PostboxInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     frameworks = [
         ":SwiftSignalKitFramework",
@@ -676,20 +659,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.TelegramApi</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>TelegramApi</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -704,6 +681,8 @@ ios_framework(
     ],
     infoplists = [
         ":TelegramApiInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -719,20 +698,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.SyncCore</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>SyncCore</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -747,6 +720,8 @@ ios_framework(
     ],
     infoplists = [
         ":SyncCoreInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     frameworks = [
         ":SwiftSignalKitFramework",
@@ -766,20 +741,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.TelegramCore</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>TelegramCore</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -794,13 +763,14 @@ ios_framework(
     ],
     infoplists = [
         ":TelegramCoreInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     frameworks = [
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":SyncCoreFramework",
-        #":TelegramApiFramework",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -816,20 +786,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.AsyncDisplayKit</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>AsyncDisplayKit</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -844,6 +808,8 @@ ios_framework(
     ],
     infoplists = [
         ":AsyncDisplayKitInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -859,20 +825,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Display</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>Display</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -930,6 +890,8 @@ ios_framework(
     ],
     infoplists = [
         ":DisplayInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     frameworks = [
         ":SwiftSignalKitFramework",
@@ -949,20 +911,14 @@ plist_fragment(
     """
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.TelegramUI</string>
-    <key>CFBundleVersion</key>
-    <string>{telegram_build_number}</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
     <string>TelegramUI</string>
-    <key>CFBundleShortVersionString</key>
-    <string>{telegram_version}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_version = telegram_version,
-        telegram_build_number = telegram_build_number,
     )
 )
 
@@ -977,12 +933,13 @@ ios_framework(
     ],
     infoplists = [
         ":TelegramUIInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
     ],
     frameworks = [
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        #":TelegramApiFramework",
         ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",
@@ -1068,6 +1025,7 @@ ios_extension(
     infoplists = [
         ":ShareInfoPlist",
         ":VersionInfoPlist",
+        ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "9.0",
@@ -1136,6 +1094,7 @@ ios_extension(
     infoplists = [
         ":NotificationContentInfoPlist",
         ":VersionInfoPlist",
+        ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
@@ -1207,6 +1166,7 @@ ios_extension(
     infoplists = [
         ":WidgetInfoPlist",
         ":VersionInfoPlist",
+        ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "14.0",
@@ -1296,6 +1256,7 @@ ios_extension(
     infoplists = [
         ":IntentsInfoPlist",
         ":VersionInfoPlist",
+        ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
@@ -1305,7 +1266,6 @@ ios_extension(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":TelegramCoreFramework",
-        #":TelegramApiFramework",
         ":SyncCoreFramework",
     ],
 )
@@ -1347,6 +1307,7 @@ ios_extension(
     infoplists = [
         ":NotificationServiceInfoPlist",
         ":VersionInfoPlist",
+        ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
@@ -1356,8 +1317,6 @@ ios_extension(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        #":TelegramApiFramework",
-        #":SyncCoreFramework",
     ],
 )
 
@@ -1542,7 +1501,9 @@ ios_application(
     entitlements = ":TelegramEntitlements.entitlements",
     infoplists = [
         ":TelegramInfoPlist",
-        ":AdditionalInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
+        ":UrlTypesInfoPlist",
     ],
     ipa_post_processor = ":AddAlternateIcons",
     resources = [

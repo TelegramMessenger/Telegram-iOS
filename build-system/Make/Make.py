@@ -22,6 +22,7 @@ class BazelCommandLine:
         self.remote_cache = None
         self.cache_dir = None
         self.additional_args = None
+        self.build_number = None
         self.configuration_args = None
         self.configuration_path = None
 
@@ -106,6 +107,9 @@ class BazelCommandLine:
     def add_additional_args(self, additional_args):
         self.additional_args = additional_args
 
+    def set_build_number(self, build_number):
+        self.build_number = build_number
+
     def set_configuration_path(self, path):
         self.configuration_path = path
 
@@ -162,10 +166,17 @@ class BazelCommandLine:
         print('TelegramBuild: running {}'.format(combined_arguments))
         call_executable(combined_arguments)
 
+    def get_define_arguments(self):
+        return [
+            '--define=buildNumber={}'.format(self.build_number),
+            '--define=telegramVersion={}'.format(self.build_environment.app_version)
+        ]
+
     def get_project_generation_arguments(self):
         combined_arguments = []
         combined_arguments += self.common_args
         combined_arguments += self.common_debug_args
+        combined_arguments += self.get_define_arguments()
 
         if self.remote_cache is not None:
             combined_arguments += [
@@ -195,6 +206,7 @@ class BazelCommandLine:
 
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
+        combined_arguments += self.get_define_arguments()
 
         if self.remote_cache is not None:
             combined_arguments += [
@@ -268,9 +280,13 @@ def generate_project(arguments):
 
     resolve_configuration(bazel_command_line, arguments)
 
+    bazel_command_line.set_build_number(arguments.buildNumber)
+
     disable_extensions = False
     if arguments.disableExtensions is not None:
         disable_extensions = arguments.disableExtensions
+
+    call_executable(['killall', 'Xcode'], check_result=False)
 
     generate(
         build_environment=bazel_command_line.build_environment,
@@ -296,6 +312,7 @@ def build(arguments):
     resolve_configuration(bazel_command_line, arguments)
 
     bazel_command_line.set_configuration(arguments.configuration)
+    bazel_command_line.set_build_number(arguments.buildNumber)
 
     bazel_command_line.invoke_build()
 

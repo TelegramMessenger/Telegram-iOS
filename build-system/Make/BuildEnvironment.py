@@ -44,7 +44,7 @@ def run_executable_with_output(path, arguments):
     return output_string
 
 
-def call_executable(arguments, use_clean_environment=True):
+def call_executable(arguments, use_clean_environment=True, check_result=True):
     executable_path = resolve_executable(arguments[0])
     if executable_path is None:
         raise Exception('Could not resolve {} to a valid executable file'.format(arguments[0]))
@@ -53,7 +53,13 @@ def call_executable(arguments, use_clean_environment=True):
         resolved_env = get_clean_env()
     else:
         resolved_env = os.environ
-    subprocess.check_call([executable_path] + arguments[1:], env=resolved_env)
+
+    resolved_arguments = [executable_path] + arguments[1:]
+
+    if check_result:
+        subprocess.check_call(resolved_arguments, env=resolved_env)
+    else:
+        subprocess.call(resolved_arguments, env=resolved_env)
 
 
 def get_bazel_version(bazel_path):
@@ -106,6 +112,10 @@ class BuildEnvironment:
         configuration_path = os.path.join(self.base_path, 'versions.json')
         with open(configuration_path) as file:
             configuration_dict = json.load(file)
+            if configuration_dict['app'] is None:
+                raise Exception('Missing app version in {}'.format(configuration_path))
+            else:
+                self.app_version = configuration_dict['app']
             if configuration_dict['bazel'] is None:
                 raise Exception('Missing bazel version in {}'.format(configuration_path))
             else:
