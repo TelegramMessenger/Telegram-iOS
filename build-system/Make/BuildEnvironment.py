@@ -17,9 +17,24 @@ def get_clean_env():
     return clean_env
 
 
+def resolve_executable(program):
+    def is_executable(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    for path in get_clean_env()["PATH"].split(os.pathsep):
+        executable_file = os.path.join(path, program)
+        if is_executable(executable_file):
+            return executable_file
+    return None
+
+
 def run_executable_with_output(path, arguments):
+    executable_path = resolve_executable(path)
+    if executable_path is None:
+        raise Exception('Could not resolve {} to a valid executable file'.format(path))
+
     process = subprocess.Popen(
-        [path] + arguments,
+        [executable_path] + arguments,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         env=get_clean_env()
@@ -29,8 +44,16 @@ def run_executable_with_output(path, arguments):
     return output_string
 
 
-def call_executable(arguments):
-    subprocess.check_call(arguments, env=get_clean_env())
+def call_executable(arguments, use_clean_environment=True):
+    executable_path = resolve_executable(arguments[0])
+    if executable_path is None:
+        raise Exception('Could not resolve {} to a valid executable file'.format(arguments[0]))
+
+    if use_clean_environment:
+        resolved_env = get_clean_env()
+    else:
+        resolved_env = os.environ
+    subprocess.check_call([executable_path] + arguments[1:], env=resolved_env)
 
 
 def get_bazel_version(bazel_path):
@@ -73,11 +96,14 @@ class BuildEnvironment:
             override_bazel_version,
             override_xcode_version
             ):
-        self.base_path = base_path
-        self.bazel_path = bazel_path
-        self.bazel_x86_64_path = bazel_x86_64_path
+        self.base_path = os.path.expanduser(base_path)
+        self.bazel_path = os.path.expanduser(bazel_path)
+        if bazel_x86_64_path is not None:
+            self.bazel_x86_64_path = os.path.expanduser(bazel_x86_64_path)
+        else:
+            self.bazel_x86_64_path = None
 
-        configuration_path = os.path.join(base_path, 'versions.json')
+        configuration_path = os.path.join(self.base_path, 'versions.json')
         with open(configuration_path) as file:
             configuration_dict = json.load(file)
             if configuration_dict['bazel'] is None:

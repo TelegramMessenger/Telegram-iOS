@@ -2,10 +2,11 @@
 
 import argparse
 import os
+import shlex
 import sys
 import tempfile
 
-from BuildEnvironment import is_apple_silicon, call_executable, BuildEnvironment
+from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironment
 from ProjectGeneration import generate
 
 
@@ -224,15 +225,21 @@ def clean(arguments):
 
 def resolve_configuration(bazel_command_line: BazelCommandLine, arguments):
     if arguments.configurationGenerator is not None:
-        if not os.path.isfile(arguments.configurationGenerator):
-            print('{} is not a valid executable'.format(arguments.configurationGenerator))
+        configuration_generator_arguments = shlex.split(arguments.configurationGenerator)
+
+        configuration_generator_executable = resolve_executable(configuration_generator_arguments[0])
+
+        if configuration_generator_executable is None:
+            print('{} is not a valid executable'.format(configuration_generator_arguments[0]))
             exit(1)
 
         temp_configuration_path = tempfile.mkdtemp()
-        call_executable([
-            arguments.configurationGenerator,
-            temp_configuration_path
-        ])
+
+        resolved_configuration_generator_arguments = [configuration_generator_executable]
+        resolved_configuration_generator_arguments += configuration_generator_arguments[1:]
+        resolved_configuration_generator_arguments += [temp_configuration_path]
+
+        call_executable(resolved_configuration_generator_arguments, use_clean_environment=False)
 
         print('TelegramBuild: using generated configuration in {}'.format(temp_configuration_path))
         bazel_command_line.set_configuration_path(temp_configuration_path)
@@ -306,12 +313,14 @@ def add_project_and_build_common_arguments(current_parser: argparse.ArgumentPars
     group.add_argument(
         '--configurationGenerator',
         help='''
-            Path to an executable that will generate configuration data
+            A command line invocation that will dynamically generate the configuration data
             (project constants and provisioning profiles).
-            The executable will be invoked with one parameter — path to the destination directory. 
+            The expression will be parsed according to the shell parsing rules into program and arguments parts.
+            The program will be then invoked with the given arguments plus the path to the output directory.   
             See build-system/generate-configuration.sh for an example.
+            Example: --configurationGenerator="sh ~/my_script.sh argument1"
             ''',
-        metavar='path'
+        metavar='command'
     )
 
 
