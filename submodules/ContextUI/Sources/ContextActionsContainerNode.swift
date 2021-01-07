@@ -89,7 +89,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                     separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
                     itemNodes.append(.itemSeparator(separatorNode))
                 }
-            case let .custom(item):
+            case let .custom(item, _):
                 itemNodes.append(.custom(item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)))
                 if i != items.count - 1, case .action = items[i + 1] {
                     let separatorNode = ASDisplayNode()
@@ -425,6 +425,7 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
 final class ContextActionsContainerNode: ASDisplayNode {
     private let blurBackground: Bool
     private let shadowNode: ASImageNode
+    private let additionalActionsNode: InnerActionsContainerNode?
     private let actionsNode: InnerActionsContainerNode
     private let textSelectionTipNode: InnerTextSelectionTipContainerNode?
     private let scrollNode: ASScrollNode
@@ -446,6 +447,14 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.shadowNode.contentMode = .scaleToFill
         self.shadowNode.isHidden = true
         
+        var items = items
+        if let firstItem = items.first, case let .custom(item, additional) = firstItem, additional {
+            self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
+            items.removeFirst()
+        } else {
+            self.additionalActionsNode = nil
+        }
+        
         self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
         if displayTextSelectionTip {
             let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData)
@@ -466,6 +475,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.shadowNode)
+        self.additionalActionsNode.flatMap(self.scrollNode.addSubnode)
         self.scrollNode.addSubnode(self.actionsNode)
         self.textSelectionTipNode.flatMap(self.scrollNode.addSubnode)
         self.addSubnode(self.scrollNode)
@@ -477,13 +487,24 @@ final class ContextActionsContainerNode: ASDisplayNode {
             widthClass = .regular
         }
         
+        var contentSize = CGSize()
         let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, transition: transition)
-                
-        let bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actionsSize)
+            
+        if let additionalActionsNode = self.additionalActionsNode {
+            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, transition: transition)
+            contentSize = additionalActionsSize
+            
+            transition.updateFrame(node: additionalActionsNode, frame: CGRect(origin: CGPoint(), size: additionalActionsSize))
+            contentSize.height += 8.0
+        }
+        
+        let bounds = CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: actionsSize)
         transition.updateFrame(node: self.shadowNode, frame: bounds.insetBy(dx: -30.0, dy: -30.0))
         self.shadowNode.isHidden = widthClass == .compact
         
-        var contentSize = actionsSize
+        contentSize.width = max(contentSize.width, actionsSize.width)
+        contentSize.height += actionsSize.height
+        
         transition.updateFrame(node: self.actionsNode, frame: bounds)
         
         if let textSelectionTipNode = self.textSelectionTipNode {

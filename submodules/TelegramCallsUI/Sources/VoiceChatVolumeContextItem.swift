@@ -8,9 +8,9 @@ import ContextUI
 
 final class VoiceChatVolumeContextItem: ContextMenuCustomItem {
     private let value: CGFloat
-    private let valueChanged: (CGFloat) -> Void
+    private let valueChanged: (CGFloat, Bool) -> Void
     
-    init(value: CGFloat, valueChanged: @escaping (CGFloat) -> Void) {
+    init(value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
         self.value = value
         self.valueChanged = valueChanged
     }
@@ -38,11 +38,11 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
         }
     }
     
-    private let valueChanged: (CGFloat) -> Void
+    private let valueChanged: (CGFloat, Bool) -> Void
     
     private let hapticFeedback = HapticFeedback()
 
-    init(presentationData: PresentationData, getController: @escaping () -> ContextController?, value: CGFloat, valueChanged: @escaping (CGFloat) -> Void) {
+    init(presentationData: PresentationData, getController: @escaping () -> ContextController?, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
         self.presentationData = presentationData
         self.value = value
         self.valueChanged = valueChanged
@@ -169,7 +169,12 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
                 } else if self.value == 0.0 && previousValue != 0.0 {
                     self.hapticFeedback.impact(.soft)
                 }
-            case .ended, .cancelled:
+                self.valueChanged(self.value, false)
+            case .ended:
+                let translation: CGFloat = gestureRecognizer.translation(in: gestureRecognizer.view).x
+                let delta = translation / self.bounds.width * 2.0
+                self.value = max(0.0, min(2.0, self.value + delta))
+                self.valueChanged(self.value, true)
                 break
             default:
                 break

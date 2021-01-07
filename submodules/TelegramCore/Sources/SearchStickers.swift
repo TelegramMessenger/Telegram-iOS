@@ -25,26 +25,6 @@ public final class FoundStickerItem: Equatable {
     }
 }
 
-extension MutableCollection {
-    mutating func shuffle() {
-        let c = count
-        guard c > 1 else { return }
-        for (firstUnshuffled, unshuffledCount) in zip(indices, stride(from: c, to: 1, by: -1)) {
-            let d: IndexDistance = numericCast(arc4random_uniform(numericCast(unshuffledCount)))
-            let i = index(firstUnshuffled, offsetBy: d)
-            swapAt(firstUnshuffled, i)
-        }
-    }
-}
-
-extension Sequence {
-    func shuffled() -> [Element] {
-        var result = Array(self)
-        result.shuffle()
-        return result
-    }
-}
-
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
 
 public struct SearchStickersScope: OptionSet {
@@ -97,8 +77,8 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers) {
                 if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
                     if !currentItems.contains(file.fileId) {
-                        for case let .Sticker(sticker) in file.attributes {
-                            if sticker.displayText.hasPrefix(query) {
+                        for case let .Sticker(displayText, _, _) in file.attributes {
+                            if displayText.hasPrefix(query) {
                                 matchingRecentItemsIds.insert(file.fileId)
                             }
                             recentItemsIds.insert(file.fileId)

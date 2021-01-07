@@ -325,7 +325,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         return
                     }
                     
-                    let panelData = currentGroupCall != nil ? nil : availableState
+                    let panelData = currentGroupCall != nil || availableState?.participantCount == 0 ? nil : availableState
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
                     strongSelf.groupCallPanelData = panelData
