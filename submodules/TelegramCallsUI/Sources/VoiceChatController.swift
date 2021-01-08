@@ -200,7 +200,7 @@ final class GroupVideoNode: ASDisplayNode {
         
         var rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0)
         
-        if size.width < 100.0 {
+        if size.width < 100.0 || true {
             rotatedVideoSize = rotatedVideoSize.aspectFilled(size)
         } else {
             rotatedVideoSize = rotatedVideoSize.aspectFitted(size)
@@ -748,12 +748,27 @@ public final class VoiceChatController: ViewController {
                     self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
             }, openPeer: { [weak self] peerId in
                 if let strongSelf = self, let navigationController = strongSelf.controller?.parentNavigationController {
-                    let context = strongSelf.context
+                    /*let context = strongSelf.context
                     strongSelf.controller?.dismiss(completion: {
                         Queue.mainQueue().justDispatch {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
                         }
-                    })
+                    })*/
+                    for entry in strongSelf.currentEntries {
+                        switch entry {
+                        case let .peer(peer):
+                            if peer.peer.id == peerId {
+                                let source = peer.ssrc
+                                if strongSelf.currentDominantSpeakerWithVideo?.0 != peerId || strongSelf.currentDominantSpeakerWithVideo?.1 != source {
+                                    strongSelf.currentDominantSpeakerWithVideo = (peerId, source)
+                                    strongSelf.call.setFullSizeVideo(peerId: peerId)
+                                    strongSelf.mainVideoContainer.updatePeer(peer: (peerId: peerId, source: source))
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
                 }
             }, openInvite: { [weak self] in
                 guard let strongSelf = self else {

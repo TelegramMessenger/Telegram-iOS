@@ -141,16 +141,24 @@
 
 @end
 
-@implementation OngoingCallThreadLocalContextVideoCapturer
-
-- (instancetype _Nonnull)init {
-    return [self initWithDeviceId:@""];
+@interface OngoingCallThreadLocalContextVideoCapturer () {
+    bool _keepLandscape;
 }
 
-- (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId {
+@end
+
+@implementation OngoingCallThreadLocalContextVideoCapturer
+
+- (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId keepLandscape:(bool)keepLandscape {
     self = [super init];
     if (self != nil) {
-        _interface = tgcalls::VideoCaptureInterface::Create(deviceId.UTF8String);
+        _keepLandscape = keepLandscape;
+        
+        std::string resolvedId = deviceId.UTF8String;
+        if (keepLandscape) {
+            resolvedId += std::string(":landscape");
+        }
+        _interface = tgcalls::VideoCaptureInterface::Create(resolvedId);
     }
     return self;
 }
@@ -160,7 +168,11 @@
 }
 
 - (void)switchVideoInput:(NSString * _Nonnull)deviceId {
-    _interface->switchToDevice(deviceId.UTF8String);
+    std::string resolvedId = deviceId.UTF8String;
+    if (_keepLandscape) {
+        resolvedId += std::string(":landscape");
+    }
+    _interface->switchToDevice(resolvedId);
 }
 
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {

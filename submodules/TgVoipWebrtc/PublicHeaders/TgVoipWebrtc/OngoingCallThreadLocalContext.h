@@ -108,8 +108,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @interface OngoingCallThreadLocalContextVideoCapturer : NSObject
 
-- (instancetype _Nonnull)init;
-- (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId;
+- (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId keepLandscape:(bool)keepLandscape;
 
 - (void)switchVideoInput:(NSString * _Nonnull)deviceId;
 - (void)setIsVideoEnabled:(bool)isVideoEnabled;

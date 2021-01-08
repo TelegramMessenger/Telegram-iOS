@@ -5438,13 +5438,13 @@ public extension Api {
     
     }
     public enum GroupCallParticipant: TypeConstructorDescription {
-        case groupCallParticipant(flags: Int32, userId: Int32, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, mutedCnt: Int32?)
+        case groupCallParticipant(flags: Int32, userId: Int32, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, mutedCnt: Int32?, params: Api.DataJSON?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let mutedCnt):
+                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let mutedCnt, let params):
                     if boxed {
-                        buffer.appendInt32(-1199443157)
+                        buffer.appendInt32(451104277)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(userId, buffer: buffer, boxed: false)
@@ -5453,14 +5453,15 @@ public extension Api {
                     serializeInt32(source, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeInt32(mutedCnt!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {params!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let mutedCnt):
-                return ("groupCallParticipant", [("flags", flags), ("userId", userId), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("mutedCnt", mutedCnt)])
+                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let mutedCnt, let params):
+                return ("groupCallParticipant", [("flags", flags), ("userId", userId), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("mutedCnt", mutedCnt), ("params", params)])
     }
     }
     
@@ -5479,6 +5480,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 7) != 0 {_6 = reader.readInt32() }
             var _7: Int32?
             if Int(_1!) & Int(1 << 8) != 0 {_7 = reader.readInt32() }
+            var _8: Api.DataJSON?
+            if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -5486,8 +5491,9 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 7) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 8) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, userId: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6, mutedCnt: _7)
+            let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, userId: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6, mutedCnt: _7, params: _8)
             }
             else {
                 return nil

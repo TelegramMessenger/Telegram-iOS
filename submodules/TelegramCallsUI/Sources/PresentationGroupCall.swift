@@ -16,6 +16,27 @@ import UniversalMediaPlayer
 import AccountContext
 import DeviceProximity
 
+private extension GroupCallParticipantsContext.Participant {
+    var allSsrcs: Set<UInt32> {
+        var participantSsrcs = Set<UInt32>()
+        participantSsrcs.insert(self.ssrc)
+        if let jsonParams = self.jsonParams, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
+            if let groups = json["ssrc-groups"] as? [Any] {
+                for group in groups {
+                    if let group = group as? [String: Any] {
+                        if let groupSources = group["sources"] as? [UInt32] {
+                            for source in groupSources {
+                                participantSsrcs.insert(source)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return participantSsrcs
+    }
+}
+
 public final class AccountGroupCallContextImpl: AccountGroupCallContext {
     public final class Proxy {
         public let context: AccountGroupCallContextImpl
@@ -467,6 +488,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private var missingSsrcs = Set<UInt32>()
+    private var processedMissingSsrcs = Set<UInt32>()
     private let missingSsrcsDisposable = MetaDisposable()
     private var isRequestingMissingSsrcs: Bool = false
     
@@ -493,7 +515,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
-        self.isVideo = false
+        self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: true)
+        self.isVideo = self.videoCapturer != nil
         
         var didReceiveAudioOutputs = false
         
@@ -632,6 +655,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if !removedSsrc.isEmpty {
                     strongSelf.callContext?.removeSsrcs(ssrcs: removedSsrc)
                 }
+                strongSelf.callContext?.addParticipants(participants: addedParticipants)
             }
         })
         
@@ -987,10 +1011,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 
                 self.ssrcMapping.removeAll()
+                var addedParticipants: [(UInt32, String?)] = []
                 for participant in initialState.participants {
                     self.ssrcMapping[participant.ssrc] = participant.peer.id
+                    addedParticipants.append((participant.ssrc, participant.jsonParams))
                 }
-                self.callContext?.setJoinResponse(payload: clientParams, participants: [])
+                self.callContext?.setJoinResponse(payload: clientParams, participants: addedParticipants)
                 
                 let accountContext = self.accountContext
                 let peerId = self.peerId
@@ -1157,13 +1183,21 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private func maybeRequestParticipants(ssrcs: Set<UInt32>) {
         var missingSsrcs = ssrcs
+        missingSsrcs.subtract(self.processedMissingSsrcs)
+        if missingSsrcs.isEmpty {
+            return
+        }
+        self.processedMissingSsrcs.formUnion(ssrcs)
         
         var addedParticipants: [(UInt32, String?)] = []
         
         if let membersValue = self.membersValue {
             for participant in membersValue.participants {
-                if missingSsrcs.contains(participant.ssrc) {
-                    missingSsrcs.remove(participant.ssrc)
+                let participantSsrcs = participant.allSsrcs
+                
+                if !missingSsrcs.intersection(participantSsrcs).isEmpty {
+                    missingSsrcs.subtract(participantSsrcs)
+                    self.processedMissingSsrcs.formUnion(participantSsrcs)
                     
                     addedParticipants.append((participant.ssrc, participant.jsonParams))
                 }
@@ -1187,7 +1221,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if self.missingSsrcs.isEmpty {
             return
         }
-        if case let .estabilished(callInfo, _, ssrc, _) = self.internalState {
+        if case let .estabilished(callInfo, _, _, _) = self.internalState {
             self.isRequestingMissingSsrcs = true
             
             let requestedSsrcs = self.missingSsrcs
@@ -1352,7 +1386,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public func requestVideo() {
         if self.videoCapturer == nil {
-            let videoCapturer = OngoingCallVideoCapturer()
+            let videoCapturer = OngoingCallVideoCapturer(keepLandscape: true)
             self.videoCapturer = videoCapturer
         }
         self.isVideo = true
@@ -1495,6 +1529,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private func requestCall() {
         self.callContext?.stop()
         self.callContext = nil
+        
+        self.missingSsrcsDisposable.set(nil)
+        self.missingSsrcs.removeAll()
+        self.processedMissingSsrcs.removeAll()
         
         self.internalState = .requesting
         self.isCurrentlyConnecting = nil
