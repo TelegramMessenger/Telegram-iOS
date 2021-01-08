@@ -84,7 +84,7 @@ public protocol ContextMenuCustomItem {
 
 public enum ContextMenuItem {
     case action(ContextMenuActionItem)
-    case custom(ContextMenuCustomItem)
+    case custom(ContextMenuCustomItem, Bool)
     case separator
 }
 

@@ -25,6 +25,7 @@ enum PeerInfoHeaderButtonKey: Hashable {
     case discussion
     case call
     case videoCall
+    case voiceChat
     case mute
     case more
     case addMember
@@ -36,6 +37,7 @@ enum PeerInfoHeaderButtonIcon {
     case message
     case call
     case videoCall
+    case voiceChat
     case mute
     case unmute
     case more
@@ -112,6 +114,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     imageName = "Peer Info/ButtonCall"
                 case .videoCall:
                     imageName = "Peer Info/ButtonVideo"
+                case .voiceChat:
+                    imageName = "Peer Info/ButtonVoiceChat"
                 case .mute:
                     imageName = "Peer Info/ButtonMute"
                 case .unmute:
@@ -3273,6 +3277,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             case .videoCall:
                 buttonText = presentationData.strings.PeerInfo_ButtonVideoCall
                 buttonIcon = .videoCall
+            case .voiceChat:
+                buttonText = presentationData.strings.PeerInfo_ButtonVoiceChat
+                buttonIcon = .voiceChat
             case .mute:
                 if let notificationSettings = notificationSettings, case .muted = notificationSettings.muteState {
                     buttonText = presentationData.strings.PeerInfo_ButtonUnmute

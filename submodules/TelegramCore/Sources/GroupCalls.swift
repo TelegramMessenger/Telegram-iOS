@@ -94,10 +94,14 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                         guard let peer = transaction.getPeer(peerId) else {
                             continue loop
                         }
+                        let muted = (flags & (1 << 0)) != 0
+                        let mutedByYou = (flags & (1 << 9)) != 0
                         var muteState: GroupCallParticipantsContext.Participant.MuteState?
-                        if (flags & (1 << 0)) != 0 {
+                        if muted {
                             let canUnmute = (flags & (1 << 2)) != 0
-                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
+                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
+                        } else if mutedByYou {
+                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
                         var jsonParams: String?
                         if let params = params {
@@ -112,7 +116,8 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                             jsonParams: jsonParams,
                             joinTimestamp: date,
                             activityTimestamp: activeDate.flatMap(Double.init),
-                            muteState: muteState
+                            muteState: muteState,
+                            volume: volume
                         ))
                     }
                 }
@@ -239,10 +244,14 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                         guard let peer = transaction.getPeer(peerId) else {
                             continue loop
                         }
+                        let muted = (flags & (1 << 0)) != 0
+                        let mutedByYou = (flags & (1 << 9)) != 0
                         var muteState: GroupCallParticipantsContext.Participant.MuteState?
-                        if (flags & (1 << 0)) != 0 {
+                        if muted {
                             let canUnmute = (flags & (1 << 2)) != 0
-                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
+                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
+                        } else if mutedByYou {
+                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
                         var jsonParams: String?
                         if let params = params {
@@ -257,7 +266,8 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                             jsonParams: jsonParams,
                             joinTimestamp: date,
                             activityTimestamp: activeDate.flatMap(Double.init),
-                            muteState: muteState
+                            muteState: muteState,
+                            volume: volume
                         ))
                     }
                 }
@@ -562,9 +572,11 @@ public final class GroupCallParticipantsContext {
     public struct Participant: Equatable, Comparable {
         public struct MuteState: Equatable {
             public var canUnmute: Bool
+            public var mutedByYou: Bool
             
-            public init(canUnmute: Bool) {
+            public init(canUnmute: Bool, mutedByYou: Bool) {
                 self.canUnmute = canUnmute
+                self.mutedByYou = mutedByYou
             }
         }
         
@@ -574,6 +586,7 @@ public final class GroupCallParticipantsContext {
         public var joinTimestamp: Int32
         public var activityTimestamp: Double?
         public var muteState: MuteState?
+        public var volume: Int32?
         
         public init(
             peer: Peer,
@@ -581,7 +594,8 @@ public final class GroupCallParticipantsContext {
             jsonParams: String?,
             joinTimestamp: Int32,
             activityTimestamp: Double?,
-            muteState: MuteState?
+            muteState: MuteState?,
+            volume: Int32?
         ) {
             self.peer = peer
             self.ssrc = ssrc
@@ -589,6 +603,7 @@ public final class GroupCallParticipantsContext {
             self.joinTimestamp = joinTimestamp
             self.activityTimestamp = activityTimestamp
             self.muteState = muteState
+            self.volume = volume
         }
         
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
@@ -605,6 +620,9 @@ public final class GroupCallParticipantsContext {
                 return false
             }
             if lhs.muteState != rhs.muteState {
+                return false
+            }
+            if lhs.volume != rhs.volume {
                 return false
             }
             return true
@@ -647,10 +665,14 @@ public final class GroupCallParticipantsContext {
     private struct OverlayState: Equatable {
         struct MuteStateChange: Equatable {
             var state: Participant.MuteState?
+            var volume: Int32?
             var disposable: Disposable
             
             static func ==(lhs: MuteStateChange, rhs: MuteStateChange) -> Bool {
                 if lhs.state != rhs.state {
+                    return false
+                }
+                if lhs.volume != rhs.volume {
                     return false
                 }
                 if lhs.disposable !== rhs.disposable {
@@ -691,6 +713,7 @@ public final class GroupCallParticipantsContext {
                 public var activityTimestamp: Double?
                 public var muteState: Participant.MuteState?
                 public var participationStatusChange: ParticipationStatusChange
+                public var volume: Int32?
                 
                 init(
                     peerId: PeerId,
@@ -699,7 +722,8 @@ public final class GroupCallParticipantsContext {
                     joinTimestamp: Int32,
                     activityTimestamp: Double?,
                     muteState: Participant.MuteState?,
-                    participationStatusChange: ParticipationStatusChange
+                    participationStatusChange: ParticipationStatusChange,
+                    volume: Int32?
                 ) {
                     self.peerId = peerId
                     self.ssrc = ssrc
@@ -708,6 +732,7 @@ public final class GroupCallParticipantsContext {
                     self.activityTimestamp = activityTimestamp
                     self.muteState = muteState
                     self.participationStatusChange = participationStatusChange
+                    self.volume = volume
                 }
             }
             
@@ -756,6 +781,7 @@ public final class GroupCallParticipantsContext {
             for i in 0 ..< publicState.participants.count {
                 if let pendingMuteState = state.overlayState.pendingMuteStateChanges[publicState.participants[i].peer.id] {
                     publicState.participants[i].muteState = pendingMuteState.state
+                    publicState.participants[i].volume = pendingMuteState.volume
                 }
             }
             return publicState
@@ -1050,7 +1076,8 @@ public final class GroupCallParticipantsContext {
                         jsonParams: participantUpdate.jsonParams,
                         joinTimestamp: participantUpdate.joinTimestamp,
                         activityTimestamp: activityTimestamp,
-                        muteState: participantUpdate.muteState
+                        muteState: participantUpdate.muteState,
+                        volume: participantUpdate.volume
                     )
                     updatedParticipants.append(participant)
                 }
@@ -1108,7 +1135,7 @@ public final class GroupCallParticipantsContext {
         }))
     }
     
-    public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?) {
+    public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?, volume: Int32?) {
         if let current = self.stateValue.overlayState.pendingMuteStateChanges[peerId] {
             if current.state == muteState {
                 return
@@ -1119,7 +1146,7 @@ public final class GroupCallParticipantsContext {
         
         for participant in self.stateValue.state.participants {
             if participant.peer.id == peerId {
-                if participant.muteState == muteState {
+                if participant.muteState == muteState && participant.volume == volume {
                     return
                 }
             }
@@ -1128,6 +1155,7 @@ public final class GroupCallParticipantsContext {
         let disposable = MetaDisposable()
         self.stateValue.overlayState.pendingMuteStateChanges[peerId] = OverlayState.MuteStateChange(
             state: muteState,
+            volume: volume,
             disposable: disposable
         )
         
@@ -1143,11 +1171,13 @@ public final class GroupCallParticipantsContext {
                 return .single(nil)
             }
             var flags: Int32 = 0
-            if let muteState = muteState, (!muteState.canUnmute || peerId == account.peerId) {
+            if let muteState = muteState, (!muteState.canUnmute || peerId == account.peerId || muteState.mutedByYou) {
                 flags |= 1 << 0
+            } else if let _ = volume {
+                flags |= 1 << 1
             }
             
-            return account.network.request(Api.functions.phone.editGroupCallMember(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), userId: inputUser, volume: nil))
+            return account.network.request(Api.functions.phone.editGroupCallMember(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), userId: inputUser, volume: volume))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)
@@ -1193,7 +1223,6 @@ public final class GroupCallParticipantsContext {
         }
         self.stateValue.state.defaultParticipantsAreMuted.isMuted = isMuted
         
-
         self.updateDefaultMuteDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallSettings(flags: 1 << 0, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), joinMuted: isMuted ? .boolTrue : .boolFalse))
         |> deliverOnMainQueue).start(next: { [weak self] updates in
             guard let strongSelf = self else {
@@ -1210,10 +1239,14 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
         case let .groupCallParticipant(flags, userId, date, activeDate, source, volume, mutedCnt, params):
             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
             let ssrc = UInt32(bitPattern: source)
+            let muted = (flags & (1 << 0)) != 0
+            let mutedByYou = (flags & (1 << 9)) != 0
             var muteState: GroupCallParticipantsContext.Participant.MuteState?
-            if (flags & (1 << 0)) != 0 {
+            if muted {
                 let canUnmute = (flags & (1 << 2)) != 0
-                muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
+                muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
+            } else if mutedByYou {
+                muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
             }
             let isRemoved = (flags & (1 << 1)) != 0
             let justJoined = (flags & (1 << 4)) != 0
@@ -1242,7 +1275,8 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 joinTimestamp: date,
                 activityTimestamp: activeDate.flatMap(Double.init),
                 muteState: muteState,
-                participationStatusChange: participationStatusChange
+                participationStatusChange: participationStatusChange,
+                volume: volume
             )
         }
     }
@@ -1256,10 +1290,14 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
             case let .groupCallParticipant(flags, userId, date, activeDate, source, volume, mutedCnt, params):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                 let ssrc = UInt32(bitPattern: source)
+                let muted = (flags & (1 << 0)) != 0
+                let mutedByYou = (flags & (1 << 9)) != 0
                 var muteState: GroupCallParticipantsContext.Participant.MuteState?
-                if (flags & (1 << 0)) != 0 {
+                if muted {
                     let canUnmute = (flags & (1 << 2)) != 0
-                    muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
+                    muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
+                } else if mutedByYou {
+                    muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                 }
                 let isRemoved = (flags & (1 << 1)) != 0
                 let justJoined = (flags & (1 << 4)) != 0
@@ -1288,7 +1326,8 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     joinTimestamp: date,
                     activityTimestamp: activeDate.flatMap(Double.init),
                     muteState: muteState,
-                    participationStatusChange: participationStatusChange
+                    participationStatusChange: participationStatusChange,
+                    volume: volume
                 ))
             }
         }

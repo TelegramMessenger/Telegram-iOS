@@ -5810,3 +5810,9 @@ Sorry for the inconvenience.";
 "Call.VoiceOver.VideoCallMissed" = "Missed Video Call";
 "Call.VoiceOver.VoiceCallCanceled" = "Cancelled Voice Call";
 "Call.VoiceOver.VideoCallCanceled" = "Cancelled Video Call";
+
+"VoiceChat.UnmuteForMe" = "Unmute for Me";
+"VoiceChat.MuteForMe" = "Mute for Me";
+
+"PeerInfo.ButtonVoiceChat" = "Voice Chat";
+"VoiceChat.OpenChat" = "Open Chat";

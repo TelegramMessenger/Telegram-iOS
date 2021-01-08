@@ -99,8 +99,11 @@ private final class NavigationControllerNode: ASDisplayNode {
     }
     
     override func accessibilityPerformEscape() -> Bool {
-        let _ = self.controller?.popViewController(animated: true)
-        return true
+        if let controller = self.controller, controller.viewControllers.count > 1 {
+            let _ = self.controller?.popViewController(animated: true)
+            return true
+        }
+        return false
     }
 }
 

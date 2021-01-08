@@ -504,7 +504,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                        case let .groupPhoneCall(callId, accessHash, _), let .inviteToGroupPhoneCall(callId, accessHash, _):
+                        case .groupPhoneCall, .inviteToGroupPhoneCall:
                             if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
                                 strongSelf.context.joinGroupCall(peerId: message.id.peerId, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash))
                             } else {
@@ -556,7 +556,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
                                                 }
                                                 strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                            }, completed: { [weak self] in
+                                            }, completed: {
                                                 dismissStatus?()
                                             }))
                                         }
@@ -708,7 +708,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, snapshots: snapshots, transitionCompletion: {
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: "", snapshots: snapshots, transitionCompletion: {
                             transitionCompletion()
                         }, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
@@ -854,9 +854,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, navigateToMessage: { [weak self] fromId, id in
             self?.navigateToMessage(from: fromId, to: .id(id), forceInCurrentChat: fromId.peerId == id.peerId)
         }, navigateToMessageStandalone: { [weak self] id in
-            guard let strongSelf = self else {
-                return
-            }
             self?.navigateToMessage(from: nil, to: .id(id), forceInCurrentChat: false)
         }, tapMessage: nil, clickThroughMessage: { [weak self] in
             self?.chatDisplayNode.dismissInput()

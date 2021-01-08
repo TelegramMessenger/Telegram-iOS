@@ -301,7 +301,7 @@ public protocol PresentationGroupCall: class {
     func requestVideo()
     func disableVideo()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
-    func setVolume(peerId: PeerId, volume: Double)
+    func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
     func setFullSizeVideo(peerId: PeerId?)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
