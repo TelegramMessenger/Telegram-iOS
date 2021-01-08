@@ -50,11 +50,12 @@ public final class OngoingGroupCallContext {
         
         let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?) {
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
+            var participantDescriptionsRequiredImpl: (([NSNumber]) -> Void)?
             
             let videoSources = self.videoSources
             self.context = GroupCallThreadLocalContext(
@@ -70,6 +71,9 @@ public final class OngoingGroupCallContext {
                 videoCapturer: video?.impl,
                 incomingVideoSourcesUpdated: { ssrcs in
                     videoSources.set(Set(ssrcs.map { $0.uint32Value }))
+                },
+                participantDescriptionsRequired: { ssrcs in
+                    participantDescriptionsRequired(Set(ssrcs.map { $0.uint32Value }))
                 }
             )
             
@@ -165,6 +169,30 @@ public final class OngoingGroupCallContext {
         func setIsMuted(_ isMuted: Bool) {
             self.isMuted.set(isMuted)
             self.context.setIsMuted(isMuted)
+        }
+        
+        func requestVideo(_ capturer: OngoingCallVideoCapturer?) {
+            let queue = self.queue
+            self.context.requestVideo(capturer?.impl, completion: { [weak self] payload, ssrc in
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.joinPayload.set(.single((payload, ssrc)))
+                }
+            })
+        }
+        
+        public func disableVideo() {
+            let queue = self.queue
+            self.context.disableVideo({ [weak self] payload, ssrc in
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.joinPayload.set(.single((payload, ssrc)))
+                }
+            })
         }
         
         func switchAudioInput(_ deviceId: String) {
@@ -278,16 +306,28 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired)
         })
     }
     
     public func setIsMuted(_ isMuted: Bool) {
         self.impl.with { impl in
             impl.setIsMuted(isMuted)
+        }
+    }
+    
+    public func requestVideo(_ capturer: OngoingCallVideoCapturer?) {
+        self.impl.with { impl in
+            impl.requestVideo(capturer)
+        }
+    }
+    
+    public func disableVideo() {
+        self.impl.with { impl in
+            impl.disableVideo()
         }
     }
     

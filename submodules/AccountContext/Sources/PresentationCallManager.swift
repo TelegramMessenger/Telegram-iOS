@@ -280,6 +280,8 @@ public protocol PresentationGroupCall: class {
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }
     
+    var isVideo: Bool { get }
+    
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
     
     var canBeRemoved: Signal<Bool, NoError> { get }
@@ -296,6 +298,8 @@ public protocol PresentationGroupCall: class {
     
     func toggleIsMuted()
     func setIsMuted(action: PresentationGroupCallMuteAction)
+    func requestVideo()
+    func disableVideo()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
     func setVolume(peerId: PeerId, volume: Double)
     func setFullSizeVideo(peerId: PeerId?)

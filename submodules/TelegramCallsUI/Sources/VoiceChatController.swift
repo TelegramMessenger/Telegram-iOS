@@ -567,6 +567,7 @@ public final class VoiceChatController: ViewController {
         private let bottomPanelBackgroundNode: ASDisplayNode
         private let bottomCornersNode: ASImageNode
         fileprivate let audioOutputNode: CallControllerButtonItemNode
+        fileprivate let cameraButtonNode: CallControllerButtonItemNode
         fileprivate let leaveNode: CallControllerButtonItemNode
         fileprivate let actionButton: VoiceChatActionButton
         private let leftBorderNode: ASDisplayNode
@@ -699,6 +700,7 @@ public final class VoiceChatController: ViewController {
             self.bottomCornersNode.image = cornersImage(top: false, bottom: true, dark: false)
             
             self.audioOutputNode = CallControllerButtonItemNode()
+            self.cameraButtonNode = CallControllerButtonItemNode()
             self.leaveNode = CallControllerButtonItemNode()
             self.actionButton = VoiceChatActionButton()
 
@@ -1094,6 +1096,7 @@ public final class VoiceChatController: ViewController {
             self.bottomPanelNode.addSubnode(self.bottomCornersNode)
             self.bottomPanelNode.addSubnode(self.bottomPanelBackgroundNode)
             self.bottomPanelNode.addSubnode(self.audioOutputNode)
+            self.bottomPanelNode.addSubnode(self.cameraButtonNode)
             self.bottomPanelNode.addSubnode(self.leaveNode)
             self.bottomPanelNode.addSubnode(self.actionButton)
             
@@ -1292,6 +1295,8 @@ public final class VoiceChatController: ViewController {
             self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
             
             self.audioOutputNode.addTarget(self, action: #selector(self.audioOutputPressed), forControlEvents: .touchUpInside)
+            
+            self.cameraButtonNode.addTarget(self, action: #selector(self.cameraPressed), forControlEvents: .touchUpInside)
             
             self.optionsButton.contextAction = { [weak self, weak optionsButton] sourceNode, gesture in
                 guard let strongSelf = self, let controller = strongSelf.controller, let strongOptionsButton = optionsButton else {
@@ -1705,6 +1710,14 @@ public final class VoiceChatController: ViewController {
             }
         }
         
+        @objc private func cameraPressed() {
+            if self.call.isVideo {
+                self.call.disableVideo()
+            } else {
+                self.call.requestVideo()
+            }
+        }
+        
         private func updateFloatingHeaderOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
             guard let (layout, _) = self.validLayout else {
                 return
@@ -1960,6 +1973,10 @@ public final class VoiceChatController: ViewController {
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
             self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: soundTitle, transition: .animated(duration: 0.3, curve: .linear))
             
+            let cameraButtonSize = CGSize(width: 40.0, height: 40.0)
+            
+            self.cameraButtonNode.update(size: cameraButtonSize, content: CallControllerButtonItemNode.Content(appearance: CallControllerButtonItemNode.Content.Appearance.blurred(isFilled: false), image: .camera), text: " ", transition: .animated(duration: 0.3, curve: .linear))
+            
             self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
         }
         
@@ -2039,6 +2056,7 @@ public final class VoiceChatController: ViewController {
             transition.updateFrame(node: self.bottomPanelNode, frame: bottomPanelFrame)
             
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
+            let cameraButtonSize = CGSize(width: 40.0, height: 40.0)
             let centralButtonSize = CGSize(width: 440.0, height: 440.0)
                         
             let actionButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - centralButtonSize.width) / 2.0), y: floorToScreenPixels((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
@@ -2112,8 +2130,14 @@ public final class VoiceChatController: ViewController {
             let sideButtonOrigin = max(sideButtonMinimalInset, floor((size.width - 144.0) / 2.0) - sideButtonOffset - sideButtonSize.width)
             
             if self.audioOutputNode.supernode === self.bottomPanelNode {
-                transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+                let cameraButtonDistance: CGFloat = 4.0
+                
+                let audioOutputFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((bottomAreaHeight - sideButtonSize.height - cameraButtonDistance - cameraButtonSize.height) / 2.0) + cameraButtonDistance + cameraButtonSize.height), size: sideButtonSize)
+                
+                transition.updateFrame(node: self.audioOutputNode, frame: audioOutputFrame)
                 transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: size.width - sideButtonOrigin - sideButtonSize.width, y: floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+                
+                transition.updateFrame(node: self.cameraButtonNode, frame: CGRect(origin: CGPoint(x: floor(audioOutputFrame.midX - cameraButtonSize.width / 2.0), y: audioOutputFrame.minY - cameraButtonDistance - cameraButtonSize.height), size: cameraButtonSize))
             }
             if isFirstTime {
                 while !self.enqueuedTransitions.isEmpty {
@@ -2139,10 +2163,13 @@ public final class VoiceChatController: ViewController {
                 if self.actionButton.supernode !== self.bottomPanelNode {
                     self.actionButton.ignoreHierarchyChanges = true
                     self.audioOutputNode.isHidden = false
+                    self.cameraButtonNode.isHidden = false
                     self.leaveNode.isHidden = false
                     self.audioOutputNode.layer.removeAllAnimations()
+                    self.cameraButtonNode.layer.removeAllAnimations()
                     self.leaveNode.layer.removeAllAnimations()
                     self.bottomPanelNode.addSubnode(self.audioOutputNode)
+                    self.bottomPanelNode.addSubnode(self.cameraButtonNode)
                     self.bottomPanelNode.addSubnode(self.leaveNode)
                     self.bottomPanelNode.addSubnode(self.actionButton)
                     self.containerLayoutUpdated(layout, navigationHeight :navigationHeight, transition: .immediate)
@@ -2386,7 +2413,7 @@ public final class VoiceChatController: ViewController {
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             if gestureRecognizer is DirectionalPanGestureRecognizer {
                 let location = gestureRecognizer.location(in: self.bottomPanelNode.view)
-                if self.audioOutputNode.frame.contains(location) || self.leaveNode.frame.contains(location) {
+                if self.audioOutputNode.frame.contains(location) || (!self.cameraButtonNode.isHidden && self.cameraButtonNode.frame.contains(location)) || self.leaveNode.frame.contains(location) {
                     return false
                 }
             }

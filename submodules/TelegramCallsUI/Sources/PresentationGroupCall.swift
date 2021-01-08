@@ -312,12 +312,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public let peerId: PeerId
     public let peer: Peer?
     
+    public private(set) var isVideo: Bool
+    
     private let temporaryJoinTimestamp: Int32
     
     private var internalState: InternalState = .requesting
     
     private var callContext: OngoingGroupCallContext?
     private var ssrcMapping: [UInt32: PeerId] = [:]
+    
+    private var requestedSsrcs = Set<UInt32>()
     
     private var summaryInfoState = Promise<SummaryInfoState?>(nil)
     private var summaryParticipantsState = Promise<SummaryParticipantsState?>(nil)
@@ -433,6 +437,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     private let memberEventsPipeDisposable = MetaDisposable()
     
+    private let joinDisposable = MetaDisposable()
     private let requestDisposable = MetaDisposable()
     private var groupCallParticipantUpdatesDisposable: Disposable?
     
@@ -461,6 +466,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.incomingVideoSourcePromise.get()
     }
     
+    private var missingSsrcs = Set<UInt32>()
+    private let missingSsrcsDisposable = MetaDisposable()
+    private var isRequestingMissingSsrcs: Bool = false
+    
     init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -484,7 +493,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
-        self.videoCapturer = OngoingCallVideoCapturer()
+        self.isVideo = false
         
         var didReceiveAudioOutputs = false
         
@@ -623,9 +632,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if !removedSsrc.isEmpty {
                     strongSelf.callContext?.removeSsrcs(ssrcs: removedSsrc)
                 }
-                if !addedParticipants.isEmpty {
-                    strongSelf.callContext?.addParticipants(participants: addedParticipants)
-                }
             }
         })
         
@@ -745,6 +751,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.audioSessionActiveDisposable?.dispose()
         self.summaryStateDisposable?.dispose()
         self.audioSessionDisposable?.dispose()
+        self.joinDisposable.dispose()
         self.requestDisposable.dispose()
         self.groupCallParticipantUpdatesDisposable?.dispose()
         self.leaveDisposable.dispose()
@@ -756,6 +763,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContextStateDisposable.dispose()
         self.myAudioLevelDisposable.dispose()
         self.memberEventsPipeDisposable.dispose()
+        self.missingSsrcsDisposable.dispose()
         
         self.myAudioLevelTimer?.invalidate()
         self.typingDisposable.dispose()
@@ -802,7 +810,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             break
         default:
             if case let .active(callInfo) = internalState {
-                let callContext = OngoingGroupCallContext(video: self.videoCapturer)
+                let callContext = OngoingGroupCallContext(video: self.videoCapturer, participantDescriptionsRequired: { [weak self] ssrcs in
+                    Queue.mainQueue().async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.maybeRequestParticipants(ssrcs: ssrcs)
+                    }
+                })
                 self.incomingVideoSourcePromise.set(callContext.videoSources
                 |> deliverOnMainQueue
                 |> map { [weak self] sources -> [PeerId: UInt32] in
@@ -818,8 +833,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     return result
                 })
                 self.callContext = callContext
-                self.requestDisposable.set((callContext.joinPayload
-                |> take(1)
+                self.joinDisposable.set((callContext.joinPayload
+                |> distinctUntilChanged(isEqual: { lhs, rhs in
+                    if lhs.0 != rhs.0 {
+                        return false
+                    }
+                    if lhs.1 != rhs.1 {
+                        return false
+                    }
+                    return true
+                })
                 |> deliverOnMainQueue).start(next: { [weak self] joinPayload, ssrc in
                     guard let strongSelf = self else {
                         return
@@ -963,14 +986,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 
                 self.ssrcMapping.removeAll()
-                var addedParticipants: [(UInt32, String?)] = []
                 for participant in initialState.participants {
                     self.ssrcMapping[participant.ssrc] = participant.peer.id
-                    if participant.peer.id != self.accountContext.account.peerId {
-                        addedParticipants.append((participant.ssrc, participant.jsonParams))
-                    }
                 }
-                self.callContext?.setJoinResponse(payload: clientParams, participants: addedParticipants)
+                self.callContext?.setJoinResponse(payload: clientParams, participants: [])
                 
                 let accountContext = self.accountContext
                 let peerId = self.peerId
@@ -1135,6 +1154,65 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    private func maybeRequestParticipants(ssrcs: Set<UInt32>) {
+        var missingSsrcs = ssrcs
+        
+        var addedParticipants: [(UInt32, String?)] = []
+        
+        if let membersValue = self.membersValue {
+            for participant in membersValue.participants {
+                if missingSsrcs.contains(participant.ssrc) {
+                    missingSsrcs.remove(participant.ssrc)
+                    
+                    addedParticipants.append((participant.ssrc, participant.jsonParams))
+                }
+            }
+        }
+        
+        if !addedParticipants.isEmpty {
+            self.callContext?.addParticipants(participants: addedParticipants)
+        }
+        
+        if !missingSsrcs.isEmpty {
+            self.missingSsrcs.formUnion(missingSsrcs)
+            self.maybeRequestMissingSsrcs()
+        }
+    }
+    
+    private func maybeRequestMissingSsrcs() {
+        if self.isRequestingMissingSsrcs {
+            return
+        }
+        if self.missingSsrcs.isEmpty {
+            return
+        }
+        if case let .estabilished(callInfo, _, ssrc, _) = self.internalState {
+            self.isRequestingMissingSsrcs = true
+            
+            let requestedSsrcs = self.missingSsrcs
+            self.missingSsrcsDisposable.set((getGroupCallParticipants(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, ssrcs: Array(requestedSsrcs), offset: "", limit: 100)
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.isRequestingMissingSsrcs = false
+                strongSelf.missingSsrcs.subtract(requestedSsrcs)
+                
+                var addedParticipants: [(UInt32, String?)] = []
+                
+                for participant in state.participants {
+                    addedParticipants.append((participant.ssrc, participant.jsonParams))
+                }
+                
+                if !addedParticipants.isEmpty {
+                    strongSelf.callContext?.addParticipants(participants: addedParticipants)
+                }
+                
+                strongSelf.maybeRequestMissingSsrcs()
+            }))
+        }
+    }
+    
     private func startCheckingCallIfNeeded() {
         if self.checkCallDisposable != nil {
             return
@@ -1268,6 +1346,25 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
         } else {
             self.stateValue.muteState = nil
+        }
+    }
+    
+    public func requestVideo() {
+        if self.videoCapturer == nil {
+            let videoCapturer = OngoingCallVideoCapturer()
+            self.videoCapturer = videoCapturer
+        }
+        self.isVideo = true
+        if let videoCapturer = self.videoCapturer {
+            self.callContext?.requestVideo(videoCapturer)
+        }
+    }
+    
+    public func disableVideo() {
+        self.isVideo = false
+        if let _ = self.videoCapturer {
+            self.videoCapturer = nil
+            self.callContext?.disableVideo()
         }
     }
     
@@ -1422,6 +1519,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         }
         
+        self.joinDisposable.set(nil)
         self.requestDisposable.set((currentOrRequestedCall
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {

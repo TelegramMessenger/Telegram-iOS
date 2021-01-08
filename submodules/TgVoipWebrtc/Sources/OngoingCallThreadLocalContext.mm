@@ -818,7 +818,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -855,6 +855,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     [mappedSources addObject:@(it)];
                 }
                 incomingVideoSourcesUpdated(mappedSources);
+            },
+            .participantDescriptionsRequired = [participantDescriptionsRequired](std::vector<uint32_t> const &ssrcs) {
+                NSMutableArray<NSNumber *> *mappedSources = [[NSMutableArray alloc] init];
+                for (auto it : ssrcs) {
+                    [mappedSources addObject:@(it)];
+                }
+                participantDescriptionsRequired(mappedSources);
             }
         }));
     }
@@ -868,105 +875,106 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonnull completion)(NSString * _Nonnull, uint32_t)) {
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+    
+    int32_t signedSsrc = *(int32_t *)&payload.ssrc;
+    
+    dict[@"ssrc"] = @(signedSsrc);
+    dict[@"ufrag"] = [NSString stringWithUTF8String:payload.ufrag.c_str()];
+    dict[@"pwd"] = [NSString stringWithUTF8String:payload.pwd.c_str()];
+    
+    NSMutableArray *fingerprints = [[NSMutableArray alloc] init];
+    for (auto &fingerprint : payload.fingerprints) {
+        [fingerprints addObject:@{
+            @"hash": [NSString stringWithUTF8String:fingerprint.hash.c_str()],
+            @"fingerprint": [NSString stringWithUTF8String:fingerprint.fingerprint.c_str()],
+            @"setup": [NSString stringWithUTF8String:fingerprint.setup.c_str()]
+        }];
+    }
+    
+    dict[@"fingerprints"] = fingerprints;
+    
+    NSMutableArray *parsedVideoSsrcGroups = [[NSMutableArray alloc] init];
+    NSMutableArray *parsedVideoSources = [[NSMutableArray alloc] init];
+    for (auto &group : payload.videoSourceGroups) {
+        NSMutableDictionary *parsedGroup = [[NSMutableDictionary alloc] init];
+        parsedGroup[@"semantics"] = [NSString stringWithUTF8String:group.semantics.c_str()];
+        NSMutableArray *sources = [[NSMutableArray alloc] init];
+        for (auto &source : group.ssrcs) {
+            [sources addObject:@(source)];
+            if (![parsedVideoSources containsObject:@(source)]) {
+                [parsedVideoSources addObject:@(source)];
+            }
+        }
+        parsedGroup[@"sources"] = sources;
+        [parsedVideoSsrcGroups addObject:parsedGroup];
+    }
+    if (parsedVideoSsrcGroups.count != 0) {
+        dict[@"ssrc-groups"] = parsedVideoSsrcGroups;
+    }
+    
+    NSMutableArray *videoPayloadTypes = [[NSMutableArray alloc] init];
+    for (auto &payloadType : payload.videoPayloadTypes) {
+        NSMutableDictionary *parsedType = [[NSMutableDictionary alloc] init];
+        parsedType[@"id"] = @(payloadType.id);
+        NSString *name = [NSString stringWithUTF8String:payloadType.name.c_str()];
+        parsedType[@"name"] = name;
+        parsedType[@"clockrate"] = @(payloadType.clockrate);
+        if (![name isEqualToString:@"rtx"]) {
+            parsedType[@"channels"] = @(payloadType.channels);
+        }
+        
+        NSMutableDictionary *parsedParameters = [[NSMutableDictionary alloc] init];
+        for (auto &it : payloadType.parameters) {
+            NSString *key = [NSString stringWithUTF8String:it.first.c_str()];
+            NSString *value = [NSString stringWithUTF8String:it.second.c_str()];
+            parsedParameters[key] = value;
+        }
+        if (parsedParameters.count != 0) {
+            parsedType[@"parameters"] = parsedParameters;
+        }
+        
+        if (![name isEqualToString:@"rtx"]) {
+            NSMutableArray *parsedFbs = [[NSMutableArray alloc] init];
+            for (auto &it : payloadType.feedbackTypes) {
+                NSMutableDictionary *parsedFb = [[NSMutableDictionary alloc] init];
+                parsedFb[@"type"] = [NSString stringWithUTF8String:it.type.c_str()];
+                if (it.subtype.size() != 0) {
+                    parsedFb[@"subtype"] = [NSString stringWithUTF8String:it.subtype.c_str()];
+                }
+                [parsedFbs addObject:parsedFb];
+            }
+            parsedType[@"rtcp-fbs"] = parsedFbs;
+        }
+        
+        [videoPayloadTypes addObject:parsedType];
+    }
+    if (videoPayloadTypes.count != 0) {
+        dict[@"payload-types"] = videoPayloadTypes;
+    }
+    
+    NSMutableArray *parsedExtensions = [[NSMutableArray alloc] init];
+    for (auto &it : payload.videoExtensionMap) {
+        NSMutableDictionary *parsedExtension = [[NSMutableDictionary alloc] init];
+        parsedExtension[@"id"] = @(it.first);
+        parsedExtension[@"uri"] = [NSString stringWithUTF8String:it.second.c_str()];
+        [parsedExtensions addObject:parsedExtension];
+    }
+    if (parsedExtensions.count != 0) {
+        dict[@"rtp-hdrexts"] = parsedExtensions;
+    }
+    
+    NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:0 error:nil];
+    NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    
+    completion(string, payload.ssrc);
+}
+
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
         _instance->emitJoinPayload([completion](tgcalls::GroupJoinPayload payload) {
-            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-            
-            int32_t signedSsrc = *(int32_t *)&payload.ssrc;
-            
-            dict[@"ssrc"] = @(signedSsrc);
-            dict[@"ufrag"] = [NSString stringWithUTF8String:payload.ufrag.c_str()];
-            dict[@"pwd"] = [NSString stringWithUTF8String:payload.pwd.c_str()];
-            
-            NSMutableArray *fingerprints = [[NSMutableArray alloc] init];
-            for (auto &fingerprint : payload.fingerprints) {
-                [fingerprints addObject:@{
-                    @"hash": [NSString stringWithUTF8String:fingerprint.hash.c_str()],
-                    @"fingerprint": [NSString stringWithUTF8String:fingerprint.fingerprint.c_str()],
-                    @"setup": [NSString stringWithUTF8String:fingerprint.setup.c_str()]
-                }];
-            }
-            
-            dict[@"fingerprints"] = fingerprints;
-            
-            NSMutableArray *parsedVideoSsrcGroups = [[NSMutableArray alloc] init];
-            NSMutableArray *parsedVideoSources = [[NSMutableArray alloc] init];
-            for (auto &group : payload.videoSourceGroups) {
-                NSMutableDictionary *parsedGroup = [[NSMutableDictionary alloc] init];
-                parsedGroup[@"semantics"] = [NSString stringWithUTF8String:group.semantics.c_str()];
-                NSMutableArray *sources = [[NSMutableArray alloc] init];
-                for (auto &source : group.ssrcs) {
-                    [sources addObject:@(source)];
-                    if (![parsedVideoSources containsObject:@(source)]) {
-                        [parsedVideoSources addObject:@(source)];
-                    }
-                }
-                parsedGroup[@"sources"] = sources;
-                [parsedVideoSsrcGroups addObject:parsedGroup];
-            }
-            if (parsedVideoSsrcGroups.count != 0) {
-                dict[@"ssrc-groups"] = parsedVideoSsrcGroups;
-            }
-            if (parsedVideoSources.count != 0) {
-                //dict[@"sources"] = parsedVideoSources;
-            }
-            
-            NSMutableArray *videoPayloadTypes = [[NSMutableArray alloc] init];
-            for (auto &payloadType : payload.videoPayloadTypes) {
-                NSMutableDictionary *parsedType = [[NSMutableDictionary alloc] init];
-                parsedType[@"id"] = @(payloadType.id);
-                NSString *name = [NSString stringWithUTF8String:payloadType.name.c_str()];
-                parsedType[@"name"] = name;
-                parsedType[@"clockrate"] = @(payloadType.clockrate);
-                if (![name isEqualToString:@"rtx"]) {
-                    parsedType[@"channels"] = @(payloadType.channels);
-                }
-                
-                NSMutableDictionary *parsedParameters = [[NSMutableDictionary alloc] init];
-                for (auto &it : payloadType.parameters) {
-                    NSString *key = [NSString stringWithUTF8String:it.first.c_str()];
-                    NSString *value = [NSString stringWithUTF8String:it.second.c_str()];
-                    parsedParameters[key] = value;
-                }
-                if (parsedParameters.count != 0) {
-                    parsedType[@"parameters"] = parsedParameters;
-                }
-                
-                if (![name isEqualToString:@"rtx"]) {
-                    NSMutableArray *parsedFbs = [[NSMutableArray alloc] init];
-                    for (auto &it : payloadType.feedbackTypes) {
-                        NSMutableDictionary *parsedFb = [[NSMutableDictionary alloc] init];
-                        parsedFb[@"type"] = [NSString stringWithUTF8String:it.type.c_str()];
-                        if (it.subtype.size() != 0) {
-                            parsedFb[@"subtype"] = [NSString stringWithUTF8String:it.subtype.c_str()];
-                        }
-                        [parsedFbs addObject:parsedFb];
-                    }
-                    parsedType[@"rtcp-fbs"] = parsedFbs;
-                }
-                
-                [videoPayloadTypes addObject:parsedType];
-            }
-            if (videoPayloadTypes.count != 0) {
-                dict[@"payload-types"] = videoPayloadTypes;
-            }
-            
-            NSMutableArray *parsedExtensions = [[NSMutableArray alloc] init];
-            for (auto &it : payload.videoExtensionMap) {
-                NSMutableDictionary *parsedExtension = [[NSMutableDictionary alloc] init];
-                parsedExtension[@"id"] = @(it.first);
-                parsedExtension[@"uri"] = [NSString stringWithUTF8String:it.second.c_str()];
-                [parsedExtensions addObject:parsedExtension];
-            }
-            if (parsedExtensions.count != 0) {
-                dict[@"rtp-hdrexts"] = parsedExtensions;
-            }
-            
-            NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:0 error:nil];
-            NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-            
-            completion(string, payload.ssrc);
+            processJoinPayload(payload, completion);
         });
     }
 }
@@ -1292,6 +1300,22 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
+    }
+}
+
+- (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer completion:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
+    if (_instance) {
+        _instance->setVideoCapture([videoCapturer getInterface], [completion](auto payload){
+            processJoinPayload(payload, completion);
+        });
+    }
+}
+
+- (void)disableVideo:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
+    if (_instance) {
+        _instance->setVideoCapture(nullptr, [completion](auto payload){
+            processJoinPayload(payload, completion);
+        });
     }
 }
 
