@@ -157,7 +157,7 @@ filegroup(
 filegroup(
     name = "LaunchScreen",
     srcs = glob([
-        "Nicegra,-iOS/Base.lproj/LaunchScreen.xib",
+        "Telegram-iOS/Base.lproj/LaunchScreen.xib",
     ]),
 )
 
