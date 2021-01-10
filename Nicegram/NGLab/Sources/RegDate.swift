@@ -8,7 +8,7 @@
 
 import Foundation
 import SwiftSignalKit
-import NGENV
+import NGEnv
 
 let ngLabData = [NGENV.ng_lab_url, NGENV.ng_lab_token]
 
