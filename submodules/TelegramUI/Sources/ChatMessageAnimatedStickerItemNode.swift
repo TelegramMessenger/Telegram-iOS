@@ -144,7 +144,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
-    private var placeholderNode: StickerShimmerEffectNode?
+    private var placeholderNode: StickerShimmerEffectNode
     private var animationNode: GenericAnimatedStickerNode?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
@@ -194,7 +194,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         self.placeholderNode = StickerShimmerEffectNode()
-        self.placeholderNode?.isUserInteractionEnabled = false
+        self.placeholderNode.isUserInteractionEnabled = false
         
         super.init(layerBacked: false)
         
@@ -242,10 +242,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 return
             }
             if image != nil {
-                if firstTime {
-                    strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
-                        self?.removePlaceholder(animated: false)
-                    })
+                if firstTime && !strongSelf.placeholderNode.isEmpty {
+                    strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    strongSelf.removePlaceholder(animated: true)
                 } else {
                     strongSelf.removePlaceholder(animated: true)
                 }
@@ -258,10 +257,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
-        
-        if let placeholderNode = self.placeholderNode {
-            self.contextSourceNode.contentNode.addSubnode(placeholderNode)
-        }
+        self.contextSourceNode.contentNode.addSubnode(self.placeholderNode)
         
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
         
@@ -283,16 +279,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private func removePlaceholder(animated: Bool) {
-        if let placeholderNode = self.placeholderNode {
-            self.placeholderNode = nil
-            if !animated {
-                placeholderNode.removeFromSupernode()
-            } else {
-                placeholderNode.alpha = 0.0
-                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
-                    placeholderNode?.removeFromSupernode()
-                })
-            }
+        if !animated {
+            self.placeholderNode.removeFromSupernode()
+        } else {
+            self.placeholderNode.alpha = 0.0
+            self.placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.placeholderNode.removeFromSupernode()
+            })
         }
     }
     
@@ -429,11 +422,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let animationNode = self.animationNode, !self.animateGreeting {
-            if let placeholderNode = self.placeholderNode {
-                self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: placeholderNode)
-            } else {
-                self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
-            }
+            self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: self.placeholderNode)
         }
     }
     
@@ -573,9 +562,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var rect = rect
             rect.origin.y = containerSize.height - rect.maxY + self.insets.top
 
-            if let placeholderNode = self.placeholderNode {
-                placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
-            }
+            self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
         }
     }
     
@@ -969,11 +956,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         file = telegramFile
                     }
                     
-                    if let file = file, let immediateThumbnailData = file.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
+                    if let file = file, let immediateThumbnailData = file.immediateThumbnailData {
                         let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
-                        placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
-                        placeholderNode.frame = animationNodeFrame
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
+                        strongSelf.placeholderNode.frame = animationNodeFrame
                     }
                     
                     if let animationNode = strongSelf.animationNode, let parentNode = strongSelf.greetingStickerParentNode, strongSelf.animateGreeting {

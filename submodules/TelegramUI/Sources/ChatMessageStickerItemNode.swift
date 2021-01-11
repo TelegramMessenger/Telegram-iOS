@@ -22,7 +22,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
-    private var placeholderNode: StickerShimmerEffectNode?
+    private var placeholderNode: StickerShimmerEffectNode
     var textNode: TextNode?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
@@ -53,7 +53,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
         self.placeholderNode = StickerShimmerEffectNode()
-        self.placeholderNode?.isUserInteractionEnabled = false
+        self.placeholderNode.isUserInteractionEnabled = false
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
@@ -64,8 +64,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 return
             }
             if image != nil {
-                if firstTime {
-                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
+                if firstTime && !strongSelf.placeholderNode.isEmpty {
+                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
                         self?.removePlaceholder(animated: false)
                     })
                 } else {
@@ -117,9 +117,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
-        if let placeholderNode = self.placeholderNode {
-            self.contextSourceNode.contentNode.addSubnode(placeholderNode)
-        }
+        self.contextSourceNode.contentNode.addSubnode(self.placeholderNode)
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
         
@@ -141,16 +139,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     
     private func removePlaceholder(animated: Bool) {
-        if let placeholderNode = self.placeholderNode {
-            self.placeholderNode = nil
-            if !animated {
-                placeholderNode.removeFromSupernode()
-            } else {
-                placeholderNode.alpha = 0.0
-                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
-                    placeholderNode?.removeFromSupernode()
-                })
-            }
+        if !animated {
+            self.placeholderNode.removeFromSupernode()
+        } else {
+            self.placeholderNode.alpha = 0.0
+            self.placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.placeholderNode.removeFromSupernode()
+            })
         }
     }
     
@@ -239,9 +234,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var rect = rect
             rect.origin.y = containerSize.height - rect.maxY + self.insets.top
 
-            if let placeholderNode = self.placeholderNode {
-                placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
-            }
+            self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
         }
     }
     
@@ -608,13 +601,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     imageApply()
                     
-                    if let immediateThumbnailData = telegramFile?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
+                    if let immediateThumbnailData = telegramFile?.immediateThumbnailData {
                         let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         
                         let placeholderFrame = updatedImageFrame.insetBy(dx: innerImageInset, dy: innerImageInset)
-                        placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: placeholderFrame.size)
-                        placeholderNode.frame = placeholderFrame
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: placeholderFrame.size)
+                        strongSelf.placeholderNode.frame = placeholderFrame
                     }
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
