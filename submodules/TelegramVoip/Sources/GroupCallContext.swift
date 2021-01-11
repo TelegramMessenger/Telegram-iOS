@@ -201,6 +201,8 @@ public final class OngoingGroupCallContext {
                             view?.setOnOrientationUpdated { value, aspect in
                                 f?(OngoingCallVideoOrientation(value), aspect)
                             }
+                        }, setVideoContentMode: { [weak view] mode in
+                            view?.setVideoContentMode(mode)
                         },
                         setOnIsMirroredUpdated: { [weak view] f in
                             view?.setOnIsMirroredUpdated { value in
