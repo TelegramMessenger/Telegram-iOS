@@ -55,6 +55,7 @@ import NGStrings
 import NGUI
 import NGData
 import NGIAP
+import NGLab
 import UndoUI
 //
 import ListMessageItem
@@ -503,6 +504,7 @@ private enum PeerInfoContextSubject {
     case bio
     case phone(String)
     case link
+    case ngId(String)
 }
 
 private enum PeerInfoSettingsSection {
@@ -532,6 +534,7 @@ private enum PeerInfoSettingsSection {
 }
 
 private final class PeerInfoInteraction {
+    let getPeerRegDate: (Int64, Int64) -> Void
     let openChat: () -> Void
     let openUsername: (String) -> Void
     let openPhone: (String) -> Void
@@ -567,6 +570,7 @@ private final class PeerInfoInteraction {
     let updateBio: (String) -> Void
     
     init(
+        getPeerRegDate: @escaping (Int64, Int64) -> Void,
         openUsername: @escaping (String) -> Void,
         openPhone: @escaping (String) -> Void,
         editingOpenNotificationSettings: @escaping () -> Void,
@@ -601,6 +605,7 @@ private final class PeerInfoInteraction {
         accountContextMenu: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
         updateBio: @escaping (String) -> Void
     ) {
+        self.getPeerRegDate = getPeerRegDate
         self.openUsername = openUsername
         self.openPhone = openPhone
         self.editingOpenNotificationSettings = editingOpenNotificationSettings
@@ -916,7 +921,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         return []
     }
     
+    // MARK: Nicegram ID
+    var ngItemId = 0
+    var idText = ""
+    var isUser = false
+    let lang = presentationData.strings.baseLanguageCode
+    
     enum Section: Int, CaseIterable {
+        case nicegram
         case groupLocation
         case calls
         case peerInfo
@@ -936,6 +948,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     }
     
     if let user = data.peer as? TelegramUser {
+        // MARK: Nicegram User ID
+        idText = String(user.id.hashValue)
+        isUser = true
+        
         if !callMessages.isEmpty {
             items[.calls]!.append(PeerInfoScreenCallListItem(id: 20, messages: callMessages))
         }
@@ -1015,6 +1031,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         }
     } else if let channel = data.peer as? TelegramChannel {
+        // MARK: Nicegram Channel ID
+        idText = "-100" + String(channel.id.hashValue)
+        
         let ItemUsername = 1
         let ItemAbout = 2
         let ItemAdmins = 3
@@ -1083,6 +1102,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
         }
     } else if let group = data.peer as? TelegramGroup {
+        // MARK: Nicegram Group ID
+        idText = String(group.id.hashValue)
+         
         if let cachedData = data.cachedData as? CachedGroupData {
             if group.isScam {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, requestLayout: {
@@ -1112,6 +1134,45 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
             }))
         }
+    }
+    
+    
+    items[.nicegram]!.append(PeerInfoScreenLabeledValueItem(id: ngItemId, label: "id", text: idText, textColor: .primary, action: nil, longTapAction: { sourceNode in
+        interaction.openPeerInfoContextMenu(.ngId(idText), sourceNode)
+    }, requestLayout: {
+        interaction.requestLayout()
+    }))
+    ngItemId += 1
+    
+    if isUser {
+        var hasRegDate = false
+        var regDateText = l("NGLab.RegDate.Btn", lang)
+        let user = data.peer as! TelegramUser
+        if let registrationDate = getCachedRegDate(user.id.toInt64()) {
+            let cachedRegdateString = makeNiceRegDateStr(registrationDate)
+            regDateText = cachedRegdateString
+            hasRegDate = true
+        }
+        
+        items[.nicegram]!.append(PeerInfoScreenLabeledValueItem(id: ngItemId, label: l("NGLab.RegDate.MenuItem", lang), text: regDateText, textColor: hasRegDate ? .primary : .accent, action: {
+            interaction.getPeerRegDate(user.id.toInt64(), context.account.peerId.toInt64())
+            
+        }, longTapAction: { sourceNode in
+            if !hasRegDate {
+                if let registrationDate = getCachedRegDate(user.id.toInt64()) {
+                    let cachedRegdateString = makeNiceRegDateStr(registrationDate)
+                    regDateText = cachedRegdateString
+                    hasRegDate = true
+                }
+            }
+            if hasRegDate {
+                // .ngId - who cares, it's just a text copy :)
+                interaction.openPeerInfoContextMenu(.ngId(regDateText), sourceNode)
+            }
+        }, requestLayout: {
+            interaction.requestLayout()
+        }))
+        ngItemId += 1
     }
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
@@ -1483,6 +1544,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         super.init()
         
         self._interaction = PeerInfoInteraction(
+            getPeerRegDate: { [weak self] peerId, ownerId in
+                self?.getPeerRegDate(peerId: peerId, ownerId: ownerId)
+            },
             openUsername: { [weak self] value in
                 self?.openUsername(value: value)
             },
@@ -3312,6 +3376,46 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
     }
     
+    private func getPeerRegDate(peerId: Int64, ownerId: Int64) {
+        let progressSignal = Signal<Never, NoError> { subscriber in
+            let overlayController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
+            self.controller?.present(overlayController, in: .window(.root))
+            return ActionDisposable { [weak overlayController] in
+                Queue.mainQueue().async() {
+                    overlayController?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        //|> delay(0.05, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        var regdateSignal = (getRegDate(peerId, owner: ownerId)  |> deliverOnMainQueue).start(next: { response in
+            let regdateString = makeNiceRegDateStr(response)
+            let title = "NGLab.RegDate.Notice"
+            let regdateController = textAlertController(context: self.context, title: regdateString, text: l(title, self.presentationData.strings.baseLanguageCode), actions: [
+                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {
+                    self.requestLayout()
+                })
+            ])
+            self.controller?.present(regdateController, in: .window(.root))
+            
+        }, error: {_ in
+            let text = "NGLab.RegDate.FetchError"
+            let errorController = textAlertController(context: self.context, title: nil, text: l(text, self.presentationData.strings.baseLanguageCode), actions: [
+                                                        TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {
+                                                        })])
+            self.controller?.present(errorController, in: .window(.root))
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }, completed: {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        })
+    }
+    
     private func openPhone(value: String) {
         let _ = (getUserPeer(postbox: self.context.account.postbox, peerId: peerId)
         |> deliverOnMainQueue).start(next: { [weak self] peer, _ in
@@ -3882,6 +3986,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }))
             }
+        case let .ngId(peerId):
+            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                UIPasteboard.general.string = peerId
+            })])
+            controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
+                if let controller = self?.controller, let sourceNode = sourceNode {
+                    return (sourceNode, sourceNode.bounds.insetBy(dx: 0.0, dy: -2.0), controller.displayNode, controller.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
         }
     }
     
