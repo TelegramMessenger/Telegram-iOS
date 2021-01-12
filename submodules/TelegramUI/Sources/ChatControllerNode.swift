@@ -26,6 +26,7 @@ final class VideoNavigationControllerDropContentItem: NavigationControllerDropCo
 // Mark: Nicegram imports
 import NGWebUtils
 import NGStrings
+import NGData
 import NGUI
 //
 
@@ -598,7 +599,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.textInputPanelNode = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentController: { [weak self] controller in
             self?.interfaceInteraction?.presentController(controller, nil)
-        })
+        }, sendWithKb: NGSettings.sendWithEnter)
         self.textInputPanelNode?.storedInputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage
         self.textInputPanelNode?.updateHeight = { [weak self] animated in
             if let strongSelf = self, let _ = strongSelf.inputPanelNode as? ChatTextInputPanelNode, !strongSelf.ignoreUpdateHeight {

@@ -196,6 +196,9 @@ enum ChatTextInputPanelPasteData {
 }
 
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
+    // MARK: Nicegram Send with Enter
+    let sendWithKb: Bool
+    
     var textPlaceholderNode: ImmediateTextNode
     var contextPlaceholderNode: TextNode?
     var slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode?
@@ -384,7 +387,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private let accessoryButtonSpacing: CGFloat = 0.0
     private let accessoryButtonInset: CGFloat = 2.0
     
-    init(presentationInterfaceState: ChatPresentationInterfaceState, presentController: @escaping (ViewController) -> Void) {
+    init(presentationInterfaceState: ChatPresentationInterfaceState, presentController: @escaping (ViewController) -> Void, sendWithKb: Bool = false) {
         self.presentationInterfaceState = presentationInterfaceState
         
         self.textInputContainer = ASDisplayNode()
@@ -405,6 +408,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.searchLayoutClearImageNode = ASImageNode()
         self.searchLayoutClearImageNode.isUserInteractionEnabled = false
         self.searchLayoutClearButton.addSubnode(self.searchLayoutClearImageNode)
+        self.sendWithKb = sendWithKb
         
         self.actionButtons = ChatTextInputActionButtonsNode(theme: presentationInterfaceState.theme, strings: presentationInterfaceState.strings, presentController: presentController)
         self.counterTextNode = ImmediateTextNode()
@@ -558,6 +562,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.textView.scrollIndicatorInsets = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: -13.0)
         self.textInputContainer.addSubnode(textInputNode)
         textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
+        // MARK: Nicegram Send with Enter
+        if self.sendWithKb {
+            textInputNode.returnKeyType = .send
+        }
+        // MARK:
         self.textInputNode = textInputNode
         
         if let presentationInterfaceState = self.presentationInterfaceState {
@@ -1844,6 +1853,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         self.updateActivity()
+        // MARK: Nicegram Send with Enter
+        if self.sendWithKb {
+            if text == "\n" {
+                self.sendButtonPressed()
+                return false
+            }
+        }
         var cleanText = text
         let removeSequences: [String] = ["\u{202d}", "\u{202c}"]
         for sequence in removeSequences {

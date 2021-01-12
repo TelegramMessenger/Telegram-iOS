@@ -55,6 +55,12 @@ private enum NicegramSettingsControllerSection: Int32 {
     case Other
 }
 
+
+private enum EasyToggleType {
+    case sendWithEnter
+}
+
+
 // MARK: ItemListNodeEntry
 
 private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
@@ -77,6 +83,8 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
     case OtherHeader(String)
     case hidePhoneInSettings(String, Bool)
     case hidePhoneInSettingsNotice(String)
+    
+    case easyToggle(Int32, EasyToggleType, String, Bool)
 
     // MARK: Section
 
@@ -90,7 +98,7 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             return NicegramSettingsControllerSection.Folders.rawValue
         case .RoundVideosHeader, .startWithRearCam:
             return NicegramSettingsControllerSection.RoundVideos.rawValue
-        case .OtherHeader, .hidePhoneInSettings, .hidePhoneInSettingsNotice:
+        case .OtherHeader, .hidePhoneInSettings, .hidePhoneInSettingsNotice, .easyToggle:
             return NicegramSettingsControllerSection.Other.rawValue
         }
     }
@@ -100,49 +108,52 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
     var stableId: Int32 {
         switch self {
         case .NotificationsHeader:
-            return 1
+            return 1000
 
         case .hideAccountInNotification:
-            return 2
+            return 1100
 
         case .hideAccountInNotificationNotice:
-            return 3
+            return 1200
 
         case .TabsHeader:
-            return 4
+            return 1300
 
         case .showContactsTab:
-            return 5
+            return 1400
 
         case .showCallsTab:
-            return 6
+            return 1500
 
         case .showTabNames:
-            return 7
+            return 1600
 
         case .FoldersHeader:
-            return 8
+            return 1700
 
         case .foldersAtBottom:
-            return 9
+            return 1800
 
         case .foldersAtBottomNotice:
-            return 10
+            return 1900
 
         case .RoundVideosHeader:
-            return 11
+            return 2000
 
         case .startWithRearCam:
-            return 12
+            return 2100
 
         case .OtherHeader:
-            return 13
+            return 2200
 
         case .hidePhoneInSettings:
-            return 14
+            return 2300
 
         case .hidePhoneInSettingsNotice:
-            return 15
+            return 2400
+            
+        case let .easyToggle(index, _, _, _):
+            return 5000 + Int32(index)
         }
     }
 
@@ -254,6 +265,12 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
+        case let .easyToggle(lhsIndex, lhsType, lhsText, lhsValue):
+            if case let .easyToggle(rhsIndex, rhsType, rhsText, rhsValue) = rhs, lhsIndex == rhsIndex, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
         }
     }
 
@@ -335,7 +352,7 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
             
         case let .startWithRearCam(text, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: false, sectionId: section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: section, style: .blocks, updated: { value in
                 ngLog("[startWithRearCam] invoked with \(value)", LOGTAG)
                 NGSettings.useRearCamTelescopy = value
             })
@@ -351,7 +368,18 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             
         case let .hidePhoneInSettingsNotice(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: section)
+            
+        case let .easyToggle(index, toggleType, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: section, style: .blocks, updated: { value in
+                ngLog("[easyToggle] \(index) \(toggleType) invoked with \(value)", LOGTAG)
+                switch (toggleType) {
+                    case .sendWithEnter:
+                        NGSettings.sendWithEnter = value
+                }
+            })
+            
         }
+        
     }
 }
 
@@ -413,6 +441,10 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     entries.append(.hidePhoneInSettingsNotice(
         l("NicegramSettings.Other.hidePhoneInSettingsNotice", locale)
     ))
+    
+    var toggleIndex: Int32 = 1
+    entries.append(.easyToggle(toggleIndex, .sendWithEnter, l("SendWithKb"), NGSettings.sendWithEnter))
+    toggleIndex += 1
 
     return entries
 }
