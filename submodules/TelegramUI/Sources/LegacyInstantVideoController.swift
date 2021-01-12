@@ -15,6 +15,8 @@ import ImageCompression
 import LocalMediaResources
 import AppBundle
 import LegacyMediaPickerUI
+// MARK: Nicegram imports
+import NGData
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>
@@ -141,7 +143,8 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 let node = ChatSendButtonRadialStatusView(color: theme.chat.inputPanel.panelControlAccentColor)
                 node.slowmodeState = slowmodeState
                 return node
-            }, canSendSilently: !isSecretChat, canSchedule: hasSchedule, reminder: peerId == context.account.peerId)!
+            }, canSendSilently: !isSecretChat, canSchedule: hasSchedule, reminder: peerId == context.account.peerId, useRearCamTelescopy: NGSettings.useRearCamTelescopy)!
+            // MARK: Nicegram useRearCamTelescopy
             controller.presentScheduleController = { done in
                 presentSchedulePicker { time in
                     done?(time)
