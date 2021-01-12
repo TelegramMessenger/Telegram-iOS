@@ -505,6 +505,7 @@ private enum PeerInfoContextSubject {
     case phone(String)
     case link
     case ngId(String)
+    case regDate(String)
 }
 
 private enum PeerInfoSettingsSection {
@@ -1156,7 +1157,6 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         
         items[.nicegram]!.append(PeerInfoScreenLabeledValueItem(id: ngItemId, label: l("NGLab.RegDate.MenuItem", lang), text: regDateText, textColor: hasRegDate ? .primary : .accent, action: {
             interaction.getPeerRegDate(user.id.toInt64(), context.account.peerId.toInt64())
-            
         }, longTapAction: { sourceNode in
             if !hasRegDate {
                 if let registrationDate = getCachedRegDate(user.id.toInt64()) {
@@ -1166,8 +1166,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
             }
             if hasRegDate {
-                // .ngId - who cares, it's just a text copy :)
-                interaction.openPeerInfoContextMenu(.ngId(regDateText), sourceNode)
+                interaction.openPeerInfoContextMenu(.regDate(regDateText), sourceNode)
             }
         }, requestLayout: {
             interaction.requestLayout()
@@ -3393,12 +3392,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         var regdateSignal = (getRegDate(peerId, owner: ownerId)  |> deliverOnMainQueue).start(next: { response in
             let regdateString = makeNiceRegDateStr(response)
             let title = "NGLab.RegDate.Notice"
-            let regdateController = textAlertController(context: self.context, title: regdateString, text: l(title, self.presentationData.strings.baseLanguageCode), actions: [
-                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {
-                    self.requestLayout()
-                })
-            ])
-            self.controller?.present(regdateController, in: .window(.root))
+//            let regdateController = textAlertController(context: self.context, title: regdateString, text: l(title, self.presentationData.strings.baseLanguageCode), actions: [
+//                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {
+//                    self.requestLayout()
+//                })
+//            ])
+//            self.controller?.present(regdateController, in: .window(.root))
+            self.requestLayout()
             
         }, error: {_ in
             let text = "NGLab.RegDate.FetchError"
@@ -3990,6 +3990,24 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = peerId
             })])
+            controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
+                if let controller = self?.controller, let sourceNode = sourceNode {
+                    return (sourceNode, sourceNode.bounds.insetBy(dx: 0.0, dy: -2.0), controller.displayNode, controller.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
+        case let .regDate(registeredString):
+            let contextMenuController = ContextMenuController(actions: [
+                ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                    UIPasteboard.general.string = registeredString
+                }),
+                ContextMenuAction(content: .text(title: "ⓘ", accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuStickerPackInfo), action: {
+                    controller.present(textAlertController(context: self.context, title: registeredString, text: l("NGLab.RegDate.Notice", self.presentationData.strings.baseLanguageCode), actions: [
+                        TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {})
+                    ]), in: .window(.root))
+                })
+            ])
             controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                 if let controller = self?.controller, let sourceNode = sourceNode {
                     return (sourceNode, sourceNode.bounds.insetBy(dx: 0.0, dy: -2.0), controller.displayNode, controller.view.bounds)
