@@ -344,14 +344,9 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
             
         case let .hidePhoneInSettings(text, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: false, sectionId: section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: section, style: .blocks, updated: { value in
                 ngLog("[hidePhoneInSettings] invoked with \(value)", LOGTAG)
-                let locale = presentationData.strings.baseLanguageCode
                 NGSettings.hidePhoneSettings = value
-                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: arguments.context.sharedContext.currentPresentationData.with {
-                    $0
-                }), title: nil, text: l("Common.RestartRequired", locale), actions: [/* TextAlertAction(type: .destructiveAction, title: l("Common.ExitNow", locale), action: { preconditionFailure() }),*/ TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
-                arguments.presentController(controller, nil)
             })
             
         case let .hidePhoneInSettingsNotice(text):
@@ -431,9 +426,7 @@ public func nicegramSettingsController(context: AccountContext, modal: Bool = fa
     var getRootControllerImpl: (() -> UIViewController?)?
     var updateTabsImpl: (() -> Void)?
 
-    let presentationData = context.sharedContext.currentPresentationData.with {
-        $0
-    }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
     let arguments = NicegramSettingsControllerArguments(context: context, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)

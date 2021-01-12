@@ -19,6 +19,7 @@ import GalleryUI
 import UniversalMediaPlayer
 import RadialStatusNode
 import TelegramUIPreferences
+import NGData
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -2864,7 +2865,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             if self.isSettings, let user = peer as? TelegramUser {
-                let formattedPhone = formatPhoneNumber(user.phone ?? "")
+                // MARK: Nicegram Hide phone
+                var formattedPhone = formatPhoneNumber(user.phone ?? "")
+                if !formattedPhone.isEmpty && NGSettings.hidePhoneSettings {
+                    formattedPhone = ""
+                }
+                // MARK
                 subtitleString = NSAttributedString(string: formattedPhone, font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
                 
                 var username = ""
