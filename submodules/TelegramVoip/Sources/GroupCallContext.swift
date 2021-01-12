@@ -206,6 +206,38 @@ public final class OngoingGroupCallContext {
         func makeIncomingVideoView(source: UInt32, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
             self.context.makeIncomingVideoView(withSsrc: source, completion: { view in
                 if let view = view {
+                    #if os(iOS)
+                    completion(OngoingCallContextPresentationCallVideoView(
+                        view: view,
+                        setOnFirstFrameReceived: { [weak view] f in
+                            view?.setOnFirstFrameReceived(f)
+                        },
+                        getOrientation: { [weak view] in
+                            if let view = view {
+                                return OngoingCallVideoOrientation(view.orientation)
+                            } else {
+                                return .rotation0
+                            }
+                        },
+                        getAspect: { [weak view] in
+                            if let view = view {
+                                return view.aspect
+                            } else {
+                                return 0.0
+                            }
+                        },
+                        setOnOrientationUpdated: { [weak view] f in
+                            view?.setOnOrientationUpdated { value, aspect in
+                                f?(OngoingCallVideoOrientation(value), aspect)
+                            }
+                        },
+                        setOnIsMirroredUpdated: { [weak view] f in
+                            view?.setOnIsMirroredUpdated { value in
+                                f?(value)
+                            }
+                        }
+                    ))
+                    #else
                     completion(OngoingCallContextPresentationCallVideoView(
                         view: view,
                         setOnFirstFrameReceived: { [weak view] f in
@@ -238,6 +270,7 @@ public final class OngoingGroupCallContext {
                             }
                         }
                     ))
+                    #endif
                 } else {
                     completion(nil)
                 }
