@@ -164,6 +164,10 @@ private struct PasscodeOptionsData: Equatable {
 
 private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int32?) -> String {
     if let timeout = timeout {
+        // MARK: Nicegram Instant Lock
+        if timeout == 2 {
+            return "Instantly"
+        }
         if timeout == 10 {
             return "If away for 10 seconds"
         } else if timeout == 1 * 60 {
@@ -326,7 +330,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 }).start()
             })
         }
-        var values: [Int32] = [0, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
+        // MARK: Nicegram Instant Lock
+        var values: [Int32] = [0, 2, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
         
         #if DEBUG
             values.append(10)
