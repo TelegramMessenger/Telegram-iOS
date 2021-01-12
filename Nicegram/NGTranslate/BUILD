@@ -7,7 +7,9 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit"
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//Nicegram/NGLogging:NGLogging",
+        "//Nicegram/NGData:NGData"
     ],
     visibility = [
         "//visibility:public",

@@ -9,11 +9,12 @@
 import Foundation
 import SwiftSignalKit
 import UIKit
+import NGData
+import NGLogging
+
+fileprivate let LOGTAG = extractNameFromPath(#file)
 
 public var gTranslateSeparator = "🗨 GTranslate"
-
-public let trRegexp = try! NSRegularExpression(pattern: "<div dir=\"(ltr|rtl)\" class=\"t0\">([\\s\\S]+)</div><form action=")
-public let modertTrRegexp = try! NSRegularExpression(pattern: "<div class=\"result-container\">([\\s\\S]+)</div><div class=")
 
 public func getTranslateUrl(_ message: String,_ toLang: String) -> String {
     var sanitizedMessage = message.replaceCharactersFromSet(characterSet:CharacterSet.newlines, replacementString: "¦")
@@ -24,24 +25,28 @@ public func getTranslateUrl(_ message: String,_ toLang: String) -> String {
     
     var queryCharSet = NSCharacterSet.urlQueryAllowed
     queryCharSet.remove(charactersIn: "+&")
-    return "https://translate.google.com/m?hl=\(toLang)&sl=auto&q=\(sanitizedMessage.addingPercentEncoding(withAllowedCharacters: queryCharSet) ?? "")"
+    return "https://translate.google.com/m?hl=en&tl=\(toLang)&sl=auto&q=\(sanitizedMessage.addingPercentEncoding(withAllowedCharacters: queryCharSet) ?? "")"
+}
+
+func prepareResultString(_ str: String) -> String {
+    return str.htmlDecoded.replacingOccurrences(of: " ¦", with: "\n").replacingOccurrences(of: "¦ ", with: "\n").replacingOccurrences(of: "¦", with: "\n")
 }
 
 public func parseTranslateResponse(_ data: String) -> String {
-    if data.contains("class=\"t0\">") {
-        if let match = trRegexp.firstMatch(in: data, options: [], range: NSRange(location: 0, length: data.utf16.count)) {
-            if let translatedString = Range(match.range(at: 2), in: data) {
-                return "\(data[translatedString])".htmlDecoded.replacingOccurrences(of: " ¦", with: "\n").replacingOccurrences(of: "¦ ", with: "\n").replacingOccurrences(of: "¦", with: "\n")
+    for rule in VarGNGSettings.translate_rules {
+        if data.contains(rule.data_check) {
+            do {
+                let regexp = try NSRegularExpression(pattern: rule.pattern)
+                if let match = regexp.firstMatch(in: data, options: [], range: NSRange(location: 0, length: data.utf16.count)) {
+                    if let translatedString = Range(match.range(at: rule.match_group), in: data) {
+                        return prepareResultString(String(data[translatedString]))
+                    }
+                }
+            } catch let error as NSError {
+                ngLog("Error processing '\(rule.name)' regexp \(error.localizedDescription)", LOGTAG)
+                continue
             }
         }
-    } else if data.contains("<div class=\"result-container\">") {
-        if let match = modertTrRegexp.firstMatch(in: data, options: [], range: NSRange(location: 0, length: data.utf16.count)) {
-            if let translatedString = Range(match.range(at: 1), in: data) {
-                return "\(data[translatedString])".htmlDecoded.replacingOccurrences(of: " ¦", with: "\n").replacingOccurrences(of: "¦ ", with: "\n").replacingOccurrences(of: "¦", with: "\n")
-            }
-        }
-    } else {
-        return ""
     }
     return ""
 }
