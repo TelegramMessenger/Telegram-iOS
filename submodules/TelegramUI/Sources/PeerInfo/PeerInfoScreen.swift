@@ -688,6 +688,24 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }))
     }
     
+
+    if isExpanded && NGSettings.showProfileId {
+        // MARK: Nicegram ID
+        var idText = ""
+        
+        if let user = data.peer as? TelegramUser {
+            idText = String(user.id.hashValue)
+        }
+        
+        // Sorry RTL users
+        let idStrings = [presentationData.strings.Conversation_ContextMenuCopy, "ID: \(idText)"]
+        
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 100, text: idStrings.joined(separator: " "),
+        color: .accent, action: {
+            UIPasteboard.general.string = idText
+        }))
+    }
+    
     if let settings = data.globalSettings {
         if settings.suggestPhoneNumberConfirmation, let peer = data.peer as? TelegramUser {
             //
@@ -1137,15 +1155,17 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     }
     
+    // MARK: Nicegram ID & Regdate Item
+    if NGSettings.showProfileId {
+        items[.nicegram]!.append(PeerInfoScreenLabeledValueItem(id: ngItemId, label: "id", text: idText, textColor: .primary, action: nil, longTapAction: { sourceNode in
+            interaction.openPeerInfoContextMenu(.ngId(idText), sourceNode)
+        }, requestLayout: {
+            interaction.requestLayout()
+        }))
+        ngItemId += 1
+    }
     
-    items[.nicegram]!.append(PeerInfoScreenLabeledValueItem(id: ngItemId, label: "id", text: idText, textColor: .primary, action: nil, longTapAction: { sourceNode in
-        interaction.openPeerInfoContextMenu(.ngId(idText), sourceNode)
-    }, requestLayout: {
-        interaction.requestLayout()
-    }))
-    ngItemId += 1
-    
-    if isUser {
+    if isUser && NGSettings.showRegDate {
         var hasRegDate = false
         var regDateText = l("NGLab.RegDate.Btn", lang)
         let user = data.peer as! TelegramUser

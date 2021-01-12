@@ -74,7 +74,11 @@ public struct NGSettings {
     @NGStorage(key: "showGmodIcon", defaultValue: true)
     public static var showGmodIcon: Bool
     
+    @NGStorage(key: "showProfileId", defaultValue: true)
+    public static var showProfileId: Bool
     
+    @NGStorage(key: "showRegDate", defaultValue: true)
+    public static var showRegDate: Bool
 }
 
 public struct NGWebSettings {

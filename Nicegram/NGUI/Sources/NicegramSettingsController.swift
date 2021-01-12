@@ -58,6 +58,8 @@ private enum NicegramSettingsControllerSection: Int32 {
 
 private enum EasyToggleType {
     case sendWithEnter
+    case showProfileId
+    case showRegDate
 }
 
 
@@ -373,8 +375,12 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: section, style: .blocks, updated: { value in
                 ngLog("[easyToggle] \(index) \(toggleType) invoked with \(value)", LOGTAG)
                 switch (toggleType) {
-                    case .sendWithEnter:
-                        NGSettings.sendWithEnter = value
+                case .sendWithEnter:
+                    NGSettings.sendWithEnter = value
+                case .showProfileId:
+                    NGSettings.showProfileId = value
+                case .showRegDate:
+                    NGSettings.showRegDate = value
                 }
             })
             
@@ -443,8 +449,16 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     ))
     
     var toggleIndex: Int32 = 1
-    entries.append(.easyToggle(toggleIndex, .sendWithEnter, l("SendWithKb"), NGSettings.sendWithEnter))
+    // MARK: Other Toggles (Easy)
+    entries.append(.easyToggle(toggleIndex, .sendWithEnter, l("SendWithKb", locale), NGSettings.sendWithEnter))
     toggleIndex += 1
+    
+    entries.append(.easyToggle(toggleIndex, .showProfileId, l("NicegramSettings.Other.showProfileId", locale), NGSettings.showProfileId))
+    toggleIndex += 1
+    
+    entries.append(.easyToggle(toggleIndex, .showRegDate, l("NicegramSettings.Other.showRegDate", locale), NGSettings.showRegDate))
+    toggleIndex += 1
+    
 
     return entries
 }
