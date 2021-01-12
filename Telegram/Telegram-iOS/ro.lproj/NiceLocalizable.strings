@@ -78,7 +78,6 @@
 "Common.FAQ.Intro" = "Vă rugăm să rețineți că asistența Nicegram este realizată de un singur dezvoltator și de comunitate.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Funcții unice pe care nu le poți refuza!";
-"IAP.Premium.Features" = "Dosare și chat-uri nelimitate\nTraducere rapidă de mesaje\nMesaje pierdute Filtrare și Gestionarea Filelor\n„Mesaje noi” la lansarea aplicației";
 "IAP.Premium.Activated" = "Premium Activat!";
 "IAP.Common.Restore" = "Restabiliţi cumpărăturile";
 "IAP.Common.CantPay" = "Ne pare rău, dar nu puteți face achiziții din cauza restricțiilor de pe dispozitiv sau cont.";
@@ -87,7 +86,6 @@
 "IAP.Common.ValidateError" = "Ne pare rău, nu putem valida achiziția.";
 "Premium.OnetapTranslate" = "Butonul Traducere Rapidă";
 "Premium.IgnoreTranslate.Title" = "Limbi Ignorate";
-"Premium.IgnoreTranslate.Header" = "App will try to detect language of each message. Butonul Traducere rapidă va fi DEZACTIVAT pentru toate limbile pe care le alegeți mai jos.";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "Administrează Ferestre";

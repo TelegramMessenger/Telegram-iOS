@@ -86,16 +86,17 @@
 "Common.FAQ.Intro" = "注意：Nicegram 支援僅由開發人員和志願者提供。\n\n請先看一下 Nicegram 常見問題：它有故障排除指示和其他大多數問題的解答。";
 "IAP.Premium.Title" = "進階版功能";
 "IAP.Premium.Subtitle" = "您無法抗拒的獨特功能！";
-"IAP.Premium.Features" = "無限資料夾＆置頂對話\n快速訊息翻譯\n錯過消息篩選及標籤管理\n在進入 App 時提示「新訊息」";
+"IAP.Premium.Features" = "快速訊息翻譯\n\n更多功能即將推出！";
 "IAP.Premium.Activated" = "已升級進階版！";
 "IAP.Common.Restore" = "恢復購買";
 "IAP.Common.CantPay" = "抱歉，由於您的設備或帳戶限制，您無法購買。";
 "IAP.Common.ErrorFetch" = "抱歉，無法取得 App Store 購買的商品。";
 "IAP.Common.Congrats" = "恭喜！";
 "IAP.Common.ValidateError" = "很抱歉，無法驗證您的購買。";
+"IAP.Common.Connecting" = "正在連接到 AppStore...";
 "Premium.OnetapTranslate" = "快速翻譯按鈕";
 "Premium.IgnoreTranslate.Title" = "忽略的語言";
-"Premium.IgnoreTranslate.Header" = "應用程序將嘗試檢測每則訊息的語言。對於以下選擇的語言，「快速翻譯」按鈕將被停用。";
+"Premium.IgnoreTranslate.Header" = "對於以下選擇的語言，「快速翻譯」按鈕將被停用。";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "管理標籤";
@@ -138,3 +139,7 @@
 "Gmod.OpenChatNotice" = "對話將被標記為「已讀」，但您可以長按來預覽聊天。";
 "Gmod.OpenChatBtn" = "是的，打開對話";
 "Gmod.DisableBtn" = "停用警告";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "您的電話號碼只會在介面中隱藏。要完全隱藏起來，請使用「隱私設定」。";
+"Premium.OnetapTranslate.LowPower" = "低電量偵測";
+"Premium.OnetapTranslate.LowPower.Notice" = "App 會檢測您設備上每則訊息的語言。這是一項高耗電的功能，會影響您的電池壽命。";

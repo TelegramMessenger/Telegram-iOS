@@ -86,16 +86,15 @@
 "Common.FAQ.Intro" = "请注意：Nicegram 的支持服务由开发者和社区提供。\n\n如用疑问，请前往“Nicegram 常见问题”，那里有常见问题和故障排除指南。";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "您无法拒绝的独特功能！";
-"IAP.Premium.Features" = "无限分组和置顶对话\n快捷翻译按钮\n未读提醒消息过滤和标签管理\nApp 启动时提醒«新消息»";
 "IAP.Premium.Activated" = "Premium 已激活！";
 "IAP.Common.Restore" = "恢复购买";
 "IAP.Common.CantPay" = "抱歉，由于您的设备或帐户限制，您无法购买。";
 "IAP.Common.ErrorFetch" = "抱歉，无法从 App Store 获取购买信息。";
 "IAP.Common.Congrats" = "恭喜！";
 "IAP.Common.ValidateError" = "抱歉，无法验证您的购买。";
+"IAP.Common.Connecting" = "正在连接到 AppStore...";
 "Premium.OnetapTranslate" = "快速翻译按钮";
 "Premium.IgnoreTranslate.Title" = "忽略的语言";
-"Premium.IgnoreTranslate.Header" = "应用会尝试检测每一条消息的语言。如果你在下面选择了忽略的语言，快速翻译按钮将不会显示。";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "管理标签";

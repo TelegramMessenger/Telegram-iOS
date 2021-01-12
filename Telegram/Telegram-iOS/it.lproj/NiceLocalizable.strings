@@ -17,6 +17,13 @@
 "NiceFeatures.ChatScreen.AnimatedStickers" = "Adesivi animati";
 "NiceFeatures.useBackCam" = "Usa camera posteriore (Videomessaggi)";
 
+"NiceFeatures.Folders.Header" = "CARTELLE";
+"NiceFeatures.Folders.TgFolders" = "Cartelle in basso";
+"NiceFeatures.Folders.TgFolders.Notice" = "lista cartelle stile iOS";
+
+"NiceFeatures.RoundVideos.Header" = "Videomessaggi";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Inizia con la camera posteriore";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "Salva nel cloud";
 
@@ -79,16 +86,17 @@
 "Common.FAQ.Intro" = "Per favore, nota che il supporto di Nicegram è operato solo dall'unico sviluppatore e dalla community.\n\nPrima di tutto, dai una occhiata alle FAQ di Nicegram: contiene molte soluzioni a problemi frequenti.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Feature uniche che non puoi rifiutare!";
-"IAP.Premium.Features" = "Cartelle e chat fissate illimitate\nTraduttore istantaneo dei messaggi\nFiltro messaggi mancati e gestione delle tab\nRiassunto «Nuovi messaggi» al lancio dell'applicazione";
+"IAP.Premium.Features" = "Traduzione rapida dei messaggi\n\nMolte più funzioni in futuro...";
 "IAP.Premium.Activated" = "Premium attivato!";
 "IAP.Common.Restore" = "Ripristina acquisti";
 "IAP.Common.CantPay" = "Spiacente, non puoi effettuare acquisti a causa di restrizioni sul tuo dispositivo o account.";
 "IAP.Common.ErrorFetch" = "Spiacente, impossibile ottenere i tuoi acquisti dall'App Store.";
 "IAP.Common.Congrats" = "Congratulazioni!";
 "IAP.Common.ValidateError" = "Spiacente, non è stato possibile convalidare l'acquisto.";
+"IAP.Common.Connecting" = "Connessione all'AppStore...";
 "Premium.OnetapTranslate" = "Bottone di traduzione rapida";
 "Premium.IgnoreTranslate.Title" = "Lingue ignorate";
-"Premium.IgnoreTranslate.Header" = "L'app cercherà di rilevare la lingua di ogni messaggio. Il bottone di traduzione rapida sarà DISABILITATO per le lingue che scegli qua sotto.";
+"Premium.IgnoreTranslate.Header" = "Il bottone di traduzione rapida sarà DISABILITATO per le lingue che selezioni sotto.";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "Gestisci tab";
@@ -131,3 +139,7 @@
 "Gmod.OpenChatNotice" = "La chat verrà segnata come \"letta\", ma puoi fare l'anteprima della chat con un tocco lungo (force-touch)";
 "Gmod.OpenChatBtn" = "Sì, apri la chat";
 "Gmod.DisableBtn" = "Disabilita avvisi";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "Il tuo numero verrà nascosto solo nell'interfaccia. Per nasconderlo dagli altri, apri le impostazioni della Privacy.";
+"Premium.OnetapTranslate.LowPower" = "Riconoscimento a bassa potenza";
+"Premium.OnetapTranslate.LowPower.Notice" = "L'app rileva la lingua di ogni messaggio sul dispositivo. Si tratta di un'operazione ad alto consumo che può influire sulla durata della batteria.";

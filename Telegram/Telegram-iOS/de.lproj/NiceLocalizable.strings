@@ -79,7 +79,6 @@
 "Common.FAQ.Intro" = "Bitte beachten Sie, dass der Nicegram Support von einem einzigen Entwickler und der Community durchgeführt wird.\n\nWerfen Sie einen Blick auf die Nicegram-FAQ: Sie enthält wichtige Tipps zur Fehlerbehebung und Antworten auf die meisten Fragen.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Einzigartige Funktionen, die du nicht ablehnen kannst!";
-"IAP.Premium.Features" = "Unbegrenzte Ordner & angepinnte Chats\nSchnellnachrichtenübersetzer\nVerpasste Nachrichten Filter & Tabs Verwaltung\n«Neue Nachrichten» beim Start der App";
 "IAP.Premium.Activated" = "Premium aktiviert!";
 "IAP.Common.Restore" = "Einkäufe wiederherstellen";
 "IAP.Common.CantPay" = "Leider können Sie aufgrund Ihres Geräts oder Ihres Kontos keine Einkäufe tätigen.";
@@ -88,7 +87,6 @@
 "IAP.Common.ValidateError" = "Es tut uns leid, kann Ihren Kauf nicht validieren.";
 "Premium.OnetapTranslate" = "Schnellübersetzen-Schaltfläche";
 "Premium.IgnoreTranslate.Title" = "Ignorierte Sprachen";
-"Premium.IgnoreTranslate.Header" = "Die App wird versuchen, die Sprache jeder Nachricht zu erkennen. Die Schnellübersetzen-Schaltfläche wird für die gewünschten Sprachen unten deaktiviert.";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "Tabs verwalten";

@@ -17,6 +17,13 @@
 "NiceFeatures.ChatScreen.AnimatedStickers" = "Stickers animados";
 "NiceFeatures.useBackCam" = "Usar cámara trasera (Videomensajes)";
 
+"NiceFeatures.Folders.Header" = "CARPETAS";
+"NiceFeatures.Folders.TgFolders" = "Carpetas al fondo";
+"NiceFeatures.Folders.TgFolders.Notice" = "Lista de carpetas en el estilo de iOS";
+
+"NiceFeatures.RoundVideos.Header" = "VIDEOS REDONDOS";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Comenzar con la cámara trasera";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "Guardar en la nube";
 
@@ -79,16 +86,16 @@
 "Common.FAQ.Intro" = "Ten en cuenta que el soporte de Nicegram sólo lo realiza un desarrollador y una comunidad.\n\nPrimero, echa un vistazo a las preguntas frecuentes de Nicegram: Tiene consejos importantes para la solución de la mayoría de problemas.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "¡Características únicas que no puedes rechazar!";
-"IAP.Premium.Features" = "Carpetas y chats anclados ilimitados\nTraductor rápido de mensajes\nFiltro de mensajes perdidos y gestión de pestañas\nResumen de “mensajes nuevos” al abrir la app";
 "IAP.Premium.Activated" = "¡Premium activado!";
 "IAP.Common.Restore" = "Restaurar compras";
 "IAP.Common.CantPay" = "Lo sentimos, pero no se puede realizar compras debido a tu dispositivo o las restricciones de tu cuenta.";
 "IAP.Common.ErrorFetch" = "Lo sentimos, no se pueden recuperar las compras del App Store.";
 "IAP.Common.Congrats" = "¡Felicidades!";
 "IAP.Common.ValidateError" = "Lo sentimos, no se puede validar tu compra.";
+"IAP.Common.Connecting" = "Conectando al App Store...";
 "Premium.OnetapTranslate" = "Botón de traducción rápida";
 "Premium.IgnoreTranslate.Title" = "Idiomas ignorados";
-"Premium.IgnoreTranslate.Header" = "La app intentará detectar el idioma de cada mensaje. El botón de traducción rápida será desactivado para los idiomas que elijas abajo.";
+"Premium.IgnoreTranslate.Header" = "El botón de traducción rápida será DESACTIVADO para los idiomas que elijas debajo.";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "Administrar pestañas";
@@ -120,7 +127,7 @@
 "Gmod.Restricted" = "No puedes enviar mensajes en modo vista previa.";
 "Gmod.Unavailable" = "Modo vista previa no disponible";
 "Gmod.Disable.Notice" = "La visibilidad de tu última vez cambiará a “%1”";
-"Gmod" = "Modo vista previa";
+"Gmod" = "Modo de vista previa";
 "Gmod.Enable" = "¿Activar modo vista previa?";
 "Gmod.Disable" = "¿Desactivar modo vista previa?";
 "Gmod.Notice" = "Tu estado en línea estará oculto para todos por la configuración de privacidad de Telegram.\nLa aplicación mostrará una advertencia si estás entrando en un chat privado.\nTu estado en línea puede ser revelado si envías o escribes CUALQUIER mensaje.";
@@ -129,5 +136,9 @@
 "NiceFeatures.ShowGmodIcon" = "Mostrar icono de modo vista previa";
 "Gmod.OpenChatQ" = "¿Abrir chat?";
 "Gmod.OpenChatNotice" = "El chat se marcará como “leído”, pero puedes obtener una vista previa del chat con un toque prolongado (3D Touch)";
-"Gmod.OpenChatBtn" = "Sí, abrir el chat";
-"Gmod.DisableBtn" = "Desactivar advertencias";
+"Gmod.OpenChatBtn" = "Sí, abre el chat";
+"Gmod.DisableBtn" = "Deshabilitar advertencias";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "Su número estará oculto solo en la interfaz de usuario. Para ocultarlo a los demás, por favor utilice la configuración de privacidad.";
+"Premium.OnetapTranslate.LowPower" = "Reconocimiento mientras de baja potencia";
+"Premium.OnetapTranslate.LowPower.Notice" = "La aplicación detecta el idioma de cada mensaje en su aparato. Es una tarea de alta predeterminación que puede afectar la duración de su batería.";

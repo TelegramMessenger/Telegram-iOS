@@ -1,25 +1,25 @@
 "AppName" = "Nicegram";
 
 /*ChatFilter*/
-"ChatFilter.Bots" = "السير";
-"ChatFilter.Channels" = "القنوات";
-"ChatFilter.Private" = "المستخدمين";
+"ChatFilter.Bots" = "بوتات";
+"ChatFilter.Channels" = "قنوات";
+"ChatFilter.Private" = "مستخدمين";
 "ChatFilter.Groups" = "مجموعات";
-"ChatFilter.Unread" = "غير مقروءه";
-"ChatFilter.Unmuted" = "إلغاء الكتم";
-"ChatFilter.Favourites" = "المفضله";
+"ChatFilter.Unread" = "غير مقروءة";
+"ChatFilter.Unmuted" = "غير مكتومة";
+"ChatFilter.Favourites" = "المفضلات";
 
 /*Nice Features*/
 "NiceFeatures.Title" = "Nicegram";
-"NiceFeatures.Tabs.Header" = "التبويبات";
+"NiceFeatures.Tabs.Header" = "تبويبات";
 "NiceFeatures.Tabs.ShowContacts" = "إظهار تبويب جهات الاتصال";
-"NiceFeatures.ChatScreen.Header" = "شاشه الدردشة";
-"NiceFeatures.ChatScreen.AnimatedStickers" = "ملصقات متحركة";
+"NiceFeatures.ChatScreen.Header" = "شاشة الدردشة";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "الملصقات المتحركة";
 "NiceFeatures.useBackCam" = "استخدام الكاميرا الخلفية (فيديوهات مستديرة)";
 
 "NiceFeatures.Folders.Header" = "المجلدات";
 "NiceFeatures.Folders.TgFolders" = "المجلدات في الأسفل";
-"NiceFeatures.Folders.TgFolders.Notice" = "قائمة مجلدات على غرار iOS";
+"NiceFeatures.Folders.TgFolders.Notice" = "قائمة مجلدات بأسلوب iOS";
 
 "NiceFeatures.RoundVideos.Header" = "فيديوهات مستديرة";
 "NiceFeatures.RoundVideos.UseRearCamera" = "البدء بالكاميرا الخلفية";
@@ -28,23 +28,23 @@
 "Chat.SaveToCloud" = "الحفظ في السحابة";
 
 /*Open Pin*/
-"Chat.OpenPin" = "عرض دبوس";
-"ChatFilter.Admin" = "المدير";
-"NiceFeatures.Notifications.HideNotifyAccount" = "إخفاء الحساب في الاشعارات";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "بدلًا من «المستخدم←الحساب» سترى فقط «المستخدم» للحسابات المتعددة فقط.";
-"NiceFeatures.Notifications.Fix" = "تعطيل إعلامات الإغلاق الاضطراري للتطبيقات";
+"Chat.OpenPin" = "عرض المثبت";
+"ChatFilter.Admin" = "مدير";
+"NiceFeatures.Notifications.HideNotifyAccount" = "إخفاء الحساب من الاشعارات";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "بدلًا من «المستخدم← الحساب» سترى فقط «المستخدم» للحسابات المتعددة فقط.";
+"NiceFeatures.Notifications.Fix" = "تعطيل الأشعارات غير المرغوب فيها";
 "NiceFeatures.Notifications.FixNotice" = "مفيد إذا حصلت على إشعارات من دردشات صامتة.\nالرد من الإشعارات، تسميات الحساب، ومعاينات الوسائط لن تكون متاحة.";
 "NiceFeatures.Filters.Header" = "الفلاتر (التبويبات)";
 "NiceFeatures.Filters.Notice" = "حدد عدد التبويبات المخصصة.\nأنقر مطولًا على التبويب لتغيير الفلتر.";
 "NiceFeatures.Filters.ShowBadge" = "إظهار الشارات (الفلاتر)";
-"NiceFeatures.UseClassicInfoUi" = "استخدام واجهة المستخدم معلومات الدردشة الكلاسيكية";
+"NiceFeatures.UseClassicInfoUi" = "استخدام واجهة معلومات الدردشة الكلاسيكية";
 
 /*Common*/
-"Common.ExitNow" = "الخروج الآن";
+"Common.ExitNow" = "خروج الآن";
 "Common.Later" = "لاحقاً";
-"Common.RestartRequired" = "إعادة التشغيل مطلوبة";
-"NiceFeatures.Tabs.ShowNames" = "إظهار أسماء التبويب";
-"Chat.ForwardAsCopy" = "إعادة الإرسال كنسخة";
+"Common.RestartRequired" = "يجب إعادة التشغيل!";
+"NiceFeatures.Tabs.ShowNames" = "إظهار أسماء التبويبات";
+"Chat.ForwardAsCopy" = "إعادة توجيه كنسخة";
 
 /*Folder*/
 "Folder.DefaultName" = "المجلد";
@@ -56,25 +56,25 @@
 "Folder.Create.Name" = "إسم المجلد";
 "Folder.Create.Placeholder" = "المجلد...";
 "Folder.LimitExceeded" = "عفوًا، لا يمكنك إنشاء أكثر من 3 مجلدات مخصصة.\nالمزيد من المجلدات متوفرة في Premium.";
-"NiceFeatures.HideNumber" = "إخفاء الهاتف في الإعدادات";
+"NiceFeatures.HideNumber" = "إخفاء الرقم من الإعدادات";
 
 /*NGWeb*/
 "NGWeb.Blocked" = "غير متوفر في Nicegram ويرجع السبب لقواعد AppStore التوجيهية";
 
 /*Browser*/
 /*Please, Go to «Data & Storage» to configure default browser*/
-"NiceFeatures.Use.DataStorage" = "رجاءً، استخدم «%1» لتكوين المتصفح الافتراضي";
-"NiceFeatures.Browser.Header" = "عناوين URLs";
+"NiceFeatures.Use.DataStorage" = "رجاءً، استخدم «%1» لضبط المتصفح الافتراضي";
+"NiceFeatures.Browser.Header" = "عناوين المواقع";
 "NiceFeatures.Browser.UseBrowser" = "فتح الروابط في المتصفح";
-"NiceFeatures.Browser.UseBrowserNotice" = "سيفتح تطبيق Nicegram الروابط في المتصفح الخارجي بدلًا من التطبيق. يجب تثبيت المتصفح المحدد.";
+"NiceFeatures.Browser.UseBrowserNotice" = "سيفتح Nicegram الروابط في المتصفح الخارجي بدلًا من التطبيق. يجب تثبيت المتصفح المحدد.";
 "ChatFilter.Missed" = "فائتة";
 
 /*Premium*/
 "Premium.Title" = "Premium";
 "Premium.UnlimitedPins.Header" = "دردشات مثبتة غير محدودة";
 "Premium.SyncPins" = "مزامنة الدردشات المثبتة";
-"Premium.SyncPins.Notice.ON" = "إذا قمت بتغيير دردشات مثبتة في عميل آخر، فإنها ستتغير في Nicegram.";
-"Premium.SyncPins.Notice.OFF" = "إذا قمت بتفيير دردشات مثبتة في عميل آخر، فإنها لن تتغير في Nicegram.";
+"Premium.SyncPins.Notice.ON" = "إذا قمت بتغيير دردشات مثبتة في تطبيق آخر، فإنها ستتغير في Nicegram.";
+"Premium.SyncPins.Notice.OFF" = "إذا قمت بتغير دردشات مثبتة في تطبيق آخر، فإنها لن تتغير في Nicegram.";
 "Premium.Missed.Header" = "الرسائل الفائتة";
 "Premium.Missed" = "أخبرني عند ورود رسائل جديدة";
 "Premium.Missed.Notice" = "عند فتح التطبيق بعد تأخير طويل (النوم والدراسة وما إلى ذلك)، سيقوم Nicegram بإعلامك بالرسائل والإشارات الخاصة الغير المقروءة.";
@@ -82,24 +82,25 @@
 "Folder.NeedPremium" = "هذا المجلد متاح فقط مع Premium. يمكنك الحصول على Premium أو حذف المجلد عن طريق السحب.";
 "Common.SupportChatUsername" = "nicegramchat";
 "Common.FAQUrl" = "https://nicegram.app/faq/";
-"Common.FAQ.Button" = "الأسئلة الشاسعة بخصوص Nicegram";
-"Common.FAQ.Intro" = "يرجى أن يكون في علمك بأن دعم Nicegram يتم بواسطة الطور والمجتمع فقط.\n\nأولًا، ألقى نظرة على الأسئلة الشاسعة بخصوص Nicegram: يتضمن نصائح مهمة في استكشاف الأخطاء وإجابات على معظم الأسئلة.";
+"Common.FAQ.Button" = "الأسئلة الشاسعة حول Nicegram";
+"Common.FAQ.Intro" = "يرجى أن يكون في علمك بأن دعم Nicegram يتم بواسطة المطور والمجتمع فقط.\n\nأولًا، ألقى نظرة على الأسئلة الشاسعة بخصوص Nicegram يتضمن نصائح مهمة في استكشاف الأخطاء وإجابات على معظم الأسئلة.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "ميزات فريدة لا يمكنك رفضها!";
-"IAP.Premium.Features" = "مجلدات غير محدودة ودردشات مثبتة\nترجمة سريعة للرسائل\nفلترة الرسائل الفائتة وإدارة التبويبات\nملخص «الرسائل الجديدة» عند تشغيل التطبيق";
+"IAP.Premium.Features" = "مترجم الرسائل السريع\n\nالمزيد من المزايا ستأتي قريباً...";
 "IAP.Premium.Activated" = "تم تفعيل Premium!";
 "IAP.Common.Restore" = "استعادة عمليات الشراء";
 "IAP.Common.CantPay" = "عفوًا، ولكنك لا تستطيع القيام بعمليات الشراء بسبب قيود في جهازك أو حسابك.";
 "IAP.Common.ErrorFetch" = "عفوًا، لا يمكن جلب عمليات الشراء من App Store.";
 "IAP.Common.Congrats" = "مبروك!";
 "IAP.Common.ValidateError" = "عفوًا، لا يمكن التحقق من صحة عملة الشراء الخاص بك.";
-"Premium.OnetapTranslate" = "زر الترجمة بسرعة";
+"IAP.Common.Connecting" = "يتم الأتصال بالمتجر...";
+"Premium.OnetapTranslate" = "زر الترجمة الفوري";
 "Premium.IgnoreTranslate.Title" = "اللغات المتجاهلة";
-"Premium.IgnoreTranslate.Header" = "سيحاول التطبيق الكشف عن لغة كل رسالة، زر الترجمة السريعة سيتم تعطيله بالنسبة للغات التي تختارها أسفله.";
+"Premium.IgnoreTranslate.Header" = "زر ترجمة الفوري سوف يعطّل للغات المختارة ادناه.";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "إدارة التبويبات";
-"ManageFilters.Header" = "تكوين الفلاتر المتاحة";
+"ManageFilters.Header" = "ضبط الفلاتر المتاحة";
 
 "Messages.Translate" = "ترجمة";
 "Messages.UndoTranslate" = "التراجع عن الترجمة";
@@ -116,7 +117,7 @@
 "NiceFeatures.BackupIcloud" = "مزامنة الإعدادت والمجلدات مع iCloud";
 "NiceFeatures.BackupSettings" = "إعدادت النسخ الاحتياطي والمجلدات";
 "NiceFeatures.BackupSettings.Notice" = "إنشاء ملف النسخ الاحتياطي. انقر على ملف الاستعادة.";
-"NiceFeatures.BackupSettings.Done" = "تم إرسال التسح الاحتياطي إلى الرسائل المحفوظة";
+"NiceFeatures.BackupSettings.Done" = "تم إرسال النسح الاحتياطي إلى الرسائل المحفوظة";
 "NiceFeatures.BackupSettings.Error" = "خطا في إنشاء نسخة الاحتياط";
 
 "NiceFeatures.RestoreSettings.Confirm" = "هل أنت متأكد من أنك تودّ استعادة المجلدات والإعدادت من الملف؟\n⚠️سيتم تجاهل البيانات الحالية";
@@ -130,11 +131,15 @@
 "Gmod" = "وضع المعاينة";
 "Gmod.Enable" = "تمكين وضع المعاينة؟";
 "Gmod.Disable" = "تعطيل وضع المعاينة؟";
-"Gmod.Notice" = "سيتم إخفاء حالة اتصالك بالأنترنيت عن الجميع عن طريق إعدادت الخصوصية في Telegram.\nسيظهر التطبيق تحذيرًا إذا كنت تدخل إلى محادثة خاصة.\nقد ينم الكشف عن حالة اتصالك بالأنترنيت إذا قمت بإرسال أو كتابة أي رسالة.";
+"Gmod.Notice" = "سيتم إخفاء حالة اتصالك بالأنترنت عن الجميع عن طريق إعدادت الخصوصية في تيليجرام.\nسيُظهر التطبيق تحذيرًا إذا كنت تدخل إلى محادثة خاصة.\nقد يتم الكشف عن اتصالك بالأنترنيت إذا قمت بإرسال أو كتابة أي رسالة.";
 
-"SendWithKb" = "إرسال مع زر «أدخل»";
+"SendWithKb" = "إرسال مع زر «إدخال»";
 "NiceFeatures.ShowGmodIcon" = "إظهار أيقونة وضع المعاينة";
 "Gmod.OpenChatQ" = "فتح الدردشة؟";
 "Gmod.OpenChatNotice" = "سيتم وضع علامة \"مقروءة\"، ولكن يمكنك معاينة الدردشة بنقرة طويلة (اللمس بقوة)";
 "Gmod.OpenChatBtn" = "أجل، افتح الدردشة";
 "Gmod.DisableBtn" = "تعطيل التحذيرات";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "سيتم اخفاء رقمك من التطبيق فقط. لأخفاءهُ من المستخدمين الآخرين، يرجى استخدام إعدادات الخصوصية.";
+"Premium.OnetapTranslate.LowPower" = "التعرف واطئ الإستهلاك";
+"Premium.OnetapTranslate.LowPower.Notice" = "التطبيق يحدد لغات كل رسالة في جهازك. ويتطلب اداء عالي من الجهاز و بالتالي إستهلاك البطارية.";
