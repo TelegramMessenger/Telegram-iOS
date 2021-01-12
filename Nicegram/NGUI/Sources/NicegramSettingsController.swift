@@ -289,9 +289,9 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
             
         case let .hideAccountInNotification(text, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: false, sectionId: section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: section, style: .blocks, updated: { value in
                 ngLog("[hideAccountInNotification] invoked with \(value)", LOGTAG)
-                NGSettings.hideNotifyAccount = value
+                VarNGSharedSettings.hideNotifyAccountName = value
             })
             
         case let .hideAccountInNotificationNotice(text):

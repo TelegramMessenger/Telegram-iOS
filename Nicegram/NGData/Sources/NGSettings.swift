@@ -94,6 +94,26 @@ public struct NGWebSettings {
 }
 
 
+public struct NGSharedSettings {
+    let UD = UserDefaults(suiteName: "group.\(Bundle.main.bundleIdentifier!)")
+
+    public init() {
+        UD?.register(defaults: ["hideNotifyAccountName": false])
+    }
+
+    public var hideNotifyAccountName: Bool {
+        get {
+            return UD?.bool(forKey: "hideNotifyAccountName") ?? false
+        }
+        set {
+            UD?.set(newValue, forKey: "hideNotifyAccountName")
+        }
+    }
+}
+
+public var VarNGSharedSettings = NGSharedSettings()
+
+
 public func isPremium() -> Bool {    
     let bb = (Bundle.main.infoDictionary?[kCFBundleVersionKey as String] ?? "") as! String
     if bb.last != "1" {
