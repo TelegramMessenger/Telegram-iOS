@@ -141,5 +141,7 @@
 "Gmod.DisableBtn" = "Disable warnings";
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Your number will be hidden in the UI only. To hide it from others, please use Privacy settings.";
+"NicegramSettings.Other.showProfileId" = "Show Profile ID";
+"NicegramSettings.Other.showRegDate" = "Show Registration Date";
 "Premium.OnetapTranslate.LowPower" = "Recognition on Low Power";
 "Premium.OnetapTranslate.LowPower.Notice" = "App detects language of each message on your device. It's a high-prefomance task which can affect your battery life.";
