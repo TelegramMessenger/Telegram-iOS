@@ -146,7 +146,7 @@ func parseAndSetGlobalData(data: Data) -> Bool {
     return true
 }
 
-public func updateGlobalNGSettings(_ build: String = (Bundle.main.infoDictionary?[kCFBundleVersionKey as String] ?? "") as! String) {
+public func updateGlobalNGSettings(_ build: String = (Bundle.main.infoDictionary?["CFBundleShortVersionString"]) as! String) {
     let url = getGlobalSettingsUrl(build)
 
     RequestsGet(url: URL(string: url)!).start(next: { data, _ in
