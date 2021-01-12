@@ -1774,18 +1774,46 @@ public struct contacts {
 }
 public extension Api {
 public struct help {
-    public enum AppUpdate: TypeConstructorDescription {
-        case noAppUpdate
-        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?)
+    public enum SupportName: TypeConstructorDescription {
+        case supportName(name: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .noAppUpdate:
+                case .supportName(let name):
                     if boxed {
-                        buffer.appendInt32(-1000708810)
+                        buffer.appendInt32(-1945767479)
                     }
-                    
+                    serializeString(name, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .supportName(let name):
+                return ("supportName", [("name", name)])
+    }
+    }
+    
+        public static func parse_supportName(_ reader: BufferReader) -> SupportName? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.help.SupportName.supportName(name: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum AppUpdate: TypeConstructorDescription {
+        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?)
+        case noAppUpdate
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
                 case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
                     if boxed {
                         buffer.appendInt32(497489295)
@@ -1802,21 +1830,24 @@ public struct help {
                     if Int(flags) & Int(1 << 1) != 0 {document!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
                     break
+                case .noAppUpdate:
+                    if boxed {
+                        buffer.appendInt32(-1000708810)
+                    }
+                    
+                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .noAppUpdate:
-                return ("noAppUpdate", [])
                 case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
                 return ("appUpdate", [("flags", flags), ("id", id), ("version", version), ("text", text), ("entities", entities), ("document", document), ("url", url)])
+                case .noAppUpdate:
+                return ("noAppUpdate", [])
     }
     }
     
-        public static func parse_noAppUpdate(_ reader: BufferReader) -> AppUpdate? {
-            return Api.help.AppUpdate.noAppUpdate
-        }
         public static func parse_appUpdate(_ reader: BufferReader) -> AppUpdate? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1849,6 +1880,9 @@ public struct help {
             else {
                 return nil
             }
+        }
+        public static func parse_noAppUpdate(_ reader: BufferReader) -> AppUpdate? {
+            return Api.help.AppUpdate.noAppUpdate
         }
     
     }

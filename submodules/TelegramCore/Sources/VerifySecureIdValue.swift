@@ -20,7 +20,7 @@ public struct SecureIdPreparePhoneVerificationPayload {
 }
 
 public func secureIdPreparePhoneVerification(network: Network, value: SecureIdPhoneValue) -> Signal<SecureIdPreparePhoneVerificationPayload, SecureIdPreparePhoneVerificationError> {
-    return network.request(Api.functions.account.sendVerifyPhoneCode(flags: 0, phoneNumber: value.phone, currentNumber: nil), automaticFloodWait: false)
+    return network.request(Api.functions.account.sendVerifyPhoneCode(phoneNumber: value.phone, settings: .codeSettings(flags: 0)), automaticFloodWait: false)
     |> mapError { error -> SecureIdPreparePhoneVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .flood

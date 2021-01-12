@@ -257,7 +257,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                 
                                 let photo: TelegramMediaImage? = chatFull.chatPhoto.flatMap(telegramMediaImageFromApiPhoto)
                                 
-                                let exportedInvitation = ExportedInvitation(apiExportedInvite: chatFull.exportedInvite)
+                                let exportedInvitation = chatFull.exportedInvite.flatMap(ExportedInvitation.init(apiExportedInvite:))
                                 let pinnedMessageId = chatFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                             
                                 var peers: [Peer] = []
@@ -513,7 +513,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
-                                                    .withUpdatedExportedInvitation(ExportedInvitation(apiExportedInvite: apiExportedInvite))
+                                                    .withUpdatedExportedInvitation(apiExportedInvite.flatMap(ExportedInvitation.init(apiExportedInvite:)))
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
                                                     .withUpdatedStickerPack(stickerPack)
