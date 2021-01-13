@@ -1379,7 +1379,7 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
                 completion(remoteRenderer);
             } else {
                 GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
-                
+             //   [remoteRenderer setVideoContentMode:kCAGravityResizeAspectFill];
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 
                 [queue dispatch:^{
