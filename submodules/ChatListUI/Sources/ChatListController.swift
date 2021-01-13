@@ -473,12 +473,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 
                 // MARK: Nicegram Switch to filter id
-                var switchingToFilterId: Int32?
+                var switchingToFilterId: Int32
                 switch (filter) {
                 case let .filter(filterId):
                     switchingToFilterId = filterId
                 default:
-                    switchingToFilterId = nil
+                    switchingToFilterId = -1
                     break
                 }
                 if NGSettings.lastFolder != switchingToFilterId {
@@ -1596,7 +1596,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 firstUpdate?()
                 // MARK: Nicegram folder after restart
                 if NGSettings.rememberFolderOnExit {
-                    if let lastFolder = NGSettings.lastFolder {
+                    let lastFolder = NGSettings.lastFolder
+                    if lastFolder != -1 {
                         strongSelf.selectTab(id: .filter(lastFolder))
                     }
                 }

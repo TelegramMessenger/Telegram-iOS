@@ -12,22 +12,32 @@ public struct NGStorage<T: Codable> {
 
     public var wrappedValue: T {
         get {
-            // Read value from UserDefaults
-            guard let data = UserDefaults.standard.object(forKey: key) as? Data else {
-                // Return defaultValue when no data in UserDefaults
-                return defaultValue
-            }
+            if #available(iOS 13.1, *) {
+                // Read value from UserDefaults
+                guard let data = UserDefaults.standard.object(forKey: key) as? Data else {
+                    // Return defaultValue when no data in UserDefaults
+                    return defaultValue
+                }
 
-            // Convert data to the desire data type
-            let value = try? JSONDecoder().decode(T.self, from: data)
-            return value ?? defaultValue
+                // Convert data to the desire data type
+                let value = try? JSONDecoder().decode(T.self, from: data)
+                return value ?? defaultValue
+            } else {
+                // Fixes for old iOS
+                return UserDefaults.standard.object(forKey: key) as? T ?? defaultValue
+            }
         }
         set {
-            // Convert newValue to data
-            let data = try? JSONEncoder().encode(newValue)
-            
-            // Set value to UserDefaults
-            UserDefaults.standard.set(data, forKey: key)
+            if #available(iOS 13.1, *) {
+                // Convert newValue to data
+                let data = try? JSONEncoder().encode(newValue)
+                
+                // Set value to UserDefaults
+                UserDefaults.standard.set(data, forKey: key)
+            } else {
+                // Fixes for old iOS
+                UserDefaults.standard.set(newValue, forKey: key)
+            }
         }
     }
 }
@@ -49,8 +59,8 @@ public struct NGSettings {
     @NGStorage(key: "rememberFolderOnExit", defaultValue: false)
     public static var rememberFolderOnExit: Bool
     
-    @NGStorage(key: "lastFolder", defaultValue: nil)
-    public static var lastFolder: Int32?
+    @NGStorage(key: "lastFolder", defaultValue: -1)
+    public static var lastFolder: Int32
     
     // MARK: App Settings
     @NGStorage(key: "showContactsTab", defaultValue: true)
