@@ -515,7 +515,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
-        self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: true)
+        //self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: true)
         self.isVideo = self.videoCapturer != nil
         
         var didReceiveAudioOutputs = false
@@ -655,7 +655,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if !removedSsrc.isEmpty {
                     strongSelf.callContext?.removeSsrcs(ssrcs: removedSsrc)
                 }
-                strongSelf.callContext?.addParticipants(participants: addedParticipants)
+                //strongSelf.callContext?.addParticipants(participants: addedParticipants)
             }
         })
         
@@ -885,6 +885,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             return
                         }
                         if let clientParams = joinCallResult.callInfo.clientParams {
+                            strongSelf.ssrcMapping.removeAll()
+                            var addedParticipants: [(UInt32, String?)] = []
+                            for participant in joinCallResult.state.participants {
+                                strongSelf.ssrcMapping[participant.ssrc] = participant.peer.id
+                                //addedParticipants.append((participant.ssrc, participant.jsonParams))
+                            }
+                            strongSelf.callContext?.setJoinResponse(payload: clientParams, participants: addedParticipants)
+                            
                             strongSelf.updateSessionState(internalState: .estabilished(info: joinCallResult.callInfo, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
                         }
                     }, error: { error in
@@ -1009,14 +1017,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if self.stateValue.canManageCall && initialState.defaultParticipantsAreMuted.canChange {
                     self.stateValue.defaultParticipantMuteState = initialState.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
                 }
-                
-                self.ssrcMapping.removeAll()
-                var addedParticipants: [(UInt32, String?)] = []
-                for participant in initialState.participants {
-                    self.ssrcMapping[participant.ssrc] = participant.peer.id
-                    addedParticipants.append((participant.ssrc, participant.jsonParams))
-                }
-                self.callContext?.setJoinResponse(payload: clientParams, participants: addedParticipants)
                 
                 let accountContext = self.accountContext
                 let peerId = self.peerId
@@ -1386,7 +1386,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public func requestVideo() {
         if self.videoCapturer == nil {
-            let videoCapturer = OngoingCallVideoCapturer(keepLandscape: true)
+            let videoCapturer = OngoingCallVideoCapturer()
             self.videoCapturer = videoCapturer
         }
         self.isVideo = true

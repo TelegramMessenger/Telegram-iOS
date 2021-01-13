@@ -738,14 +738,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .voiceConference:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
-                guard let context = arguments.context else {
+                guard let _ = arguments.context else {
                     return
-                }
-                
-                if #available(iOS 12.0, *) {
-                    let chatScreen = DebugVoiceChatScreen(context: context)
-                    chatScreen.navigationPresentation = .modal
-                    arguments.pushController(chatScreen)
                 }
             })
         case let .preferredVideoCodec(_, title, value, isSelected):

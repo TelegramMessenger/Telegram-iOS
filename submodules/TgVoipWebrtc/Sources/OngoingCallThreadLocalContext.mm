@@ -820,7 +820,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 @interface GroupCallThreadLocalContext () {
     id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
     
-    std::unique_ptr<tgcalls::GroupInstanceImpl> _instance;
+    std::unique_ptr<tgcalls::GroupInstanceInterface> _instance;
     OngoingCallThreadLocalContextVideoCapturer *_videoCapturer;
     
     void (^_networkStateUpdated)(GroupCallNetworkState);
@@ -839,7 +839,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _videoCapturer = videoCapturer;
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
-        _instance.reset(new tgcalls::GroupInstanceImpl((tgcalls::GroupInstanceDescriptor){
+        _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .networkStateUpdated = [weakSelf, queue, networkStateUpdated](bool isConnected) {
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
@@ -1024,7 +1024,7 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     
     NSArray *fingerprintsValue = transport[@"fingerprints"];
     if (![fingerprintsValue isKindOfClass:[NSArray class]]) {
-        return;
+        //return;
     }
     
     for (NSDictionary *fingerprintValue in fingerprintsValue) {
@@ -1392,46 +1392,6 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
                 completion(remoteRenderer);
             }
         });
-    }
-}
-
-@end
-
-
-@interface GroupCallCustomThreadLocalContext () {
-    std::unique_ptr<tgcalls::GroupInstanceCustomImpl> _impl;
-}
-
-@end
-
-@implementation GroupCallCustomThreadLocalContext
-
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue sendPacket:(void (^ _Nonnull)(NSData * _Nonnull))sendPacket {
-    self = [super init];
-    if (self != nil) {
-        tgcalls::GroupInstanceCustomDescriptor descriptor;
-        descriptor.sendPacket = [sendPacket](std::vector<uint8_t> const &data) {
-            if (sendPacket) {
-                sendPacket([[NSData alloc] initWithBytes:data.data() length:data.size()]);
-            }
-        };
-        _impl.reset(new tgcalls::GroupInstanceCustomImpl(std::move(descriptor)));
-    }
-    return self;
-}
-
-- (void)stop {
-    if (_impl) {
-        _impl->stop();
-    }
-}
-
-- (void)receivePacket:(NSData * _Nonnull)data {
-    if (_impl) {
-        std::vector<uint8_t> mappedData;
-        mappedData.resize(data.length);
-        memcpy(mappedData.data(), data.bytes, data.length);
-        _impl->receivePacket(std::move(mappedData));
     }
 }
 

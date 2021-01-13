@@ -484,6 +484,10 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                     missingGroups.append(id)
                 case .inputPeerEmpty:
                     break
+                case .inputPeerUserFromMessage:
+                    break
+                case .inputPeerChannelFromMessage:
+                    break
                 }
             }
             
