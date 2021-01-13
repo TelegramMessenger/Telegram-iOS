@@ -141,5 +141,7 @@
 "Gmod.DisableBtn" = "Uyarıları devre dışı bırak";
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Numaranız sadece arayüzde gizlenecek. Diğerlerinden gizlemek için, lütfen Gizlilik ayarlarını kullanın.";
+"NicegramSettings.Other.showProfileId" = "Profil ID'sini Göster";
+"NicegramSettings.Other.showRegDate" = "Kayıt Tarihini Göster";
 "Premium.OnetapTranslate.LowPower" = "Düşük Güçte Tanıma";
 "Premium.OnetapTranslate.LowPower.Notice" = "Uygulama, cihazınızdaki her mesajın dilini algılar. Bu, pil ömrünüzü etkileyebilecek yüksek öncelikli bir görevdir.";
