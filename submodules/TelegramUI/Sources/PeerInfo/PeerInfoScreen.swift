@@ -1171,7 +1171,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         let user = data.peer as! TelegramUser
         if let registrationDate = getCachedRegDate(user.id.toInt64()) {
             let cachedRegdateString = makeNiceRegDateStr(registrationDate)
-            regDateText = cachedRegdateString
+            regDateText = "~ " + cachedRegdateString
             hasRegDate = true
         }
         
