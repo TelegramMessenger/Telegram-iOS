@@ -513,7 +513,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
-                                                    .withUpdatedExportedInvitation(ExportedInvitation(apiExportedInvite: apiExportedInvite))
+                                                    .withUpdatedExportedInvitation(apiExportedInvite.flatMap { ExportedInvitation(apiExportedInvite: $0) })
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
                                                     .withUpdatedStickerPack(stickerPack)
