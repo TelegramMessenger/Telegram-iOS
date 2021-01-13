@@ -57,13 +57,21 @@ public func getGoogleLang(_ userLang: String) -> String {
     if lang.hasSuffix(rawSuffix) {
         lang = String(lang.dropLast(rawSuffix.count))
     }
-    if ["zh-hans", "zh-hant"].contains(lang) {
-        if lang == "zh-hans" {
-            lang = "zh-CN"
-        } else if lang == "zh-hant" {
-            lang = "zh-TW"
-        }
+    
+    // Google lang for Chineses
+    switch (lang) {
+        case "zh-hans":
+            return "zh-CN"
+        case "zh-hant":
+            return "zh-TW"
+        default:
+            break
     }
+    
+    
+    // Fix for pt-br and other non Chinese langs
+    // https://cloud.google.com/translate/docs/languages
+    lang = lang.components(separatedBy: "-")[0].components(separatedBy: "_")[0]
     
     return lang
 }
