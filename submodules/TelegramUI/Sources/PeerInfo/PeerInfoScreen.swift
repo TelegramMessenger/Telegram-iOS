@@ -2976,6 +2976,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 var items: [ActionSheetItem] = []
                 let muteValues: [Int32] = [
                     1 * 60 * 60,
+                    4 * 60 * 60,
+                    8 * 60 * 60,
                     24 * 60 * 60,
                     2 * 24 * 60 * 60,
                     Int32.max
