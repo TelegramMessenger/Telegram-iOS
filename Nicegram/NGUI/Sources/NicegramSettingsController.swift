@@ -400,7 +400,7 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
         presentationData.strings.Notifications_Title.uppercased()))
     entries.append(.hideAccountInNotification(
         l("NicegramSettings.Notifications.hideAccountInNotification", locale),
-        NGSettings.hideNotifyAccount
+        VarNGSharedSettings.hideNotifyAccountName
     ))
     entries.append(.hideAccountInNotificationNotice(
         l("NicegramSettings.Notifications.hideAccountInNotificationNotice", locale)
