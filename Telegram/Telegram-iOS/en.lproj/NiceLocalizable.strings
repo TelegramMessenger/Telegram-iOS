@@ -145,3 +145,4 @@
 "NicegramSettings.Other.showRegDate" = "Show Registration Date";
 "Premium.OnetapTranslate.LowPower" = "Recognition on Low Power";
 "Premium.OnetapTranslate.LowPower.Notice" = "App detects language of each message on your device. It's a high-prefomance task which can affect your battery life.";
+"Premium.rememberFolderOnExit" = "Remember current folder on exit";
