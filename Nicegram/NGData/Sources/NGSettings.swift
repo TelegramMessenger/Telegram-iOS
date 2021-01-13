@@ -46,6 +46,12 @@ public struct NGSettings {
     @NGStorage(key: "ignoreTranslate", defaultValue: [])
     public static var ignoreTranslate: [String]
     
+    @NGStorage(key: "rememberFolderOnExit", defaultValue: false)
+    public static var rememberFolderOnExit: Bool
+    
+    @NGStorage(key: "lastFolder", defaultValue: nil)
+    public static var lastFolder: Int32?
+    
     // MARK: App Settings
     @NGStorage(key: "showContactsTab", defaultValue: true)
     public static var showContactsTab: Bool

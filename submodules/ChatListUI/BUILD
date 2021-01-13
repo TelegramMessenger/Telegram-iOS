@@ -1,5 +1,7 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = ["//Nicegram/NGData:NGData"]
+
 swift_library(
     name = "ChatListUI",
     module_name = "ChatListUI",
@@ -58,7 +60,7 @@ swift_library(
         "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/TelegramCallsUI:TelegramCallsUI",
-    ],
+    ] + NGDEPS,
     visibility = [
         "//visibility:public",
     ],

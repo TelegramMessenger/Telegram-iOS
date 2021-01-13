@@ -24,13 +24,13 @@ private struct SelectionState: Equatable {
 }
 
 private final class PremiumControllerArguments {
-    let toggleSetting: (Bool, String) -> Void
+    let toggleSetting: (Bool, PremiumSettingsToggle) -> Void
     let openSetMissedInterval: () -> Void
     let testAction: () -> Void
     let openManageFilters: () -> Void
     let openIgnoreTranslations: () -> Void
 
-    init(toggleSetting:@escaping (Bool, String) -> Void, openSetMissedInterval:@escaping () -> Void, testAction:@escaping () -> Void, openManageFilters:@escaping () -> Void, openIgnoreTranslations:@escaping () -> Void) {
+    init(toggleSetting:@escaping (Bool, PremiumSettingsToggle) -> Void, openSetMissedInterval:@escaping () -> Void, testAction:@escaping () -> Void, openManageFilters:@escaping () -> Void, openIgnoreTranslations:@escaping () -> Void) {
         self.toggleSetting = toggleSetting
         self.openSetMissedInterval = openSetMissedInterval
         self.testAction = testAction
@@ -53,6 +53,12 @@ private enum PremiumControllerEntityId: Equatable, Hashable {
     case index(Int)
 }
 
+private enum PremiumSettingsToggle {
+    case syncPins
+    case oneTapTr
+    case rememberFilterOnExit
+}
+
 private enum PremiumControllerEntry: ItemListNodeEntry {
     case header(PresentationTheme, String)
 
@@ -65,6 +71,8 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
 
     case manageFiltersHeader(PresentationTheme, String)
     case manageFilters(PresentationTheme, String)
+    
+    case rememberFolderOnExit(PresentationTheme, String, Bool)
 
     case otherHeader(PresentationTheme, String)
 
@@ -81,7 +89,7 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
             return premiumControllerSection.syncPins.rawValue
         case .notifyMissed, .notifyMissedNotice:
             return premiumControllerSection.notifyMissed.rawValue
-        case .manageFiltersHeader, .manageFilters:
+        case .manageFiltersHeader, .manageFilters, .rememberFolderOnExit:
            return premiumControllerSection.manageFilters.rawValue
         case .otherHeader, .onetaptr, .ignoretr:
             return premiumControllerSection.other.rawValue
@@ -109,6 +117,8 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
             return 3000
         case .manageFilters:
             return 3100
+        case .rememberFolderOnExit:
+            return 4000
         case .otherHeader:
             return 10000
         case .onetaptr:
@@ -181,7 +191,14 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-
+        
+        case let .rememberFolderOnExit(lhsTheme, lhsText, lhsValue):
+            if case let .rememberFolderOnExit(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+            
         case let .otherHeader(lhsTheme, lhsText):
             if case let .otherHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
@@ -218,7 +235,7 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .syncPinsToggle(theme, text, value):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.toggleSetting(value, "syncPins")
+                arguments.toggleSetting(value, .syncPins)
             })
         case let .syncPinsNotice(theme, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -239,7 +256,7 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .onetaptr(theme, text, value):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.toggleSetting(value, "oneTapTr")
+                arguments.toggleSetting(value, .oneTapTr)
             })
 
         case let .testButton(theme, text):
@@ -249,6 +266,10 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
         case let .ignoretr(theme, text):
             return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                 arguments.openIgnoreTranslations()
+            })
+        case let .rememberFolderOnExit(theme, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.toggleSetting(value, .rememberFilterOnExit)
             })
         }
     }
@@ -263,7 +284,7 @@ private func premiumControllerEntries(presentationData: PresentationData) -> [Pr
     let strings = presentationData.strings
     let locale = presentationData.strings.baseLanguageCode
 
-
+    entries.append(.rememberFolderOnExit(theme, l("Premium.rememberFolderOnExit", locale), NGSettings.rememberFolderOnExit))
     entries.append(.onetaptr(theme, l("Premium.OnetapTranslate", locale), NGSettings.oneTapTr))
     entries.append(.ignoretr(theme, l("Premium.IgnoreTranslate.Title", locale)))
 
@@ -312,9 +333,10 @@ public func premiumController(context: AccountContext) -> ViewController {
 
     let arguments = PremiumControllerArguments(toggleSetting: { value, setting in
         switch (setting) {
-        case "oneTapTr":
+        case .oneTapTr:
             NGSettings.oneTapTr = value
-            break
+        case .rememberFilterOnExit:
+            NGSettings.rememberFolderOnExit = value
         default:
             break
         }

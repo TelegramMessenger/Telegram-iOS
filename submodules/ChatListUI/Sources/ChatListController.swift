@@ -1,6 +1,9 @@
 import Foundation
 import UIKit
 import Postbox
+// MARK: Nicegram Imports
+import NGData
+// MARKL
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
@@ -467,6 +470,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 strongSelf.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: tabContainerData.0, selectedFilter: filter, isReordering: strongSelf.chatListDisplayNode.isReorderingFilters || (strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing && !strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: false, transitionFraction: fraction, presentationData: strongSelf.presentationData, transition: transition)
                 strongSelf.chatListDisplayNode.inlineTabContainerNode.update(size: CGSize(width: layout.size.width, height: 40.0), sideInset: layout.safeInsets.left, filters: tabContainerData.0, selectedFilter: filter, isReordering: strongSelf.chatListDisplayNode.isReorderingFilters || (strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing && !strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: false, transitionFraction: fraction, presentationData: strongSelf.presentationData, transition: transition)
+                
+                
+                // MARK: Nicegram Switch to filter id
+                var switchingToFilterId: Int32?
+                switch (filter) {
+                case let .filter(filterId):
+                    switchingToFilterId = filterId
+                default:
+                    switchingToFilterId = nil
+                    break
+                }
+                if NGSettings.lastFolder != switchingToFilterId {
+                    NGSettings.lastFolder = switchingToFilterId
+                }
+                
             }
             self.reloadFilters()
         }
@@ -1576,6 +1594,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if !notifiedFirstUpdate {
                 notifiedFirstUpdate = true
                 firstUpdate?()
+                // MARK: Nicegram folder after restart
+                if NGSettings.rememberFolderOnExit {
+                    if let lastFolder = NGSettings.lastFolder {
+                        strongSelf.selectTab(id: .filter(lastFolder))
+                    }
+                }
             }
             
             if resetCurrentEntry {
