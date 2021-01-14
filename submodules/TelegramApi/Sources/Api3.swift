@@ -3903,23 +3903,6 @@ public extension Api {
                     })
                 }
             
-                public static func exportChatInvite(flags: Int32, peer: Api.InputPeer, expireDate: Int32?, usageLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedChatInvite>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(347716823)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(expireDate!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(usageLimit!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.exportChatInvite", parameters: [("flags", flags), ("peer", peer), ("expireDate", expireDate), ("usageLimit", usageLimit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedChatInvite? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.ExportedChatInvite?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getExportedChatInvites(flags: Int32, peer: Api.InputPeer, adminId: Api.InputUser?, offsetLink: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvites>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1838984707)
@@ -3938,6 +3921,23 @@ public extension Api {
                     })
                 }
             
+                public static func exportChatInvite(flags: Int32, peer: Api.InputPeer, expireDate: Int32?, usageLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedChatInvite>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(347716823)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(expireDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(usageLimit!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.exportChatInvite", parameters: [("flags", flags), ("peer", peer), ("expireDate", expireDate), ("usageLimit", usageLimit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedChatInvite? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ExportedChatInvite?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+                        }
+                        return result
+                    })
+                }
+            
                 public static func editExportedChatInvite(flags: Int32, peer: Api.InputPeer, link: String, expireDate: Int32?, usageLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvite>) {
                     let buffer = Buffer()
                     buffer.appendInt32(48562110)
@@ -3947,21 +3947,6 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(expireDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(usageLimit!, buffer: buffer, boxed: false)}
                     return (FunctionDescription(name: "messages.editExportedChatInvite", parameters: [("flags", flags), ("peer", peer), ("link", link), ("expireDate", expireDate), ("usageLimit", usageLimit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ExportedChatInvite? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.ExportedChatInvite?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.ExportedChatInvite
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getExportedChatInvite(peer: Api.InputPeer, link: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvite>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1937010524)
-                    peer.serialize(buffer, true)
-                    serializeString(link, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getExportedChatInvite", parameters: [("peer", peer), ("link", link)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ExportedChatInvite? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.ExportedChatInvite?
                         if let signature = reader.readInt32() {

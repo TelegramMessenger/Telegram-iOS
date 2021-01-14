@@ -221,20 +221,15 @@ public struct messages {
     
     }
     public enum ExportedChatInvite: TypeConstructorDescription {
-        case exportedChatInvite(invite: Api.ExportedChatInvite, recentImporters: [Int32], users: [Api.User])
+        case exportedChatInvite(invite: Api.ExportedChatInvite, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .exportedChatInvite(let invite, let recentImporters, let users):
+                case .exportedChatInvite(let invite, let users):
                     if boxed {
-                        buffer.appendInt32(-1748638807)
+                        buffer.appendInt32(410107472)
                     }
                     invite.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(recentImporters.count))
-                    for item in recentImporters {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -246,8 +241,8 @@ public struct messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .exportedChatInvite(let invite, let recentImporters, let users):
-                return ("exportedChatInvite", [("invite", invite), ("recentImporters", recentImporters), ("users", users)])
+                case .exportedChatInvite(let invite, let users):
+                return ("exportedChatInvite", [("invite", invite), ("users", users)])
     }
     }
     
@@ -256,19 +251,14 @@ public struct messages {
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
             }
-            var _2: [Int32]?
+            var _2: [Api.User]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.ExportedChatInvite.exportedChatInvite(invite: _1!, recentImporters: _2!, users: _3!)
+            if _c1 && _c2 {
+                return Api.messages.ExportedChatInvite.exportedChatInvite(invite: _1!, users: _2!)
             }
             else {
                 return nil
