@@ -266,9 +266,13 @@ def resolve_configuration(bazel_command_line: BazelCommandLine, arguments):
 
 
 def generate_project(arguments):
+    bazel_x86_64_path = None
+    if is_apple_silicon():
+        bazel_x86_64_path = arguments.bazel_x86_64
+            
     bazel_command_line = BazelCommandLine(
         bazel_path=arguments.bazel,
-        bazel_x86_64_path=arguments.bazel_x86_64,
+        bazel_x86_64_path=bazel_x86_64_path,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion
     )
