@@ -130,7 +130,6 @@ fi
 #PATH="$PATH:$(pwd)/tools" BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
 
 python3 build-system/Make/Make.py \
-	--overrideXcodeVersion \
     --bazel="$(pwd)/tools/bazel" \
     --cacheHost="$BAZEL_HTTP_CACHE_URL" \
     build \
