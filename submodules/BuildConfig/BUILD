@@ -1,5 +1,5 @@
 load(
-    "//build-input/data:variables.bzl",
+    "@build_configuration//:variables.bzl",
     "ng_env",
     "telegram_api_id",
     "telegram_api_hash",

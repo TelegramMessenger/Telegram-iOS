@@ -65,6 +65,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             if image != nil {
                 strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             firstTime = false
         }
