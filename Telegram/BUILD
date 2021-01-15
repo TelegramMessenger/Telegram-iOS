@@ -41,12 +41,6 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
-string_flag(
-    name = "buildNumber",
-    build_setting_default = "10000",
-    visibility = ["//visibility:public"],
-)
-
 config_setting(
     name = "disableExtensionsSetting",
     flag_values = {
