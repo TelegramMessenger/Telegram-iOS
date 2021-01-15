@@ -5,6 +5,7 @@ import os
 import shlex
 import sys
 import tempfile
+import subprocess
 
 from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironment
 from ProjectGeneration import generate
@@ -181,7 +182,7 @@ class BazelCommandLine:
         if self.remote_cache is not None:
             combined_arguments += [
                 '--remote_cache={}'.format(self.remote_cache),
-                '--experimental_remote_downloader="{}"'.format(self.remote_cache)
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
             ]
         elif self.cache_dir is not None:
             combined_arguments += [
@@ -211,7 +212,7 @@ class BazelCommandLine:
         if self.remote_cache is not None:
             combined_arguments += [
                 '--remote_cache={}'.format(self.remote_cache),
-                '--experimental_remote_downloader="{}"'.format(self.remote_cache)
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
             ]
         elif self.cache_dir is not None:
             combined_arguments += [
@@ -220,7 +221,8 @@ class BazelCommandLine:
 
         combined_arguments += self.configuration_args
 
-        print('TelegramBuild: running {}'.format(combined_arguments))
+        print('TelegramBuild: running')
+        print(subprocess.list2cmdline(combined_arguments))
         call_executable(combined_arguments)
 
 
@@ -280,7 +282,7 @@ def generate_project(arguments):
     if arguments.cacheDir is not None:
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
-        bazel_command_line.add_remote_cache(arguments.cacheDir)
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
 
     resolve_configuration(bazel_command_line, arguments)
 
@@ -311,7 +313,7 @@ def build(arguments):
     if arguments.cacheDir is not None:
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
-        bazel_command_line.add_remote_cache(arguments.cacheDir)
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
 
     resolve_configuration(bazel_command_line, arguments)
 
