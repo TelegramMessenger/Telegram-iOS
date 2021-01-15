@@ -20,7 +20,7 @@ Verify that it's working
 
 ```
 chmod +x bazel
-bazel --version
+./bazel --version
 ```
 
 4. Adjust configuration parameters
