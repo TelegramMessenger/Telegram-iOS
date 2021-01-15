@@ -5,7 +5,7 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
-XCODE_VERSION="12.2"
+XCODE_VERSION="12.3"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
@@ -100,7 +100,7 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 
 	case "$BUILD_CONFIGURATION" in
 		"hockeyapp")
-			generate-configuration.sh internal development "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+			generate-configuration.sh internal release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 			;;
 
 		*)
