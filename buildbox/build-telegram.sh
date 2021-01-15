@@ -90,28 +90,24 @@ fi
 BASE_DIR=$(pwd)
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	if [ ! `which setup-telegram-build.sh` ]; then
-		echo "setup-telegram-build.sh not found in PATH $PATH"
+	if [ ! `which generate-configuration.sh` ]; then
+		echo "generate-configuration.sh not found in PATH $PATH"
 		exit 1
-	fi
-	if [ ! `which setup-codesigning.sh` ]; then
-		echo "setup-codesigning.sh not found in PATH $PATH"
-		exit 1
-	fi
-	source `which setup-telegram-build.sh`
-	setup_telegram_build "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
-	source `which setup-codesigning.sh`
-
-	CODESIGNING_CONFIGURATION="$BUILD_CONFIGURATION"
-	if [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
-		CODESIGNING_CONFIGURATION="hockeyapp"
 	fi
 
-	setup_codesigning "$CODESIGNING_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
-	if [ "$SETUP_TELEGRAM_BUILD_VERSION" != "$BUILD_TELEGRAM_VERSION" ]; then
-		echo "setup-telegram-build.sh script version doesn't match"
-		exit 1
-	fi
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+
+	case "$BUILD_CONFIGURATION" in
+		"hockeyapp")
+			generate-configuration.sh internal development "$BASE_DIR/$BUILDBOX_DIR/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
+			;;
+
+		*)
+			echo "Unknown build configuration $BUILD_CONFIGURATION"
+			exit 1
+			;;
+	esac
+
 	if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 		if [ -z "$TELEGRAM_BUILD_APPSTORE_PASSWORD" ]; then
 			echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
