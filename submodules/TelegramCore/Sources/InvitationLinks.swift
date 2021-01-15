@@ -12,7 +12,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
             var flags: Int32 = (1 << 2)
             if let _ = peer as? TelegramChannel {
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, cachedData.exportedInvitation != nil && !revokeExisted {
-                    return .complete()
+                    return .single(cachedData.exportedInvitation)
                 } else {
                     return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
                     |> retryRequest
