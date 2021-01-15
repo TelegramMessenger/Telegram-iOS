@@ -1127,24 +1127,34 @@ plist_fragment(
 )
 
 swift_library(
+    name = "GeneratedSources",
+    module_name = "GeneratedSources",
+    srcs = glob([
+        "Generated/**/*.swift",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+swift_library(
     name = "WidgetExtensionLib",
     module_name = "WidgetExtensionLib",
     srcs = glob([
         "WidgetKitWidget/**/*.swift",
-        "Generated/**/*.swift",
     ]),
     data = [
         "SiriIntents/Intents.intentdefinition",
     ],
     deps = [
         "//submodules/BuildConfig:BuildConfig",
-        "//submodules/WidgetItems:WidgetItems",
+        "//submodules/WidgetItems:WidgetItems_iOS14",
+        "//submodules/WidgetItemsUtils:WidgetItemsUtils",
         "//submodules/AppLockState:AppLockState",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SyncCore:SyncCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        ":GeneratedSources",
     ],
 )
 
@@ -1221,7 +1231,6 @@ swift_library(
     module_name = "IntentsExtensionLib",
     srcs = glob([
         "SiriIntents/**/*.swift",
-        "Generated/**/*.swift",
     ]),
     data = [
         "SiriIntents/Intents.intentdefinition",
@@ -1235,6 +1244,7 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/AppLockState:AppLockState",
+        ":GeneratedSources",
     ],
 )
 

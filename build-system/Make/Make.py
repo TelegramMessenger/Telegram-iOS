@@ -136,7 +136,7 @@ class BazelCommandLine:
                 # Always build universal Watch binaries.
                 '--watchos_cpus=armv7k,arm64_32'
             ] + self.common_release_args
-        elif configuration == 'release':
+        elif configuration == 'release_universal':
             self.configuration_args = [
                 # bazel optimized build configuration
                 '-c', 'opt',
@@ -145,7 +145,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=armv7,arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32'
+                '--watchos_cpus=armv7k,arm64_32',
                 
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
@@ -266,9 +266,13 @@ def resolve_configuration(bazel_command_line: BazelCommandLine, arguments):
 
 
 def generate_project(arguments):
+    bazel_x86_64_path = None
+    if is_apple_silicon():
+        bazel_x86_64_path = arguments.bazel_x86_64
+            
     bazel_command_line = BazelCommandLine(
         bazel_path=arguments.bazel,
-        bazel_x86_64_path=arguments.bazel_x86_64,
+        bazel_x86_64_path=bazel_x86_64_path,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion
     )

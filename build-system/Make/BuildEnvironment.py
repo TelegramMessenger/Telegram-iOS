@@ -66,7 +66,7 @@ def get_bazel_version(bazel_path):
     command_result = run_executable_with_output(bazel_path, ['--version']).strip('\n')
     if not command_result.startswith('bazel '):
         raise Exception('{} is not a valid bazel binary'.format(bazel_path))
-    command_result.replace('bazel ', '')
+    command_result = command_result.replace('bazel ', '')
     return command_result
 
 
@@ -132,7 +132,7 @@ class BuildEnvironment:
                     self.bazel_version, actual_bazel_version, self.bazel_path))
                 self.bazel_version = actual_bazel_version
             else:
-                print('Required bazel version is {}, but {} is reported by {}'.format(
+                print('Required bazel version is "{}", but "{}"" is reported by {}'.format(
                     self.bazel_version, actual_bazel_version, self.bazel_path))
                 exit(1)
 
