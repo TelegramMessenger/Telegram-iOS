@@ -1,6 +1,6 @@
 # Telegram iOS Source Code Compilation Guide
 
-1. Install Xcode (directly from https://developer.apple.com/download/more or using App Store).
+1. Install Xcode (directly from https://developer.apple.com/download/more or using the App Store).
 2. Clone the project from GitHub:
 
 ```
@@ -67,7 +67,7 @@ Tip: use `--disableExtensions` when developing to speed up development by not bu
 
 # Tips
 
-Bazel is used to build the app. In order to simplify the development setup a helper script is provided (`build-system/Make/Make.py`). See help:
+Bazel is used to build the app. To simplify the development setup a helper script is provided (`build-system/Make/Make.py`). See help:
 
 ```
 python3 build-system/Make/Make.py --help
@@ -75,7 +75,7 @@ python3 build-system/Make/Make.py build --help
 python3 build-system/Make/Make.py generateProject --help
 ```
 
-Each release is built using specific Xcode and Bazel versions (see `versions.json`). The helper script checks the versions of installed software and reports an error if they don't match the ones specified in `versions.json`. There is flag that allows to bypass these checks:
+Each release is built using specific Xcode and Bazel versions (see `versions.json`). The helper script checks the versions of installed software and reports an error if they don't match the ones specified in `versions.json`. There are flags that allow to bypass these checks:
 
 ```
 python3 build-system/Make/Make.py --overrideBazelVersion build ... # Don't check the version of Bazel
