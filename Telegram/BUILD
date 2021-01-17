@@ -41,10 +41,23 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+bool_flag(
+    name = "disableProvisioningProfiles",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
 config_setting(
     name = "disableExtensionsSetting",
     flag_values = {
         ":disableExtensions": "True",
+    },
+)
+
+config_setting(
+    name = "disableProvisioningProfilesSetting",
+    flag_values = {
+        ":disableProvisioningProfiles": "True",
     },
 )
 
@@ -491,7 +504,10 @@ watchos_extension(
         ":WatchExtensionNSExtensionInfoPlist",
     ],
     minimum_os_version = "5.0",
-    provisioning_profile = "@build_configuration//provisioning:WatchExtension.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:WatchExtension.mobileprovision",
+    }),
     resources = [
         ":TelegramWatchExtensionResources",
     ],
@@ -519,7 +535,10 @@ watchos_application(
         ":WatchAppCompanionInfoPlist",
     ],
     minimum_os_version = "5.0",
-    provisioning_profile = "@build_configuration//provisioning:WatchApp.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:WatchApp.mobileprovision",
+    }),
     resources = [
         ":TelegramWatchAppResources",
         ":TelegramWatchAppAssets",
@@ -1028,7 +1047,10 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "9.0",
-    provisioning_profile = "@build_configuration//provisioning:Share.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Share.mobileprovision",
+    }),
     deps = [":ShareExtensionLib"],
     frameworks = [
         ":TelegramUIFramework"
@@ -1097,7 +1119,10 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
-    provisioning_profile = "@build_configuration//provisioning:NotificationContent.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:NotificationContent.mobileprovision",
+    }),
     deps = [":NotificationContentExtensionLib"],
     frameworks = [
         ":TelegramUIFramework"
@@ -1161,7 +1186,10 @@ ios_extension(
     ],
     minimum_os_version = "14.0",
     provides_main = True,
-    provisioning_profile = "@build_configuration//provisioning:Widget.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
+    }),
     deps = [":WidgetExtensionLib"],
     frameworks = [],
 )
@@ -1240,7 +1268,10 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
-    provisioning_profile = "@build_configuration//provisioning:Intents.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Intents.mobileprovision",
+    }),
     deps = [":IntentsExtensionLib"],
     frameworks = [
         ":SwiftSignalKitFramework",
@@ -1291,7 +1322,10 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = "10.0",
-    provisioning_profile = "@build_configuration//provisioning:NotificationService.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:NotificationService.mobileprovision",
+    }),
     deps = ["//Telegram/NotificationService:NotificationServiceExtensionLib"],
     frameworks = [
         ":MtProtoKitFramework",
@@ -1477,7 +1511,10 @@ ios_application(
     ),
     families = ["iphone", "ipad"],
     minimum_os_version = "9.0",
-    provisioning_profile = "@build_configuration//provisioning:Telegram.mobileprovision",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
+    }),
     entitlements = ":TelegramEntitlements.entitlements",
     infoplists = [
         ":TelegramInfoPlist",
@@ -1514,7 +1551,10 @@ ios_application(
             ":WidgetExtension",
         ],
     }),
-    watch_application = ":TelegramWatchApp",
+    watch_application = select({
+        ":disableExtensionsSetting": None,
+        "//conditions:default": ":TelegramWatchApp",
+    }),
     deps = [
         ":Main",
         ":Lib",

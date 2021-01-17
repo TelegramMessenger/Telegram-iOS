@@ -1,10 +1,23 @@
 # Telegram iOS Source Code Compilation Guide
 
+We welcome all developers to use our API and source code to create applications on our platform.
+There are several things we require from **all developers** for the moment.
+
+# Creating your Telegram Application
+
+1. [**Obtain your own api_id**](https://core.telegram.org/api/obtaining_api_id) for your application.
+2. Please **do not** use the name Telegram for your app — or make sure your users understand that it is unofficial.
+3. Kindly **do not** use our standard logo (white paper plane in a blue circle) as your app's logo.
+3. Please study our [**security guidelines**](https://core.telegram.org/mtproto/security_guidelines) and take good care of your users' data and privacy.
+4. Please remember to publish **your** code too in order to comply with the licences.
+
+# Compilation Guide
+
 1. Install Xcode (directly from https://developer.apple.com/download/more or using the App Store).
 2. Clone the project from GitHub:
 
 ```
-git clone --recursive https://github.com/TelegramMessenger/Telegram-iOS.git
+git clone --recursive -j8 https://github.com/TelegramMessenger/Telegram-iOS.git
 ```
 
 3. Download Bazel 3.7.0
@@ -62,7 +75,19 @@ python3 build-system/Make/Make.py \
     --disableExtensions
 ```
 
-Tip: use `--disableExtensions` when developing to speed up development by not building application extensions.
+It is possible to generate a project that does not require any codesigning certificates to be installed: add `--disableProvisioningProfiles` flag:
+```
+python3 build-system/Make/Make.py \
+    --bazel="$HOME/bazel-dist/bazel" \
+    --cacheDir="$HOME/telegram-bazel-cache" \
+    generateProject \
+    --configurationPath="$HOME/telegram-configuration" \
+    --disableExtensions \
+    --disableProvisioningProfiles
+```
+
+
+Tip: use `--disableExtensions` when developing to speed up development by not building application extensions and the WatchOS app.
 
 
 # Tips
