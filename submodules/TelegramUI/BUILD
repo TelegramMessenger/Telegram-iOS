@@ -187,6 +187,7 @@ swift_library(
         "//submodules/Markdown:Markdown",
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/WidgetItems:WidgetItems",
+        "//submodules/WidgetItemsUtils:WidgetItemsUtils",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/AppLock:AppLock",
@@ -211,6 +212,7 @@ swift_library(
         "//submodules/SlotMachineAnimationNode:SlotMachineAnimationNode",
         "//submodules/AnimatedNavigationStripeNode:AnimatedNavigationStripeNode",
         "//submodules/AudioBlob:AudioBlob",
+        "//Telegram:GeneratedSources",
     ],
     visibility = [
         "//visibility:public",

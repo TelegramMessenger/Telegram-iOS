@@ -12,7 +12,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
             let flags: Int32 = (1 << 2)
             if let _ = peer as? TelegramChannel {
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, cachedData.exportedInvitation != nil && !revokeExisted {
-                    return .complete()
+                    return .single(cachedData.exportedInvitation)
                 } else {
                     return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
                     |> retryRequest
@@ -99,10 +99,13 @@ public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: B
     return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
+            if let _ = offsetLink {
+                flags |= (1 << 2)
+            }
             if revoked {
                 flags |= (1 << 3)
             }
-            return account.network.request(Api.functions.messages.getExportedChatInvites(flags: flags, peer: inputPeer, adminId: nil, offsetLink: nil, limit: 50))
+            return account.network.request(Api.functions.messages.getExportedChatInvites(flags: flags, peer: inputPeer, adminId: nil, offsetLink: offsetLink, limit: 50))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.ExportedChatInvites?, NoError> in
                 return .single(nil)

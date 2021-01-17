@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ ! -d "$1" ]; then
+    exit 1
+fi
+
+cp -R build-system/example-configuration/* "$1/"

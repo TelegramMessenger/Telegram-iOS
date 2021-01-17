@@ -55,6 +55,12 @@ genrule(
     rm -rf "$$BUILD_DIR"
     mkdir -p "$$BUILD_DIR"
 
+    YASM_DIR="$$BUILD_DIR/yasm"
+    rm -rf "$$YASM_DIR"
+    mkdir -p "$$YASM_DIR"
+    tar -xf "$(location //third-party/yasm:yasm.tar)" -C "$$YASM_DIR"
+    ABS_YASM_DIR="$$(pwd)/$$(dirname $$YASM_DIR)/$$(basename $$YASM_DIR)"
+
     cp $(location :build-libvpx-bazel.sh) "$$BUILD_DIR/"
     cp $(location :0001-Add-support-for-arm64-iphonesimulator-gcc.patch) "$$BUILD_DIR/"
 
@@ -81,6 +87,9 @@ genrule(
     outs = ["Public/vpx/" + x for x in headers] +
     ["Public/vpx/vpx_config.h"] +
     ["Public/vpx/lib{}.a".format(x) for x in libs],
+    tools = [
+        "//third-party/yasm:yasm.tar",
+    ],
     visibility = [
         "//visibility:public",
     ]

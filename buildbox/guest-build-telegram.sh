@@ -13,8 +13,8 @@ if [ -z "COMMIT_ID" ]; then
 fi
 
 if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "testinghockeyapp" ]; then
-	CERTS_PATH="$HOME/codesigning_data/certs"
-	PROFILES_PATH="$HOME/codesigning_data/profiles"
+	CERTS_PATH="$HOME/codesigning_data/certs/enterprise"
+	#PROFILES_PATH="$HOME/codesigning_data/profiles"
 elif [ "$1" == "testinghockeyapp-local" ]; then
 	CERTS_PATH="$HOME/codesigning_data/certs"
 	PROFILES_PATH="$HOME/codesigning_data/profiles"
@@ -79,7 +79,7 @@ echo "Unpacking files..."
 
 mkdir -p "$SOURCE_PATH/buildbox"
 mkdir -p "$SOURCE_PATH/buildbox/transient-data"
-cp -r "$HOME/codesigning_teams" "$SOURCE_PATH/buildbox/transient-data/teams"
+#cp -r "$HOME/codesigning_teams" "$SOURCE_PATH/buildbox/transient-data/teams"
 
 BASE_DIR=$(pwd)
 cd "$SOURCE_PATH"
@@ -95,17 +95,18 @@ done
 
 security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
-mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+#mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
 
-for f in $(ls "$PROFILES_PATH"); do
-	PROFILE_PATH="$PROFILES_PATH/$f"
-	uuid=`grep UUID -A1 -a "$PROFILE_PATH" | grep -io "[-A-F0-9]\{36\}"`
-	cp -f "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
-done
+#for f in $(ls "$PROFILES_PATH"); do
+#	PROFILE_PATH="$PROFILES_PATH/$f"
+#	uuid=`grep UUID -A1 -a "$PROFILE_PATH" | grep -io "[-A-F0-9]\{36\}"`
+#	cp -f "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
+#done
 
 if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ]; then
-	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/internal.sh"
-	APP_TARGET="bazel_app_arm64"
+	#BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/internal.sh"
+	#APP_TARGET="bazel_app_arm64"
+	echo "" >> /dev/null
 elif [ "$1" == "appstore" ]; then
 	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/appstore.sh"
 	APP_TARGET="bazel_app"
@@ -126,7 +127,15 @@ elif [ "$1" == "appcenter-experimental-2" ]; then
 	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_2_ID"
 fi
 
-PATH="$PATH:$(pwd)/tools" BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
+#PATH="$PATH:$(pwd)/tools" BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
+
+python3 build-system/Make/Make.py \
+    --bazel="$(pwd)/tools/bazel" \
+    --cacheHost="$BAZEL_HTTP_CACHE_URL" \
+    build \
+    --configurationPath="$HOME/telegram-configuration" \
+    --buildNumber="$BUILD_NUMBER" \
+    --configuration=release_arm64
 
 OUTPUT_PATH="build/artifacts"
 rm -rf "$OUTPUT_PATH"

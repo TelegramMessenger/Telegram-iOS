@@ -5,7 +5,7 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
-XCODE_VERSION="12.2"
+XCODE_VERSION="12.3"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
@@ -58,7 +58,7 @@ cp "$BAZEL" "tools/bazel"
 BUILD_CONFIGURATION="$1"
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
-	CODESIGNING_SUBPATH="transient-data/codesigning"
+	CODESIGNING_SUBPATH="transient-data/telegram-codesigning/codesigning"
 	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
@@ -90,28 +90,25 @@ fi
 BASE_DIR=$(pwd)
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	if [ ! `which setup-telegram-build.sh` ]; then
-		echo "setup-telegram-build.sh not found in PATH $PATH"
+	if [ ! `which generate-configuration.sh` ]; then
+		echo "generate-configuration.sh not found in PATH $PATH"
 		exit 1
-	fi
-	if [ ! `which setup-codesigning.sh` ]; then
-		echo "setup-codesigning.sh not found in PATH $PATH"
-		exit 1
-	fi
-	source `which setup-telegram-build.sh`
-	setup_telegram_build "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
-	source `which setup-codesigning.sh`
-
-	CODESIGNING_CONFIGURATION="$BUILD_CONFIGURATION"
-	if [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
-		CODESIGNING_CONFIGURATION="hockeyapp"
 	fi
 
-	setup_codesigning "$CODESIGNING_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
-	if [ "$SETUP_TELEGRAM_BUILD_VERSION" != "$BUILD_TELEGRAM_VERSION" ]; then
-		echo "setup-telegram-build.sh script version doesn't match"
-		exit 1
-	fi
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning"
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+
+	case "$BUILD_CONFIGURATION" in
+		"hockeyapp")
+			generate-configuration.sh internal release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+			;;
+
+		*)
+			echo "Unknown build configuration $BUILD_CONFIGURATION"
+			exit 1
+			;;
+	esac
+
 	if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 		if [ -z "$TELEGRAM_BUILD_APPSTORE_PASSWORD" ]; then
 			echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
@@ -186,13 +183,14 @@ elif [ "$BUILD_MACHINE" == "macOS" ]; then
 fi
 
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
-scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_TEAMS_SUBPATH" telegram@"$VM_IP":codesigning_teams
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration" telegram@"$VM_IP":telegram-configuration
+#scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_TEAMS_SUBPATH" telegram@"$VM_IP":codesigning_teams
 
-if [ "$BUILD_CONFIGURATION" == "verify" ]; then
-	ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "mkdir -p telegram-ios-shared/fastlane; echo '' > telegram-ios-shared/fastlane/Fastfile"
-else
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/transient-data/telegram-ios-shared" telegram@"$VM_IP":telegram-ios-shared
-fi
+#if [ "$BUILD_CONFIGURATION" == "verify" ]; then
+#	ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "mkdir -p telegram-ios-shared/fastlane; echo '' > telegram-ios-shared/fastlane/Fastfile"
+#else
+#	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/transient-data/telegram-ios-shared" telegram@"$VM_IP":telegram-ios-shared
+#fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
 ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BAZEL_HTTP_CACHE_URL=\"$BAZEL_HTTP_CACHE_URL\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true

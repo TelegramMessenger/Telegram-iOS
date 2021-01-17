@@ -9,6 +9,7 @@ import Contacts
 import OpenSSLEncryptionProvider
 import AppLockState
 import UIKit
+import GeneratedSources
 
 private var accountCache: Account?
 
