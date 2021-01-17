@@ -362,7 +362,7 @@ private final class PeerInvitationImportersContextImpl {
         |> mapToSignal { inputPeer -> Signal<([PeerInvitationImportersState.Importer], Int), NoError> in
             if let inputPeer = inputPeer {
                 let offsetUser = lastResult?.peer.peer.flatMap { apiInputUser($0) } ?? .inputUserEmpty
-                let offsetDate = lastResult?.date ?? 0
+                let offsetDate = populateCache ? 0 : lastResult?.date ?? 0
                 let signal = account.network.request(Api.functions.messages.getChatInviteImporters(peer: inputPeer, link: link, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.ChatInviteImporters?, NoError> in
