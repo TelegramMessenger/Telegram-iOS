@@ -1035,6 +1035,14 @@ public final class VoiceChatController: ViewController {
                 let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers?.totalCount ?? 0)))
                 strongSelf.currentSubtitle = subtitle
                 
+                if let callState = strongSelf.callState, callState.canManageCall {
+                    strongSelf.optionsButton.isUserInteractionEnabled = true
+                    strongSelf.optionsButton.alpha = 1.0
+                } else {
+                    strongSelf.optionsButton.isUserInteractionEnabled = false
+                    strongSelf.optionsButton.alpha = 0.0
+                }
+                
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                 }
@@ -1073,27 +1081,6 @@ public final class VoiceChatController: ViewController {
                     
                     strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
-                }
-                
-                if let peer = peerViewMainPeer(view) {
-                    if let channel = peer as? TelegramChannel {
-                        if channel.hasPermission(.manageCalls) {
-                            strongSelf.optionsButton.isUserInteractionEnabled = true
-                            strongSelf.optionsButton.alpha = 1.0
-                        } else {
-                            strongSelf.optionsButton.isUserInteractionEnabled = false
-                            strongSelf.optionsButton.alpha = 0.0
-                        }
-                    } else if let group = peer as? TelegramGroup {
-                        switch group.role {
-                        case .creator, .admin:
-                            strongSelf.optionsButton.isUserInteractionEnabled = true
-                            strongSelf.optionsButton.alpha = 1.0
-                        default:
-                            strongSelf.optionsButton.isUserInteractionEnabled = false
-                            strongSelf.optionsButton.alpha = 0.0
-                        }
-                    }
                 }
             })
             
@@ -1142,7 +1129,7 @@ public final class VoiceChatController: ViewController {
             
             self.audioOutputNode.addTarget(self, action: #selector(self.audioOutputPressed), forControlEvents: .touchUpInside)
             
-            self.optionsButton.contextAction = { [weak self, weak optionsButton] sourceNode, gesture in
+            self.optionsButton.contextAction = { [weak self] sourceNode, gesture in
                 guard let strongSelf = self, let controller = strongSelf.controller else {
                     return
                 }
@@ -1181,16 +1168,7 @@ public final class VoiceChatController: ViewController {
                         strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: true)
                     })))
                 }
-                
-                if !items.isEmpty {
-                    items.append(.separator)
-                }
-                
-                items.append(.custom(VoiceChatRecordingContextItem(timestamp: CFAbsoluteTimeGetCurrent(), action: { (_, f) in
-                    f(.dismissWithoutContent)
-                    
-                }), false))
-                
+                                
                 if !items.isEmpty {
                     items.append(.separator)
                 }
@@ -1223,6 +1201,10 @@ public final class VoiceChatController: ViewController {
                         })])
                         strongSelf.controller?.present(alert, in: .window(.root))
                     })))
+                }
+                
+                if items.isEmpty {
+                    return
                 }
                 
                 let optionsButton: VoiceChatHeaderButton

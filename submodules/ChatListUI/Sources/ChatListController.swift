@@ -1970,6 +1970,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         let _ = (signal
                         |> deliverOnMainQueue).start()
+                        
+                        strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                            var state = state
+                            for peerId in peerIds {
+                                state.selectedPeerIds.remove(peerId)
+                            }
+                            return state
+                        })
+                        
                         return true
                     } else if value == .undo {
                         strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
@@ -2524,6 +2533,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     deleteSendMessageIntents(peerId: peerId)
                 })
+                
+                strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                    var state = state
+                    state.selectedPeerIds.remove(peerId)
+                    return state
+                })
+                
                 completion()
                 return true
             } else if value == .undo {

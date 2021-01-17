@@ -43,7 +43,7 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
         self.onPlaybackStarted = onPlaybackStarted
         updateStatus(self.status)
         
-        if self.url.contains("player.twitch.tv/"), let url = URL(string: self.url) {
+        if self.url.contains(".twitch.tv/"), let url = URL(string: self.url) {
             webView.load(URLRequest(url: url))
         } else {
             let html = String(format: htmlTemplate, self.url)

@@ -1674,7 +1674,7 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
 }
 
 private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32, reportSpam: Bool) -> Signal<Void, NoError> {
-    return network.request(Api.functions.messages.discardEncryption(chatId: peerId.id))
+    return network.request(Api.functions.messages.discardEncryption(flags: 0, chatId: peerId.id))
     |> map(Optional.init)
     |> `catch` { _ in
         return .single(nil)

@@ -5816,3 +5816,76 @@ Sorry for the inconvenience.";
 
 "PeerInfo.ButtonVoiceChat" = "Voice Chat";
 "VoiceChat.OpenChat" = "Open Chat";
+
+"GroupInfo.InviteLinks" = "Invite Links";
+
+"InviteLink.Title" = "Invite Links";
+"InviteLink.PermanentLink" = "Permanent Link";
+"InviteLink.Share" = "Share Link";
+"InviteLink.PeopleJoinedNone" = "no one joined yet";
+"InviteLink.PeopleJoined_1" = "%@ people joined";
+"InviteLink.PeopleJoined_2" = "%@ people joined";
+"InviteLink.PeopleJoined_3_10" = "%@ people joined";
+"InviteLink.PeopleJoined_many" = "%@ people joined";
+"InviteLink.PeopleJoined_any" = "%@ people joined";
+"InviteLink.CreatePrivateLinkHelp" = "Anyone who has Telegram installed will be able to join your group by following this link.";
+"InviteLink.Manage" = "Manage Invite Links";
+
+"InviteLink.PeopleJoinedShortNoneExpired" = "no one joined";
+"InviteLink.PeopleJoinedShortNone" = "no one joined yet";
+"InviteLink.PeopleJoinedShort_1" = "%@ joined";
+"InviteLink.PeopleJoinedShort_2" = "%@ joined";
+"InviteLink.PeopleJoinedShort_3_10" = "%@ joined";
+"InviteLink.PeopleJoinedShort_many" = "%@ joined";
+"InviteLink.PeopleJoinedShort_any" = "%@ joined";
+
+"InviteLink.Expired" = "expired";
+"InviteLink.UsageLimitReached" = "limit reached";
+"InviteLink.Revoked" = "revoked";
+
+"InviteLink.AdditionalLinks" = "Additional Links";
+"InviteLink.Create" = "Create a New Link";
+"InviteLink.CreateInfo" = "You can create additional invite links that have limited time or number of usages.";
+
+"InviteLink.RevokedLinks" = "Revoked Links";
+"InviteLink.DeleteAllRevokedLinks" = "Delete All Revoked Links";
+
+"InviteLink.ContextCopy" = "Copy";
+"InviteLink.ContextEdit" = "Edit";
+"InviteLink.ContextGetQRCode" = "Get QR Code";
+"InviteLink.ContextShare" = "Share";
+"InviteLink.ContextRevoke" = "Revoke";
+"InviteLink.ContextDelete" = "Delete";
+
+"InviteLink.Create.Title" = "New Link";
+"InviteLink.Create.EditTitle" = "Edit Link";
+
+"InviteLink.Create.TimeLimit" = "Limit By Time Period";
+"InviteLink.Create.TimeLimitExpiryDate" = "Expiry Date";
+"InviteLink.Create.TimeLimitExpiryDateNever" = "Never";
+"InviteLink.Create.TimeLimitExpiryTime" = "Time";
+"InviteLink.Create.TimeLimitInfo" = "You can make the link expire after a certain time.";
+"InviteLink.Create.TimeLimitNoLimit" = "No Limit";
+
+"InviteLink.Create.UsersLimit" = "Limit By Number Of Users";
+"InviteLink.Create.UsersLimitNumberOfUsers" = "Number of Uses";
+"InviteLink.Create.UsersLimitNumberOfUsersUnlimited" = "Unlimited";
+"InviteLink.Create.UsersLimitInfo" = "You can make the link expire after it has been used for a certain number of times.";
+"InviteLink.Create.UsersLimitNoLimit" = "No Limit";
+
+"InviteLink.Create.Revoke" = "Revoke Link";
+
+"InviteLink.QRCode.Title" = "Invite by QR Code";
+"InviteLink.QRCode.Info" = "Everyone on Telegram can scan this code to join your group.";
+"InviteLink.QRCode.Share" = "Share QR Code";
+
+"InviteLink.InviteLink" = "Invite Link";
+"InviteLink.CreatedBy" = "Link Created By";
+
+"InviteLink.DeleteAllRevokedLinksAlert.Text" = "This will delete all revoked links";
+"InviteLink.DeleteAllRevokedLinksAlert.Action" = "Delete";
+
+"Conversation.ChecksTooltip.Delivered" = "Delivered";
+"Conversation.ChecksTooltip.Read" = "Read";
+
+"DialogList.MultipleTypingPair" = "%@ and %@ are typing";

@@ -66,7 +66,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
             } else {
                 Logger.shared.log("State", "got encryptedChat, but peer or state don't exist or account is not creator")
             }
-        case .encryptedChatDiscarded(_):
+        case let .encryptedChatDiscarded(flags, _):
             if let currentPeer = currentPeer, let currentState = currentState {
                 let state = currentState.withUpdatedEmbeddedState(.terminated)
                 let peer = currentPeer.withUpdatedEmbeddedState(state.embeddedState.peerState)

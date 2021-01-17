@@ -1341,6 +1341,7 @@ struct ChatListViewState {
                 case let .IntermediateMessageEntry(index, messageIndex):
                     var peers = SimpleDictionary<PeerId, Peer>()
                     var notificationsPeerId = index.messageIndex.id.peerId
+                    var presence: PeerPresence?
                     if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
                         peers[peer.id] = peer
                         if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
@@ -1350,6 +1351,9 @@ struct ChatListViewState {
                             if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
                                 peers[associatedPeer.id] = associatedPeer
                             }
+                            presence = postbox.peerPresenceTable.get(associatedPeerId)
+                        } else {
+                            presence = postbox.peerPresenceTable.get(index.messageIndex.id.peerId)
                         }
                     }
                     let renderedPeer = RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers)
@@ -1387,7 +1391,7 @@ struct ChatListViewState {
                         }
                     }
                     
-                    let updatedEntry: MutableChatListEntry = .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState, renderedPeer: renderedPeer, presence: postbox.peerPresenceTable.get(index.messageIndex.id.peerId), tagSummaryInfo: tagSummaryInfo, hasFailedMessages: false, isContact: postbox.contactsTable.isContact(peerId: index.messageIndex.id.peerId))
+                    let updatedEntry: MutableChatListEntry = .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState, renderedPeer: renderedPeer, presence: presence, tagSummaryInfo: tagSummaryInfo, hasFailedMessages: false, isContact: postbox.contactsTable.isContact(peerId: index.messageIndex.id.peerId))
                     if directionIndex == 0 {
                         self.stateBySpace[space]!.orderedEntries.setLowerOrAtAnchorAtArrayIndex(listIndex, to: updatedEntry)
                     } else {

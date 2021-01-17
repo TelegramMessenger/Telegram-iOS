@@ -13,6 +13,9 @@ import Postbox
 import SyncCore
 import TelegramCore
 import OpenSSLEncryptionProvider
+import WidgetItemsUtils
+
+import GeneratedSources
 
 private var installedSharedLogger = false
 
@@ -156,9 +159,16 @@ struct Provider: IntentTimelineProvider {
                             )
                         }
                         
+                        var mappedMessage: WidgetDataPeer.Message?
+                        if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
+                            if let message = transaction.getMessage(index.id) {
+                                mappedMessage = WidgetDataPeer.Message(message: message)
+                            }
+                        }
+                        
                         peers.append(WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return postbox.mediaBox.resourcePath(representation.resource)
-                        }, badge: badge))
+                        }, badge: badge, message: mappedMessage))
                     }
                 }
                 return WidgetDataPeers(accountPeerId: widgetPeers.accountPeerId, peers: peers)
@@ -195,12 +205,13 @@ struct AvatarItemView: View {
     var accountPeerId: Int64
     var peer: WidgetDataPeer
     var itemSize: CGFloat
+    var displayBadge: Bool = true
     
     var body: some View {
         return ZStack {
             Image(uiImage: avatarImage(accountPeerId: accountPeerId, peer: peer, size: CGSize(width: itemSize, height: itemSize)))
                 .clipShape(Circle())
-            if let badge = peer.badge, badge.count > 0 {
+            if displayBadge, let badge = peer.badge, badge.count > 0 {
                 Text("\(badge.count)")
                     .font(Font.system(size: 16.0))
                     .multilineTextAlignment(.center)
@@ -219,6 +230,7 @@ struct AvatarItemView: View {
 
 struct WidgetView: View {
     @Environment(\.widgetFamily) private var widgetFamily
+    @Environment(\.colorScheme) private var colorScheme
     let data: PeersWidgetData
     
     func placeholder(geometry: GeometryProxy) -> some View {
@@ -329,10 +341,148 @@ struct WidgetView: View {
         }
     }
     
-    var body: some View {
+    var body1: some View {
         ZStack {
             peerViews()
         }
+        .padding(0.0)
+    }
+    
+    func chatTopLine(_ peer: WidgetDataPeer) -> some View {
+        let dateText: String
+        if let message = peer.message {
+            dateText = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .none, timeStyle: .short)
+        } else {
+            dateText = ""
+        }
+        return HStack(alignment: .center, spacing: 0.0, content: {
+            Text(peer.name).font(Font.system(size: 16.0, weight: .medium, design: .default)).foregroundColor(.primary)
+            Spacer()
+            Text(dateText).font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
+        })
+    }
+    
+    func chatBottomLine(_ peer: WidgetDataPeer) -> some View {
+        var text = peer.message?.text ?? ""
+        if let message = peer.message {
+            //TODO:localize
+            switch message.content {
+            case .text:
+                break
+            case .image:
+                text = "🖼 Photo"
+            case .video:
+                text = "📹 Video"
+            case .gif:
+                text = "Gif"
+            case let .file(file):
+                text = "📎 \(file.name)"
+            case let .music(music):
+                if !music.title.isEmpty && !music.artist.isEmpty {
+                    text = "\(music.artist) — \(music.title)"
+                } else if !music.title.isEmpty {
+                    text = music.title
+                } else if !music.artist.isEmpty {
+                    text = music.artist
+                } else {
+                    text = "Music"
+                }
+            case .voiceMessage:
+                text = "🎤 Voice Message"
+            case .videoMessage:
+                text = "Video Message"
+            case let .sticker(sticker):
+                text = "\(sticker.altText) Sticker"
+            case let .call(call):
+                if call.isVideo {
+                    text = "Video Call"
+                } else {
+                    text = "Voice Call"
+                }
+            case .mapLocation:
+                text = "Location"
+            case let .game(game):
+                text = "🎮 \(game.title)"
+            case let .poll(poll):
+                text = "📊 \(poll.title)"
+            }
+        }
+        
+        var hasBadge = false
+        if let badge = peer.badge, badge.count > 0 {
+            hasBadge = true
+        }
+        
+        return HStack(alignment: .center, spacing: hasBadge ? 6.0 : 0.0, content: {
+            Text(text).lineLimit(nil).font(Font.system(size: 15.0, weight: .regular, design: .default)).foregroundColor(.secondary).multilineTextAlignment(.leading).frame(maxHeight: .infinity, alignment: .topLeading)
+            Spacer()
+            if let badge = peer.badge, badge.count > 0 {
+                VStack {
+                    Spacer()
+                    Text("\(badge.count)")
+                        .font(Font.system(size: 14.0))
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 4.0)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(badge.isMuted ? Color.gray : Color.blue)
+                                .frame(minWidth: 20, idealWidth: 20, maxWidth: .infinity, minHeight: 20, idealHeight: 20, maxHeight: 20.0, alignment: .center)
+                        )
+                        .padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 6.0, trailing: 3.0))
+                }
+            }
+        })
+    }
+    
+    func chatContent(_ peer: WidgetDataPeer) -> some View {
+        return VStack(alignment: .leading, spacing: 2.0, content: {
+            chatTopLine(peer)
+            chatBottomLine(peer).frame(maxHeight: .infinity)
+        })
+    }
+    
+    func chatContentView(_ index: Int) -> AnyView {
+        let peers: WidgetDataPeers
+        switch data {
+        case let .peers(peersValue):
+            peers = peersValue
+            if peers.peers.count <= index {
+                return AnyView(Spacer())
+            }
+        default:
+            return AnyView(Spacer())
+        }
+        
+        return AnyView(
+            Link(destination: URL(string: linkForPeer(id: peers.peers[index].id))!, label: {
+                HStack(alignment: .center, spacing: 0.0, content: {
+                AvatarItemView(accountPeerId: peers.accountPeerId, peer: peers.peers[index], itemSize: 60.0, displayBadge: false).frame(width: 60.0, height: 60.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                chatContent(peers.peers[index]).frame(maxWidth: .infinity).padding(EdgeInsets(top: 10.0, leading: 0.0, bottom: 10.0, trailing: 10.0))
+                })
+            })
+        )
+    }
+    
+    func getSeparatorColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 200.0 / 255.0, green: 199.0 / 255.0, blue: 204.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 61.0 / 255.0, green: 61.0 / 255.0, blue: 64.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    var body: some View {
+        GeometryReader(content: { geometry in
+            ZStack {
+                chatContentView(0).position(x: geometry.size.width / 2.0, y: geometry.size.height / 4.0).frame(width: geometry.size.width, height: geometry.size.height / 2.0, alignment: .leading)
+                chatContentView(1).position(x: geometry.size.width / 2.0, y: geometry.size.height / 2.0 + geometry.size.height / 4.0).frame(width: geometry.size.width, height: geometry.size.height / 2.0, alignment: .leading)
+                Rectangle().foregroundColor(getSeparatorColor()).position(x: geometry.size.width / 2.0, y: geometry.size.height / 4.0).frame(width: geometry.size.width, height: 0.33, alignment: .leading)
+            }
+        })
         .padding(0.0)
     }
 }
@@ -429,7 +579,7 @@ struct Static_Widget: Widget {
         return IntentConfiguration(kind: kind, intent: SelectFriendsIntent.self, provider: Provider(), content: { entry in
             WidgetView(data: getWidgetData(contents: entry.contents))
         })
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemMedium])
         .configurationDisplayName(presentationData.widgetGalleryTitle)
         .description(presentationData.widgetGalleryDescription)
     }

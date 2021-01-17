@@ -3,10 +3,16 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+public protocol TooltipControllerCustomContentNode: ASDisplayNode {
+    func animateIn()
+    func updateLayout(size: CGSize) -> CGSize
+}
+
 public enum TooltipControllerContent: Equatable {
     case text(String)
     case attributedText(NSAttributedString)
     case iconAndText(UIImage, String)
+    case custom(TooltipControllerCustomContentNode)
     
     var text: String {
         switch self {
@@ -14,6 +20,8 @@ public enum TooltipControllerContent: Equatable {
                 return text
             case let .attributedText(text):
                 return text.string
+            case .custom:
+                return ""
         }
     }
     
@@ -22,6 +30,35 @@ public enum TooltipControllerContent: Equatable {
             return image
         }
         return nil
+    }
+    
+    public static func == (lhs: TooltipControllerContent, rhs: TooltipControllerContent) -> Bool {
+        switch lhs {
+            case let .text(lhsText):
+                if case let .text(rhsText) = rhs, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .attributedText(lhsText):
+                if case let .attributedText(rhsText) = rhs, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .iconAndText(_, lhsText):
+                if case let .iconAndText(_, rhsText) = rhs, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .custom(lhsNode):
+                if case let .custom(rhsNode) = rhs, lhsNode === rhsNode {
+                    return true
+                } else {
+                    return false
+                }
+        }
     }
 }
 

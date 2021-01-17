@@ -449,7 +449,6 @@ private class PeersNearbyControllerImpl: ItemListController {
     }
 }
 
-
 public func peersNearbyController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?

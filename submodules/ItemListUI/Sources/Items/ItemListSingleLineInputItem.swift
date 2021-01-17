@@ -29,6 +29,11 @@ public enum ItemListSingleLineInputClearType: Equatable {
     }
 }
 
+public enum ItemListSingleLineInputAlignment {
+    case `default`
+    case right
+}
+
 public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let title: NSAttributedString
@@ -36,6 +41,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let placeholder: String
     let type: ItemListSingleLineInputItemType
     let returnKeyType: UIReturnKeyType
+    let alignment: ItemListSingleLineInputAlignment
     let spacing: CGFloat
     let clearType: ItemListSingleLineInputClearType
     let maxLength: Int
@@ -49,13 +55,14 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let cleared: (() -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, alignment: ItemListSingleLineInputAlignment = .default, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.title = title
         self.text = text
         self.placeholder = placeholder
         self.type = type
         self.returnKeyType = returnKeyType
+        self.alignment = alignment
         self.spacing = spacing
         self.clearType = clearType
         self.maxLength = maxLength
@@ -324,6 +331,13 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                     }
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: 1.0), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset + titleLayout.size.width + item.spacing)), height: layout.contentSize.height - 2.0))
+                    
+                    switch item.alignment {
+                        case .default:
+                            strongSelf.textNode.textField.textAlignment = .natural
+                        case .right:
+                            strongSelf.textNode.textField.textAlignment = .right
+                    }
                     
                     if let image = updatedClearIcon {
                         strongSelf.clearIconNode.image = image

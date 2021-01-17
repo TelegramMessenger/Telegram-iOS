@@ -22,17 +22,19 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let icon: UIImage?
     let title: String
     public let alwaysPlain: Bool
+    let hasSeparator: Bool
     let editing: Bool
     let height: ItemListPeerActionItemHeight
     let color: ItemListPeerActionItemColor
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
         self.alwaysPlain = alwaysPlain
+        self.hasSeparator = hasSeparator
         self.editing = editing
         self.height = height
         self.color = color
@@ -256,6 +258,8 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                             hasBottomCorners = true
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
+                    
+                    strongSelf.bottomStripeNode.isHidden = strongSelf.bottomStripeNode.isHidden || !item.hasSeparator
                     
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     

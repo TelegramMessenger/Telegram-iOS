@@ -58,15 +58,21 @@ private func loadCountryCodes() -> [(String, Int)] {
 
 private let countryCodes: [(String, Int)] = loadCountryCodes()
 
-func localizedCountryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, Int)] {
+func localizedCountryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, [Int])] {
     let locale = localeWithStrings(strings)
-    var result: [((String, String), String, Int)] = []
+    var result: [((String, String), String, [Int])] = []
     for country in AuthorizationSequenceCountrySelectionController.countries() {
         if country.hidden {
             continue
         }
-        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: country.id), let countryName = locale.localizedString(forRegionCode: country.id), let codeValue = country.countryCodes.first?.code, let code = Int(codeValue) {
-            result.append(((englishCountryName, countryName), country.id, code))
+        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: country.id), let countryName = locale.localizedString(forRegionCode: country.id) {
+            var codes: [Int] = []
+            for codeValue in country.countryCodes {
+                if let code = Int(codeValue.code) {
+                    codes.append(code)
+                }
+            }
+            result.append(((englishCountryName, countryName), country.id, codes))
         } else {
             assertionFailure()
         }
@@ -128,7 +134,7 @@ private func matchStringTokens(_ tokens: [ValueBoxKey], with other: [ValueBoxKey
     return false
 }
 
-private func searchCountries(items: [((String, String), String, Int)], query: String) -> [((String, String), String, Int)] {
+private func searchCountries(items: [((String, String), String, [Int])], query: String) -> [((String, String), String, Int)] {
     let queryTokens = stringTokens(query.lowercased())
     
     var result: [((String, String), String, Int)] = []
@@ -136,7 +142,9 @@ private func searchCountries(items: [((String, String), String, Int)], query: St
         let string = "\(item.0) \(item.1)"
         let tokens = stringTokens(string)
         if matchStringTokens(tokens, with: queryTokens) {
-            result.append(item)
+            for code in item.2 {
+                result.append((item.0, item.1, code))
+            }
         }
     }
     
@@ -158,7 +166,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     private let sectionTitles: [String]
     
     private var searchResults: [((String, String), String, Int)] = []
-    private let countryNamesAndCodes: [((String, String), String, Int)]
+    private let countryNamesAndCodes: [((String, String), String, [Int])]
     
     init(theme: PresentationTheme, strings: PresentationStrings, displayCodes: Bool, itemSelected: @escaping (((String, String), String, Int)) -> Void) {
         self.theme = theme
@@ -181,14 +189,16 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         self.countryNamesAndCodes = countryNamesAndCodes
         
         var sections: [(String, [((String, String), String, Int)])] = []
-        for (names, id, code) in countryNamesAndCodes.sorted(by: { lhs, rhs in
+        for (names, id, codes) in countryNamesAndCodes.sorted(by: { lhs, rhs in
             return lhs.0.1 < rhs.0.1
         }) {
             let title = String(names.1[names.1.startIndex ..< names.1.index(after: names.1.startIndex)]).uppercased()
             if sections.isEmpty || sections[sections.count - 1].0 != title {
                 sections.append((title, []))
             }
-            sections[sections.count - 1].1.append((names, id, code))
+            for code in codes {
+                sections[sections.count - 1].1.append((names, id, code))
+            }
         }
         self.sections = sections
         self.sectionTitles = sections.map { $0.0 }

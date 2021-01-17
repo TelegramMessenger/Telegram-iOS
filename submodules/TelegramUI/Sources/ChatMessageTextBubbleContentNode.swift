@@ -617,4 +617,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return nil
     }
+    
+    override func getStatusNode() -> ASDisplayNode? {
+        return self.statusNode
+    }
 }

@@ -556,7 +556,7 @@ extension Api.EncryptedChat {
         switch self {
             case let .encryptedChat(id, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
-            case let .encryptedChatDiscarded(id):
+            case let .encryptedChatDiscarded(_, id):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
             case let .encryptedChatEmpty(id):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)

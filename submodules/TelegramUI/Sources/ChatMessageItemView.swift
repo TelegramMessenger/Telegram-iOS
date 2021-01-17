@@ -835,4 +835,8 @@ public class ChatMessageItemView: ListViewItemNode {
     func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         return nil
     }
+    
+    func getStatusNode() -> ASDisplayNode? {
+        return nil
+    }
 }

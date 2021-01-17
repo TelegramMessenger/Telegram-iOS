@@ -2,6 +2,8 @@
 
 #import <LegacyComponents/LegacyComponents.h>
 
+#import "LegacyComponentsInternal.h"
+
 #import <LegacyComponents/TGModernGalleryController.h>
 #import "TGClipboardGalleryPhotoItem.h"
 #import "TGClipboardGalleryModel.h"
@@ -14,6 +16,8 @@
 #import <LegacyComponents/TGMediaAssetFetchResult.h>
 #import <LegacyComponents/TGMediaAssetMomentList.h>
 #import <LegacyComponents/TGMediaAssetMoment.h>
+
+#import "TGMediaPickerSendActionSheetController.h"
 
 @interface TGClipboardGalleryMixin ()
 {
@@ -35,7 +39,7 @@
 
 @implementation TGClipboardGalleryMixin
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName
 {
     self = [super init];
     if (self != nil)
@@ -109,7 +113,96 @@
             strongSelf->_galleryModel.dismiss(true, false);
             
             if (strongSelf.completeWithItem != nil)
-                strongSelf.completeWithItem((TGClipboardGalleryPhotoItem *)item);
+                strongSelf.completeWithItem((TGClipboardGalleryPhotoItem *)item, false, 0);
+        };
+        
+        model.interfaceView.doneLongPressed = ^(id<TGModernGalleryItem> item) {
+            __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
+            if (strongSelf == nil || !(hasSilentPosting || hasSchedule))
+                return;
+            
+            if (iosMajorVersion() >= 10) {
+                UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+                [generator impactOccurred];
+            }
+            
+            bool effectiveHasSchedule = hasSchedule;
+            for (id item in strongSelf->_galleryModel.selectionContext.selectedItems)
+            {
+                if ([item isKindOfClass:[TGMediaAsset class]])
+                {
+                    if ([[strongSelf->_editingContext timerForItem:item] integerValue] > 0)
+                    {
+                        effectiveHasSchedule = false;
+                        break;
+                    }
+                }
+            }
+            
+            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context isDark:true sendButtonFrame:strongSelf.galleryModel.interfaceView.doneButtonFrame canSendSilently:hasSilentPosting canSchedule:effectiveHasSchedule reminder:reminder hasTimer:hasTimer];
+            controller.send = ^{
+                __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf->_galleryModel.dismiss(true, false);
+                
+                if (strongSelf.completeWithItem != nil)
+                    strongSelf.completeWithItem((TGClipboardGalleryPhotoItem *)item, false, 0);
+            };
+            controller.sendSilently = ^{
+                __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf->_galleryModel.dismiss(true, false);
+                
+                if (strongSelf.completeWithItem != nil)
+                    strongSelf.completeWithItem((TGClipboardGalleryPhotoItem *)item, true, 0);
+            };
+            controller.schedule = ^{
+                __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf.presentScheduleController(^(int32_t time) {
+                    __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    strongSelf->_galleryModel.dismiss(true, false);
+                    
+                    if (strongSelf.completeWithItem != nil)
+                        strongSelf.completeWithItem((TGClipboardGalleryPhotoItem *)item, false, time);
+                });
+            };
+            controller.sendWithTimer = ^{
+                __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf.presentTimerController(^(int32_t time) {
+                    __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    strongSelf->_galleryModel.dismiss(true, false);
+                    
+                    TGMediaEditingContext *editingContext = strongSelf->_editingContext;
+                    NSMutableArray *items = [strongSelf->_galleryModel.selectionContext.selectedItems mutableCopy];
+                    [items addObject:((TGClipboardGalleryPhotoItem *)item).image];
+                    
+                    for (id<TGMediaEditableItem> editableItem in items) {
+                        [editingContext setTimer:@(time) forItem:editableItem];
+                    }
+                    
+                    if (strongSelf.completeWithItem != nil)
+                        strongSelf.completeWithItem((TGClipboardGalleryPhotoItem *)item, false, 0);
+                });
+            };
+            
+            TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:[strongSelf->_context makeOverlayWindowManager] parentController:strongSelf->_parentController contentController:controller];
+            controllerWindow.hidden = false;
         };
         
         modernGallery.model = model;

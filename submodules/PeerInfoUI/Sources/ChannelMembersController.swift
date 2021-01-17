@@ -13,6 +13,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import ItemListPeerItem
+import InviteLinksUI
 
 private final class ChannelMembersControllerArguments {
     let context: AccountContext
@@ -461,7 +462,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
-        presentControllerImpl?(channelVisibilityController(context: context, peerId: peerId, mode: .privateLink, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        pushControllerImpl?(InviteLinkInviteController(context: context, peerId: peerId))
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
