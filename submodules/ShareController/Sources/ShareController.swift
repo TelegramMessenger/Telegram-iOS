@@ -135,6 +135,8 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                                     fileName = value
                                 } else if file.isVideo {
                                     fileName = "telegram_video.mp4"
+                                } else if file.isVoice {
+                                    fileName = "telegram_audio.ogg"
                                 } else {
                                     fileName = "file"
                                 }

@@ -861,6 +861,9 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                             if channel.hasPermission(.banMembers) {
                                 result.insert(.restrict)
                             }
+                            if channel.hasPermission(.addAdmins) {
+                                result.insert(.promote)
+                            }
                         }
                     }
                 case .legacyGroupMember:
@@ -904,7 +907,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
     return result
 }
 
-func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, videoCallsEnabled: Bool) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
         if !isOpenedFromChat {
@@ -931,7 +934,10 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if isOpenedFromChat {
             result.append(.search)
         }
-        result.append(.more)
+        if isSecretChat && !isContact {
+        } else {
+            result.append(.more)
+        }
     } else if let channel = peer as? TelegramChannel {
         var displayLeave = !channel.flags.contains(.isCreator)
         var canViewStats = false

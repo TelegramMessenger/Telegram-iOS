@@ -174,7 +174,11 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
                 if let index = strongSelf.searchResult.messages.firstIndex(where: { $0.index == message.index }) {
-                    strongSelf.resultSelected?(strongSelf.searchResult.messages.count - index - 1)
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        strongSelf.resultSelected?(index)
+                    } else {
+                        strongSelf.resultSelected?(strongSelf.searchResult.messages.count - index - 1)
+                    }
                 }
                 strongSelf.listNode.clearHighlightAnimated(true)
             }

@@ -17,10 +17,6 @@ import PeersNearbyUI
 import PeerInfoUI
 import SettingsUI
 import UrlHandling
-#if ENABLE_WALLET
-import WalletUI
-import WalletCore
-#endif
 import LegacyMediaPickerUI
 import LocalMediaResources
 import OverlayStatusController

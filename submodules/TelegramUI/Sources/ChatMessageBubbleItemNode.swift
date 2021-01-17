@@ -3764,4 +3764,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             forwardInfoNode.updatePsaButtonDisplay(isVisible: item.controllerInteraction.currentPsaMessageWithTooltip != item.message.id, animated: animated)
         }
     }
+    
+    override func getStatusNode() -> ASDisplayNode? {
+        for contentNode in self.contentNodes {
+            if let statusNode = contentNode.getStatusNode() {
+                return statusNode
+            }
+        }
+        if let statusNode = self.mosaicStatusNode {
+            return statusNode
+        }
+        return nil
+    }
 }

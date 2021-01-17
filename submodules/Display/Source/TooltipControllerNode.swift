@@ -12,6 +12,7 @@ final class TooltipControllerNode: ASDisplayNode {
     private let containerNode: ContextMenuContainerNode
     private let imageNode: ASImageNode
     private let textNode: ImmediateTextNode
+    private var contentNode: TooltipControllerCustomContentNode?
     
     private let dismissByTapOutside: Bool
     
@@ -45,10 +46,15 @@ final class TooltipControllerNode: ASDisplayNode {
         
         self.dismiss = dismiss
         
+        if case let .custom(contentNode) = content {
+            self.contentNode = contentNode
+        }
+        
         super.init()
         
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.textNode)
+        self.contentNode.flatMap { self.containerNode.addSubnode($0) }
         
         self.addSubnode(self.containerNode)
     }
@@ -71,20 +77,37 @@ final class TooltipControllerNode: ASDisplayNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
-        let maxActionsWidth = layout.size.width - 20.0
+        let maxWidth = layout.size.width - 20.0
         
-        var imageSize = CGSize()
-        var imageSizeWithInset = CGSize()
-        if let image = self.imageNode.image {
-            imageSize = image.size
-            imageSizeWithInset = CGSize(width: image.size.width + 12.0, height: image.size.height)
+        let contentSize: CGSize
+        
+        if let contentNode = self.contentNode {
+            contentSize = contentNode.updateLayout(size: layout.size)
+            contentNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+        } else {
+            var imageSize = CGSize()
+            var imageSizeWithInset = CGSize()
+            if let image = self.imageNode.image {
+                imageSize = image.size
+                imageSizeWithInset = CGSize(width: image.size.width + 12.0, height: image.size.height)
+            }
+            
+            var textSize = self.textNode.updateLayout(CGSize(width: maxWidth, height: CGFloat.greatestFiniteMagnitude))
+            textSize.width = ceil(textSize.width / 2.0) * 2.0
+            textSize.height = ceil(textSize.height / 2.0) * 2.0
+           
+            contentSize = CGSize(width: imageSizeWithInset.width + textSize.width + 12.0, height: textSize.height + 34.0)
+            
+            let textFrame = CGRect(origin: CGPoint(x: 6.0 + imageSizeWithInset.width, y: 17.0), size: textSize)
+            if transition.isAnimated, textFrame.size != self.textNode.frame.size {
+                transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textFrame.minX - self.textNode.frame.minX, y: 0.0))
+            }
+            
+            let imageFrame = CGRect(origin: CGPoint(x: 10.0, y: floor((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+            self.imageNode.frame = imageFrame
+            self.textNode.frame = textFrame
         }
-        
-        var textSize = self.textNode.updateLayout(CGSize(width: maxActionsWidth, height: CGFloat.greatestFiniteMagnitude))
-        textSize.width = ceil(textSize.width / 2.0) * 2.0
-        textSize.height = ceil(textSize.height / 2.0) * 2.0
-        let contentSize = CGSize(width: imageSizeWithInset.width + textSize.width + 12.0, height: textSize.height + 34.0)
-        
+            
         let sourceRect: CGRect = self.sourceRect ?? CGRect(origin: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0), size: CGSize())
         
         let insets = layout.insets(options: [.statusBar, .input])
@@ -105,19 +128,11 @@ final class TooltipControllerNode: ASDisplayNode {
         self.containerNode.relativeArrowPosition = (sourceRect.midX - horizontalOrigin, arrowOnBottom)
         
         self.containerNode.updateLayout(transition: transition)
-        
-        let textFrame = CGRect(origin: CGPoint(x: 6.0 + imageSizeWithInset.width, y: 17.0), size: textSize)
-        if transition.isAnimated, textFrame.size != self.textNode.frame.size {
-            transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textFrame.minX - self.textNode.frame.minX, y: 0.0))
-        }
-        
-        let imageFrame = CGRect(origin: CGPoint(x: 10.0, y: floor((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
-        self.imageNode.frame = imageFrame
-        self.textNode.frame = textFrame
     }
     
     func animateIn() {
         self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        self.contentNode?.animateIn()
     }
     
     func animateOut(completion: @escaping () -> Void) {

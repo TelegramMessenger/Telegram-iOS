@@ -1354,7 +1354,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _, displayAsMessage, _):
                     if !displayAsMessage {
-                        if let peer = renderedPeer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
+                        if let peer = renderedPeer.chatMainPeer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
                             let updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
                             let relativeStatus = relativeUserPresenceStatus(updatedPresence, relativeTo: timestamp)
                             if case .online = relativeStatus {

@@ -2787,7 +2787,11 @@ public final class Postbox {
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents)
             mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in
                 return self.peerTable.get(id)
-            }, getPeerNotificationSettings: { self.peerNotificationSettingsTable.getEffective($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
+            }, getPeerNotificationSettings: {
+                self.peerNotificationSettingsTable.getEffective($0)
+            }, getPeerPresence: {
+                self.peerPresenceTable.get($0)
+            })
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
             
