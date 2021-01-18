@@ -178,12 +178,14 @@ public final class InviteLinkInviteController: ViewController {
     
     private let context: AccountContext
     private let peerId: PeerId
+    private weak var parentNavigationController: NavigationController?
     
     private var presentationDataDisposable: Disposable?
             
-    public init(context: AccountContext, peerId: PeerId) {
+    public init(context: AccountContext, peerId: PeerId, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
+        self.parentNavigationController = parentNavigationController
                 
         super.init(navigationBarPresentationData: nil)
         
@@ -389,7 +391,7 @@ public final class InviteLinkInviteController: ViewController {
                 self?.controller?.present(shareController, in: .window(.root))
             }, manageLinks: { [weak self] in
                 let controller = inviteLinkListController(context: context, peerId: peerId)
-                self?.controller?.push(controller)
+                self?.controller?.parentNavigationController?.pushViewController(controller)
                 self?.controller?.dismiss()
             })
             
@@ -558,7 +560,7 @@ public final class InviteLinkInviteController: ViewController {
             let listTopInset = layoutTopInset + headerHeight
             let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset)
             
-            insets.top = max(0.0, listNodeSize.height - visibleItemsHeight)
+            insets.top = max(0.0, listNodeSize.height - visibleItemsHeight - insets.bottom)
                         
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: duration, curve: curve)

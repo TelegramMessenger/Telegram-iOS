@@ -4551,7 +4551,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
                     contactsController?.push(visibilityController)
                 } else {
-                    contactsController?.present(InviteLinkInviteController(context: context, peerId: groupPeer.id), in: .window(.root))
+                    contactsController?.present(InviteLinkInviteController(context: context, peerId: groupPeer.id, parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
                 }
             }
 
