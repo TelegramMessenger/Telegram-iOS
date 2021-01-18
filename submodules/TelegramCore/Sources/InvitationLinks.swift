@@ -35,7 +35,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                 }
             } else if let _ = peer as? TelegramGroup {
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedGroupData, cachedData.exportedInvitation != nil && !revokeExisted {
-                    return .complete()
+                    return .single(cachedData.exportedInvitation)
                 } else {
                     return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
                     |> retryRequest
@@ -46,7 +46,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                                     if let current = current as? CachedGroupData {
                                         return current.withUpdatedExportedInvitation(invitation)
                                     } else {
-                                        return current
+                                        return CachedGroupData().withUpdatedExportedInvitation(invitation)
                                     }
                                 })
                                 return invitation
