@@ -178,7 +178,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             case let .mainLinkHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .mainLink(_, invite, peers):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: peers, buttonColor: nil, sectionId: self.section, style: .blocks, shareAction: {
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: peers, displayButton: true, displayImporters: true, buttonColor: nil, sectionId: self.section, style: .blocks, shareAction: {
                     arguments.shareMainLink(invite)
                 }, contextAction: { node in
                     arguments.mainLinkContextAction(invite, node, nil)
@@ -194,7 +194,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     arguments.createLink()
                 })
             case let .links(_, _, invites):
-                return ItemListInviteLinkGridItem(presentationData: presentationData, invites: invites, sectionId: self.section, style: .blocks, tapAction: { invite in
+                return ItemListInviteLinkGridItem(presentationData: presentationData, invites: invites, share: false, sectionId: self.section, style: .blocks, tapAction: { invite in
                     arguments.openLink(invite)
                 }, contextAction: { invite, node in
                     arguments.linkContextAction(invite, node, nil)
@@ -208,7 +208,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     arguments.deleteAllRevokedLinks()
                 })
             case let .revokedLinks(_, _, invites):
-                return ItemListInviteLinkGridItem(presentationData: presentationData, invites: invites, sectionId: self.section, style: .blocks, tapAction: { invite in
+                return ItemListInviteLinkGridItem(presentationData: presentationData, invites: invites, share: false, sectionId: self.section, style: .blocks, tapAction: { invite in
                     arguments.openLink(invite)
                 }, contextAction: { invite, node in
                     arguments.linkContextAction(invite, node, nil)
@@ -468,8 +468,8 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
                         ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
                         ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                             dismissAction()
-                            
-                            revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+
+                            revokeLinkDisposable.set((deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
 
                             }))
                         })

@@ -45,25 +45,39 @@ private struct InviteLinkInviteTransaction {
 }
 
 private enum InviteLinkInviteEntryId: Hashable {
+    case header
     case mainLink
     case links(Int32)
+    case manage
 }
 
 private enum InviteLinkInviteEntry: Comparable, Identifiable {
+    case header(PresentationTheme, String, String)
     case mainLink(PresentationTheme, ExportedInvitation)
     case links(Int32, PresentationTheme, [ExportedInvitation])
+    case manage(PresentationTheme, String)
     
     var stableId: InviteLinkInviteEntryId {
         switch self {
+            case .header:
+                return .header
             case .mainLink:
                 return .mainLink
             case let .links(index, _, _):
                 return .links(index)
+            case .manage:
+                return .manage
         }
     }
     
     static func ==(lhs: InviteLinkInviteEntry, rhs: InviteLinkInviteEntry) -> Bool {
         switch lhs {
+            case let .header(lhsTheme, lhsTitle, lhsText):
+                if case let .header(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .mainLink(lhsTheme, lhsInvitation):
                 if case let .mainLink(rhsTheme, rhsInvitation) = rhs, lhsTheme === rhsTheme, lhsInvitation == rhsInvitation {
                     return true
@@ -76,42 +90,70 @@ private enum InviteLinkInviteEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .manage(lhsTheme, lhsText):
+                if case let .manage(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
     static func <(lhs: InviteLinkInviteEntry, rhs: InviteLinkInviteEntry) -> Bool {
         switch lhs {
+            case .header:
+                switch rhs {
+                    case .header:
+                        return false
+                    case .mainLink, .links, .manage:
+                        return true
+                }
             case .mainLink:
                 switch rhs {
-                    case .mainLink:
+                    case .header, .mainLink:
                         return false
-                    case .links:
+                    case .links, .manage:
                         return true
                 }
             case let .links(lhsIndex, _, _):
                 switch rhs {
-                    case .mainLink:
+                    case .header, .mainLink:
                         return false
                     case let .links(rhsIndex, _, _):
                         return lhsIndex < rhsIndex
+                    case .manage:
+                        return true
+                }
+            case .manage:
+                switch rhs {
+                    case .header, .mainLink, .links:
+                        return false
+                    case .manage:
+                        return true
                 }
         }
     }
     
     func item(account: Account, presentationData: PresentationData, interaction: InviteLinkInviteInteraction) -> ListViewItem {
         switch self {
+            case let .header(theme, title, text):
+                return InviteLinkInviteHeaderItem(theme: theme, title: title, text: text)
             case let .mainLink(_, invite):
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], buttonColor: nil, sectionId: 0, style: .plain, shareAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, shareAction: {
                     interaction.shareLink(invite)
                 }, contextAction: { node in
                     interaction.mainLinkContextAction(invite, node, nil)
                 }, viewAction: {
                 })
             case let .links(_, _, invites):
-                return ItemListInviteLinkGridItem(presentationData: ItemListPresentationData(presentationData), invites: invites, sectionId: 0, style: .plain, tapAction: { invite in
+                return ItemListInviteLinkGridItem(presentationData: ItemListPresentationData(presentationData), invites: invites, share: true, sectionId: 0, style: .plain, tapAction: { invite in
                     interaction.copyLink(invite)
                 }, contextAction: { invite, _ in
                     interaction.shareLink(invite)
+                })
+            case let .manage(theme, text):
+                return InviteLinkInviteManageItem(theme: theme, text: text, action: {
+                    interaction.manageLinks()
                 })
         }
     }
@@ -140,7 +182,6 @@ public final class InviteLinkInviteController: ViewController {
     private var presentationDataDisposable: Disposable?
             
     public init(context: AccountContext, peerId: PeerId) {
-        fatalError()
         self.context = context
         self.peerId = peerId
                 
@@ -196,7 +237,7 @@ public final class InviteLinkInviteController: ViewController {
             
             self.controllerNode.animateOut(completion: { [weak self] in
                 completion?()
-                self?.dismiss(animated: false)
+                self?.presentingViewController?.dismiss(animated: false, completion: nil)
             })
         }
     }
@@ -360,12 +401,15 @@ public final class InviteLinkInviteController: ViewController {
                 if let strongSelf = self {
                     var entries: [InviteLinkInviteEntry] = []
                     
+                    entries.append(.header(presentationData.theme, presentationData.strings.InviteLink_InviteLink, presentationData.strings.InviteLink_CreatePrivateLinkHelp))
+                    
                     if let cachedData = view.cachedData as? CachedGroupData, let invite = cachedData.exportedInvitation {
                         entries.append(.mainLink(presentationData.theme, invite))
                     } else if let cachedData = view.cachedData as? CachedChannelData, let invite = cachedData.exportedInvitation {
                         entries.append(.mainLink(presentationData.theme, invite))
                     }
                     
+                    entries.append(.manage(presentationData.theme, presentationData.strings.InviteLink_Manage))
                        
                     let previousEntries = previousEntries.swap(entries)
                     
@@ -507,7 +551,7 @@ public final class InviteLinkInviteController: ViewController {
             insets.bottom = layout.intrinsicInsets.bottom
                     
             let headerHeight: CGFloat = 54.0
-            let visibleItemsHeight: CGFloat = 147.0 + floor(52.0 * 3.5)
+            let visibleItemsHeight: CGFloat = 409.0
         
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             

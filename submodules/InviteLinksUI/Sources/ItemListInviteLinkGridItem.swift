@@ -10,6 +10,7 @@ import ItemListUI
 public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let invites: [ExportedInvitation]?
+    let share: Bool
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let tapAction: ((ExportedInvitation) -> Void)?
@@ -19,6 +20,7 @@ public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     public init(
         presentationData: ItemListPresentationData,
         invites: [ExportedInvitation]?,
+        share: Bool,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
         tapAction: ((ExportedInvitation) -> Void)?,
@@ -27,6 +29,7 @@ public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     ) {
         self.presentationData = presentationData
         self.invites = invites
+        self.share = share
         self.sectionId = sectionId
         self.style = style
         self.tapAction = tapAction
@@ -167,7 +170,7 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                     }
                     
-                    let gridSize = strongSelf.gridNode.update(size: contentSize, safeInset: params.leftInset,  items: item.invites ?? [], presentationData: item.presentationData, transition: .immediate)
+                    let gridSize = strongSelf.gridNode.update(size: contentSize, safeInset: params.leftInset, items: item.invites ?? [], share: item.share, presentationData: item.presentationData, transition: .immediate)
                     strongSelf.gridNode.frame = CGRect(origin: CGPoint(), size: gridSize)
                     strongSelf.gridNode.action = { invite in
                         item.tapAction?(invite)

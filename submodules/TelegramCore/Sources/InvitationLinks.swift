@@ -251,6 +251,205 @@ public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: Pe
     |> switchToLatest
 }
 
+private let cachedPeerExportedInvitationsCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20)
+
+public struct PeerExportedInvitationsState: Equatable {
+    public var invitations: [ExportedInvitation]
+    public var isLoadingMore: Bool
+    public var hasLoadedOnce: Bool
+    public var canLoadMore: Bool
+    public var count: Int32
+}
+
+final class CachedPeerExportedInvitations: PostboxCoding {
+    let invitations: [ExportedInvitation]
+    let canLoadMore: Bool
+    let count: Int32
+    
+    public static func key(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8 + 4)
+        key.setInt64(0, value: peerId.toInt64())
+        return key
+    }
+    
+    init(invitations: [ExportedInvitation], canLoadMore: Bool, count: Int32) {
+        self.invitations = invitations
+        self.canLoadMore = canLoadMore
+        self.count = count
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.invitations = decoder.decodeObjectArrayForKey("invitations")
+        self.canLoadMore = decoder.decodeBoolForKey("canLoadMore", orElse: false)
+        self.count = decoder.decodeInt32ForKey("count", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObjectArray(self.invitations, forKey: "invitations")
+        encoder.encodeBool(self.canLoadMore, forKey: "canLoadMore")
+        encoder.encodeInt32(self.count, forKey: "count")
+    }
+}
+
+private final class PeerExportedInvitationsContextImpl {
+    private let queue: Queue
+    private let account: Account
+    private let peerId: PeerId
+    private let disposable = MetaDisposable()
+    private var isLoadingMore: Bool = false
+    private var hasLoadedOnce: Bool = false
+    private var canLoadMore: Bool = true
+    private var results: [ExportedInvitation] = []
+    private var count: Int32
+    private var populateCache: Bool = true
+    
+    let state = Promise<PeerExportedInvitationsState>()
+    
+    init(queue: Queue, account: Account, peerId: PeerId) {
+        self.queue = queue
+        self.account = account
+        self.peerId = peerId
+        
+        self.count = 0
+        
+        self.isLoadingMore = true
+        self.disposable.set((account.postbox.transaction { transaction -> CachedPeerExportedInvitations? in
+            return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerExportedInvitations.key(peerId: peerId))) as? CachedPeerExportedInvitations
+        }
+        |> deliverOn(self.queue)).start(next: { [weak self] cachedResult in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isLoadingMore = false
+            if let cachedResult = cachedResult {
+                strongSelf.results = cachedResult.invitations
+                strongSelf.count = cachedResult.count
+                strongSelf.hasLoadedOnce = true
+                strongSelf.canLoadMore = cachedResult.canLoadMore
+            }
+            strongSelf.loadMore()
+        }))
+                
+        self.loadMore()
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    func loadMore() {
+        if self.isLoadingMore {
+            return
+        }
+        self.isLoadingMore = true
+        let account = self.account
+        let peerId = self.peerId
+        let lastResult = self.results.last
+        let populateCache = self.populateCache
+        self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        }
+        |> mapToSignal { inputPeer -> Signal<([ExportedInvitation], Int32), NoError> in
+            if let inputPeer = inputPeer {
+                let offsetLink = lastResult?.link
+                
+                let signal = account.network.request(Api.functions.messages.getExportedChatInvites(flags: 0, peer: inputPeer, adminId: nil, offsetLink: offsetLink, limit: lastResult == nil ? 50 : 100))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.ExportedChatInvites?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<([ExportedInvitation], Int32), NoError> in
+                    return account.postbox.transaction { transaction -> ([ExportedInvitation], Int32) in
+                        guard let result = result else {
+                            return ([], 0)
+                        }
+                        switch result {
+                        case let .exportedChatInvites(count, invites, users):
+                            var peers: [Peer] = []
+                            for apiUser in users {
+                                peers.append(TelegramUser(user: apiUser))
+                            }
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                                return updated
+                            })
+                            let invitations: [ExportedInvitation] = invites.compactMap { ExportedInvitation(apiExportedInvite: $0) }
+                            if populateCache {
+                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerExportedInvitations.key(peerId: peerId)), entry: CachedPeerExportedInvitations(invitations: invitations, canLoadMore: count >= 50, count: count), collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+                            }
+                            return (invitations, count)
+                        }
+                    }
+                }
+                return signal
+            } else {
+                return .single(([], 0))
+            }
+        }
+        |> deliverOn(self.queue)).start(next: { [weak self] invitations, updatedCount in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.populateCache {
+                strongSelf.populateCache = false
+                strongSelf.results.removeAll()
+            }
+            var existingLinks = Set(strongSelf.results.map { $0.link })
+            for invitation in invitations {
+                if !existingLinks.contains(invitation.link) {
+                    strongSelf.results.append(invitation)
+                    existingLinks.insert(invitation.link)
+                }
+            }
+            strongSelf.isLoadingMore = false
+            strongSelf.hasLoadedOnce = true
+            strongSelf.canLoadMore = !invitations.isEmpty
+            if strongSelf.canLoadMore {
+                strongSelf.count = max(updatedCount, Int32(strongSelf.results.count))
+            } else {
+                strongSelf.count = Int32(strongSelf.results.count)
+            }
+            strongSelf.updateState()
+        }))
+        self.updateState()
+    }
+    
+    private func updateState() {
+        self.state.set(.single(PeerExportedInvitationsState(invitations: self.results, isLoadingMore: self.isLoadingMore, hasLoadedOnce: self.hasLoadedOnce, canLoadMore: self.canLoadMore, count: self.count)))
+    }
+}
+
+public final class PeerExportedInvitationsContext {
+    private let queue: Queue = Queue()
+    private let impl: QueueLocalObject<PeerExportedInvitationsContextImpl>
+    
+    public var state: Signal<PeerExportedInvitationsState, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.state.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public init(account: Account, peerId: PeerId, invite: ExportedInvitation) {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return PeerExportedInvitationsContextImpl(queue: queue, account: account, peerId: peerId)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+}
+
+
+
 private let cachedPeerInvitationImportersCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20)
 
 public struct PeerInvitationImportersState: Equatable {
@@ -262,7 +461,7 @@ public struct PeerInvitationImportersState: Equatable {
     public var isLoadingMore: Bool
     public var hasLoadedOnce: Bool
     public var canLoadMore: Bool
-    public var count: Int
+    public var count: Int32
 }
 
 final class CachedPeerInvitationImporters: PostboxCoding {
@@ -331,7 +530,7 @@ private final class PeerInvitationImportersContextImpl {
     private var hasLoadedOnce: Bool = false
     private var canLoadMore: Bool = true
     private var results: [PeerInvitationImportersState.Importer] = []
-    private var count: Int
+    private var count: Int32
     private var populateCache: Bool = true
     
     let state = Promise<PeerInvitationImportersState>()
@@ -342,7 +541,7 @@ private final class PeerInvitationImportersContextImpl {
         self.peerId = peerId
         self.link = invite.link
         
-        let count = invite.count.flatMap { Int($0) } ?? 0
+        let count = invite.count ?? 0
         self.count = count
         
         self.isLoadingMore = true
@@ -395,7 +594,7 @@ private final class PeerInvitationImportersContextImpl {
         self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
-        |> mapToSignal { inputPeer -> Signal<([PeerInvitationImportersState.Importer], Int), NoError> in
+        |> mapToSignal { inputPeer -> Signal<([PeerInvitationImportersState.Importer], Int32), NoError> in
             if let inputPeer = inputPeer {
                 let offsetUser = lastResult?.peer.peer.flatMap { apiInputUser($0) } ?? .inputUserEmpty
                 let offsetDate = lastResult?.date ?? 0
@@ -404,8 +603,8 @@ private final class PeerInvitationImportersContextImpl {
                 |> `catch` { _ -> Signal<Api.messages.ChatInviteImporters?, NoError> in
                     return .single(nil)
                 }
-                |> mapToSignal { result -> Signal<([PeerInvitationImportersState.Importer], Int), NoError> in
-                    return account.postbox.transaction { transaction -> ([PeerInvitationImportersState.Importer], Int) in
+                |> mapToSignal { result -> Signal<([PeerInvitationImportersState.Importer], Int32), NoError> in
+                    return account.postbox.transaction { transaction -> ([PeerInvitationImportersState.Importer], Int32) in
                         guard let result = result else {
                             return ([], 0)
                         }
@@ -434,7 +633,7 @@ private final class PeerInvitationImportersContextImpl {
                             if populateCache {
                                 transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link)), entry: CachedPeerInvitationImporters(importers: resultImporters, count: count), collectionSpec: cachedPeerInvitationImportersCollectionSpec)
                             }
-                            return (resultImporters, Int(count))
+                            return (resultImporters, count)
                         }
                     }
                 }
@@ -462,9 +661,9 @@ private final class PeerInvitationImportersContextImpl {
             strongSelf.hasLoadedOnce = true
             strongSelf.canLoadMore = !importers.isEmpty
             if strongSelf.canLoadMore {
-                strongSelf.count = max(updatedCount, strongSelf.results.count)
+                strongSelf.count = max(updatedCount, Int32(strongSelf.results.count))
             } else {
-                strongSelf.count = strongSelf.results.count
+                strongSelf.count = Int32(strongSelf.results.count)
             }
             strongSelf.updateState()
         }))

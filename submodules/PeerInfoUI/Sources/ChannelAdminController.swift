@@ -368,17 +368,17 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelAdminControllerArguments
         switch self {
-            case let .info(theme, strings, dateTimeFormat, peer, presence):
+            case let .info(_, strings, dateTimeFormat, peer, presence):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
-            case let .rankTitle(theme, text, count, limit):
+            case let .rankTitle(_, text, count, limit):
                 var accessoryText: ItemListSectionHeaderAccessoryText?
                 if let count = count {
                     accessoryText = ItemListSectionHeaderAccessoryText(value: "\(limit - count)", color: count > limit ? .destructive : .generic)
                 }
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: accessoryText, sectionId: self.section)
-            case let .rank(theme, strings, placeholder, text, enabled):
+            case let .rank(_, _, placeholder, text, enabled):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearType: enabled ? .always : .none, enabled: enabled, tag: ChannelAdminEntryTag.rank, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateRank(text, updatedText)
                 }, shouldUpdateText: { text in
@@ -392,23 +392,23 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }, action: {
                     arguments.dismissInput()
                 })
-            case let .rankInfo(theme, text):
+            case let .rankInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .rightsTitle(theme, text):
+            case let .rightsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .rightItem(theme, _, text, right, flags, value, enabled):
+            case let .rightItem(_, _, text, right, flags, value, enabled):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, type: .icon, enabled: enabled, sectionId: self.section, style: .blocks, updated: { _ in
                     arguments.toggleRight(right, flags)
                 }, activatedWhileDisabled: {
                     arguments.toggleRightWhileDisabled(right, flags)
                 })
-            case let .addAdminsInfo(theme, text):
+            case let .addAdminsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .transfer(theme, text):
+            case let .transfer(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.transferOwnership()
                 }, tag: nil)
-            case let .dismiss(theme, text):
+            case let .dismiss(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.dismissAdmin()
                 }, tag: nil)
@@ -1004,12 +1004,12 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         var currentRank: String?
                         var currentFlags: TelegramChatAdminRightsFlags?
                         switch initialParticipant {
-                            case let .creator(creator):
-                                currentRank = creator.rank
-                                currentFlags = maskRightsFlags
-                            case let .member(member):
+                            case let .creator(_, adminInfo, rank):
+                                currentRank = rank
+                                currentFlags = adminInfo?.rights.flags ?? maskRightsFlags.subtracting(.canBeAnonymous)
+                            case let .member(_, _, adminInfo, _, rank):
                                 if updateFlags == nil {
-                                    if member.adminInfo?.rights == nil {
+                                    if adminInfo?.rights == nil {
                                         if channel.flags.contains(.isCreator) {
                                             updateFlags = maskRightsFlags.subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else if let adminRights = channel.adminRights {
@@ -1019,8 +1019,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         }
                                     }
                                 }
-                                currentRank = member.rank
-                                currentFlags = member.adminInfo?.rights.flags
+                                currentRank = rank
+                                currentFlags = adminInfo?.rights.flags
                         }
                         
                         let effectiveRank = updateRank ?? currentRank

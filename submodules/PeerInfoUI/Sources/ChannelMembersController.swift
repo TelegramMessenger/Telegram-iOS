@@ -462,7 +462,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
-        pushControllerImpl?(InviteLinkInviteController(context: context, peerId: peerId))
+        presentControllerImpl?(InviteLinkInviteController(context: context, peerId: peerId), nil)
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
