@@ -209,7 +209,7 @@ public final class InviteLinkQRCodeController: ViewController {
             self.contentContainerNode.addSubnode(self.qrIconNode)
             self.contentContainerNode.addSubnode(self.qrButtonNode)
             
-            let textFont = Font.regular(16.0)
+            let textFont = Font.regular(13.0)
             
             self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_QRCode_Info, font: textFont, textColor: secondaryTextColor)
             self.buttonNode.title = self.presentationData.strings.InviteLink_QRCode_Share
@@ -352,7 +352,7 @@ public final class InviteLinkQRCodeController: ViewController {
             
             let _ = imageApply()
             
-            let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: insets.top + 24.0), size: imageSize)
+            let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: insets.top + 16.0), size: imageSize)
             transition.updateFrame(node: self.qrImageNode, frame: imageFrame)
             transition.updateFrame(node: self.qrButtonNode, frame: imageFrame)
             
@@ -365,7 +365,7 @@ public final class InviteLinkQRCodeController: ViewController {
             
             let inset: CGFloat = 22.0
             let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-            let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: imageFrame.maxX + 20.0), size: textSize)
+            let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
             
             let buttonSideInset: CGFloat = 16.0
@@ -379,7 +379,7 @@ public final class InviteLinkQRCodeController: ViewController {
             
             
             let titleHeight: CGFloat = 54.0
-            let contentHeight = titleHeight + textSize.height + imageSize.height + bottomInset + 52.0 + 77.0
+            let contentHeight = titleHeight + textSize.height + imageSize.height + bottomInset + 121.0
             
             let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
             
@@ -401,7 +401,7 @@ public final class InviteLinkQRCodeController: ViewController {
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             let cancelSize = self.cancelButton.measure(CGSize(width: width, height: titleHeight))
-            let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 16.0, y: 16.0), size: cancelSize)
+            let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 16.0, y: 18.0), size: cancelSize)
             transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
             
             let buttonInset: CGFloat = 16.0

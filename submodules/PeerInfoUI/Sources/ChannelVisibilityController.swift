@@ -291,7 +291,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: [], buttonColor: nil, sectionId: self.section, style: .blocks, shareAction: {
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: [], displayButton: true, displayImporters: true, buttonColor: nil, sectionId: self.section, style: .blocks, shareAction: {
                     arguments.shareLink()
                 }, contextAction: { node in
                     arguments.linkContextAction(node)

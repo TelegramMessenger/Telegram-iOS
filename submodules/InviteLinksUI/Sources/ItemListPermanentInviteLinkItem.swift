@@ -30,6 +30,8 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let invite: ExportedInvitation?
     let peers: [Peer]
+    let displayButton: Bool
+    let displayImporters: Bool
     let buttonColor: UIColor?
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
@@ -43,6 +45,8 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         presentationData: ItemListPresentationData,
         invite: ExportedInvitation?,
         peers: [Peer],
+        displayButton: Bool,
+        displayImporters: Bool,
         buttonColor: UIColor?,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
@@ -55,6 +59,8 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         self.presentationData = presentationData
         self.invite = invite
         self.peers = peers
+        self.displayButton = displayButton
+        self.displayImporters = displayImporters
         self.buttonColor = buttonColor
         self.sectionId = sectionId
         self.style = style
@@ -287,7 +293,6 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             
             switch item.style {
             case .plain:
-                height -= 57.0
                 itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
                 itemSeparatorColor = .clear
                 insets = UIEdgeInsets()
@@ -296,6 +301,14 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 insets = itemListNeighborsGroupedInsets(neighbors)
             }
+            
+            if !item.displayImporters {
+                height -= 57.0
+            }
+            if !item.displayButton {
+                height -= 63.0
+            }
+            
             contentSize = CGSize(width: params.width, height: height)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -432,6 +445,11 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     strongSelf.avatarsButtonNode.frame = CGRect(x: floorToScreenPixels((params.width - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0, width: totalWidth, height: 32.0)
                     strongSelf.avatarsButtonNode.isUserInteractionEnabled = !item.peers.isEmpty
+                    
+                    strongSelf.shareButtonNode?.isHidden = !item.displayButton
+                    strongSelf.avatarsButtonNode.isHidden = !item.displayImporters
+                    strongSelf.avatarsNode.isHidden = !item.displayImporters
+                    strongSelf.invitedPeersNode.isHidden = !item.displayImporters
                 }
             })
         }

@@ -342,6 +342,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissInputImpl: (() -> Void)?
     
+    var getControllerImpl: (() -> ViewController?)?
+    
     let actionsDisposable = DisposableSet()
     
     let addMembersDisposable = MetaDisposable()
@@ -462,7 +464,9 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
-        pushControllerImpl?(InviteLinkInviteController(context: context, peerId: peerId))
+        if let controller = getControllerImpl?() {
+            presentControllerImpl?(InviteLinkInviteController(context: context, peerId: peerId, parentNavigationController: controller.navigationController as? NavigationController), nil)
+        }
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -550,6 +554,9 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    getControllerImpl =  { [weak controller] in
+        return controller
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if let loadMoreControl = loadMoreControl, case let .known(value) = offset, value < 40.0 {
