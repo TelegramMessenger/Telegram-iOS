@@ -50,7 +50,7 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
 private enum InviteLinksEditEntry: ItemListNodeEntry {
     case timeHeader(PresentationTheme, String)
     case timePicker(PresentationTheme, InviteLinkTimeLimit)
-    case timeExpiryDate(PresentationTheme, Int32?)
+    case timeExpiryDate(PresentationTheme, Int32?, Bool)
     case timeCustomPicker(PresentationTheme, Int32?)
     case timeInfo(PresentationTheme, String)
     
@@ -111,8 +111,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .timeExpiryDate(lhsTheme, lhsDate):
-                if case let .timeExpiryDate(rhsTheme, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDate == rhsDate {
+            case let .timeExpiryDate(lhsTheme, lhsDate, lhsActive):
+                if case let .timeExpiryDate(rhsTheme, rhsDate, rhsActive) = rhs, lhsTheme === rhsTheme, lhsDate == rhsDate, lhsActive == rhsActive {
                     return true
                 } else {
                     return false
@@ -182,14 +182,14 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     })
                 })
-            case let .timeExpiryDate(_, value):
+            case let .timeExpiryDate(theme, value, active):
                 let text: String
                 if let value = value {
                     text = stringForFullDate(timestamp: value, strings: presentationData.strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."))
                 } else {
                     text = presentationData.strings.InviteLink_Create_TimeLimitExpiryDateNever
                 }
-                return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.InviteLink_Create_TimeLimitExpiryDate, label: text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.InviteLink_Create_TimeLimitExpiryDate, label: text, labelStyle: active ? .coloredText(theme.list.itemAccentColor) : .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                     arguments.dismissInput()
                     arguments.updateState { state in
                         var updatedState = state
@@ -276,7 +276,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     } else if let value = state.time.value {
         time = currentTime + value
     }
-    entries.append(.timeExpiryDate(presentationData.theme, time))
+    entries.append(.timeExpiryDate(presentationData.theme, time, state.pickingTimeLimit))
     if state.pickingTimeLimit {
         entries.append(.timeCustomPicker(presentationData.theme, time ?? currentTime))
     }
@@ -327,7 +327,7 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
         
         initialState = InviteLinkEditControllerState(usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, pickingTimeLimit: false, pickingUsageLimit: false)
     } else {
-        initialState = InviteLinkEditControllerState(usage: .medium, time: .week, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(usage: .unlimited, time: .unlimited, pickingTimeLimit: false, pickingUsageLimit: false)
     }
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -376,7 +376,7 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
             dismissImpl?()
         })
         
-        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+        let rightNavigationButton = ItemListNavigationButton(content: .text(invite == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Save), style: .bold, enabled: true, action: {
             let expireDate: Int32?
             if case let .custom(value) = state.time {
                 expireDate = value

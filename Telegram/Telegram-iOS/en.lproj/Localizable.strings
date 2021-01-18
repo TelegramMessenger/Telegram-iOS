@@ -5892,3 +5892,5 @@ Sorry for the inconvenience.";
 "Conversation.ChecksTooltip.Read" = "Read";
 
 "DialogList.MultipleTypingPair" = "%@ and %@ are typing";
+
+"Common.Save" = "Save";

@@ -2206,14 +2206,14 @@ public extension Api {
     
     }
     public enum ChatFull: TypeConstructorDescription {
-        case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?)
+        case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?)
         case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call):
                     if boxed {
-                        buffer.appendInt32(231260545)
+                        buffer.appendInt32(-213431562)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -2221,7 +2221,7 @@ public extension Api {
                     participants.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {chatPhoto!.serialize(buffer, true)}
                     notifySettings.serialize(buffer, true)
-                    exportedInvite.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 13) != 0 {exportedInvite!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(botInfo!.count))
                     for item in botInfo! {
@@ -2300,9 +2300,9 @@ public extension Api {
                 _6 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
             var _7: Api.ExportedChatInvite?
-            if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 13) != 0 {if let signature = reader.readInt32() {
                 _7 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-            }
+            } }
             var _8: [Api.BotInfo]?
             if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
                 _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInfo.self)
@@ -2321,13 +2321,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = _6 != nil
-            let _c7 = _7 != nil
+            let _c7 = (Int(_1!) & Int(1 << 13) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 6) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 12) == 0) || _11 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.ChatFull.chatFull(flags: _1!, id: _2!, about: _3!, participants: _4!, chatPhoto: _5, notifySettings: _6!, exportedInvite: _7!, botInfo: _8, pinnedMsgId: _9, folderId: _10, call: _11)
+                return Api.ChatFull.chatFull(flags: _1!, id: _2!, about: _3!, participants: _4!, chatPhoto: _5, notifySettings: _6!, exportedInvite: _7, botInfo: _8, pinnedMsgId: _9, folderId: _10, call: _11)
             }
             else {
                 return nil

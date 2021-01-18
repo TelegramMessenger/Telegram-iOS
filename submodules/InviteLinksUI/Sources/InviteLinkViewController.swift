@@ -24,12 +24,14 @@ import DirectionalPanGesture
 class InviteLinkViewInteraction {
     let context: AccountContext
     let openPeer: (PeerId) -> Void
+    let copyLink: (ExportedInvitation) -> Void
     let shareLink: (ExportedInvitation) -> Void
     let contextAction: (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.openPeer = openPeer
+        self.copyLink = copyLink
         self.shareLink = shareLink
         self.contextAction = contextAction
     }
@@ -169,7 +171,9 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
             case let .link(_, invite):
                 let buttonColor = color(for: invite)
                 let availability = invitationAvailability(invite)
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: !invite.isRevoked && !availability.isZero, displayImporters: false, buttonColor: buttonColor, sectionId: 0, style: .plain, shareAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: !invite.isRevoked && !availability.isZero, displayImporters: false, buttonColor: buttonColor, sectionId: 0, style: .plain, copyAction: {
+                    interaction.copyLink(invite)
+                }, shareAction: {
                     interaction.shareLink(invite)
                 }, contextAction: { node in
                     interaction.contextAction(invite, node, nil)
@@ -383,6 +387,10 @@ public final class InviteLinkViewController: ViewController {
                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                     context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), keepStack: .always))
                 }
+            }, copyLink: { [weak self] invite in
+                UIPasteboard.general.string = invite.link
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                self?.controller?.present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), in: .window(.root))
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
                 self?.controller?.present(shareController, in: .window(.root))
@@ -655,11 +663,6 @@ public final class InviteLinkViewController: ViewController {
             if result === self.headerNode.view {
                 return self.view
             }
-            
-            if result === self.headerNode.view {
-                return self.view
-            }
-            
             if !self.bounds.contains(point) {
                 return nil
             }

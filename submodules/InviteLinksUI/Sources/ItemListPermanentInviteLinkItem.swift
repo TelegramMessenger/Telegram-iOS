@@ -35,6 +35,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
     let buttonColor: UIColor?
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
+    let copyAction: (() -> Void)?
     let shareAction: (() -> Void)?
     let contextAction: ((ASDisplayNode) -> Void)?
     let viewAction: (() -> Void)?
@@ -50,6 +51,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         buttonColor: UIColor?,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
+        copyAction: (() -> Void)?,
         shareAction: (() -> Void)?,
         contextAction: ((ASDisplayNode) -> Void)?,
         viewAction: (() -> Void)?,
@@ -64,6 +66,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         self.buttonColor = buttonColor
         self.sectionId = sectionId
         self.style = style
+        self.copyAction = copyAction
         self.shareAction = shareAction
         self.contextAction = contextAction
         self.viewAction = viewAction
@@ -114,6 +117,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     
     private let fieldNode: ASImageNode
     private let addressNode: TextNode
+    private let fieldButtonNode: HighlightTrackingButtonNode
     private let extractedContainerNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     private let addressButtonNode: HighlightTrackingButtonNode
@@ -157,6 +161,8 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         
         self.addressNode = TextNode()
         self.addressNode.isUserInteractionEnabled = false
+        
+        self.fieldButtonNode = HighlightTrackingButtonNode()
     
         self.addressButtonNode = HighlightTrackingButtonNode()
         self.extractedContainerNode = ContextExtractedContentContainingNode()
@@ -177,6 +183,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         
         self.addSubnode(self.fieldNode)
         self.addSubnode(self.addressNode)
+        self.addSubnode(self.fieldButtonNode)
         self.addSubnode(self.avatarsNode)
         self.addSubnode(self.invitedPeersNode)
         self.addSubnode(self.avatarsButtonNode)
@@ -188,6 +195,19 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         self.addSubnode(self.addressButtonNode)
         
         self.addSubnode(self.activateArea)
+        
+        self.fieldButtonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.addressNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.addressNode.alpha = 0.4
+                } else {
+                    strongSelf.addressNode.alpha = 1.0
+                    strongSelf.addressNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        self.fieldButtonNode.addTarget(self, action: #selector(self.fieldButtonPressed), forControlEvents: .touchUpInside)
         
         self.addressButtonNode.addTarget(self, action: #selector(self.addressButtonPressed), forControlEvents: .touchUpInside)
         self.addressButtonNode.highligthedChanged = { [weak self] highlighted in
@@ -222,6 +242,12 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             }
         }
         self.avatarsButtonNode.addTarget(self, action: #selector(self.avatarsButtonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func fieldButtonPressed() {
+        if let item = self.item {
+            item.copyAction?()
+        }
     }
     
     @objc private func addressButtonPressed() {
@@ -393,6 +419,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     let fieldFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: CGSize(width: params.width - leftInset - rightInset, height: fieldHeight))
                     strongSelf.fieldNode.frame = fieldFrame
+                    strongSelf.fieldButtonNode.frame = fieldFrame
                     
                     strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
                     

@@ -139,7 +139,9 @@ private enum InviteLinkInviteEntry: Comparable, Identifiable {
             case let .header(theme, title, text):
                 return InviteLinkInviteHeaderItem(theme: theme, title: title, text: text)
             case let .mainLink(_, invite):
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, shareAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, copyAction: {
+                    interaction.copyLink(invite)
+                }, shareAction: {
                     interaction.shareLink(invite)
                 }, contextAction: { node in
                     interaction.mainLinkContextAction(invite, node, nil)
@@ -371,7 +373,7 @@ public final class InviteLinkInviteController: ViewController {
                             ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                                 dismissAction()
                                 
-                                self?.revokeDisposable.set((ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId, revokeExisted: true) |> deliverOnMainQueue).start(completed: {
+                                self?.revokeDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
 
                                 }))
                             })
@@ -585,11 +587,6 @@ public final class InviteLinkInviteController: ViewController {
             if result === self.headerNode.view {
                 return self.view
             }
-            
-            if result === self.headerNode.view {
-                return self.view
-            }
-            
             if !self.bounds.contains(point) {
                 return nil
             }
@@ -615,8 +612,6 @@ public final class InviteLinkInviteController: ViewController {
                 case .changed:
                     var translation = recognizer.translation(in: self.contentNode.view).y
                     if let currentPanOffset = self.panGestureArguments {
-                        
-
                         if case let .known(value) = contentOffset, value <= 0.5 {
                         } else {
                             translation = currentPanOffset

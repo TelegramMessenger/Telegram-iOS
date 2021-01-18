@@ -30,11 +30,12 @@ private final class ChannelVisibilityControllerArguments {
     let displayPrivateLinkMenu: (String) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let revokePeerId: (PeerId) -> Void
-    let shareLink: () -> Void
+    let copyLink: (ExportedInvitation) -> Void
+    let shareLink: (ExportedInvitation) -> Void
     let linkContextAction: (ASDisplayNode) -> Void
     let manageInviteLinks: () -> Void
     
-    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, shareLink: @escaping () -> Void, linkContextAction: @escaping (ASDisplayNode) -> Void, manageInviteLinks: @escaping () -> Void) {
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode) -> Void, manageInviteLinks: @escaping () -> Void) {
         self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
@@ -42,6 +43,7 @@ private final class ChannelVisibilityControllerArguments {
         self.displayPrivateLinkMenu = displayPrivateLinkMenu
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.revokePeerId = revokePeerId
+        self.copyLink = copyLink
         self.shareLink = shareLink
         self.linkContextAction = linkContextAction
         self.manageInviteLinks = manageInviteLinks
@@ -291,8 +293,14 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: [], displayButton: true, displayImporters: true, buttonColor: nil, sectionId: self.section, style: .blocks, shareAction: {
-                    arguments.shareLink()
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: [], displayButton: true, displayImporters: true, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+                    if let invite = invite {
+                        arguments.copyLink(invite)
+                    }
+                }, shareAction: {
+                    if let invite = invite {
+                        arguments.shareLink(invite)
+                    }
                 }, contextAction: { node in
                     arguments.linkContextAction(node)
                 }, viewAction: {
@@ -835,14 +843,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
-    
-    actionsDisposable.add((context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<String?, NoError> in
-        return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
-        |> mapToSignal { _ -> Signal<String?, NoError> in
-            return .complete()
-        }
-    }).start())
-    
+        
     let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
         updateState { state in
             return state.withUpdatedSelectedType(type)
@@ -898,22 +899,13 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 }
             })
         }))
-    }, shareLink: {
-        let _ = (context.account.postbox.transaction { transaction -> String? in
-            if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.exportedInvitation?.link
-                } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.exportedInvitation?.link
-                }
-            }
-            return nil
-        } |> deliverOnMainQueue).start(next: { link in
-            if let link = link {
-                let shareController = ShareController(context: context, subject: .url(link))
-                presentControllerImpl?(shareController, nil)
-            }
-        })
+    }, copyLink: { invite in
+        UIPasteboard.general.string = invite.link
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+    }, shareLink: { invite in
+        let shareController = ShareController(context: context, subject: .url(invite.link))
+        presentControllerImpl?(shareController, nil)
     }, linkContextAction: { node in
         guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?() else {
             return
@@ -991,7 +983,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                             }
                         }
                         if revoke {
-                            revokeLinkDisposable.set((ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId, revokeExisted: true) |> deliverOnMainQueue).start(completed: {
+                            revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
                                 updateState {
                                     $0.withUpdatedRevokingPrivateLink(false)
                                 }
