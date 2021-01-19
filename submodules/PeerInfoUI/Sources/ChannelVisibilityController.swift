@@ -595,8 +595,24 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         } else {
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
                         }
+                        
+                        switch mode {
+                            case .initialSetup:
+                                break
+                            case .generic, .privateLink:
+                                entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                                entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                        }
+                        
                     } else {
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePublicLinkHelp))
+                    }
+                    switch mode {
+                        case .initialSetup:
+                            break
+                        case .generic, .privateLink:
+                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
                     }
                 }
             case .privateChannel:
