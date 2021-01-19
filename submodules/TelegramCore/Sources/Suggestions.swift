@@ -6,6 +6,7 @@ import SyncCore
 
 public enum ServerProvidedSuggestion: String {
     case autoarchivePopular = "AUTOARCHIVE_POPULAR"
+    case newcomerTicks = "NEWCOMER_TICKS"
 }
 
 public func getServerProvidedSuggestions(postbox: Postbox) -> Signal<[ServerProvidedSuggestion], NoError> {
@@ -22,12 +23,7 @@ public func getServerProvidedSuggestions(postbox: Postbox) -> Signal<[ServerProv
             return []
         }
         return list.compactMap { item -> ServerProvidedSuggestion? in
-            switch item {
-            case "AUTOARCHIVE_POPULAR":
-                return .autoarchivePopular
-            default:
-                return nil
-            }
+            return ServerProvidedSuggestion(rawValue: item)
         }
     }
     |> distinctUntilChanged

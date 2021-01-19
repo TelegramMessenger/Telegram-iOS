@@ -5883,8 +5883,11 @@ Sorry for the inconvenience.";
 "InviteLink.InviteLink" = "Invite Link";
 "InviteLink.CreatedBy" = "Link Created By";
 
+"InviteLink.DeleteLinkAlert.Text" = "Are you sure you want to delete this link? It will be completely gone.";
+"InviteLink.DeleteLinkAlert.Action" = "Delete";
+
 "InviteLink.DeleteAllRevokedLinksAlert.Text" = "This will delete all revoked links.";
-"InviteLink.DeleteAllRevokedLinksAlert.Action" = "Delete";
+"InviteLink.DeleteAllRevokedLinksAlert.Action" = "Delete All";
 
 "InviteLink.ExpiresIn" = "expires in %@";
 
@@ -5892,3 +5895,5 @@ Sorry for the inconvenience.";
 "Conversation.ChecksTooltip.Read" = "Read";
 
 "DialogList.MultipleTypingPair" = "%@ and %@ are typing";
+
+"Common.Save" = "Save";

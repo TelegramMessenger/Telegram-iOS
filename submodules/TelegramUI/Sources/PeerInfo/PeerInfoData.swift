@@ -159,6 +159,7 @@ final class PeerInfoScreenData {
     let members: PeerInfoMembersData?
     let encryptionKeyFingerprint: SecretChatKeyFingerprint?
     let globalSettings: TelegramGlobalSettings?
+    let invitations: PeerExportedInvitationsState?
     
     init(
         peer: Peer?,
@@ -172,7 +173,8 @@ final class PeerInfoScreenData {
         linkedDiscussionPeer: Peer?,
         members: PeerInfoMembersData?,
         encryptionKeyFingerprint: SecretChatKeyFingerprint?,
-        globalSettings: TelegramGlobalSettings?
+        globalSettings: TelegramGlobalSettings?,
+        invitations: PeerExportedInvitationsState?
     ) {
         self.peer = peer
         self.cachedData = cachedData
@@ -186,6 +188,7 @@ final class PeerInfoScreenData {
         self.members = members
         self.encryptionKeyFingerprint = encryptionKeyFingerprint
         self.globalSettings = globalSettings
+        self.invitations = invitations
     }
 }
 
@@ -442,7 +445,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
                 linkedDiscussionPeer: nil,
                 members: nil,
                 encryptionKeyFingerprint: nil,
-                globalSettings: globalSettings
+                globalSettings: globalSettings,
+                invitations: nil
             )
     }
 }
@@ -464,7 +468,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 linkedDiscussionPeer: nil,
                 members: nil,
                 encryptionKeyFingerprint: nil,
-                globalSettings: nil
+                globalSettings: nil,
+                invitations: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -603,7 +608,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     linkedDiscussionPeer: nil,
                     members: nil,
                     encryptionKeyFingerprint: encryptionKeyFingerprint,
-                    globalSettings: nil
+                    globalSettings: nil,
+                    invitations: nil
                 )
             }
         case .channel:
@@ -623,13 +629,19 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
             var combinedKeys: [PostboxViewKey] = []
             combinedKeys.append(globalNotificationsKey)
+            
+            let invitationsContextPromise = Promise<PeerExportedInvitationsContext?>(nil)
+            let invitationsStatePromise = Promise<PeerExportedInvitationsState?>(nil)
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId),
                 context.account.postbox.combinedView(keys: combinedKeys),
-                status
+                status,
+                invitationsContextPromise.get(),
+                invitationsStatePromise.get()
             )
-            |> map { peerView, availablePanes, combinedView, status -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, combinedView, status, currentInvitationsContext, invitations -> PeerInfoScreenData in
                 var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
                 if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
                     if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
@@ -642,6 +654,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     discussionPeer = peer
                 }
                 
+                if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || ((channel.adminRights != nil && channel.hasPermission(.pinMessages)) && cachedData.flags.contains(.canChangeUsername)), currentInvitationsContext == nil {
+                    let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: true)
+                    invitationsContextPromise.set(.single(invitationsContext))
+                    invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
+                }
+                                
                 return PeerInfoScreenData(
                     peer: peerView.peers[peerId],
                     cachedData: peerView.cachedData,
@@ -654,7 +672,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     linkedDiscussionPeer: discussionPeer,
                     members: nil,
                     encryptionKeyFingerprint: nil,
-                    globalSettings: nil
+                    globalSettings: nil,
+                    invitations: invitations
                 )
             }
         case let .group(groupId):
@@ -751,14 +770,20 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
             var combinedKeys: [PostboxViewKey] = []
             combinedKeys.append(globalNotificationsKey)
+            
+            let invitationsContextPromise = Promise<PeerExportedInvitationsContext?>(nil)
+            let invitationsStatePromise = Promise<PeerExportedInvitationsState?>(nil)
+            
             return combineLatest(queue: .mainQueue(),
                 context.account.viewTracker.peerView(groupId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: groupId),
                 context.account.postbox.combinedView(keys: combinedKeys),
                 status,
-                membersData
+                membersData,
+                invitationsContextPromise.get(),
+                invitationsStatePromise.get()
             )
-            |> map { peerView, availablePanes, combinedView, status, membersData -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, combinedView, status, membersData, currentInvitationsContext, invitations -> PeerInfoScreenData in
                 var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
                 if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
                     if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
@@ -780,6 +805,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                 }
                 
+                if let group = peerViewMainPeer(peerView) as? TelegramGroup, case .creator = group.role, currentInvitationsContext == nil {
+                    let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: true)
+                    invitationsContextPromise.set(.single(invitationsContext))
+                    invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
+                }
+                
                 return PeerInfoScreenData(
                     peer: peerView.peers[groupId],
                     cachedData: peerView.cachedData,
@@ -792,7 +823,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     linkedDiscussionPeer: discussionPeer,
                     members: membersData,
                     encryptionKeyFingerprint: nil,
-                    globalSettings: nil
+                    globalSettings: nil,
+                    invitations: invitations
                 )
             }
         }

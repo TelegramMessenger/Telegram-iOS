@@ -1060,25 +1060,7 @@ public final class VoiceChatController: ViewController {
                 if !strongSelf.didSetDataReady {
                     strongSelf.accountPeer = accountPeer
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
-                    
-                    if let peer = peerViewMainPeer(view) {
-                        if let channel = peer as? TelegramChannel {
-                            let addressName = channel.addressName ?? ""
-                            if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
-                                if addressName.isEmpty {
-                                    let _ = ensuredExistingPeerExportedInvitation(account: strongSelf.context.account, peerId: call.peerId).start()
-                                }
-                            }
-                        } else if let group = peer as? TelegramGroup {
-                            switch group.role {
-                            case .creator, .admin:
-                                let _ = ensuredExistingPeerExportedInvitation(account: strongSelf.context.account, peerId: call.peerId).start()
-                            default:
-                                break
-                            }
-                        }
-                    }
-                    
+                                        
                     strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
                 }

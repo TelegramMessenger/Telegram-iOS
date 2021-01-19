@@ -170,6 +170,8 @@ private var declaredEncodables: Void = {
     declareEncodable(ValidationMessageAttribute.self, f: { ValidationMessageAttribute(decoder: $0) })
     declareEncodable(EmojiSearchQueryMessageAttribute.self, f: { EmojiSearchQueryMessageAttribute(decoder: $0) })
     declareEncodable(CachedPeerInvitationImporters.self, f: { CachedPeerInvitationImporters(decoder: $0) })
+    declareEncodable(CachedPeerExportedInvitations.self, f: { CachedPeerExportedInvitations(decoder: $0) })
+    declareEncodable(ExportedInvitation.self, f: { ExportedInvitation(decoder: $0) })
     
     return
 }()

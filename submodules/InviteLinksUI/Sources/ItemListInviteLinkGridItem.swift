@@ -130,7 +130,6 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
             let itemSeparatorColor: UIColor
             
             let leftInset = 16.0 + params.leftInset
-            let rightInset = 16.0 + params.rightInset
             
             var height: CGFloat
             let count = item.invites?.count ?? 0
