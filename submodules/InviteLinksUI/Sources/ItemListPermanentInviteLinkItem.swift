@@ -169,6 +169,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.isGestureEnabled = false
         self.addressButtonIconNode = ASImageNode()
+        self.addressButtonIconNode.contentMode = .center
         self.addressButtonIconNode.displaysAsynchronously = false
         self.addressButtonIconNode.displayWithoutProcessing = true
         
@@ -423,7 +424,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
                     
-                    strongSelf.addressButtonNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0, y: verticalInset + 14.0), size: CGSize(width: 24.0, height: 24.0))
+                    strongSelf.addressButtonNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0 - 14.0, y: verticalInset), size: CGSize(width: 52.0, height: 52.0))
                     strongSelf.extractedContainerNode.frame = strongSelf.addressButtonNode.bounds
                     strongSelf.extractedContainerNode.contentRect = strongSelf.addressButtonNode.bounds
                     strongSelf.addressButtonIconNode.frame = strongSelf.addressButtonNode.bounds

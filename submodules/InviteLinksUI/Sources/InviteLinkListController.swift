@@ -316,7 +316,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         let shareController = ShareController(context: context, subject: .url(invite.link))
         presentControllerImpl?(shareController, nil)
     }, openMainLink: { invite in
-        let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: nil, importersContext: nil)
+        let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: nil, revokedInvitationsContext: revokedInvitesContext, importersContext: nil)
         pushControllerImpl?(controller)
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
@@ -409,7 +409,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         pushControllerImpl?(controller)
     }, openLink: { invite in
         if let invite = invite {
-            let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: invitesContext, importersContext: nil)
+            let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: invitesContext, revokedInvitationsContext: revokedInvitesContext, importersContext: nil)
             pushControllerImpl?(controller)
         }
     }, linkContextAction: { invite, node, gesture in
