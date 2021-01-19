@@ -895,7 +895,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }).start()
             
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled]))
-            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peerId in
+            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in
+                let peerId = peer.id
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in

@@ -35,17 +35,20 @@ public final class PeerSelectionControllerParams {
     public let hasContactSelector: Bool
     public let title: String?
     public let attemptSelection: ((Peer) -> Void)?
+    public let createNewGroup: (() -> Void)?
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil) {
         self.context = context
         self.filter = filter
         self.hasContactSelector = hasContactSelector
         self.title = title
         self.attemptSelection = attemptSelection
+        self.createNewGroup = createNewGroup
     }
 }
 
 public protocol PeerSelectionController: ViewController {
-    var peerSelected: ((PeerId) -> Void)? { get set }
+    var peerSelected: ((Peer) -> Void)? { get set }
     var inProgress: Bool { get set }
+    var customDismiss: (() -> Void)? { get set }
 }

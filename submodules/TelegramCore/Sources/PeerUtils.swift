@@ -254,4 +254,13 @@ public extension PeerId {
             return false
         }
     }
+    
+    var isImport: Bool {
+        if self.namespace == Namespaces.Peer.CloudUser {
+            if self.id == 225079 {
+                return true
+            }
+        }
+        return false
+    }
 }

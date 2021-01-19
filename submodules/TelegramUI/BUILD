@@ -213,6 +213,7 @@ swift_library(
         "//submodules/AnimatedNavigationStripeNode:AnimatedNavigationStripeNode",
         "//submodules/AudioBlob:AudioBlob",
         "//Telegram:GeneratedSources",
+        "//third-party/ZIPFoundation:ZIPFoundation",
     ],
     visibility = [
         "//visibility:public",

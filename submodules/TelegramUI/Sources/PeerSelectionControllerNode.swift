@@ -46,7 +46,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeer: ((PeerId) -> Void)?
+    var requestOpenPeer: ((Peer) -> Void)?
     var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
@@ -59,7 +59,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, hasContactSelector: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.dismiss = dismiss
@@ -84,14 +84,25 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.toolbarSeparatorNode = nil
             self.segmentedControlNode = nil
         }
+        
+        var chatListcategories: [ChatListNodeAdditionalCategory] = []
+        
+        if let _ = createNewGroup {
+            //TODO:localize
+            chatListcategories.append(ChatListNodeAdditionalCategory(id: 0, icon: PresentationResourcesItemList.createGroupIcon(self.presentationData.theme), title: "Create a New Group", appearance: .action))
+        }
        
-        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: filter, isSelecting: false, additionalCategories: [], chatListFilters: nil), theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: filter, isSelecting: false, additionalCategories: chatListcategories, chatListFilters: nil), theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         super.init()
         
         self.setViewBlock({
             return UITracingLayerView()
         })
+        
+        self.chatListNode.additionalCategorySelected = { _ in
+            createNewGroup?()
+        }
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
@@ -100,7 +111,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         self.chatListNode.peerSelected = { [weak self] peer, _, _ in
-            self?.requestOpenPeer?(peer.id)
+            self?.chatListNode.clearHighlightAnimated(true)
+            self?.requestOpenPeer?(peer)
         }
         
         self.chatListNode.disabledPeerSelected = { [weak self] peer in
@@ -326,7 +338,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     }
                     contactListNode.openPeer = { [weak self] peer, _ in
                         if case let .peer(peer, _, _) = peer {
-                            self?.requestOpenPeer?(peer.id)
+                            self?.requestOpenPeer?(peer)
                         }
                     }
                     contactListNode.suppressPermissionWarning = { [weak self] in

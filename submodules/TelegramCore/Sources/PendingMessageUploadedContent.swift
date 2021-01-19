@@ -364,7 +364,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                 transaction.updateMessage(messageId, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil, psaType: nil)
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil, psaType: nil, flags: [])
                                     }
                                     var updatedAttributes = currentMessage.attributes
                                     if let index = updatedAttributes.firstIndex(where: { $0 is OutgoingMessageInfoAttribute }){
@@ -654,7 +654,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                             transaction.updateMessage(messageId, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
-                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil, psaType: nil)
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil, psaType: nil, flags: [])
                                 }
                                 var updatedAttributes = currentMessage.attributes
                                 if let index = updatedAttributes.firstIndex(where: { $0 is OutgoingMessageInfoAttribute }){

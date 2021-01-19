@@ -9927,7 +9927,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
-            controller.peerSelected = { [weak self, weak controller] peerId in
+            controller.peerSelected = { [weak self, weak controller] peer in
+                let peerId = peer.id
+                
                 guard let strongSelf = self, let strongController = controller else {
                     return
                 }
@@ -10122,7 +10124,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case let .chat(textInputState, _, _):
                             if let textInputState = textInputState {
                                 let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context))
-                                controller.peerSelected = { [weak self, weak controller] peerId in
+                                controller.peerSelected = { [weak self, weak controller] peer in
+                                    let peerId = peer.id
+                                    
                                     if let strongSelf = self, let strongController = controller {
                                         if case let .peer(currentPeerId) = strongSelf.chatLocation, peerId == currentPeerId {
                                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -10322,7 +10326,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
                     if let _ = chatPeer as? TelegramSecretChat {
                         let _ = (strongSelf.context.account.postbox.transaction { transaction in
-                            terminateSecretChat(transaction: transaction, peerId: chatPeer.id)
+                            terminateSecretChat(transaction: transaction, peerId: chatPeer.id, requestRemoteHistoryRemoval: true)
                         }).start()
                     }
                     if deleteChat {
