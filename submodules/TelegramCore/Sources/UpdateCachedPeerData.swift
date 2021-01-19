@@ -205,10 +205,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     
                                     let peerStatusSettings = PeerStatusSettings(apiSettings: userFull.settings)
                                     
-                                    var hasScheduledMessages = false
-                                    if (userFull.flags & 1 << 12) != 0 {
-                                        hasScheduledMessages = true
-                                    }
+                                    let hasScheduledMessages = (userFull.flags & 1 << 12) != 0
                                 
                                     return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                             }
@@ -257,7 +254,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                 
                                 let photo: TelegramMediaImage? = chatFull.chatPhoto.flatMap(telegramMediaImageFromApiPhoto)
                                 
-                                let exportedInvitation = chatFull.exportedInvite.flatMap(ExportedInvitation.init(apiExportedInvite:))
+                                let exportedInvitation = chatFull.exportedInvite.flatMap { ExportedInvitation(apiExportedInvite: $0) }
                                 let pinnedMessageId = chatFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                             
                                 var peers: [Peer] = []

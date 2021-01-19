@@ -45,25 +45,39 @@ private struct InviteLinkInviteTransaction {
 }
 
 private enum InviteLinkInviteEntryId: Hashable {
+    case header
     case mainLink
     case links(Int32)
+    case manage
 }
 
 private enum InviteLinkInviteEntry: Comparable, Identifiable {
+    case header(PresentationTheme, String, String)
     case mainLink(PresentationTheme, ExportedInvitation)
     case links(Int32, PresentationTheme, [ExportedInvitation])
+    case manage(PresentationTheme, String, Bool)
     
     var stableId: InviteLinkInviteEntryId {
         switch self {
+            case .header:
+                return .header
             case .mainLink:
                 return .mainLink
             case let .links(index, _, _):
                 return .links(index)
+            case .manage:
+                return .manage
         }
     }
     
     static func ==(lhs: InviteLinkInviteEntry, rhs: InviteLinkInviteEntry) -> Bool {
         switch lhs {
+            case let .header(lhsTheme, lhsTitle, lhsText):
+                if case let .header(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .mainLink(lhsTheme, lhsInvitation):
                 if case let .mainLink(rhsTheme, rhsInvitation) = rhs, lhsTheme === rhsTheme, lhsInvitation == rhsInvitation {
                     return true
@@ -76,42 +90,72 @@ private enum InviteLinkInviteEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .manage(lhsTheme, lhsText, lhsStandalone):
+                if case let .manage(rhsTheme, rhsText, rhsStandalone) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsStandalone == rhsStandalone {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
     static func <(lhs: InviteLinkInviteEntry, rhs: InviteLinkInviteEntry) -> Bool {
         switch lhs {
+            case .header:
+                switch rhs {
+                    case .header:
+                        return false
+                    case .mainLink, .links, .manage:
+                        return true
+                }
             case .mainLink:
                 switch rhs {
-                    case .mainLink:
+                    case .header, .mainLink:
                         return false
-                    case .links:
+                    case .links, .manage:
                         return true
                 }
             case let .links(lhsIndex, _, _):
                 switch rhs {
-                    case .mainLink:
+                    case .header, .mainLink:
                         return false
                     case let .links(rhsIndex, _, _):
                         return lhsIndex < rhsIndex
+                    case .manage:
+                        return true
+                }
+            case .manage:
+                switch rhs {
+                    case .header, .mainLink, .links:
+                        return false
+                    case .manage:
+                        return true
                 }
         }
     }
     
     func item(account: Account, presentationData: PresentationData, interaction: InviteLinkInviteInteraction) -> ListViewItem {
         switch self {
+            case let .header(theme, title, text):
+                return InviteLinkInviteHeaderItem(theme: theme, title: title, text: text)
             case let .mainLink(_, invite):
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], buttonColor: nil, sectionId: 0, style: .plain, shareAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, copyAction: {
+                    interaction.copyLink(invite)
+                }, shareAction: {
                     interaction.shareLink(invite)
                 }, contextAction: { node in
                     interaction.mainLinkContextAction(invite, node, nil)
                 }, viewAction: {
                 })
             case let .links(_, _, invites):
-                return ItemListInviteLinkGridItem(presentationData: ItemListPresentationData(presentationData), invites: invites, sectionId: 0, style: .plain, tapAction: { invite in
+                return ItemListInviteLinkGridItem(presentationData: ItemListPresentationData(presentationData), invites: invites, share: true, sectionId: 1, style: .plain, tapAction: { invite in
                     interaction.copyLink(invite)
                 }, contextAction: { invite, _ in
                     interaction.shareLink(invite)
+                })
+            case let .manage(theme, text, standalone):
+                return InviteLinkInviteManageItem(theme: theme, text: text, standalone: standalone, action: {
+                    interaction.manageLinks()
                 })
         }
     }
@@ -136,13 +180,14 @@ public final class InviteLinkInviteController: ViewController {
     
     private let context: AccountContext
     private let peerId: PeerId
+    private weak var parentNavigationController: NavigationController?
     
     private var presentationDataDisposable: Disposable?
             
-    public init(context: AccountContext, peerId: PeerId) {
-        fatalError()
+    public init(context: AccountContext, peerId: PeerId, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
+        self.parentNavigationController = parentNavigationController
                 
         super.init(navigationBarPresentationData: nil)
         
@@ -196,7 +241,7 @@ public final class InviteLinkInviteController: ViewController {
             
             self.controllerNode.animateOut(completion: { [weak self] in
                 completion?()
-                self?.dismiss(animated: false)
+                self?.presentingViewController?.dismiss(animated: false, completion: nil)
             })
         }
     }
@@ -212,6 +257,7 @@ public final class InviteLinkInviteController: ViewController {
         
         private let context: AccountContext
         private let peerId: PeerId
+        private let invitesContext: PeerExportedInvitationsContext
         
         private var interaction: InviteLinkInviteInteraction?
         
@@ -244,6 +290,8 @@ public final class InviteLinkInviteController: ViewController {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
+            
+            self.invitesContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: false)
                         
             self.dimNode = ASDisplayNode()
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -328,7 +376,7 @@ public final class InviteLinkInviteController: ViewController {
                             ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                                 dismissAction()
                                 
-                                self?.revokeDisposable.set((ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId, revokeExisted: true) |> deliverOnMainQueue).start(completed: {
+                                self?.revokeDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
 
                                 }))
                             })
@@ -341,31 +389,53 @@ public final class InviteLinkInviteController: ViewController {
                 let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             }, copyLink: { [weak self] invite in
-                let shareController = ShareController(context: context, subject: .url(invite.link))
-                self?.controller?.present(shareController, in: .window(.root))
+                UIPasteboard.general.string = invite.link
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                self?.controller?.present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), in: .window(.root))
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
                 self?.controller?.present(shareController, in: .window(.root))
             }, manageLinks: { [weak self] in
                 let controller = inviteLinkListController(context: context, peerId: peerId)
-                self?.controller?.push(controller)
+                self?.controller?.parentNavigationController?.pushViewController(controller)
                 self?.controller?.dismiss()
             })
             
             let previousEntries = Atomic<[InviteLinkInviteEntry]?>(value: nil)
             
             let peerView = context.account.postbox.peerView(id: peerId)
-            self.disposable = (combineLatest(self.presentationDataPromise.get(), peerView)
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData, view in
+            self.disposable = (combineLatest(self.presentationDataPromise.get(), peerView, self.invitesContext.state)
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData, view, invites in
                 if let strongSelf = self {
                     var entries: [InviteLinkInviteEntry] = []
                     
+                    entries.append(.header(presentationData.theme, presentationData.strings.InviteLink_InviteLink, presentationData.strings.InviteLink_CreatePrivateLinkHelp))
+                    
+                    let mainInvite: ExportedInvitation?
                     if let cachedData = view.cachedData as? CachedGroupData, let invite = cachedData.exportedInvitation {
-                        entries.append(.mainLink(presentationData.theme, invite))
+                        mainInvite = invite
                     } else if let cachedData = view.cachedData as? CachedChannelData, let invite = cachedData.exportedInvitation {
-                        entries.append(.mainLink(presentationData.theme, invite))
+                        mainInvite = invite
+                    } else {
+                        mainInvite = nil
+                    }
+                    if let mainInvite = mainInvite {
+                        entries.append(.mainLink(presentationData.theme, mainInvite))
                     }
                     
+                    let additionalInvites = invites.invitations.filter { $0.link != mainInvite?.link }
+                    var index: Int32 = 0
+                    for i in stride(from: 0, to: additionalInvites.endIndex, by: 2) {
+                        var invitesPair: [ExportedInvitation] = []
+                        invitesPair.append(additionalInvites[i])
+                        if i + 1 < additionalInvites.count {
+                            invitesPair.append(additionalInvites[i + 1])
+                        }
+                        entries.append(.links(index, presentationData.theme, invitesPair))
+                        index += 1
+                    }
+                    
+                    entries.append(.manage(presentationData.theme, presentationData.strings.InviteLink_Manage, additionalInvites.isEmpty))
                        
                     let previousEntries = previousEntries.swap(entries)
                     
@@ -507,14 +577,14 @@ public final class InviteLinkInviteController: ViewController {
             insets.bottom = layout.intrinsicInsets.bottom
                     
             let headerHeight: CGFloat = 54.0
-            let visibleItemsHeight: CGFloat = 147.0 + floor(52.0 * 3.5)
+            let visibleItemsHeight: CGFloat = 409.0
         
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             
             let listTopInset = layoutTopInset + headerHeight
             let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset)
             
-            insets.top = max(0.0, listNodeSize.height - visibleItemsHeight)
+            insets.top = max(0.0, listNodeSize.height - visibleItemsHeight - insets.bottom)
                         
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: duration, curve: curve)
@@ -539,11 +609,6 @@ public final class InviteLinkInviteController: ViewController {
             if result === self.headerNode.view {
                 return self.view
             }
-            
-            if result === self.headerNode.view {
-                return self.view
-            }
-            
             if !self.bounds.contains(point) {
                 return nil
             }
@@ -569,8 +634,6 @@ public final class InviteLinkInviteController: ViewController {
                 case .changed:
                     var translation = recognizer.translation(in: self.contentNode.view).y
                     if let currentPanOffset = self.panGestureArguments {
-                        
-
                         if case let .known(value) = contentOffset, value <= 0.5 {
                         } else {
                             translation = currentPanOffset

@@ -158,7 +158,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ChatListSearchItem(theme: theme, placeholder: strings.Contacts_SearchLabel, activate: {
                     interaction.activateSearch()
                 })
-            case let .sort(theme, strings, sortOrder):
+            case let .sort(_, strings, sortOrder):
                 var text = strings.Contacts_SortedByName
                 if case .presence = sortOrder {
                     text = strings.Contacts_SortedByPresence
@@ -166,17 +166,17 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, header: nil, action: {
                     interaction.openSortMenu()
             })
-            case let .permissionInfo(theme, title, text, suppressed):
+            case let .permissionInfo(_, title, text, suppressed):
                 return InfoListItem(presentationData: ItemListPresentationData(presentationData), title: title, text: .plain(text), style: .plain, closeAction: suppressed ? nil : {
                     interaction.suppressWarning()
                 })
-            case let .permissionEnable(theme, text):
+            case let .permissionEnable(_, text):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .none, header: nil, action: {
                     interaction.authorize()
                 })
-            case let .option(_, option, header, theme, _):
+            case let .option(_, option, header, _, _):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, icon: option.icon, clearHighlightAutomatically: false, header: header, action: option.action)
-            case let .peer(_, peer, presence, header, selection, theme, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, displayCallIcons, enabled):
+            case let .peer(_, peer, presence, header, selection, _, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, displayCallIcons, enabled):
                 var status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
                 var isContextActionEnabled = false
@@ -928,9 +928,9 @@ public final class ContactListNode: ASDisplayNode {
         |> mapToSignal { presentation in
             var generateSections = false
             var includeChatList = false
-            if case let .natural(natural) = presentation {
+            if case let .natural(_, includeChatListValue) = presentation {
                 generateSections = true
-                includeChatList = natural.includeChatList
+                includeChatList = includeChatListValue
             }
             
             if case let .search(query, searchChatList, searchDeviceContacts, searchGroups, searchChannels, globalSearch) = presentation {

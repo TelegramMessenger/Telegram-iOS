@@ -13,10 +13,12 @@ class InviteLinkInviteHeaderItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId = 0
     
     let theme: PresentationTheme
+    let title: String
     let text: String
     
-    init(theme: PresentationTheme, text: String) {
+    init(theme: PresentationTheme, title: String, text: String) {
         self.theme = theme
+        self.title = title
         self.text = text
     }
     
@@ -57,58 +59,86 @@ class InviteLinkInviteHeaderItem: ListViewItem, ItemListItem {
     }
 }
 
-private let titleFont = Font.regular(13.0)
+private let titleFont = Font.medium(23.0)
+private let textFont = Font.regular(13.0)
 
 class InviteLinkInviteHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
-    private var animationNode: AnimatedStickerNode
+    private let textNode: TextNode
+    private let iconBackgroundNode: ASImageNode
+    private let iconNode: ASImageNode
     
     private var item: InviteLinkInviteHeaderItem?
     
     init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.contentMode = .left
-        self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.animationNode = AnimatedStickerNode()
-        if let path = getAppBundle().path(forResource: "Invite", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            self.animationNode.visibility = true
-        }
+        self.textNode = TextNode()
+        self.textNode.isUserInteractionEnabled = false
+        
+        self.iconBackgroundNode = ASImageNode()
+        self.iconBackgroundNode.displaysAsynchronously = false
+        self.iconBackgroundNode.displayWithoutProcessing = true
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.contentMode = .center
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
-        self.addSubnode(self.animationNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.iconBackgroundNode)
+        self.addSubnode(self.iconNode)
     }
     
     func asyncLayout() -> (_ item: InviteLinkInviteHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let currentItem = self.item
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 32.0 + params.leftInset
-            let topInset: CGFloat = 92.0
+            let leftInset: CGFloat = 40.0 + params.leftInset
+            let topInset: CGFloat = 98.0
+            let spacing: CGFloat = 8.0
+            let bottomInset: CGFloat = 24.0
             
-            let attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.freeTextColor)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            var updatedTheme: PresentationTheme?
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
             
-            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let titleAttributedText = NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            let attributedText = NSAttributedString(string: item.text, font: textFont, textColor: item.theme.list.freeTextColor)
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            
+            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + spacing + textLayout.size.height + bottomInset)
+        
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.iconBackgroundNode.image = generateFilledCircleImage(diameter: 92.0, color: item.theme.actionSheet.controlAccentColor)
+                        strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/LargeLink"), color: item.theme.list.itemCheckColors.foregroundColor)
+                    }
                                         
-                    let iconSize = CGSize(width: 96.0, height: 96.0)
-                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
-                    strongSelf.animationNode.updateLayout(size: iconSize)
+                    let iconSize = CGSize(width: 92.0, height: 92.0)
+                    strongSelf.iconBackgroundNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
+                    strongSelf.iconNode.frame = strongSelf.iconBackgroundNode.frame
                     
                     let _ = titleApply()
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset + 8.0), size: titleLayout.size)
+                    
+                    let _ = textApply()
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - textLayout.size.width) / 2.0), y: topInset + 8.0 + titleLayout.size.height + spacing), size: textLayout.size)
                 }
             })
         }

@@ -10,6 +10,7 @@ import ItemListUI
 public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let invites: [ExportedInvitation]?
+    let share: Bool
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let tapAction: ((ExportedInvitation) -> Void)?
@@ -19,6 +20,7 @@ public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     public init(
         presentationData: ItemListPresentationData,
         invites: [ExportedInvitation]?,
+        share: Bool,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
         tapAction: ((ExportedInvitation) -> Void)?,
@@ -27,6 +29,7 @@ public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     ) {
         self.presentationData = presentationData
         self.invites = invites
+        self.share = share
         self.sectionId = sectionId
         self.style = style
         self.tapAction = tapAction
@@ -127,15 +130,21 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
             let itemSeparatorColor: UIColor
             
             let leftInset = 16.0 + params.leftInset
-            let rightInset = 16.0 + params.rightInset
+            let topInset: CGFloat
+            if case .plain = item.style, case .otherSection = neighbors.top {
+                topInset = 16.0
+            } else {
+                topInset = 4.0
+            }
+            
             
             var height: CGFloat
             let count = item.invites?.count ?? 0
             if count > 0 {
                 if count % 2 == 0 {
-                    height = 4.0 + 122.0 + 6.0
+                    height = topInset + 122.0 + 6.0
                 } else {
-                    height = 4.0 + 102.0 + 6.0
+                    height = topInset + 102.0 + 6.0
                 }
             } else {
                 height = 0.001
@@ -143,9 +152,9 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
             
             switch item.style {
             case .plain:
-                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
-                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                insets = itemListNeighborsPlainInsets(neighbors)
+                itemBackgroundColor = item.presentationData.theme.list.blocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.blocksBackgroundColor
+                insets = UIEdgeInsets()
             case .blocks:
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
@@ -153,7 +162,7 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
             }
             if case .sameSection(false) = neighbors.bottom {
             } else {
-                height += 6.0
+                height += 10.0
             }
             contentSize = CGSize(width: params.width, height: height)
             
@@ -167,8 +176,8 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                     }
                     
-                    let gridSize = strongSelf.gridNode.update(size: contentSize, safeInset: params.leftInset,  items: item.invites ?? [], presentationData: item.presentationData, transition: .immediate)
-                    strongSelf.gridNode.frame = CGRect(origin: CGPoint(), size: gridSize)
+                    let gridSize = strongSelf.gridNode.update(size: contentSize, safeInset: params.leftInset, items: item.invites ?? [], share: item.share, presentationData: item.presentationData, transition: .immediate)
+                    strongSelf.gridNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset - 4.0), size: gridSize)
                     strongSelf.gridNode.action = { invite in
                         item.tapAction?(invite)
                     }
@@ -178,18 +187,19 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
                     
                     switch item.style {
                     case .plain:
-                        if strongSelf.backgroundNode.supernode != nil {
-                            strongSelf.backgroundNode.removeFromSupernode()
+                        if strongSelf.backgroundNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                         }
                         if strongSelf.topStripeNode.supernode != nil {
                             strongSelf.topStripeNode.removeFromSupernode()
                         }
-                        if strongSelf.bottomStripeNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                        if strongSelf.bottomStripeNode.supernode != nil {
+                            strongSelf.bottomStripeNode.removeFromSupernode()
                         }
                         if strongSelf.maskNode.supernode != nil {
                             strongSelf.maskNode.removeFromSupernode()
                         }
+                        strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: contentSize.height))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     case .blocks:
                         if strongSelf.backgroundNode.supernode == nil {

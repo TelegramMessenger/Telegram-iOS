@@ -305,6 +305,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var applicationInForegroundDisposable: Disposable?
     private var applicationInFocusDisposable: Disposable?
     
+    private let checksTooltipDisposable = MetaDisposable()
+    private var shouldDisplayChecksTooltip = false
+    
     private var checkedPeerChatServiceActions = false
     
     private var willAppear = false
@@ -3424,6 +3427,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.peekTimerDisposable.dispose()
         self.hasActiveGroupCallDisposable?.dispose()
         self.createVoiceChatDisposable.dispose()
+        self.checksTooltipDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -4761,7 +4765,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                let editingMessage = strongSelf.editingMessage
                 let text = trimChatInputText(convertMarkdownToAttributes(editMessage.inputState.inputText))
                 let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
                 var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -6236,7 +6239,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.openScheduledMessages()
                     }
                     
-//                    strongSelf.displayChecksTooltip()
+                    if strongSelf.shouldDisplayChecksTooltip {
+                        strongSelf.displayChecksTooltip()
+                        strongSelf.shouldDisplayChecksTooltip = false
+                        strongSelf.checksTooltipDisposable.set(dismissServerProvidedSuggestion(account: strongSelf.context.account, suggestion: .newcomerTicks).start())
+                    }
                 }
             }))
         
@@ -6482,7 +6489,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return false
                         }
                         
-                        if !strongSelf.context.sharedContext.currentMediaInputSettings.with { $0.enableRaiseToSpeak } {
+                        if !strongSelf.context.sharedContext.currentMediaInputSettings.with({ $0.enableRaiseToSpeak }) {
                             return false
                         }
                         
@@ -6706,6 +6713,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 ), in: .window(.root))
             }))
         }
+        
+        self.checksTooltipDisposable.set((getServerProvidedSuggestions(postbox: self.context.account.postbox)
+        |> deliverOnMainQueue).start(next: { [weak self] values in
+            guard let strongSelf = self else {
+                return
+            }
+            if !values.contains(.newcomerTicks) {
+                return
+            }
+            strongSelf.shouldDisplayChecksTooltip = true
+        }))
         
         if self.scheduledActivateInput {
             self.scheduledActivateInput = false
@@ -7481,7 +7499,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> deliverOnMainQueue).start(next: { [weak self, weak controller] result in
                         controller?.dismiss()
                         
-                        guard let strongSelf = self, case let .result(stats) = result, var categories = stats.media[peer.id] else {
+                        guard let strongSelf = self, case let .result(stats) = result, let categories = stats.media[peer.id] else {
                             return
                         }
                         let presentationData = strongSelf.presentationData
@@ -7682,16 +7700,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func editMessageMediaWithMessages(_ messages: [EnqueueMessage]) {
-        if let message = messages.first, case let .message(desc) = message, let mediaReference = desc.mediaReference {
+        if let message = messages.first, case let .message(text, _, maybeMediaReference, _, _) = message, let mediaReference = maybeMediaReference {
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                 var state = state
                 if let editMessageState = state.editMessageState, case let .media(options) = editMessageState.content, !options.isEmpty {
                     state = state.updatedEditMessageState(ChatEditInterfaceMessageState(content: editMessageState.content, mediaReference: mediaReference))
                 }
-                if !desc.text.isEmpty {
+                if !text.isEmpty {
                     state = state.updatedInterfaceState { state in
                         if let editMessage = state.editMessage {
-                            return state.withUpdatedEditMessage(editMessage.withUpdatedInputState(ChatTextInputState(inputText: NSAttributedString(string: desc.text))))
+                            return state.withUpdatedEditMessage(editMessage.withUpdatedInputState(ChatTextInputState(inputText: NSAttributedString(string: text))))
                         }
                         return state
                     }
@@ -9338,7 +9356,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.completed
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
@@ -10113,8 +10130,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             case let .withBotStartPayload(botStart):
                                 self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), botStart: botStart))
-                            default:
-                                break
                         }
                     }
                 } else {
@@ -10536,7 +10551,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
         self.commitPurposefulAction()
         
-        self.presentVoiceMessageDiscardAlert(action: {
+        let _ = self.presentVoiceMessageDiscardAlert(action: {
             if self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback {
                 if url.hasSuffix(".m3u8") {
                     let navigationController = self.navigationController as? NavigationController

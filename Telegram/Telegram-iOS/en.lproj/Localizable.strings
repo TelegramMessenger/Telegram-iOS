@@ -5845,6 +5845,7 @@ Sorry for the inconvenience.";
 "InviteLink.Expired" = "expired";
 "InviteLink.UsageLimitReached" = "limit reached";
 "InviteLink.Revoked" = "revoked";
+"InviteLink.TapToCopy" = "tap to copy";
 
 "InviteLink.AdditionalLinks" = "Additional Links";
 "InviteLink.Create" = "Create a New Link";
@@ -5885,10 +5886,17 @@ Sorry for the inconvenience.";
 "InviteLink.InviteLink" = "Invite Link";
 "InviteLink.CreatedBy" = "Link Created By";
 
-"InviteLink.DeleteAllRevokedLinksAlert.Text" = "This will delete all revoked links";
-"InviteLink.DeleteAllRevokedLinksAlert.Action" = "Delete";
+"InviteLink.DeleteLinkAlert.Text" = "Are you sure you want to delete this link? It will be completely gone.";
+"InviteLink.DeleteLinkAlert.Action" = "Delete";
+
+"InviteLink.DeleteAllRevokedLinksAlert.Text" = "This will delete all revoked links.";
+"InviteLink.DeleteAllRevokedLinksAlert.Action" = "Delete All";
+
+"InviteLink.ExpiresIn" = "expires in %@";
 
 "Conversation.ChecksTooltip.Delivered" = "Delivered";
 "Conversation.ChecksTooltip.Read" = "Read";
 
 "DialogList.MultipleTypingPair" = "%@ and %@ are typing";
+
+"Common.Save" = "Save";

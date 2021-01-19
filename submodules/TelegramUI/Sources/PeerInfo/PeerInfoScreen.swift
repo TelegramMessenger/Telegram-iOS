@@ -1185,6 +1185,17 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         discussionGroupTitle = "..."
                     }
                     
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
+                    } else {
+                        invitesText = ""
+                    }
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
+                    
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, action: {
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
@@ -1255,11 +1266,16 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
                                 
-                                if !isPublic {
-                                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(""), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-                                        interaction.editingOpenInviteLinksSetup()
-                                    }))
+                                let invitesText: String
+                                if let count = data.invitations?.count, count > 0 {
+                                    invitesText = "\(count)"
+                                } else {
+                                    invitesText = ""
                                 }
+                                
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                                    interaction.editingOpenInviteLinksSetup()
+                                }))
                                 
                                 if let linkedDiscussionPeer = data.linkedDiscussionPeer {
                                     let peerTitle: String
@@ -1318,9 +1334,10 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             }
         } else if let group = data.peer as? TelegramGroup {
             let ItemUsername = 1
-            let ItemPreHistory = 2
-            let ItemPermissions = 3
-            let ItemAdmins = 4
+            let ItemInviteLinks = 2
+            let ItemPreHistory = 3
+            let ItemPermissions = 4
+            let ItemAdmins = 5
             
             if case .creator = group.role {
                 if let cachedData = data.cachedData as? CachedGroupData {
@@ -1330,6 +1347,18 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }))
                     }
                 }
+                
+                let invitesText: String
+                if let count = data.invitations?.count, count > 0 {
+                    invitesText = "\(count)"
+                } else {
+                    invitesText = ""
+                }
+                
+                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                    interaction.editingOpenInviteLinksSetup()
+                }))
+                
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
                     interaction.editingOpenPreHistorySetup()
                 }))
@@ -4540,15 +4569,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 guard let strongSelf = self else {
                     return
                 }
-                let mode: ChannelVisibilityControllerMode
-                if groupPeer.addressName != nil {
-                    let visibilityController = channelVisibilityController(context: strongSelf.context, peerId: groupPeer.id, mode: .generic, upgradedToSupergroup: { _, f in f() }, onDismissRemoveController: contactsController)
-                    //visibilityController.navigationPresentation = .modal
-    
-                    contactsController?.push(visibilityController)
-                } else {
-                    contactsController?.push(InviteLinkInviteController(context: context, peerId: groupPeer.id))
-                }
+                strongSelf.view.endEditing(true)
+                contactsController?.present(InviteLinkInviteController(context: context, peerId: groupPeer.id, parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
             }
 
             strongSelf.controller?.push(contactsController)
