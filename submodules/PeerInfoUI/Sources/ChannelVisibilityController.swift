@@ -125,18 +125,18 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 8
             case .privateLinkInfo:
                 return 9
-            case .privateLinkManage:
-                return 10
-            case .privateLinkManageInfo:
-                return 11
             case .publicLinkStatus:
-                return 12
+                return 10
             case .publicLinkInfo:
-                return 13
+                return 11
             case .existingLinksInfo:
-                return 14
+                return 12
             case let .existingLinkPeerItem(index, _, _, _, _, _, _, _):
-                return 15 + index
+                return 13 + index
+            case .privateLinkManage:
+                return 1000
+            case .privateLinkManageInfo:
+                return 1001
         }
     }
     
