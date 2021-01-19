@@ -63,10 +63,35 @@ private enum ItemBackgroundColor: Equatable {
             case .red:
                 return (UIColor(rgb: 0xf2656a), UIColor(rgb: 0xf25f65), UIColor(rgb: 0xffd3de))
             case .gray:
-                return (UIColor(rgb: 0xd4d8db), UIColor(rgb: 0xced2d5), UIColor(rgb: 0xf8f9f9))
+                return (UIColor(rgb: 0xa8b2bb), UIColor(rgb: 0xa2abb4), UIColor(rgb: 0xe3e6e8))
         }
     }
 }
+
+private let moreIcon = generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    
+    context.setFillColor(UIColor.white.cgColor)
+    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    
+    context.setBlendMode(.clear)
+    context.fillEllipse(in: CGRect(origin: CGPoint(x: 4.0, y: 11.0), size: CGSize(width: 4.0, height: 4.0)))
+    context.fillEllipse(in: CGRect(origin: CGPoint(x: 11.0, y: 11.0), size: CGSize(width: 4.0, height: 4.0)))
+    context.fillEllipse(in: CGRect(origin: CGPoint(x: 18.0, y: 11.0), size: CGSize(width: 4.0, height: 4.0)))
+})
+
+private let shareIcon = generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    
+    context.setFillColor(UIColor.white.cgColor)
+    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    
+    if let maskImage = UIImage(bundleImageName: "Chat/Links/Share") {
+        context.clip(to: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - maskImage.size.width) / 2.0), y: floorToScreenPixels((size.height - maskImage.size.height) / 2.0)), size: maskImage.size), mask: maskImage.cgImage!)
+        context.setBlendMode(.clear)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    }
+})
 
 private class ItemNode: ASDisplayNode {
     private let selectionNode: HighlightTrackingButtonNode
@@ -114,17 +139,6 @@ private class ItemNode: ASDisplayNode {
         self.buttonIconNode = ASImageNode()
         self.buttonIconNode.displaysAsynchronously = false
         self.buttonIconNode.displayWithoutProcessing = true
-        self.buttonIconNode.image = generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            
-            context.setFillColor(UIColor.white.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            
-            context.setBlendMode(.clear)
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: 4.0, y: 11.0), size: CGSize(width: 4.0, height: 4.0)))
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: 11.0, y: 11.0), size: CGSize(width: 4.0, height: 4.0)))
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: 18.0, y: 11.0), size: CGSize(width: 4.0, height: 4.0)))
-        })
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 2
@@ -264,6 +278,8 @@ private class ItemNode: ASDisplayNode {
         }
         self.titleNode.attributedText = title
         
+        self.buttonIconNode.image = share ? shareIcon : moreIcon
+        
         var subtitleText: String = ""
         if let count = invite.count {
             subtitleText = presentationData.strings.InviteLink_PeopleJoinedShort(count)
@@ -282,7 +298,11 @@ private class ItemNode: ASDisplayNode {
             if !subtitleText.isEmpty {
                 subtitleText += " • "
             }
-            subtitleText += presentationData.strings.InviteLink_Expired
+            if share {
+                subtitleText = presentationData.strings.InviteLink_Expired
+            } else {
+                subtitleText += presentationData.strings.InviteLink_Expired
+            }
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
             self.timerNode?.removeFromSupernode()
             self.timerNode = nil
@@ -290,7 +310,11 @@ private class ItemNode: ASDisplayNode {
             if !subtitleText.isEmpty {
                 subtitleText += " • "
             }
-            subtitleText += presentationData.strings.InviteLink_UsageLimitReached
+            if share {
+                subtitleText = presentationData.strings.InviteLink_UsageLimitReached
+            } else {
+                subtitleText += presentationData.strings.InviteLink_UsageLimitReached
+            }
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
             self.timerNode?.removeFromSupernode()
             self.timerNode = nil
@@ -306,10 +330,16 @@ private class ItemNode: ASDisplayNode {
                 self.addSubnode(timerNode)
             }
             timerNode.update(color: UIColor.white, creationTimestamp: invite.date, deadlineTimestamp: expireDate)
+            if share {
+                subtitleText = presentationData.strings.InviteLink_TapToCopy
+            }
         } else {
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Link"), color: .white)
             self.timerNode?.removeFromSupernode()
             self.timerNode = nil
+            if share {
+                subtitleText = presentationData.strings.InviteLink_TapToCopy
+            }
         }
         
         self.iconNode.frame = CGRect(x: 10.0, y: 10.0, width: 30.0, height: 30.0)

@@ -449,7 +449,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
                     if let invite = invite {
                         if invite.isRevoked {
                             invitesContext.remove(invite)
-                            revokedInvitesContext.add(invite)
+                            revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
                         } else {
                             invitesContext.update(invite)
                         }
@@ -508,7 +508,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
                             }))
                             
                             invitesContext.remove(invite)
-                            revokedInvitesContext.add(invite)
+                            revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
                         })
                     ]),
                     ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])

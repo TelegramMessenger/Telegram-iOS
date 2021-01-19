@@ -4570,15 +4570,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return
                 }
                 strongSelf.view.endEditing(true)
-                let mode: ChannelVisibilityControllerMode
-                if groupPeer.addressName != nil {
-                    let visibilityController = channelVisibilityController(context: strongSelf.context, peerId: groupPeer.id, mode: .generic, upgradedToSupergroup: { _, f in f() }, onDismissRemoveController: contactsController)
-                    //visibilityController.navigationPresentation = .modal
-    
-                    contactsController?.push(visibilityController)
-                } else {
-                    contactsController?.present(InviteLinkInviteController(context: context, peerId: groupPeer.id, parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
-                }
+                contactsController?.present(InviteLinkInviteController(context: context, peerId: groupPeer.id, parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
             }
 
             strongSelf.controller?.push(contactsController)
