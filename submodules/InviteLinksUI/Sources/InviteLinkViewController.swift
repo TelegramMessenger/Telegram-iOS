@@ -118,7 +118,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     return false
                 }
             case let .importer(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate, lhsLoading):
-                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate {
+                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
@@ -192,7 +192,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil, shimmering: ItemListPeerItemShimmering(alternationIndex: 0))
+                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil, shimmering: loading ? ItemListPeerItemShimmering(alternationIndex: 0) : nil)
         }
     }
 }
@@ -217,14 +217,16 @@ public final class InviteLinkViewController: ViewController {
     private let context: AccountContext
     private let peerId: PeerId
     private let invite: ExportedInvitation
+    private let invitationsContext: PeerExportedInvitationsContext?
     private let importersContext: PeerInvitationImportersContext?
 
     private var presentationDataDisposable: Disposable?
             
-    public init(context: AccountContext, peerId: PeerId, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?) {
+    public init(context: AccountContext, peerId: PeerId, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
         self.context = context
         self.peerId = peerId
         self.invite = invite
+        self.invitationsContext = invitationsContext
         self.importersContext = importersContext
                 
         super.init(navigationBarPresentationData: nil)
@@ -539,8 +541,17 @@ public final class InviteLinkViewController: ViewController {
             let navigationController = self.controller?.navigationController as? NavigationController
             self.controller?.dismiss()
             
+            let invitationsContext = self.controller?.invitationsContext
             if let navigationController = navigationController {
-                let controller = inviteLinkEditController(context: self.context, peerId: self.peerId, invite: self.invite)
+                let controller = inviteLinkEditController(context: self.context, peerId: self.peerId, invite: self.invite, completion: { [weak self] invite in
+                    if let invite = invite {
+                        if invite.isRevoked {
+                            invitationsContext?.remove(invite)
+                        } else {
+                            invitationsContext?.update(invite)
+                        }
+                    }
+                })
                 controller.navigationPresentation = .modal
                 navigationController.pushViewController(controller)
             }

@@ -5,6 +5,26 @@ import SwiftSignalKit
 
 import SyncCore
 
+private struct SearchStickersConfiguration {
+    static var defaultValue: SearchStickersConfiguration {
+        return SearchStickersConfiguration(cacheTimeout: 86400)
+    }
+    
+    public let cacheTimeout: Int32
+    
+    fileprivate init(cacheTimeout: Int32) {
+        self.cacheTimeout = cacheTimeout
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> SearchStickersConfiguration {
+        if let data = appConfiguration.data, let value = data["stickers_emoji_cache_time"] as? Int32 {
+            return SearchStickersConfiguration(cacheTimeout: value)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 public final class FoundStickerItem: Equatable {
     public let file: TelegramMediaFile
     public let stringRepresentations: [String]
@@ -140,7 +160,15 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             result.append(contentsOf: installedItems)
         }
         
-        let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
+        var cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
+        
+        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+        let searchStickersConfiguration = SearchStickersConfiguration.with(appConfiguration: appConfiguration)
+        
+        if let currentCached = cached, currentTime > currentCached.timestamp + searchStickersConfiguration.cacheTimeout {
+            cached = nil
+        }
         
         return (result, cached)
     } |> mapToSignal { localItems, cached -> Signal<[FoundStickerItem], NoError> in
@@ -199,7 +227,8 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
                         result.append(contentsOf: animatedItems)
                         result.append(contentsOf: items)
                         
-                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash), collectionSpec: collectionSpec)
+                        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash, timestamp: currentTime), collectionSpec: collectionSpec)
                     
                         return result
                     case .stickersNotModified:

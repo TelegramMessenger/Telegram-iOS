@@ -46,6 +46,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let clearType: ItemListSingleLineInputClearType
     let maxLength: Int
     let enabled: Bool
+    let selectAllOnFocus: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
@@ -55,7 +56,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let cleared: (() -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, alignment: ItemListSingleLineInputAlignment = .default, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, alignment: ItemListSingleLineInputAlignment = .default, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, selectAllOnFocus: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.title = title
         self.text = text
@@ -67,6 +68,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.clearType = clearType
         self.maxLength = maxLength
         self.enabled = enabled
+        self.selectAllOnFocus = selectAllOnFocus
         self.tag = tag
         self.sectionId = sectionId
         self.textUpdated = textUpdated
@@ -494,6 +496,13 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     
     @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
         self.item?.updatedFocus?(true)
+        if self.item?.selectAllOnFocus == true {
+            DispatchQueue.main.async {
+                let startPosition = self.textNode.textField.beginningOfDocument
+                let endPosition = self.textNode.textField.endOfDocument
+                self.textNode.textField.selectedTextRange = self.textNode.textField.textRange(from: startPosition, to: endPosition)
+            }
+        }
         self.updateClearButtonVisibility()
     }
     

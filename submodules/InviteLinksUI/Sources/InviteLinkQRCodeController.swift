@@ -342,7 +342,6 @@ public final class InviteLinkQRCodeController: ViewController {
             self.containerLayout = (layout, navigationBarHeight)
             
             var insets = layout.insets(options: [.statusBar, .input])
-            let cleanInsets = layout.insets(options: [.statusBar])
             insets.top = max(10.0, insets.top)
             
             let makeImageLayout = self.qrImageNode.asyncLayout()

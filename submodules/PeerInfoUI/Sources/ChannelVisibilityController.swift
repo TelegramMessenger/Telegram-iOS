@@ -79,7 +79,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case publicLinkAvailability(PresentationTheme, String, Bool)
     case editablePublicLink(PresentationTheme, PresentationStrings, String, String)
     case privateLinkHeader(PresentationTheme, String)
-    case privateLink(PresentationTheme, ExportedInvitation?)
+    case privateLink(PresentationTheme, ExportedInvitation?, Bool)
     case privateLinkInfo(PresentationTheme, String)
     case privateLinkManage(PresentationTheme, String)
     case privateLinkManageInfo(PresentationTheme, String)
@@ -184,8 +184,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .privateLink(lhsTheme, lhsInvite):
-                if case let .privateLink(rhsTheme, rhsInvite) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite {
+            case let .privateLink(lhsTheme, lhsInvite, lhsDisplayImporters):
+                if case let .privateLink(rhsTheme, rhsInvite, rhsDisplayImporters) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite, lhsDisplayImporters == rhsDisplayImporters {
                     return true
                 } else {
                     return false
@@ -292,8 +292,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ItemListActivityTextItem(displayActivity: value, presentationData: presentationData, text: attr, sectionId: self.section)
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .privateLink(_, invite):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: [], displayButton: true, displayImporters: true, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+            case let .privateLink(_, invite, displayImporters):
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: [], displayButton: true, displayImporters: displayImporters, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                     if let invite = invite {
                         arguments.copyLink(invite)
                     }
@@ -602,7 +602,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             case .privateChannel:
                 let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_PermanentLink.uppercased()))
-                entries.append(.privateLink(presentationData.theme, invite))
+                entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                 if isGroup {
                     entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
                 } else {
@@ -621,7 +621,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             case .privateLink:
                 let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_PermanentLink.uppercased()))
-                entries.append(.privateLink(presentationData.theme, invite))
+                entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                 entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
                 switch mode {
                     case .initialSetup:
@@ -720,7 +720,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     case .privateChannel:
                         let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                         entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_PermanentLink.uppercased()))
-                        entries.append(.privateLink(presentationData.theme, invite))
+                        entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                         entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
                         switch mode {
                             case .initialSetup:
@@ -1058,8 +1058,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)
                                 }
-                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                                
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)                        
                             }, completed: {
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)

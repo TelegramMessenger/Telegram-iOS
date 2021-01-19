@@ -1212,8 +1212,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             strongSelf.forEachController({ controller in
                 if let controller = controller as? UndoOverlayController {
                     switch controller.content {
-                        case let .archivedChat(archivedChat):
-                            if peerIds.contains(PeerId(archivedChat.peerId)) {
+                        case let .archivedChat(peerId, _, _, _):
+                            if peerIds.contains(PeerId(peerId)) {
                                 controller.dismiss()
                             }
                         default:

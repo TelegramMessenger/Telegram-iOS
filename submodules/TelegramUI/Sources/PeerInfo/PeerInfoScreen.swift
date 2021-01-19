@@ -1255,7 +1255,14 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
                                 
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(""), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                                let invitesText: String
+                                if let count = data.invitations?.count, count > 0 {
+                                    invitesText = "\(count)"
+                                } else {
+                                    invitesText = ""
+                                }
+                                
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
                                     interaction.editingOpenInviteLinksSetup()
                                 }))
                                 
@@ -1330,7 +1337,14 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }
                 }
                 
-                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(""), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                let invitesText: String
+                if let count = data.invitations?.count, count > 0 {
+                    invitesText = "\(count)"
+                } else {
+                    invitesText = ""
+                }
+                
+                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
                     interaction.editingOpenInviteLinksSetup()
                 }))
                 
@@ -4544,6 +4558,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.view.endEditing(true)
                 let mode: ChannelVisibilityControllerMode
                 if groupPeer.addressName != nil {
                     let visibilityController = channelVisibilityController(context: strongSelf.context, peerId: groupPeer.id, mode: .generic, upgradedToSupergroup: { _, f in f() }, onDismissRemoveController: contactsController)

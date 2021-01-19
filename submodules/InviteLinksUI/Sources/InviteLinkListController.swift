@@ -309,19 +309,14 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         
     var getControllerImpl: (() -> ViewController?)?
     
-    let invitesPromise = Promise<ExportedInvitations?>()
-    invitesPromise.set(.single(nil)
-    |> then(peerExportedInvitations(account: context.account, peerId: peerId, revoked: false)))
-    
-    let revokedInvitesPromise = Promise<ExportedInvitations?>()
-    revokedInvitesPromise.set(.single(nil)
-    |> then(peerExportedInvitations(account: context.account, peerId: peerId, revoked: true)))
+    let invitesContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: false)
+    let revokedInvitesContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: true, forceUpdate: true)
     
     let arguments = InviteLinkListControllerArguments(context: context, shareMainLink: { invite in
         let shareController = ShareController(context: context, subject: .url(invite.link))
         presentControllerImpl?(shareController, nil)
     }, openMainLink: { invite in
-        let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, importersContext: nil)
+        let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: nil, importersContext: nil)
         pushControllerImpl?(controller)
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
@@ -390,7 +385,9 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
                                     updatedState.revokingPrivateLink = false
                                     return updatedState
                                 }
-                                invitesPromise.set(peerExportedInvitations(account: context.account, peerId: peerId, revoked: false))
+                                
+                                invitesContext.reload()
+                                revokedInvitesContext.reload()
                             }))
                         }
                     })
@@ -403,14 +400,16 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, createLink: {
-        let controller = inviteLinkEditController(context: context, peerId: peerId, invite: nil, completion: {
-            invitesPromise.set(peerExportedInvitations(account: context.account, peerId: peerId, revoked: false))
+        let controller = inviteLinkEditController(context: context, peerId: peerId, invite: nil, completion: { invite in
+            if let invite = invite {
+                invitesContext.add(invite)
+            }
         })
         controller.navigationPresentation = .modal
         pushControllerImpl?(controller)
     }, openLink: { invite in
         if let invite = invite {
-            let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, importersContext: nil)
+            let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: invitesContext, importersContext: nil)
             pushControllerImpl?(controller)
         }
     }, linkContextAction: { invite, node, gesture in
@@ -446,8 +445,15 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
             }, action: { _, f in
                 f(.dismissWithoutContent)
             
-                let controller = inviteLinkEditController(context: context, peerId: peerId, invite: invite, completion: {
-                    invitesPromise.set(peerExportedInvitations(account: context.account, peerId: peerId, revoked: false))
+                let controller = inviteLinkEditController(context: context, peerId: peerId, invite: invite, completion: { invite in
+                    if let invite = invite {
+                        if invite.isRevoked {
+                            invitesContext.remove(invite)
+                            revokedInvitesContext.add(invite)
+                        } else {
+                            invitesContext.update(invite)
+                        }
+                    }
                 })
                 controller.navigationPresentation = .modal
                 pushControllerImpl?(controller)
@@ -466,13 +472,15 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
                 }
                 controller.setItemGroups([
                     ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                        ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                        ActionSheetTextItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Text),
+                        ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Action, color: .destructive, action: {
                             dismissAction()
 
                             revokeLinkDisposable.set((deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
 
                             }))
+                            
+                            revokedInvitesContext.remove(invite)
                         })
                     ]),
                     ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -498,6 +506,9 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
                             revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
 
                             }))
+                            
+                            invitesContext.remove(invite)
+                            revokedInvitesContext.add(invite)
                         })
                     ]),
                     ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -521,8 +532,9 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
                     dismissAction()
                     
                     deleteAllRevokedLinksDisposable.set((deleteAllRevokedPeerExportedInvitations(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-
                     }))
+                    
+                    revokedInvitesContext.clear()
                 })
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -552,11 +564,11 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         importersState.set(context.state |> map(Optional.init))
     }
     
-    let signal = combineLatest(context.sharedContext.presentationData, peerView, importersContext, importersState.get(), invitesPromise.get(), revokedInvitesPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, peerView, importersContext, importersState.get(), invitesContext.state, revokedInvitesContext.state)
     |> deliverOnMainQueue
     |> map { presentationData, view, importersContext, importers, invites, revokedInvites -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.InviteLink_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites?.list, revokedInvites: revokedInvites?.list, mainPeers: importers?.importers.compactMap { $0.peer.peer } ?? []), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.invitations, revokedInvites: revokedInvites.invitations, mainPeers: importers?.importers.compactMap { $0.peer.peer } ?? []), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
