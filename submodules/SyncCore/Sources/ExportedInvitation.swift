@@ -66,4 +66,8 @@ public struct ExportedInvitation: PostboxCoding, Equatable {
     public static func ==(lhs: ExportedInvitation, rhs: ExportedInvitation) -> Bool {
         return lhs.link == rhs.link && lhs.isPermanent == rhs.isPermanent && lhs.isRevoked == rhs.isRevoked && lhs.adminId == rhs.adminId && lhs.date == rhs.date && lhs.startDate == rhs.startDate && lhs.expireDate == rhs.expireDate && lhs.usageLimit == rhs.usageLimit && lhs.count == rhs.count
     }
+    
+    public func withUpdated(isRevoked: Bool) -> ExportedInvitation {
+        return ExportedInvitation(link: self.link, isPermanent: self.isPermanent, isRevoked: isRevoked, adminId: self.adminId, date: self.date, startDate: self.startDate, expireDate: self.expireDate, usageLimit: self.usageLimit, count: self.count)
+    }
 }

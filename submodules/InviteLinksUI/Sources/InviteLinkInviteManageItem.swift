@@ -14,12 +14,13 @@ class InviteLinkInviteManageItem: ListViewItem, ItemListItem {
     
     let theme: PresentationTheme
     let text: String
-    
+    let standalone: Bool
     let action: () -> Void
     
-    init(theme: PresentationTheme, text: String, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, text: String, standalone: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.text = text
+        self.standalone = standalone
         self.action = action
     }
     
@@ -94,7 +95,11 @@ class InviteLinkInviteManageItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
+                    strongSelf.backgroundNode.backgroundColor = item.standalone ? .clear : item.theme.list.blocksBackgroundColor
+                    
                     strongSelf.buttonNode.setTitle(item.text, with: Font.regular(17.0), with: item.theme.actionSheet.controlAccentColor, for: .normal)
+                    
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: 1000.0))
 
                     let size = strongSelf.buttonNode.measure(layout.contentSize)
                     strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.contentSize.width - size.width) / 2.0), y: floorToScreenPixels((layout.contentSize.height - size.height) / 2.0)), size: size)

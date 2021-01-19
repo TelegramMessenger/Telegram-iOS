@@ -125,18 +125,18 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 8
             case .privateLinkInfo:
                 return 9
-            case .privateLinkManage:
-                return 10
-            case .privateLinkManageInfo:
-                return 11
             case .publicLinkStatus:
-                return 12
+                return 10
             case .publicLinkInfo:
-                return 13
+                return 11
             case .existingLinksInfo:
-                return 14
+                return 12
             case let .existingLinkPeerItem(index, _, _, _, _, _, _, _):
-                return 15 + index
+                return 13 + index
+            case .privateLinkManage:
+                return 1000
+            case .privateLinkManageInfo:
+                return 1001
         }
     }
     
@@ -594,9 +594,16 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_PublicLink_Info))
                         } else {
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
-                        }
+                        }                        
                     } else {
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePublicLinkHelp))
+                    }
+                    switch mode {
+                        case .initialSetup:
+                            break
+                        case .generic, .privateLink:
+                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
                     }
                 }
             case .privateChannel:

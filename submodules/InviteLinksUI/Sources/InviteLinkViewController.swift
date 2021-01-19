@@ -218,15 +218,17 @@ public final class InviteLinkViewController: ViewController {
     private let peerId: PeerId
     private let invite: ExportedInvitation
     private let invitationsContext: PeerExportedInvitationsContext?
+    private let revokedInvitationsContext: PeerExportedInvitationsContext?
     private let importersContext: PeerInvitationImportersContext?
 
     private var presentationDataDisposable: Disposable?
             
-    public init(context: AccountContext, peerId: PeerId, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
+    public init(context: AccountContext, peerId: PeerId, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
         self.context = context
         self.peerId = peerId
         self.invite = invite
         self.invitationsContext = invitationsContext
+        self.revokedInvitationsContext = revokedInvitationsContext
         self.importersContext = importersContext
                 
         super.init(navigationBarPresentationData: nil)
@@ -299,12 +301,16 @@ public final class InviteLinkViewController: ViewController {
         private let peerId: PeerId
         private let invite: ExportedInvitation
         
+        private let importersContext: PeerInvitationImportersContext
+        
         private var interaction: InviteLinkViewInteraction?
         
         private var presentationData: PresentationData
         private let presentationDataPromise: Promise<PresentationData>
-                
+        private var presentationDataDisposable: Disposable?
+        
         private var disposable: Disposable?
+        private let actionDisposable = MetaDisposable()
         
         private let dimNode: ASDisplayNode
         private let contentNode: ASDisplayNode
@@ -322,10 +328,6 @@ public final class InviteLinkViewController: ViewController {
         private var enqueuedTransitions: [InviteLinkViewTransaction] = []
         
         private var validLayout: ContainerViewLayout?
-        
-        private var presentationDataDisposable: Disposable?
-        
-        private let importersContext: PeerInvitationImportersContext
         
         init(context: AccountContext, peerId: PeerId, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?, controller: InviteLinkViewController) {
             self.context = context
@@ -420,7 +422,24 @@ public final class InviteLinkViewController: ViewController {
                     }, action: { [weak self] _, f in
                         f(.dismissWithoutContent)
                         
-                        let controller = InviteLinkQRCodeController(context: context, invite: invite)
+                        let controller = ActionSheetController(presentationData: presentationData)
+                        let dismissAction: () -> Void = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        controller.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Text),
+                                ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Action, color: .destructive, action: {
+                                    dismissAction()
+
+                                    self?.actionDisposable.set((deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                    }))
+                                    
+                                    self?.controller?.revokedInvitationsContext?.remove(invite)
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                        ])
                         self?.controller?.present(controller, in: .window(.root))
                     })))
                 } else {
