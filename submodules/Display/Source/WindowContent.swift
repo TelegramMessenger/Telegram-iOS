@@ -3,9 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-public func qewfqewfq() {
-}
-
 private struct WindowLayout: Equatable {
     let size: CGSize
     let metrics: LayoutMetrics

@@ -20,444 +20,10 @@ import Intents
 import MobileCoreServices
 import OverlayStatusController
 import PresentationDataUtils
-
+import ChatImportUI
 import ZIPFoundation
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
-
-private final class LinearProgressNode: ASDisplayNode {
-    private let trackingNode: HierarchyTrackingNode
-    private let backgroundNode: ASImageNode
-    private let barNode: ASImageNode
-    private let shimmerNode: ASImageNode
-    private let shimmerClippingNode: ASDisplayNode
-    
-    private var currentProgress: CGFloat = 0.0
-    private var currentProgressAnimation: (from: CGFloat, to: CGFloat, startTime: Double, completion: () -> Void)?
-    
-    private var shimmerPhase: CGFloat = 0.0
-    
-    private var inHierarchyValue: Bool = false
-    private var shouldAnimate: Bool = false
-    
-    private let animator: ConstantDisplayLinkAnimator
-    
-    override init() {
-        var updateInHierarchy: ((Bool) -> Void)?
-        self.trackingNode = HierarchyTrackingNode { value in
-            updateInHierarchy?(value)
-        }
-        
-        var animationStep: (() -> Void)?
-        self.animator = ConstantDisplayLinkAnimator {
-            animationStep?()
-        }
-        
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        
-        self.barNode = ASImageNode()
-        self.barNode.isLayerBacked = true
-        
-        self.shimmerNode = ASImageNode()
-        self.shimmerNode.contentMode = .scaleToFill
-        self.shimmerClippingNode = ASDisplayNode()
-        self.shimmerClippingNode.clipsToBounds = true
-        
-        super.init()
-        
-        self.addSubnode(trackingNode)
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.barNode)
-        
-        self.shimmerClippingNode.addSubnode(self.shimmerNode)
-        self.addSubnode(self.shimmerClippingNode)
-        
-        updateInHierarchy = { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            if strongSelf.inHierarchyValue != value {
-                strongSelf.inHierarchyValue = value
-                strongSelf.updateAnimations()
-            }
-        }
-        
-        animationStep = { [weak self] in
-            self?.update()
-        }
-    }
-    
-    func updateTheme(theme: PresentationTheme) {
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 3.0, color: theme.list.itemAccentColor.withMultipliedAlpha(0.2))
-        self.barNode.image = generateStretchableFilledCircleImage(diameter: 3.0, color: theme.list.itemAccentColor)
-        self.shimmerNode.image = generateImage(CGSize(width: 100.0, height: 3.0), opaque: false, rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            
-            let foregroundColor = theme.list.plainBackgroundColor.withAlphaComponent(0.4)
-            
-            let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
-            let peakColor = foregroundColor.cgColor
-            
-            var locations: [CGFloat] = [0.0, 0.5, 1.0]
-            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
-            
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
-            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-            
-            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
-        })
-    }
-    
-    func updateProgress(value: CGFloat, completion: @escaping () -> Void = {}) {
-        if self.currentProgress.isEqual(to: value) {
-            self.currentProgressAnimation = nil
-            completion()
-        } else {
-            if value.isEqual(to: 1.0) {
-                self.shimmerNode.alpha = 0.0
-            }
-            self.currentProgressAnimation = (self.currentProgress, value, CACurrentMediaTime(), completion)
-        }
-    }
-    
-    private func updateAnimations() {
-        let shouldAnimate = self.inHierarchyValue
-        if shouldAnimate != self.shouldAnimate {
-            self.shouldAnimate = shouldAnimate
-            self.animator.isPaused = !shouldAnimate
-        }
-    }
-    
-    private func update() {
-        if let (fromValue, toValue, startTime, completion) = self.currentProgressAnimation {
-            let duration: Double = 0.15
-            let timestamp = CACurrentMediaTime()
-            let t = CGFloat((timestamp - startTime) / duration)
-            if t >= 1.0 {
-                self.currentProgress = toValue
-                self.currentProgressAnimation = nil
-                completion()
-            } else {
-                let clippedT = max(0.0, t)
-                self.currentProgress = (1.0 - clippedT) * fromValue + clippedT * toValue
-            }
-            
-            var progressWidth: CGFloat = self.bounds.width * self.currentProgress
-            if progressWidth < 6.0 {
-                progressWidth = 0.0
-            }
-            let progressFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: progressWidth, height: 3.0))
-            self.barNode.frame = progressFrame
-            self.shimmerClippingNode.frame = progressFrame
-        }
-        self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.width, height: 3.0))
-        
-        self.shimmerPhase += 3.5
-        let shimmerWidth: CGFloat = 160.0
-        let shimmerOffset = self.shimmerPhase.remainder(dividingBy: self.bounds.width + shimmerWidth / 2.0)
-        self.shimmerNode.frame = CGRect(origin: CGPoint(x: shimmerOffset - shimmerWidth / 2.0, y: 0.0), size: CGSize(width: shimmerWidth, height: 3.0))
-    }
-}
-
-private final class ChatImportProgressController: ViewController {
-    private final class Node: ViewControllerTracingNode {
-        private weak var controller: ChatImportProgressController?
-        
-        private let context: AccountContext
-        private var presentationData: PresentationData
-        
-        private let statusText: ImmediateTextNode
-        private let statusButtonText: ImmediateTextNode
-        private let statusButton: HighlightableButtonNode
-        
-        private let messagesProgressText: ImmediateTextNode
-        private let messagesProgressNode: LinearProgressNode
-        
-        private let mediaProgressText: ImmediateTextNode
-        private let mediaProgressNode: LinearProgressNode
-        
-        private var validLayout: (ContainerViewLayout, CGFloat)?
-        
-        private let mediaCount: Int
-        private var mediaProgress: Int
-        private var messagesProgress: CGFloat = 0.0
-        private var isDone: Bool = false
-        
-        init(controller: ChatImportProgressController, context: AccountContext, mediaCount: Int) {
-            self.controller = controller
-            self.context = context
-            
-            self.mediaCount = mediaCount
-            self.mediaProgress = 0
-            
-            self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            
-            self.messagesProgressText = ImmediateTextNode()
-            self.messagesProgressText.isUserInteractionEnabled = false
-            self.messagesProgressText.displaysAsynchronously = false
-            self.messagesProgressText.maximumNumberOfLines = 1
-            self.messagesProgressText.isAccessibilityElement = false
-            
-            self.mediaProgressText = ImmediateTextNode()
-            self.mediaProgressText.isUserInteractionEnabled = false
-            self.mediaProgressText.displaysAsynchronously = false
-            self.mediaProgressText.maximumNumberOfLines = 1
-            self.mediaProgressText.isAccessibilityElement = false
-            
-            self.statusText = ImmediateTextNode()
-            self.statusText.textAlignment = .center
-            self.statusText.isUserInteractionEnabled = false
-            self.statusText.displaysAsynchronously = false
-            self.statusText.maximumNumberOfLines = 0
-            self.statusText.isAccessibilityElement = false
-            
-            self.statusButtonText = ImmediateTextNode()
-            self.statusButtonText.isUserInteractionEnabled = false
-            self.statusButtonText.displaysAsynchronously = false
-            self.statusButtonText.maximumNumberOfLines = 1
-            self.statusButtonText.isAccessibilityElement = false
-            
-            self.statusButton = HighlightableButtonNode()
-            
-            self.messagesProgressNode = LinearProgressNode()
-            self.messagesProgressNode.updateTheme(theme: self.presentationData.theme)
-            
-            self.mediaProgressNode = LinearProgressNode()
-            self.mediaProgressNode.updateTheme(theme: self.presentationData.theme)
-            
-            super.init()
-            
-            self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            
-            self.addSubnode(self.messagesProgressText)
-            self.addSubnode(self.messagesProgressNode)
-            self.addSubnode(self.mediaProgressText)
-            self.addSubnode(self.mediaProgressNode)
-            self.addSubnode(self.statusText)
-            self.addSubnode(self.statusButtonText)
-            self.addSubnode(self.statusButton)
-            
-            self.statusButton.addTarget(self, action: #selector(self.statusButtonPressed), forControlEvents: .touchUpInside)
-            self.statusButton.highligthedChanged = { [weak self] highlighted in
-                if let strongSelf = self {
-                    if highlighted {
-                        strongSelf.statusButtonText.layer.removeAnimation(forKey: "opacity")
-                        strongSelf.statusButtonText.alpha = 0.4
-                    } else {
-                        strongSelf.statusButtonText.alpha = 1.0
-                        strongSelf.statusButtonText.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    }
-                }
-            }
-        }
-        
-        @objc private func statusButtonPressed() {
-            self.controller?.cancel()
-        }
-        
-        func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-            self.validLayout = (layout, navigationHeight)
-            
-            //TODO:localize
-            
-            self.messagesProgressText.attributedText = NSAttributedString(string: "Message Texts", font: Font.regular(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-            let messagesProgressTextSize = self.messagesProgressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
-            
-            self.mediaProgressText.attributedText = NSAttributedString(string: "\(self.mediaProgress) media out of \(self.mediaCount)", font: Font.regular(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-            let mediaProgressTextSize = self.mediaProgressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
-            
-            self.statusButtonText.attributedText = NSAttributedString(string: "Done", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
-            let statusButtonTextSize = self.statusButtonText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
-            
-            var statusTextOffset: CGFloat = 0.0
-            let statusButtonSpacing: CGFloat = 10.0
-            
-            if !self.isDone {
-                self.statusText.attributedText = NSAttributedString(string: "Please keep this window open\nduring the import.", font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
-            } else {
-                self.statusText.attributedText = NSAttributedString(string: "This chat has been imported\nsuccessfully.", font: Font.semibold(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-                statusTextOffset -= statusButtonTextSize.height - statusButtonSpacing
-            }
-            let statusTextSize = self.statusText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
-            
-            let mediaProgressHeight: CGFloat = 4.0
-            let progressSpacing: CGFloat = 16.0
-            let sectionSpacing: CGFloat = 50.0
-            
-            let contentOriginY = navigationHeight + floor((layout.size.height - navigationHeight - messagesProgressTextSize.height - progressSpacing - mediaProgressHeight - sectionSpacing - mediaProgressTextSize.height - progressSpacing - mediaProgressHeight) / 2.0)
-            
-            let messagesProgressTextFrame = CGRect(origin: CGPoint(x: 16.0, y: contentOriginY), size: messagesProgressTextSize)
-            self.messagesProgressText.frame = messagesProgressTextFrame
-            let messagesProgressFrame = CGRect(origin: CGPoint(x: 16.0, y: messagesProgressTextFrame.maxY + progressSpacing), size: CGSize(width: layout.size.width - 16.0 * 2.0, height: mediaProgressHeight))
-            self.messagesProgressNode.frame = messagesProgressFrame
-            
-            let mediaProgressTextFrame = CGRect(origin: CGPoint(x: 16.0, y: messagesProgressFrame.maxY + sectionSpacing), size: mediaProgressTextSize)
-            self.mediaProgressText.frame = mediaProgressTextFrame
-            let mediaProgressFrame = CGRect(origin: CGPoint(x: 16.0, y: mediaProgressTextFrame.maxY + progressSpacing), size: CGSize(width: layout.size.width - 16.0 * 2.0, height: mediaProgressHeight))
-            self.mediaProgressNode.frame = mediaProgressFrame
-            
-            let statusTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - 16.0 - statusTextSize.height + statusTextOffset), size: statusTextSize)
-            self.statusText.frame = statusTextFrame
-            
-            let statusButtonTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusButtonTextSize.width) / 2.0), y: statusTextFrame.maxY + statusButtonSpacing), size: statusButtonTextSize)
-            self.statusButtonText.frame = statusButtonTextFrame
-            
-            self.statusButtonText.isHidden = !self.isDone
-            self.statusButton.isHidden = !self.isDone
-            self.statusButton.frame = statusButtonTextFrame.insetBy(dx: -10.0, dy: -10.0)
-        }
-        
-        func updateProgress(mediaProgress: Int, messagesProgress: CGFloat, isDone: Bool, animated: Bool) {
-            self.mediaProgress = mediaProgress
-            self.isDone = isDone
-            
-            if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                self.messagesProgressNode.updateProgress(value: messagesProgress)
-                self.mediaProgressNode.updateProgress(value: CGFloat(mediaProgress) / CGFloat(self.mediaCount))
-            }
-        }
-    }
-    
-    private var controllerNode: Node {
-        return self.displayNode as! Node
-    }
-    
-    private let context: AccountContext
-    private var presentationData: PresentationData
-    let cancel: () -> Void
-    private let peerId: PeerId
-    private let archive: Archive
-    private let mainEntry: TempBoxFile
-    private let otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]
-    
-    private var pendingEntries = Set<String>()
-    
-    private let disposable = MetaDisposable()
-    
-    init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archive: Archive, mainEntry: TempBoxFile, otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]) {
-        self.context = context
-        self.cancel = cancel
-        self.peerId = peerId
-        self.archive = archive
-        self.mainEntry = mainEntry
-        self.otherEntries = otherEntries
-        
-        self.pendingEntries = Set(otherEntries.map { $0.1 })
-        
-        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
-        
-        //TODO:localize
-        self.title = "Importing Chat"
-        
-        self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
-        
-        self.attemptNavigation = { _ in
-            return false
-        }
-        
-        self.beginImport()
-    }
-    
-    required init(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        self.disposable.dispose()
-    }
-    
-    @objc private func cancelPressed() {
-        self.cancel()
-    }
-    
-    override func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context, mediaCount: self.otherEntries.count)
-        
-        self.displayNodeDidLoad()
-    }
-    
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        super.containerLayoutUpdated(layout, transition: transition)
-        
-        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationHeight, transition: transition)
-    }
-    
-    private func beginImport() {
-        enum ImportError {
-            case generic
-        }
-        
-        let context = self.context
-        let archive = self.archive
-        let otherEntries = self.otherEntries
-        self.disposable.set((ChatHistoryImport.initSession(account: self.context.account, peerId: self.peerId, file: self.mainEntry, mediaCount: Int32(otherEntries.count))
-        |> mapError { _ -> ImportError in
-            return .generic
-        }
-        |> mapToSignal { session -> Signal<String, ImportError> in
-            var importSignal: Signal<String, ImportError> = .single("")
-            
-            for (entry, fileName, mediaType) in otherEntries {
-                let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
-                    let tempFile = TempBox.shared.tempFile(fileName: fileName)
-                    do {
-                        let _ = try archive.extract(entry, to: URL(fileURLWithPath: tempFile.path))
-                        subscriber.putNext(tempFile)
-                        subscriber.putCompletion()
-                    } catch {
-                        subscriber.putError(.generic)
-                    }
-                    
-                    return EmptyDisposable
-                }
-                let uploadedMedia = unpackedFile
-                |> mapToSignal { tempFile -> Signal<String, ImportError> in
-                    return ChatHistoryImport.uploadMedia(account: context.account, session: session, file: tempFile, fileName: fileName, type: mediaType)
-                    |> mapError { _ -> ImportError in
-                        return .generic
-                    }
-                    |> map { _ -> String in
-                    }
-                    |> then(.single(fileName))
-                }
-                
-                importSignal = importSignal
-                |> then(uploadedMedia)
-            }
-            
-            importSignal = importSignal
-            |> then(ChatHistoryImport.startImport(account: context.account, session: session)
-            |> mapError { _ -> ImportError in
-                return .generic
-            }
-            |> map { _ -> String in
-            })
-            
-            return importSignal
-        }
-        |> deliverOnMainQueue).start(next: { [weak self] fileName in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.pendingEntries.remove(fileName)
-            strongSelf.controllerNode.updateProgress(mediaProgress: strongSelf.otherEntries.count - strongSelf.pendingEntries.count, messagesProgress: 1.0, isDone: false, animated: true)
-        }, error: { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.controllerNode.updateProgress(mediaProgress: 0, messagesProgress: 0.0, isDone: false, animated: true)
-        }, completed: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.controllerNode.updateProgress(mediaProgress: strongSelf.otherEntries.count, messagesProgress: 1.0, isDone: true, animated: true)
-        }))
-    }
-}
 
 private final class InternalContext {
     let sharedContext: SharedAccountContextImpl
@@ -847,6 +413,10 @@ public class ShareRootControllerImpl {
                                         let stickerRegex = try! NSRegularExpression(pattern: "[\\d]+-STICKER-.*?\\.webp")
                                         let voiceRegex = try! NSRegularExpression(pattern: "[\\d]+-AUDIO-.*?\\.opus")
                                         
+                                        let groupVerificationRegexList = [
+                                            try! NSRegularExpression(pattern: "created this group"),
+                                            try! NSRegularExpression(pattern: "created group “(.*?)”"),
+                                        ]
                                         let groupCreationRegexList = [
                                             try! NSRegularExpression(pattern: "created group “(.*?)”"),
                                             try! NSRegularExpression(pattern: "] (.*?): ‎Messages and calls are end-to-end encrypted")
@@ -867,14 +437,23 @@ public class ShareRootControllerImpl {
                                                     let _ = try archive.extract(entry, to: URL(fileURLWithPath: tempFile.path))
                                                     if let fileContents = try? String(contentsOfFile: tempFile.path) {
                                                         let fullRange = NSRange(fileContents.startIndex ..< fileContents.endIndex, in: fileContents)
-                                                        for regex in groupCreationRegexList {
-                                                            if groupTitle != nil {
+                                                        var isGroup = false
+                                                        for regex in groupVerificationRegexList {
+                                                            if let _ = regex.firstMatch(in: fileContents, options: [], range: fullRange) {
+                                                                isGroup = true
                                                                 break
                                                             }
-                                                            if let match = regex.firstMatch(in: fileContents, options: [], range: fullRange) {
-                                                                let range = match.range(at: 1)
-                                                                if let mappedRange = Range(range, in: fileContents) {
-                                                                    groupTitle = String(fileContents[mappedRange])
+                                                        }
+                                                        if isGroup {
+                                                            for regex in groupCreationRegexList {
+                                                                if groupTitle != nil {
+                                                                    break
+                                                                }
+                                                                if let match = regex.firstMatch(in: fileContents, options: [], range: fullRange) {
+                                                                    let range = match.range(at: 1)
+                                                                    if let mappedRange = Range(range, in: fileContents) {
+                                                                        groupTitle = String(fileContents[mappedRange])
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -902,103 +481,173 @@ public class ShareRootControllerImpl {
                                             }
                                         } catch {
                                         }
-                                        if let mainFile = mainFile, let groupTitle = groupTitle {
-                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                            let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
-                                            
-                                            //TODO:localize
-                                            var attemptSelectionImpl: ((Peer) -> Void)?
-                                            var createNewGroupImpl: (() -> Void)?
-                                            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled], hasContactSelector: false, title: "Import Chat", attemptSelection: { peer in
-                                                attemptSelectionImpl?(peer)
-                                            }, createNewGroup: {
-                                                createNewGroupImpl?()
-                                            }))
-                                            
-                                            controller.peerSelected = { peer in
-                                                attemptSelectionImpl?(peer)
-                                            }
-                                            
-                                            controller.navigationPresentation = .default
-                                            
-                                            let beginWithPeer: (PeerId) -> Void = { peerId in
-                                                navigationController.pushViewController(ChatImportProgressController(context: context, cancel: {
+                                        if let mainFile = mainFile {
+                                            if let groupTitle = groupTitle {
+                                                let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
+                                                
+                                                //TODO:localize
+                                                var attemptSelectionImpl: ((Peer) -> Void)?
+                                                var createNewGroupImpl: (() -> Void)?
+                                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled], hasContactSelector: false, title: "Import Chat", attemptSelection: { peer in
+                                                    attemptSelectionImpl?(peer)
+                                                }, createNewGroup: {
+                                                    createNewGroupImpl?()
+                                                }))
+                                                
+                                                controller.customDismiss = {
                                                     self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
-                                            }
-                                            
-                                            attemptSelectionImpl = { peer in
-                                                var errorText: String?
-                                                if let channel = peer as? TelegramChannel {
-                                                    if channel.flags.contains(.isCreator) || channel.adminRights != nil {
-                                                    } else {
-                                                        errorText = "You need to be an admin of the group to import messages into it."
-                                                    }
-                                                } else {
-                                                    errorText = "You can't import history into this group."
                                                 }
                                                 
-                                                if let errorText = errorText {
-                                                    let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                                                    })])
-                                                    strongSelf.mainWindow?.present(controller, on: .root)
-                                                } else {
-                                                    let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: "Are you sure you want to import messages from \(groupTitle) into \(peer.debugDisplayTitle)?", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                    }), TextAlertAction(type: .defaultAction, title: "Import", action: {
-                                                        beginWithPeer(peer.id)
-                                                    })])
-                                                    strongSelf.mainWindow?.present(controller, on: .root)
+                                                controller.peerSelected = { peer in
+                                                    attemptSelectionImpl?(peer)
                                                 }
-                                            }
-                                            
-                                            createNewGroupImpl = {
-                                                let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Create Group and Import Messages", text: "Are you sure you want to create group \(groupTitle) and import messages from another messaging app?", actions: [TextAlertAction(type: .defaultAction, title: "Create and Import", action: {
-                                                    var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: groupTitle, description: nil)
-                                                    |> map(Optional.init)
-                                                    |> `catch` { _ -> Signal<PeerId?, NoError> in
-                                                        return .single(nil)
+                                                
+                                                controller.navigationPresentation = .default
+                                                
+                                                let beginWithPeer: (PeerId) -> Void = { peerId in
+                                                    navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
+                                                        self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                                                    }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                }
+                                                
+                                                attemptSelectionImpl = { peer in
+                                                    var errorText: String?
+                                                    if let channel = peer as? TelegramChannel {
+                                                        if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                                        } else {
+                                                            errorText = "You need to be an admin of the group to import messages into it."
+                                                        }
+                                                    } else if let group = peer as? TelegramGroup {
+                                                        switch group.role {
+                                                        case .creator:
+                                                            break
+                                                        default:
+                                                            errorText = "You need to be an admin of the group to import messages into it."
+                                                        }
+                                                    } else {
+                                                        errorText = "You can't import history into this group."
                                                     }
                                                     
-                                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                                    let progressSignal = Signal<Never, NoError> { subscriber in
-                                                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                                                        if let strongSelf = self {
-                                                            strongSelf.mainWindow?.present(controller, on: .root)
+                                                    if let errorText = errorText {
+                                                        let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                                        })])
+                                                        strongSelf.mainWindow?.present(controller, on: .root)
+                                                    } else {
+                                                        let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: "Are you sure you want to import messages from **\(groupTitle)** into **\(peer.debugDisplayTitle)**?", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                        }), TextAlertAction(type: .defaultAction, title: "Import", action: {
+                                                            beginWithPeer(peer.id)
+                                                        })], parseMarkdown: true)
+                                                        strongSelf.mainWindow?.present(controller, on: .root)
+                                                    }
+                                                }
+                                                
+                                                createNewGroupImpl = {
+                                                    let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Create Group and Import Messages", text: "Are you sure you want to create group **\(groupTitle)** and import messages from another messaging app?", actions: [TextAlertAction(type: .defaultAction, title: "Create and Import", action: {
+                                                        var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: groupTitle, description: nil)
+                                                        |> map(Optional.init)
+                                                        |> `catch` { _ -> Signal<PeerId?, NoError> in
+                                                            return .single(nil)
                                                         }
-                                                        return ActionDisposable { [weak controller] in
-                                                            Queue.mainQueue().async() {
-                                                                controller?.dismiss()
+                                                        
+                                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                                        let progressSignal = Signal<Never, NoError> { subscriber in
+                                                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                                                            if let strongSelf = self {
+                                                                strongSelf.mainWindow?.present(controller, on: .root)
+                                                            }
+                                                            return ActionDisposable { [weak controller] in
+                                                                Queue.mainQueue().async() {
+                                                                    controller?.dismiss()
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                    |> runOn(Queue.mainQueue())
-                                                    |> delay(0.15, queue: Queue.mainQueue())
-                                                    let progressDisposable = progressSignal.start()
-                                                    
-                                                    signal = signal
-                                                    |> afterDisposed {
-                                                        Queue.mainQueue().async {
-                                                            progressDisposable.dispose()
+                                                        |> runOn(Queue.mainQueue())
+                                                        |> delay(0.15, queue: Queue.mainQueue())
+                                                        let progressDisposable = progressSignal.start()
+                                                        
+                                                        signal = signal
+                                                        |> afterDisposed {
+                                                            Queue.mainQueue().async {
+                                                                progressDisposable.dispose()
+                                                            }
                                                         }
-                                                    }
-                                                    let _ = (signal
-                                                    |> deliverOnMainQueue).start(next: { peerId in
-                                                        if let peerId = peerId {
-                                                            beginWithPeer(peerId)
-                                                        } else {
-                                                            //TODO:localize
+                                                        let _ = (signal
+                                                        |> deliverOnMainQueue).start(next: { peerId in
+                                                            if let peerId = peerId {
+                                                                beginWithPeer(peerId)
+                                                            } else {
+                                                                //TODO:localize
+                                                            }
+                                                        })
+                                                    }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                    })], parseMarkdown: true)
+                                                    strongSelf.mainWindow?.present(controller, on: .root)
+                                                }
+                                                
+                                                navigationController.viewControllers = [controller]
+                                                strongSelf.mainWindow?.present(navigationController, on: .root)
+                                            } else {
+                                                let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
+                                                
+                                                //TODO:localize
+                                                var attemptSelectionImpl: ((Peer) -> Void)?
+                                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled], hasChatListSelector: false, hasContactSelector: true, title: "Import Chat", attemptSelection: { peer in
+                                                    attemptSelectionImpl?(peer)
+                                                }))
+                                                
+                                                controller.customDismiss = {
+                                                    self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                                                }
+                                                
+                                                controller.peerSelected = { peer in
+                                                    attemptSelectionImpl?(peer)
+                                                }
+                                                
+                                                controller.navigationPresentation = .default
+                                                
+                                                let beginWithPeer: (PeerId) -> Void = { peerId in
+                                                    navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
+                                                        self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                                                    }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                }
+                                                
+                                                attemptSelectionImpl = { [weak controller] peer in
+                                                    controller?.inProgress = true
+                                                    let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                    |> deliverOnMainQueue).start(error: { error in
+                                                        controller?.inProgress = false
+                                                        
+                                                        let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                        let errorText: String
+                                                        switch error {
+                                                        case .generic:
+                                                            errorText = presentationData.strings.Login_UnknownError
+                                                        case .userIsNotMutualContact:
+                                                            errorText = "You can only import messages into private chats with users who added you in their contact list."
                                                         }
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                                        })])
+                                                        strongSelf.mainWindow?.present(controller, on: .root)
+                                                    }, completed: {
+                                                        controller?.inProgress = false
+                                                        
+                                                        let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: "Are you sure you want to import messages into the chat with **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))**?", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                        }), TextAlertAction(type: .defaultAction, title: "Import", action: {
+                                                            beginWithPeer(peer.id)
+                                                        })], parseMarkdown: true)
+                                                        strongSelf.mainWindow?.present(controller, on: .root)
                                                     })
-                                                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                })])
-                                                strongSelf.mainWindow?.present(controller, on: .root)
+                                                }
+                                                
+                                                navigationController.viewControllers = [controller]
+                                                strongSelf.mainWindow?.present(navigationController, on: .root)
                                             }
-                                            
-                                            navigationController.viewControllers = [controller]
-                                            strongSelf.mainWindow?.present(navigationController, on: .root)
                                         } else {
                                             beginShare()
                                             return

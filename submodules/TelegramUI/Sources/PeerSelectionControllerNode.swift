@@ -59,7 +59,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, hasContactSelector: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.dismiss = dismiss
@@ -67,7 +67,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        if hasContactSelector {
+        if hasChatListSelector && hasContactSelector {
             self.toolbarBackgroundNode = ASDisplayNode()
             self.toolbarBackgroundNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
             
@@ -145,7 +145,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
         })
         
-        if hasContactSelector {
+        if hasChatListSelector && hasContactSelector {
             self.segmentedControlNode!.selectedIndexChanged = { [weak self] index in
                 self?.indexChanged(index)
             }
@@ -155,6 +155,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.addSubnode(self.segmentedControlNode!)
         }
         
+        if !hasChatListSelector && hasContactSelector {
+            self.indexChanged(1)
+        }
         
         self.readyValue.set(self.chatListNode.ready)
     }
@@ -316,10 +319,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
     
     private func indexChanged(_ index: Int) {
-        guard let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout else {
-            return
-        }
-            
         let contactListActive = index == 1
         if contactListActive != self.contactListActive {
             self.contactListActive = contactListActive
@@ -338,6 +337,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     }
                     contactListNode.openPeer = { [weak self] peer, _ in
                         if case let .peer(peer, _, _) = peer {
+                            self?.contactListNode?.listNode.clearHighlightAnimated(true)
                             self?.requestOpenPeer?(peer)
                         }
                     }
@@ -360,17 +360,26 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     contactListNode.contentScrollingEnded = { [weak self] listView in
                         return self?.contentScrollingEnded?(listView) ?? false
                     }
-                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .immediate)
                     
-                    let _ = (contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in
-                        if let strongSelf = self {
-                            if let contactListNode = strongSelf.contactListNode {
-                                strongSelf.insertSubnode(contactListNode, aboveSubnode: strongSelf.chatListNode)
+                    if let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout {
+                        self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .immediate)
+                        
+                        let _ = (contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in
+                            if let strongSelf = self {
+                                if let contactListNode = strongSelf.contactListNode {
+                                    strongSelf.insertSubnode(contactListNode, aboveSubnode: strongSelf.chatListNode)
+                                }
+                                strongSelf.chatListNode.removeFromSupernode()
+                                strongSelf.recursivelyEnsureDisplaySynchronously(true)
                             }
-                            strongSelf.chatListNode.removeFromSupernode()
-                            strongSelf.recursivelyEnsureDisplaySynchronously(true)
+                        })
+                    } else {
+                        if let contactListNode = self.contactListNode {
+                            self.insertSubnode(contactListNode, aboveSubnode: self.chatListNode)
                         }
-                    })
+                        self.chatListNode.removeFromSupernode()
+                        self.recursivelyEnsureDisplaySynchronously(true)
+                    }
                 }
             } else if let contactListNode = self.contactListNode {
                 contactListNode.enableUpdates = false

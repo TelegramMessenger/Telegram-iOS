@@ -14,14 +14,6 @@ def generate(build_environment: BuildEnvironment, disable_extensions, configurat
     project_path = os.path.join(build_environment.base_path, 'build-input/gen/project')
     app_target = 'Telegram'
 
-    '''
-    TULSI_APP="build-input/gen/project/Tulsi.app"
-    TULSI="$TULSI_APP/Contents/MacOS/Tulsi"
-    
-    rm -rf "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj"
-    rm -rf "$TULSI_APP"
-    '''
-
     os.makedirs(project_path, exist_ok=True)
     remove_directory('{}/Tulsi.app'.format(project_path))
     remove_directory('{project}/{target}.tulsiproj'.format(project=project_path, target=app_target))

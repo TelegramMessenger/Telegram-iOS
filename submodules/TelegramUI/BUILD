@@ -214,6 +214,7 @@ swift_library(
         "//submodules/AudioBlob:AudioBlob",
         "//Telegram:GeneratedSources",
         "//third-party/ZIPFoundation:ZIPFoundation",
+        "//submodules/ChatImportUI:ChatImportUI",
     ],
     visibility = [
         "//visibility:public",

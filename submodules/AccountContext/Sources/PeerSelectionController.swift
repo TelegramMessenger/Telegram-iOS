@@ -32,14 +32,16 @@ public struct ChatListNodePeersFilter: OptionSet {
 public final class PeerSelectionControllerParams {
     public let context: AccountContext
     public let filter: ChatListNodePeersFilter
+    public let hasChatListSelector: Bool
     public let hasContactSelector: Bool
     public let title: String?
     public let attemptSelection: ((Peer) -> Void)?
     public let createNewGroup: (() -> Void)?
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil) {
         self.context = context
         self.filter = filter
+        self.hasChatListSelector = hasChatListSelector
         self.hasContactSelector = hasContactSelector
         self.title = title
         self.attemptSelection = attemptSelection

@@ -54,6 +54,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         return self._ready
     }
     
+    private let hasChatListSelector: Bool
     private let hasContactSelector: Bool
     
     private var searchContentNode: NavigationBarSearchContentNode?
@@ -61,6 +62,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     public init(_ params: PeerSelectionControllerParams) {
         self.context = params.context
         self.filter = params.filter
+        self.hasChatListSelector = params.hasChatListSelector
         self.hasContactSelector = params.hasContactSelector
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.attemptSelection = params.attemptSelection
@@ -124,7 +126,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasContactSelector: hasContactSelector, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
