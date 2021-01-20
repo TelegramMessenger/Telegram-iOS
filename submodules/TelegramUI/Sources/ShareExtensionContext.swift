@@ -489,11 +489,11 @@ public class ShareRootControllerImpl {
                                                 //TODO:localize
                                                 var attemptSelectionImpl: ((Peer) -> Void)?
                                                 var createNewGroupImpl: (() -> Void)?
-                                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled], hasContactSelector: false, title: "Import Chat", attemptSelection: { peer in
+                                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled, .doNotSearchMessages], hasContactSelector: false, hasGlobalSearch: false, title: "Import Chat", attemptSelection: { peer in
                                                     attemptSelectionImpl?(peer)
                                                 }, createNewGroup: {
                                                     createNewGroupImpl?()
-                                                }))
+                                                }, pretendPresentedInModal: true))
                                                 
                                                 controller.customDismiss = {
                                                     self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -547,7 +547,7 @@ public class ShareRootControllerImpl {
                                                 createNewGroupImpl = {
                                                     let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                                     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Create Group and Import Messages", text: "Are you sure you want to create group **\(groupTitle)** and import messages from another messaging app?", actions: [TextAlertAction(type: .defaultAction, title: "Create and Import", action: {
-                                                        var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: groupTitle, description: nil)
+                                                        var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: groupTitle, description: nil, isForHistoryImport: true)
                                                         |> map(Optional.init)
                                                         |> `catch` { _ -> Signal<PeerId?, NoError> in
                                                             return .single(nil)
@@ -596,9 +596,9 @@ public class ShareRootControllerImpl {
                                                 
                                                 //TODO:localize
                                                 var attemptSelectionImpl: ((Peer) -> Void)?
-                                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled], hasChatListSelector: false, hasContactSelector: true, title: "Import Chat", attemptSelection: { peer in
+                                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled, .doNotSearchMessages], hasChatListSelector: false, hasContactSelector: true, hasGlobalSearch: false, title: "Import Chat", attemptSelection: { peer in
                                                     attemptSelectionImpl?(peer)
-                                                }))
+                                                }, pretendPresentedInModal: true))
                                                 
                                                 controller.customDismiss = {
                                                     self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)

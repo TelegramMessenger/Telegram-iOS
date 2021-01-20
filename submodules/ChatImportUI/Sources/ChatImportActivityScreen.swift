@@ -120,13 +120,13 @@ public final class ChatImportActivityScreen: ViewController {
             //TODO:localize
             
             let iconSize = CGSize(width: 170.0, height: 170.0)
-            let radialStatusSize = CGSize(width: 180.0, height: 180.0)
+            let radialStatusSize = CGSize(width: 186.0, height: 186.0)
             let maxIconStatusSpacing: CGFloat = 62.0
-            let maxProgressTextSpacing: CGFloat = 32.0
-            let progressStatusSpacing: CGFloat = 16.0
-            let statusButtonSpacing: CGFloat = 16.0
+            let maxProgressTextSpacing: CGFloat = 33.0
+            let progressStatusSpacing: CGFloat = 14.0
+            let statusButtonSpacing: CGFloat = 19.0
             
-            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(self.totalProgress * 100.0))%", font: Font.with(size: 42.0, design: .round, traits: []), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(self.totalProgress * 100.0))%", font: Font.with(size: 42.0, design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
             
             self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(self.totalProgress * CGFloat(self.totalBytes)))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes))))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
@@ -206,6 +206,13 @@ public final class ChatImportActivityScreen: ViewController {
     private var pendingEntries = Set<String>()
     
     private let disposable = MetaDisposable()
+    
+    override public var _presentedInModal: Bool {
+        get {
+            return true
+        } set(value) {
+        }
+    }
     
     public init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archive: Archive, mainEntry: TempBoxFile, otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]) {
         self.context = context

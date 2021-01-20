@@ -19,6 +19,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let present: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
     private let filter: ChatListNodePeersFilter
+    private let hasGlobalSearch: Bool
     
     var inProgress: Bool = false {
         didSet {
@@ -59,11 +60,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.dismiss = dismiss
         self.filter = filter
+        self.hasGlobalSearch = hasGlobalSearch
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -264,7 +266,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, placeholder: placeholderNode)
             
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: true, categories: [.cloudContacts, .global], addContact: nil, openPeer: { [weak self] peer in
+            var categories: ContactsSearchCategories = [.cloudContacts]
+            if self.hasGlobalSearch {
+                categories.insert(.global)
+            }
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: true, categories: categories, addContact: nil, openPeer: { [weak self] peer in
                 if let strongSelf = self {
                     switch peer {
                         case let .peer(peer, _, _):

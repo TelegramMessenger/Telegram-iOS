@@ -56,6 +56,22 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     
     private let hasChatListSelector: Bool
     private let hasContactSelector: Bool
+    private let hasGlobalSearch: Bool
+    private let pretendPresentedInModal: Bool
+    
+    override public var _presentedInModal: Bool {
+        get {
+            if self.pretendPresentedInModal {
+                return true
+            } else {
+                return super._presentedInModal
+            }
+        } set(value) {
+            if !self.pretendPresentedInModal {
+                super._presentedInModal = value
+            }
+        }
+    }
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
@@ -64,9 +80,11 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.filter = params.filter
         self.hasChatListSelector = params.hasChatListSelector
         self.hasContactSelector = params.hasContactSelector
+        self.hasGlobalSearch = params.hasGlobalSearch
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.attemptSelection = params.attemptSelection
         self.createNewGroup = params.createNewGroup
+        self.pretendPresentedInModal = params.pretendPresentedInModal
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -126,7 +144,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

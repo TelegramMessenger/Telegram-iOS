@@ -1130,6 +1130,7 @@
 "ShareFileTip.CloseTip" = "Close Tip";
 
 "DialogList.SearchSectionDialogs" = "Chats and Contacts";
+"DialogList.SearchSectionChats" = "Chats";
 "DialogList.SearchSectionGlobal" = "Global Search";
 "DialogList.SearchSectionMessages" = "Messages";
 
@@ -5900,3 +5901,5 @@ Sorry for the inconvenience.";
 "DialogList.MultipleTypingPair" = "%@ and %@ are typing";
 
 "Common.Save" = "Save";
+
+"ChatList.HeaderImportIntoAnExistingGroup" = "OR IMPORT INTO AN EXISTING GROUP";

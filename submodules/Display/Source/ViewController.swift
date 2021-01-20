@@ -139,7 +139,7 @@ public enum TabBarItemContextActionType {
     }
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
-    var _presentedInModal: Bool = false
+    open var _presentedInModal: Bool = false
     
     public var presentedOverCoveringView: Bool = false
     
