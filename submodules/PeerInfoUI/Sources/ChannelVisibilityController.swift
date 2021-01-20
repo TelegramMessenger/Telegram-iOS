@@ -292,7 +292,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     }
                 }, tag: ChannelVisibilityEntryTag.privateLink)
             case let .editablePublicLink(theme, strings, placeholder, currentText):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), clearType: .always, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .username, clearType: .always, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, updatedFocus: { focus in
                     if focus {
@@ -868,10 +868,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 return state.withUpdatedEditingPublicLinkText(text).withUpdatedAddressNameValidationStatus(nil)
             }
         } else if currentText == text {
-            checkAddressNameDisposable.set(nil)
-            updateState { state in
-                return state.withUpdatedEditingPublicLinkText(text).withUpdatedAddressNameValidationStatus(nil).withUpdatedAddressNameValidationStatus(nil)
-            }
+            return
         } else {
             updateState { state in
                 return state.withUpdatedEditingPublicLinkText(text)
