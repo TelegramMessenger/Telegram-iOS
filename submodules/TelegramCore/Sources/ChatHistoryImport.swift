@@ -123,4 +123,44 @@ public enum ChatHistoryImport {
             }
         }
     }
+    
+    public enum CheckPeerImportError {
+        case generic
+        case userIsNotMutualContact
+    }
+    
+    public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<Never, CheckPeerImportError> {
+        return account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(peerId)
+        }
+        |> castError(CheckPeerImportError.self)
+        |> mapToSignal { peer -> Signal<Never, CheckPeerImportError> in
+            guard let peer = peer else {
+                return .fail(.generic)
+            }
+            if let inputUser = apiInputUser(peer) {
+                return account.network.request(Api.functions.users.getUsers(id: [inputUser]))
+                |> mapError { _ -> CheckPeerImportError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<Never, CheckPeerImportError> in
+                    guard let apiUser = result.first else {
+                        return .fail(.generic)
+                    }
+                    switch apiUser {
+                    case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _):
+                        if (flags & (1 << 12)) == 0 {
+                            // not mutual contact
+                            return .fail(.userIsNotMutualContact)
+                        }
+                        return .complete()
+                    case.userEmpty:
+                        return .fail(.generic)
+                    }
+                }
+            } else {
+                return .complete()
+            }
+        }
+    }
 }
