@@ -104,6 +104,8 @@ public extension Message {
             if let peer = self.peers[sourceReference.messageId.peerId] {
                 return peer
             }
+        } else if let forwardInfo = self.forwardInfo, forwardInfo.flags.contains(.isImported), let author = forwardInfo.author {
+            return author
         }
         return self.author
     }

@@ -131,7 +131,11 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         lhsEffectiveTimestamp = lhsForwardInfo.date
         rhsEffectiveTimestamp = rhsForwardInfo.date
         
-        sameAuthor = lhsForwardInfo.authorSignature == rhsForwardInfo.authorSignature
+        if let lhsAuthorId = lhsForwardInfo.author?.id, let rhsAuthorId = rhsForwardInfo.author?.id {
+            sameAuthor = lhsAuthorId == rhsAuthorId
+        } else if let lhsAuthorSignature = lhsForwardInfo.authorSignature, let rhsAuthorSignature = rhsForwardInfo.authorSignature {
+            sameAuthor = lhsAuthorSignature == rhsAuthorSignature
+        }
     }
     
     if lhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {

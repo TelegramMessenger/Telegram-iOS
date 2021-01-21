@@ -52,9 +52,15 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
                 return false
             }
             if let forwardInfo = self.forwardInfo, let otherForwardInfo = other.forwardInfo {
-                if forwardInfo.flags.contains(.isImported) == forwardInfo.flags.contains(.isImported) {
-                    if forwardInfo.authorSignature != otherForwardInfo.authorSignature {
-                        return false
+                if forwardInfo.flags.contains(.isImported) && forwardInfo.flags.contains(.isImported) == forwardInfo.flags.contains(.isImported) {
+                    if let authorSignature = forwardInfo.authorSignature, let otherAuthorSignature = otherForwardInfo.authorSignature {
+                        if authorSignature != otherAuthorSignature {
+                            return false
+                        }
+                    } else if let authorId = forwardInfo.author?.id, let otherAuthorId = other.forwardInfo?.author?.id {
+                        if authorId != otherAuthorId {
+                            return false
+                        }
                     }
                 } else {
                     return false
@@ -74,7 +80,9 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         let node = ChatMessageAvatarAccessoryItemNode()
         node.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         if let forwardInfo = self.forwardInfo, forwardInfo.flags.contains(.isImported) {
-            if let authorSignature = forwardInfo.authorSignature, !authorSignature.isEmpty {
+            if let author = forwardInfo.author {
+                node.setPeer(context: self.context, theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme, synchronousLoad: synchronous, peer: author, authorOfMessage: self.messageReference, emptyColor: self.emptyColor, controllerInteraction: self.controllerInteraction)
+            } else if let authorSignature = forwardInfo.authorSignature, !authorSignature.isEmpty {
                 let components = authorSignature.components(separatedBy: " ")
                 if !components.isEmpty, !components[0].hasPrefix("+") {
                     var letters: [String] = []

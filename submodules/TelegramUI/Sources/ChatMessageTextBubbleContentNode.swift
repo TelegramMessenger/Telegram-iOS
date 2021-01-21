@@ -277,8 +277,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let entities = entities {
                     attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont)
-                } else {
+                } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
+                } else {
+                    attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
                 var cutout: TextNodeCutout?
@@ -337,6 +339,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         boundingSize = textFrameWithoutInsets.size
                         boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                         boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                    }
+                    
+                    if attributedText.string.isEmpty, var adjustedStatusFrameValue = adjustedStatusFrame {
+                        adjustedStatusFrameValue.origin.y = 1.0
+                        boundingSize.height = adjustedStatusFrameValue.maxY + 5.0
+                        adjustedStatusFrame = adjustedStatusFrameValue
                     }
                     
                     return (boundingSize, { [weak self] animation, _ in

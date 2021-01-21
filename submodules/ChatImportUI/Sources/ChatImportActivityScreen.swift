@@ -22,6 +22,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         private let animationNode: AnimatedStickerNode
         private let radialStatus: RadialStatusNode
+        private let radialCheck: RadialStatusNode
         private let radialStatusBackground: ASImageNode
         private let radialStatusText: ImmediateTextNode
         private let progressText: ImmediateTextNode
@@ -46,6 +47,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.animationNode = AnimatedStickerNode()
             
             self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
+            self.radialCheck = RadialStatusNode(backgroundNodeColor: .clear)
             self.radialStatusBackground = ASImageNode()
             self.radialStatusBackground.isUserInteractionEnabled = false
             self.radialStatusBackground.displaysAsynchronously = false
@@ -90,6 +92,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.addSubnode(self.animationNode)
             self.addSubnode(self.radialStatusBackground)
             self.addSubnode(self.radialStatus)
+            self.addSubnode(self.radialCheck)
             self.addSubnode(self.radialStatusText)
             self.addSubnode(self.progressText)
             self.addSubnode(self.statusText)
@@ -159,6 +162,8 @@ public final class ChatImportActivityScreen: ViewController {
             self.animationNode.updateLayout(size: iconSize)
             
             self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: hideIcon ? contentOriginY : (contentOriginY + iconSize.height + maxIconStatusSpacing)), size: radialStatusSize)
+            let checkSize: CGFloat = 130.0
+            self.radialCheck.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
             self.radialStatusBackground.frame = self.radialStatus.frame
             
             self.radialStatusText.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize)
@@ -187,6 +192,18 @@ public final class ChatImportActivityScreen: ViewController {
             if let (layout, navigationHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                 self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: animated, synchronous: true, completion: {})
+                if isDone {
+                    self.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: false, synchronous: true, completion: {})
+                    self.radialCheck.transitionToState(.check(self.presentationData.theme.list.itemAccentColor), animated: animated, synchronous: true, completion: {})
+                    
+                    let transition: ContainedViewLayoutTransition
+                    if animated {
+                        transition = .animated(duration: 0.2, curve: .easeInOut)
+                    } else {
+                        transition = .immediate
+                    }
+                    transition.updateAlpha(node: self.radialStatusText, alpha: 0.0)
+                }
             }
         }
     }

@@ -76,7 +76,13 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 let message = messageView.message
                 var authorName = ""
                 var text = ""
-                if let author = message?.effectiveAuthor {
+                if let forwardInfo = message?.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                    if let author = forwardInfo.author {
+                        authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                    } else if let authorSignature = forwardInfo.authorSignature {
+                        authorName = authorSignature
+                    }
+                } else if let author = message?.effectiveAuthor {
                     authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {

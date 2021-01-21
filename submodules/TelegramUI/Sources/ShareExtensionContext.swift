@@ -490,6 +490,7 @@ public class ShareRootControllerImpl {
                                                     controller.navigationPresentation = .default
                                                     
                                                     let beginWithPeer: (PeerId) -> Void = { peerId in
+                                                        navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                         }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
@@ -607,6 +608,7 @@ public class ShareRootControllerImpl {
                                                     controller.navigationPresentation = .default
                                                     
                                                     let beginWithPeer: (PeerId) -> Void = { peerId in
+                                                        navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                         }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
