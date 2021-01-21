@@ -20,6 +20,7 @@ import ShareController
 import OverlayStatusController
 import PresentationDataUtils
 import DirectionalPanGesture
+import UndoUI
 
 class InviteLinkViewInteraction {
     let context: AccountContext
@@ -171,7 +172,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
             case let .link(_, invite):
                 let buttonColor = color(for: invite)
                 let availability = invitationAvailability(invite)
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: !invite.isRevoked && !availability.isZero, displayImporters: false, buttonColor: buttonColor, sectionId: 0, style: .plain, copyAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, count: 0, peers: [], displayButton: !invite.isRevoked && !availability.isZero, displayImporters: false, buttonColor: buttonColor, sectionId: 0, style: .plain, copyAction: {
                     interaction.copyLink(invite)
                 }, shareAction: {
                     interaction.shareLink(invite)
@@ -393,8 +394,9 @@ public final class InviteLinkViewController: ViewController {
                 }
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
+                
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                self?.controller?.present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), in: .window(.root))
+                self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
                 self?.controller?.present(shareController, in: .window(.root))
@@ -412,8 +414,9 @@ public final class InviteLinkViewController: ViewController {
                     f(.dismissWithoutContent)
                     
                     UIPasteboard.general.string = invite.link
+  
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    self?.controller?.present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), in: .window(.root))
+                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                 })))
                 
                 if invite.isRevoked {
@@ -452,6 +455,8 @@ public final class InviteLinkViewController: ViewController {
                         self?.controller?.present(controller, in: .window(.root))
                     })))
                 }
+                
+                
                                 
                 let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
@@ -717,12 +722,20 @@ public final class InviteLinkViewController: ViewController {
                     self.panGestureArguments = 0.0
                 case .changed:
                     var translation = recognizer.translation(in: self.contentNode.view).y
-                    if let currentPanOffset = self.panGestureArguments {
-                        
-
+                    if let currentOffset = self.panGestureArguments {
                         if case let .known(value) = contentOffset, value <= 0.5 {
+                            if currentOffset > 0.0 {
+                                let translation = self.listNode.scroller.panGestureRecognizer.translation(in: self.listNode.scroller)
+                                if translation.y > 10.0 {
+                                    self.listNode.scroller.panGestureRecognizer.isEnabled = false
+                                    self.listNode.scroller.panGestureRecognizer.isEnabled = true
+                                } else {
+                                    self.listNode.scroller.panGestureRecognizer.setTranslation(CGPoint(), in: self.listNode.scroller)
+                                }
+                            }
                         } else {
-                            translation = currentPanOffset
+                            translation = 0.0
+                            recognizer.setTranslation(CGPoint(), in: self.contentNode.view)
                         }
 
                         self.panGestureArguments = translation

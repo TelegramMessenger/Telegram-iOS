@@ -937,7 +937,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         }
         if let cachedData = data.cachedData as? CachedUserData {
-            if user.isScam {
+            if user.isFake {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
+                    interaction.requestLayout()
+                }))
+            } else if user.isScam {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
                     interaction.requestLayout()
                 }))
@@ -1025,12 +1029,27 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         }
         if let cachedData = data.cachedData as? CachedChannelData {
-            if channel.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, requestLayout: {
-                    interaction.requestLayout()
-                }))
+            let aboutText: String?
+            if channel.isFake {
+                if case .broadcast = channel.info {
+                    aboutText = presentationData.strings.ChannelInfo_FakeChannelWarning
+                } else {
+                    aboutText = presentationData.strings.GroupInfo_FakeGroupWarning
+                }
+            } else if channel.isScam {
+                if case .broadcast = channel.info {
+                    aboutText = presentationData.strings.ChannelInfo_ScamChannelWarning
+                } else {
+                    aboutText = presentationData.strings.GroupInfo_ScamGroupWarning
+                }
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                aboutText = about
+            } else {
+                aboutText = nil
+            }
+            
+            if let aboutText = aboutText {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout()
                 }))
             }
@@ -1061,12 +1080,19 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     } else if let group = data.peer as? TelegramGroup {
         if let cachedData = data.cachedData as? CachedGroupData {
-            if group.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, requestLayout: {
-                    interaction.requestLayout()
-                }))
+            let aboutText: String?
+            if group.isFake {
+                aboutText = presentationData.strings.GroupInfo_FakeGroupWarning
+            } else if group.isScam {
+                aboutText = presentationData.strings.GroupInfo_ScamGroupWarning
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                aboutText = about
+            } else {
+                aboutText = nil
+            }
+            
+            if let aboutText = aboutText {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout()
                 }))
             }
@@ -1266,6 +1292,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
                                 
+                            }
+                             
+                            if channel.hasPermission(.inviteMembers) {
                                 let invitesText: String
                                 if let count = data.invitations?.count, count > 0 {
                                     invitesText = "\(count)"
@@ -1276,7 +1305,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
                                     interaction.editingOpenInviteLinksSetup()
                                 }))
-                                
+                            }
+                            
+                            if cachedData.flags.contains(.canChangeUsername) {
                                 if let linkedDiscussionPeer = data.linkedDiscussionPeer {
                                     let peerTitle: String
                                     if let addressName = linkedDiscussionPeer.addressName, !addressName.isEmpty {
@@ -4425,7 +4456,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if canCreateInviteLink {
                 options.append(ContactListAdditionalOption(title: presentationData.strings.GroupInfo_InviteByLink, icon: .generic(UIImage(bundleImageName: "Contact List/LinkActionIcon")!), action: {
                     createInviteLinkImpl?()
-                }))
+                }, clearHighlightAutomatically: true))
             }
             
             let contactsController: ViewController

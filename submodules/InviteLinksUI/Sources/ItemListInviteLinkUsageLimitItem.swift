@@ -32,7 +32,9 @@ enum InviteLinkUsageLimit: Equatable {
     }
     
     init(value: Int32?) {
-        if let value = value {
+        if value == 0 {
+            self = .unlimited
+        } else if let value = value {
             if value == 1 {
                 self = .low
             } else if value == 10 {
@@ -56,7 +58,7 @@ enum InviteLinkUsageLimit: Equatable {
         case .high:
             return 100
         case .unlimited:
-            return nil
+            return 0
         case let .custom(value):
             return value
         }

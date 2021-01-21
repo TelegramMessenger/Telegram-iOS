@@ -376,6 +376,9 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                 if peer.isScam {
                     credibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
                     credibilityIconOffset = 6.0
+                } else if peer.isFake {
+                    credibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, type: .regular)
+                    credibilityIconOffset = 2.0
                 } else if peer.isVerified {
                     credibilityIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.presentationData.theme)
                 }

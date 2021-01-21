@@ -5821,6 +5821,7 @@ Sorry for the inconvenience.";
 
 "InviteLink.Title" = "Invite Links";
 "InviteLink.PermanentLink" = "Permanent Link";
+"InviteLink.PublicLink" = "Public Link";
 "InviteLink.Share" = "Share Link";
 "InviteLink.PeopleJoinedNone" = "no one joined yet";
 "InviteLink.PeopleJoined_1" = "%@ people joined";
@@ -5891,9 +5892,18 @@ Sorry for the inconvenience.";
 
 "InviteLink.ExpiresIn" = "expires in %@";
 
+"InviteLink.InviteLinkCopiedText" = "Invite link copied to clipboard";
+
 "Conversation.ChecksTooltip.Delivered" = "Delivered";
 "Conversation.ChecksTooltip.Read" = "Read";
 
 "DialogList.MultipleTypingPair" = "%@ and %@ are typing";
 
 "Common.Save" = "Save";
+
+"UserInfo.FakeUserWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+"UserInfo.FakeBotWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+"GroupInfo.FakeGroupWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+"ChannelInfo.FakeChannelWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+
+"ReportPeer.ReasonFake" = "Fake Account";

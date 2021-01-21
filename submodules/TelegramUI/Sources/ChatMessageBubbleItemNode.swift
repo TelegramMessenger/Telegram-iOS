@@ -1426,9 +1426,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 var isScam = effectiveAuthor.isScam
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
-                    isScam = false
+                    
+                } else if effectiveAuthor.isScam {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, type: incoming ? .regular : .outgoing)
+                } else if effectiveAuthor.isFake {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, type: incoming ? .regular : .outgoing)
                 }
-                currentCredibilityIconImage = isScam ? PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, type: incoming ? .regular : .outgoing) : nil
+                
             }
             if let rawAuthorNameColor = authorNameColor {
                 var dimColors = false

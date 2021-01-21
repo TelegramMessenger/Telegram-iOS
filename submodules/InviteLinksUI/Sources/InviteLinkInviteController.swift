@@ -20,6 +20,7 @@ import ShareController
 import OverlayStatusController
 import PresentationDataUtils
 import DirectionalPanGesture
+import UndoUI
 
 class InviteLinkInviteInteraction {
     let context: AccountContext
@@ -139,7 +140,7 @@ private enum InviteLinkInviteEntry: Comparable, Identifiable {
             case let .header(theme, title, text):
                 return InviteLinkInviteHeaderItem(theme: theme, title: title, text: text)
             case let .mainLink(_, invite):
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, copyAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, count: 0, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, copyAction: {
                     interaction.copyLink(invite)
                 }, shareAction: {
                     interaction.shareLink(invite)
@@ -345,8 +346,9 @@ public final class InviteLinkInviteController: ViewController {
                     
                     if let invite = invite {
                         UIPasteboard.general.string = invite.link
+                        
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        self?.controller?.present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), in: .window(.root))
+                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }
                 })))
                 
@@ -390,8 +392,9 @@ public final class InviteLinkInviteController: ViewController {
                 self?.controller?.presentInGlobalOverlay(contextController)
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
+                
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                self?.controller?.present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), in: .window(.root))
+                self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
                 self?.controller?.present(shareController, in: .window(.root))
@@ -625,6 +628,10 @@ public final class InviteLinkInviteController: ViewController {
         }
         
         private var panGestureArguments: CGFloat?
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return gestureRecognizer is DirectionalPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer
+        }
         
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
             let contentOffset = self.listNode.visibleContentOffset()
@@ -633,10 +640,20 @@ public final class InviteLinkInviteController: ViewController {
                     self.panGestureArguments = 0.0
                 case .changed:
                     var translation = recognizer.translation(in: self.contentNode.view).y
-                    if let currentPanOffset = self.panGestureArguments {
+                    if let currentOffset = self.panGestureArguments {
                         if case let .known(value) = contentOffset, value <= 0.5 {
+                            if currentOffset > 0.0 {
+                                let translation = self.listNode.scroller.panGestureRecognizer.translation(in: self.listNode.scroller)
+                                if translation.y > 10.0 {
+                                    self.listNode.scroller.panGestureRecognizer.isEnabled = false
+                                    self.listNode.scroller.panGestureRecognizer.isEnabled = true
+                                } else {
+                                    self.listNode.scroller.panGestureRecognizer.setTranslation(CGPoint(), in: self.listNode.scroller)
+                                }
+                            }
                         } else {
-                            translation = currentPanOffset
+                            translation = 0.0
+                            recognizer.setTranslation(CGPoint(), in: self.contentNode.view)
                         }
 
                         self.panGestureArguments = translation
