@@ -56,7 +56,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     
     case usageHeader(PresentationTheme, String)
     case usagePicker(PresentationTheme, InviteLinkUsageLimit)
-    case usageCustomPicker(PresentationTheme, Int32?, Bool)
+    case usageCustomPicker(PresentationTheme, Int32?, Bool, Bool)
     case usageInfo(PresentationTheme, String)
     
     case revoke(PresentationTheme, String)
@@ -141,8 +141,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .usageCustomPicker(lhsTheme, lhsValue, lhsFocused):
-                if case let .usageCustomPicker(rhsTheme, rhsValue, rhsFocused) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsFocused == rhsFocused {
+            case let .usageCustomPicker(lhsTheme, lhsValue, lhsFocused, lhsCustomValue):
+                if case let .usageCustomPicker(rhsTheme, rhsValue, rhsFocused, rhsCustomValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsFocused == rhsFocused, lhsCustomValue == rhsCustomValue {
                     return true
                 } else {
                     return false
@@ -221,9 +221,14 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     })
                 })
-            case let .usageCustomPicker(theme, value, focused):
-                let text = value.flatMap { String($0) } ?? (focused ? "" : presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsersUnlimited)
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, tag: nil, sectionId: self.section, textUpdated: { updatedText in
+            case let .usageCustomPicker(theme, value, focused, customValue):
+                let text: String
+                if let value = value, value != 0 {
+                    text = String(value)
+                } else {
+                    text = focused ? "" : presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsersUnlimited
+                }
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: nil, sectionId: self.section, textUpdated: { updatedText in
                     guard !updatedText.isEmpty else {
                         return
                     }
@@ -284,7 +289,12 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     
     entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
     entries.append(.usagePicker(presentationData.theme, state.usage))
-    entries.append(.usageCustomPicker(presentationData.theme, state.usage.value, state.pickingUsageLimit))
+    
+    var customValue = false
+    if case .custom = state.usage {
+        customValue = true
+    }
+    entries.append(.usageCustomPicker(presentationData.theme, state.usage.value, state.pickingUsageLimit, customValue))
 
     entries.append(.usageInfo(presentationData.theme, presentationData.strings.InviteLink_Create_UsersLimitInfo))
     
@@ -401,7 +411,7 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 expireDate = currentTime + value
             } else {
-                expireDate = nil
+                expireDate = 0
             }
 
             let usageLimit = state.usage.value

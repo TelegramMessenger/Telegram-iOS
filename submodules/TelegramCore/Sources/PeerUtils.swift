@@ -122,6 +122,17 @@ public extension Peer {
         }
     }
     
+    var isFake: Bool {
+        switch self {
+        case let user as TelegramUser:
+            return user.flags.contains(.isFake)
+        case let channel as TelegramChannel:
+            return channel.flags.contains(.isFake)
+        default:
+            return false
+        }
+    }
+        
     var isVerified: Bool {
         switch self {
         case let user as TelegramUser:

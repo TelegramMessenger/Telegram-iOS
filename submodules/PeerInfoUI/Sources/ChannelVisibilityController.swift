@@ -293,7 +293,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite, displayImporters):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: [], displayButton: true, displayImporters: displayImporters, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: 0, peers: [], displayButton: true, displayImporters: displayImporters, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                     if let invite = invite {
                         arguments.copyLink(invite)
                     }

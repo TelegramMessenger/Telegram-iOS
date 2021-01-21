@@ -96,7 +96,8 @@ private let shareIcon = generateImage(CGSize(width: 26.0, height: 26.0), context
 private class ItemNode: ASDisplayNode {
     private let selectionNode: HighlightTrackingButtonNode
     private let wrapperNode: ASDisplayNode
-    private let backgroundNode: ASImageNode
+    private let backgroundNode: ASDisplayNode
+    private let backgroundGradientLayer: CAGradientLayer
     
     private let iconNode: ASImageNode
     private var timerNode: TimerNode?
@@ -122,10 +123,18 @@ private class ItemNode: ASDisplayNode {
         self.selectionNode = HighlightTrackingButtonNode()
         self.wrapperNode = ASDisplayNode()
         
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.clipsToBounds = true
+        self.backgroundNode.cornerRadius = 15.0
+        if #available(iOS 13.0, *) {
+            self.backgroundNode.layer.cornerCurve = .continuous
+        }
         self.backgroundNode.isUserInteractionEnabled = false
+        
+        self.backgroundGradientLayer = CAGradientLayer()
+        self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.0)
+        self.backgroundGradientLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
+        self.backgroundNode.layer.addSublayer(self.backgroundGradientLayer)
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
@@ -256,10 +265,10 @@ private class ItemNode: ASDisplayNode {
                         snapshotView?.removeFromSuperview()
                     })
                 }
-                self.backgroundNode.image = generateBackgroundImage(colors: colors)
+                self.backgroundGradientLayer.colors = colors as? [Any]
             }
         } else {
-            self.backgroundNode.image = generateBackgroundImage(colors: colors)
+            self.backgroundGradientLayer.colors = colors as? [Any]
         }
                 
         let secondaryTextColor = color.colors.text
@@ -329,7 +338,7 @@ private class ItemNode: ASDisplayNode {
                 self.timerNode = timerNode
                 self.addSubnode(timerNode)
             }
-            timerNode.update(color: UIColor.white, creationTimestamp: invite.date, deadlineTimestamp: expireDate)
+            timerNode.update(color: UIColor.white, creationTimestamp: invite.startDate ?? invite.date, deadlineTimestamp: expireDate)
             if share {
                 subtitleText = presentationData.strings.InviteLink_TapToCopy
             }
@@ -359,6 +368,7 @@ private class ItemNode: ASDisplayNode {
         transition.updateFrame(node: self.wrapperNode, frame: backgroundFrame)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.selectionNode, frame: backgroundFrame)
+        transition.updateFrame(layer: self.backgroundGradientLayer, frame: backgroundFrame)
         
         let buttonSize = CGSize(width: 26.0, height: 26.0)
         let buttonFrame = CGRect(origin: CGPoint(x: itemSize.width - buttonSize.width - 12.0, y: 12.0), size: buttonSize)
@@ -532,7 +542,7 @@ private final class TimerNode: ASDisplayNode {
 
         let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         var fraction = CGFloat(params.deadlineTimestamp - currentTimestamp) / CGFloat(params.deadlineTimestamp - params.creationTimestamp)
-        fraction = 1.0 - max(0.0, min(1.0, fraction))
+        fraction = max(0.0001, 1.0 - max(0.0, min(1.0, fraction)))
       
         let image: UIImage?
         

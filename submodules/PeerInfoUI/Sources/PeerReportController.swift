@@ -20,6 +20,7 @@ public enum PeerReportSubject {
 
 public enum PeerReportOption {
     case spam
+    case fake
     case violence
     case copyright
     case pornography
@@ -37,6 +38,8 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
             switch option {
             case .spam:
                 title = presentationData.strings.ReportPeer_ReasonSpam
+            case .fake:
+                title = presentationData.strings.ReportPeer_ReasonFake
             case .violence:
                 title = presentationData.strings.ReportPeer_ReasonViolence
             case .pornography:
@@ -57,6 +60,8 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 switch option {
                 case .spam:
                     reportReason = .spam
+                case .fake:
+                    reportReason = .fake
                 case .violence:
                     reportReason = .violence
                 case .pornography:
@@ -112,6 +117,8 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
         switch option {
             case .spam:
                 title = presentationData.strings.ReportPeer_ReasonSpam
+            case .fake:
+                title = presentationData.strings.ReportPeer_ReasonFake
             case .violence:
                 title = presentationData.strings.ReportPeer_ReasonViolence
             case .pornography:
@@ -128,6 +135,8 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
             switch option {
                 case .spam:
                     reportReason = .spam
+                case .fake:
+                    reportReason = .fake
                 case .violence:
                     reportReason = .violence
                 case .pornography:

@@ -383,11 +383,13 @@ public struct ContactListAdditionalOption: Equatable {
     public let title: String
     public let icon: ContactListActionItemIcon
     public let action: () -> Void
+    public let clearHighlightAutomatically: Bool
     
-    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void) {
+    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void, clearHighlightAutomatically: Bool = false) {
         self.title = title
         self.icon = icon
         self.action = action
+        self.clearHighlightAutomatically = clearHighlightAutomatically
     }
     
     public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {

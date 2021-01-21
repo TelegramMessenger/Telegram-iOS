@@ -47,6 +47,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let maxLength: Int
     let enabled: Bool
     let selectAllOnFocus: Bool
+    let secondaryStyle: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
@@ -56,7 +57,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let cleared: (() -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, alignment: ItemListSingleLineInputAlignment = .default, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, selectAllOnFocus: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, alignment: ItemListSingleLineInputAlignment = .default, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, selectAllOnFocus: Bool = false, secondaryStyle: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.title = title
         self.text = text
@@ -69,6 +70,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.maxLength = maxLength
         self.enabled = enabled
         self.selectAllOnFocus = selectAllOnFocus
+        self.secondaryStyle = secondaryStyle
         self.tag = tag
         self.sectionId = sectionId
         self.textUpdated = textUpdated
@@ -183,7 +185,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             self.textNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize)]
             self.textNode.textField.font = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
-            self.textNode.textField.textColor = item.presentationData.theme.list.itemPrimaryTextColor
+            self.textNode.textField.textColor = item.secondaryStyle ? item.presentationData.theme.list.itemSecondaryTextColor : item.presentationData.theme.list.itemPrimaryTextColor
             self.textNode.textField.keyboardAppearance = item.presentationData.theme.rootController.keyboardColor.keyboardAppearance
             self.textNode.textField.tintColor = item.presentationData.theme.list.itemAccentColor
             self.textNode.textField.accessibilityHint = item.placeholder
@@ -216,6 +218,11 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             var fontUpdated = false
             if currentItem?.presentationData.fontSize != item.presentationData.fontSize {
                 fontUpdated = true
+            }
+            
+            var styleUpdated = false
+            if currentItem?.secondaryStyle != item.secondaryStyle {
+                styleUpdated = true
             }
             
             let leftInset: CGFloat = 16.0 + params.leftInset
@@ -252,13 +259,17 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                         strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                         
-                        strongSelf.textNode.textField.textColor = item.presentationData.theme.list.itemPrimaryTextColor
+                        strongSelf.textNode.textField.textColor = item.secondaryStyle ? item.presentationData.theme.list.itemSecondaryTextColor : item.presentationData.theme.list.itemPrimaryTextColor
                         strongSelf.textNode.textField.keyboardAppearance = item.presentationData.theme.rootController.keyboardColor.keyboardAppearance
                         strongSelf.textNode.textField.tintColor = item.presentationData.theme.list.itemAccentColor
                     }
                     
                     if fontUpdated {
-                    strongSelf.textNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize)]
+                        strongSelf.textNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize)]
+                    }
+                    
+                    if styleUpdated {
+                        strongSelf.textNode.textField.textColor = item.secondaryStyle ? item.presentationData.theme.list.itemSecondaryTextColor : item.presentationData.theme.list.itemPrimaryTextColor
                     }
                     
                     let _ = titleApply()

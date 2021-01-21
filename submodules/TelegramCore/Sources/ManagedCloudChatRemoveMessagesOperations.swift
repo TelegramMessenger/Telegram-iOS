@@ -275,7 +275,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
                 return .complete()
             }
         } else {
-            deleteUser = network.request(Api.functions.messages.deleteChatUser(chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
+            deleteUser = network.request(Api.functions.messages.deleteChatUser(flags: 0, chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
                 |> map { result -> Api.Updates? in
                     return result
                 }

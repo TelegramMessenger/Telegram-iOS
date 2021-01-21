@@ -29,6 +29,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
     let invite: ExportedInvitation?
+    let count: Int32
     let peers: [Peer]
     let displayButton: Bool
     let displayImporters: Bool
@@ -45,6 +46,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         context: AccountContext,
         presentationData: ItemListPresentationData,
         invite: ExportedInvitation?,
+        count: Int32,
         peers: [Peer],
         displayButton: Bool,
         displayImporters: Bool,
@@ -60,6 +62,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         self.context = context
         self.presentationData = presentationData
         self.invite = invite
+        self.count = count
         self.peers = peers
         self.displayButton = displayButton
         self.displayImporters = displayImporters
@@ -290,18 +293,13 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
-            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link.replacingOccurrences(of: "https://", with: "") }) ?? "", font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link.replacingOccurrences(of: "https://", with: "") }) ?? "", font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 90.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let subtitle: String
             let subtitleColor: UIColor
-            if let count = item.invite?.count {
-                if count > 0 {
-                    subtitle = item.presentationData.strings.InviteLink_PeopleJoined(count)
-                    subtitleColor = item.presentationData.theme.list.itemAccentColor
-                } else {
-                    subtitle = item.presentationData.strings.InviteLink_PeopleJoinedNone
-                    subtitleColor = item.presentationData.theme.list.itemSecondaryTextColor
-                }
+            if item.count > 0 {
+                subtitle = item.presentationData.strings.InviteLink_PeopleJoined(item.count)
+                subtitleColor = item.presentationData.theme.list.itemAccentColor
             } else {
                 subtitle = item.presentationData.strings.InviteLink_PeopleJoinedNone
                 subtitleColor = item.presentationData.theme.list.itemSecondaryTextColor

@@ -19,6 +19,7 @@ import ContextUI
 import TelegramStringFormatting
 import ItemListPeerActionItem
 import ShareController
+import UndoUI
 
 private final class InviteLinkListControllerArguments {
     let context: AccountContext
@@ -55,7 +56,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     case header(PresentationTheme, String)
    
     case mainLinkHeader(PresentationTheme, String)
-    case mainLink(PresentationTheme, ExportedInvitation?, [Peer])
+    case mainLink(PresentationTheme, ExportedInvitation?, [Peer], Int32, Bool)
     
     case linksHeader(PresentationTheme, String)
     case linksCreate(PresentationTheme, String)
@@ -117,8 +118,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .mainLink(lhsTheme, lhsInvite, lhsPeers):
-                if case let .mainLink(rhsTheme, rhsInvite, rhsPeers) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite, arePeerArraysEqual(lhsPeers, rhsPeers) {
+            case let .mainLink(lhsTheme, lhsInvite, lhsPeers, lhsImportersCount, lhsIsPublic):
+                if case let .mainLink(rhsTheme, rhsInvite, rhsPeers, rhsImportersCount, rhsIsPublic) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite, arePeerArraysEqual(lhsPeers, rhsPeers), lhsImportersCount == rhsImportersCount, lhsIsPublic == rhsIsPublic {
                     return true
                 } else {
                     return false
@@ -179,8 +180,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 return InviteLinkHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .mainLinkHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .mainLink(_, invite, peers):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, peers: peers, displayButton: true, displayImporters: true, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+            case let .mainLink(_, invite, peers, importersCount, isPublic):
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: importersCount, peers: peers, displayButton: true, displayImporters: !isPublic, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                     if let invite = invite {
                         arguments.copyLink(invite)
                     }
@@ -225,14 +226,18 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteLinkListControllerEntries(presentationData: PresentationData, view: PeerView, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, mainPeers: [Peer]) -> [InviteLinksListEntry] {
+private func inviteLinkListControllerEntries(presentationData: PresentationData, view: PeerView, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, importers: PeerInvitationImportersState?) -> [InviteLinksListEntry] {
     var entries: [InviteLinksListEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.InviteLink_CreatePrivateLinkHelp))
-    entries.append(.mainLinkHeader(presentationData.theme, presentationData.strings.InviteLink_PermanentLink.uppercased()))
+
         
     let mainInvite: ExportedInvitation?
-    if let invites = invites, let invite = invites.first(where: { $0.isPermanent && !$0.isRevoked }) {
+    var isPublic = false
+    if let peer = peerViewMainPeer(view), let address = peer.addressName, !address.isEmpty {
+        mainInvite = ExportedInvitation(link: "t.me/\(address)", isPermanent: true, isRevoked: false, adminId: PeerId(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil)
+        isPublic = true
+    } else if let invites = invites, let invite = invites.first(where: { $0.isPermanent && !$0.isRevoked }) {
         mainInvite = invite
     } else if let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation {
         mainInvite = invite
@@ -241,7 +246,19 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     } else {
         mainInvite = nil
     }
-    entries.append(.mainLink(presentationData.theme, mainInvite, mainPeers))
+    
+    entries.append(.mainLinkHeader(presentationData.theme, isPublic ? presentationData.strings.InviteLink_PublicLink.uppercased() : presentationData.strings.InviteLink_PermanentLink.uppercased()))
+    
+    let importersCount: Int32
+    if let count = importers?.count {
+        importersCount = count
+    } else if let count = mainInvite?.count {
+        importersCount = count
+    } else {
+        importersCount = 0
+    }
+    
+    entries.append(.mainLink(presentationData.theme, mainInvite, importers?.importers.prefix(3).compactMap { $0.peer.peer } ?? [], importersCount, isPublic))
     
     entries.append(.linksHeader(presentationData.theme, presentationData.strings.InviteLink_AdditionalLinks.uppercased()))
     entries.append(.linksCreate(presentationData.theme, presentationData.strings.InviteLink_Create))
@@ -320,10 +337,11 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         pushControllerImpl?(controller)
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
+        
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, mainLinkContextAction: { invite, node, gesture in
-        guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?() else {
+        guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?(), let invite = invite else {
             return
         }
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -334,11 +352,10 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         }, action: { _, f in
             f(.dismissWithoutContent)
             
-            if let invite = invite {
-                UIPasteboard.general.string = invite.link
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
-            }
+            UIPasteboard.general.string = invite.link
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
         })))
         
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
@@ -346,56 +363,56 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
         }, action: { _, f in
             f(.dismissWithoutContent)
             
-            if let invite = invite {
-                let controller = InviteLinkQRCodeController(context: context, invite: invite)
-                presentControllerImpl?(controller, nil)
-            }
+            let controller = InviteLinkQRCodeController(context: context, invite: invite)
+            presentControllerImpl?(controller, nil)
         })))
         
-        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
-        }, action: { _, f in
-            f(.dismissWithoutContent)
-        
-            let controller = ActionSheetController(presentationData: presentationData)
-            let dismissAction: () -> Void = { [weak controller] in
-                controller?.dismissAnimated()
-            }
-            controller.setItemGroups([
-                ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                        dismissAction()
-                        
-                        var revoke = false
-                        updateState { state in
-                            if !state.revokingPrivateLink {
-                                revoke = true
-                                var updatedState = state
-                                updatedState.revokingPrivateLink = true
-                                return updatedState
-                            } else {
-                                return state
-                            }
-                        }
-                        if revoke {
-                            revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-                                updateState { state in
+        if invite.adminId.toInt64() != 0 {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+            
+                let controller = ActionSheetController(presentationData: presentationData)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
+                        ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                            dismissAction()
+                            
+                            var revoke = false
+                            updateState { state in
+                                if !state.revokingPrivateLink {
+                                    revoke = true
                                     var updatedState = state
-                                    updatedState.revokingPrivateLink = false
+                                    updatedState.revokingPrivateLink = true
                                     return updatedState
+                                } else {
+                                    return state
                                 }
-                                
-                                invitesContext.reload()
-                                revokedInvitesContext.reload()
-                            }))
-                        }
-                    })
-                ]),
-                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        })))
+                            }
+                            if revoke {
+                                revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
+                                    updateState { state in
+                                        var updatedState = state
+                                        updatedState.revokingPrivateLink = false
+                                        return updatedState
+                                    }
+                                    
+                                    invitesContext.reload()
+                                    revokedInvitesContext.reload()
+                                }))
+                            }
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            })))
+        }
 
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
@@ -426,11 +443,21 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
             f(.dismissWithoutContent)
             
             UIPasteboard.general.string = invite.link
+
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
         })))
         
         if !invite.isRevoked {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextShare, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+            
+                let shareController = ShareController(context: context, subject: .url(invite.link))
+                presentControllerImpl?(shareController, nil)
+            })))
+            
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
@@ -546,29 +573,41 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
     |> deliverOnMainQueue
     
     let importersState = Promise<PeerInvitationImportersState?>(nil)
-    let importersContext: Signal<PeerInvitationImportersContext, NoError> = peerView
-    |> mapToSignal { view -> Signal<ExportedInvitation, NoError> in
+    let importersContext: Signal<PeerInvitationImportersContext?, NoError> = peerView
+    |> mapToSignal { view -> Signal<ExportedInvitation?, NoError> in
         if let cachedData = view.cachedData as? CachedGroupData, let exportedInvitation = cachedData.exportedInvitation {
             return .single(exportedInvitation)
         } else if let cachedData = view.cachedData as? CachedChannelData, let exportedInvitation = cachedData.exportedInvitation {
             return .single(exportedInvitation)
         } else {
-            return .complete()
+            return .single(nil)
         }
     }
     |> distinctUntilChanged
     |> deliverOnMainQueue
-    |> map { invite -> PeerInvitationImportersContext in
-        return PeerInvitationImportersContext(account: context.account, peerId: peerId, invite: invite)
+    |> map { invite -> PeerInvitationImportersContext? in
+        return invite.flatMap { PeerInvitationImportersContext(account: context.account, peerId: peerId, invite: $0) }
     } |> afterNext { context in
-        importersState.set(context.state |> map(Optional.init))
+        if let context = context {
+            importersState.set(context.state |> map(Optional.init))
+        } else {
+            importersState.set(.single(nil))
+        }
     }
     
+    let previousRevokedInvites = Atomic<PeerExportedInvitationsState?>(value: nil)
     let signal = combineLatest(context.sharedContext.presentationData, peerView, importersContext, importersState.get(), invitesContext.state, revokedInvitesContext.state)
     |> deliverOnMainQueue
     |> map { presentationData, view, importersContext, importers, invites, revokedInvites -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let previousRevokedInvites = previousRevokedInvites.swap(invites)
+        
+        var crossfade = false
+        if (previousRevokedInvites?.hasLoadedOnce ?? false) != (revokedInvites.hasLoadedOnce) {
+            crossfade = true
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.InviteLink_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.invitations, revokedInvites: revokedInvites.invitations, mainPeers: importers?.importers.compactMap { $0.peer.peer } ?? []), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.invitations, revokedInvites: revokedInvites.invitations, importers: importers), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
