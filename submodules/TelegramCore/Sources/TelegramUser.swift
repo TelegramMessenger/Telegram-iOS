@@ -53,7 +53,9 @@ extension TelegramUser {
             if (flags & (1 << 24)) != 0 {
                 userFlags.insert(.isScam)
             }
-            
+            if (flags & (1 << 26)) != 0 {
+                userFlags.insert(.isFake)
+            }
             var botInfo: BotUserInfo?
             if (flags & (1 << 14)) != 0 {
                 var botFlags = BotUserInfoFlags()
@@ -156,7 +158,9 @@ extension TelegramUser {
             if rhs.flags.contains(.isScam) {
                 userFlags.insert(.isScam)
             }
-            
+            if rhs.flags.contains(.isFake) {
+                userFlags.insert(.isFake)
+            }
             let botInfo: BotUserInfo? = rhs.botInfo
             
             let restrictionInfo: PeerAccessRestrictionInfo? = rhs.restrictionInfo
