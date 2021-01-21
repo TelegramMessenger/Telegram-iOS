@@ -13931,6 +13931,7 @@ public extension Api {
         case inputReportReasonCopyright
         case inputReportReasonChildAbuse
         case inputReportReasonGeoIrrelevant
+        case inputReportReasonFake
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13976,6 +13977,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputReportReasonFake:
+                    if boxed {
+                        buffer.appendInt32(-170010905)
+                    }
+                    
+                    break
     }
     }
     
@@ -13995,6 +14002,8 @@ public extension Api {
                 return ("inputReportReasonChildAbuse", [])
                 case .inputReportReasonGeoIrrelevant:
                 return ("inputReportReasonGeoIrrelevant", [])
+                case .inputReportReasonFake:
+                return ("inputReportReasonFake", [])
     }
     }
     
@@ -14026,6 +14035,9 @@ public extension Api {
         }
         public static func parse_inputReportReasonGeoIrrelevant(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonGeoIrrelevant
+        }
+        public static func parse_inputReportReasonFake(_ reader: BufferReader) -> ReportReason? {
+            return Api.ReportReason.inputReportReasonFake
         }
     
     }
