@@ -26,7 +26,7 @@ public func leftGroup(account: Account, peerId: PeerId) -> Signal<Void, NoError>
         |> take(1)
         |> mapToSignal { peer -> Signal<Void, NoError> in
             if let inputUser = apiInputUser(peer) {
-                return account.network.request(Api.functions.messages .deleteChatUser(chatId: peerId.id, userId: inputUser))
+                return account.network.request(Api.functions.messages.deleteChatUser(flags: 0, chatId: peerId.id, userId: inputUser))
                     |> retryRequest
                     |> mapToSignal { updates -> Signal<Void, NoError> in
                         account.stateManager.addUpdates(updates)

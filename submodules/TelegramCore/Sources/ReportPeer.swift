@@ -93,7 +93,7 @@ private extension ReportReason {
             case .spam:
                 return .inputReportReasonSpam
             case .fake:
-                return .inputReportReasonOther(text: "fake")
+                return .inputReportReasonFake
             case .violence:
                 return .inputReportReasonViolence
             case .porno:

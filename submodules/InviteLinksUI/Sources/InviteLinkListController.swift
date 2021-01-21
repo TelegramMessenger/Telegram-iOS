@@ -573,22 +573,26 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId) ->
     |> deliverOnMainQueue
     
     let importersState = Promise<PeerInvitationImportersState?>(nil)
-    let importersContext: Signal<PeerInvitationImportersContext, NoError> = peerView
-    |> mapToSignal { view -> Signal<ExportedInvitation, NoError> in
+    let importersContext: Signal<PeerInvitationImportersContext?, NoError> = peerView
+    |> mapToSignal { view -> Signal<ExportedInvitation?, NoError> in
         if let cachedData = view.cachedData as? CachedGroupData, let exportedInvitation = cachedData.exportedInvitation {
             return .single(exportedInvitation)
         } else if let cachedData = view.cachedData as? CachedChannelData, let exportedInvitation = cachedData.exportedInvitation {
             return .single(exportedInvitation)
         } else {
-            return .complete()
+            return .single(nil)
         }
     }
     |> distinctUntilChanged
     |> deliverOnMainQueue
-    |> map { invite -> PeerInvitationImportersContext in
-        return PeerInvitationImportersContext(account: context.account, peerId: peerId, invite: invite)
+    |> map { invite -> PeerInvitationImportersContext? in
+        return invite.flatMap { PeerInvitationImportersContext(account: context.account, peerId: peerId, invite: $0) }
     } |> afterNext { context in
-        importersState.set(context.state |> map(Optional.init))
+        if let context = context {
+            importersState.set(context.state |> map(Optional.init))
+        } else {
+            importersState.set(.single(nil))
+        }
     }
     
     let previousRevokedInvites = Atomic<PeerExportedInvitationsState?>(value: nil)

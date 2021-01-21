@@ -11,8 +11,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-457104426] = { return Api.InputGeoPoint.parse_inputGeoPointEmpty($0) }
     dict[1210199983] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
-    dict[2055070967] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-213431562] = { return Api.ChatFull.parse_chatFull($0) }
+    dict[2055070967] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-1159937629] = { return Api.PollResults.parse_pollResults($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -460,6 +460,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
+    dict[-1919636670] = { return Api.messages.HistoryImportParsed.parse_historyImportParsed($0) }
     dict[-618540889] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
     dict[-170029155] = { return Api.messages.DiscussionMessage.parse_discussionMessage($0) }
     dict[1722786150] = { return Api.help.DeepLinkInfo.parse_deepLinkInfoEmpty($0) }
@@ -473,6 +474,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1685456582] = { return Api.ReportReason.parse_inputReportReasonCopyright($0) }
     dict[-1376497949] = { return Api.ReportReason.parse_inputReportReasonChildAbuse($0) }
     dict[-606798099] = { return Api.ReportReason.parse_inputReportReasonGeoIrrelevant($0) }
+    dict[-170010905] = { return Api.ReportReason.parse_inputReportReasonFake($0) }
     dict[-247351839] = { return Api.InputEncryptedChat.parse_inputEncryptedChat($0) }
     dict[-524237339] = { return Api.PageTableRow.parse_pageTableRow($0) }
     dict[-40996577] = { return Api.DraftMessage.parse_draftMessage($0) }
@@ -658,7 +660,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1056001329] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsSaved($0) }
     dict[873977640] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentials($0) }
     dict[178373535] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsApplePay($0) }
-    dict[-1966921727] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsGooglePay($0) }
+    dict[-905587442] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsAndroidPay($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
     dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
     dict[1399317950] = { return Api.InputSecureFile.parse_inputSecureFile($0) }
@@ -1192,6 +1194,8 @@ public struct Api {
             case let _1 as Api.LabeledPrice:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ChatFull:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.HistoryImportParsed:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputSecureValue:
                 _1.serialize(buffer, boxed)
