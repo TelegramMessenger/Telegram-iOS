@@ -2126,15 +2126,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
                     canRemoveGlobally = true
                 }
+            } else if peer.peerId.namespace == Namespaces.Peer.SecretChat {
+                canRemoveGlobally = true
             }
             
             if let user = chatPeer as? TelegramUser, user.botInfo == nil, canRemoveGlobally {
+                strongSelf.maybeAskForPeerChatRemoval(peer: peer, joined: joined, completion: { _ in }, removed: {})
+            } else if let _ = chatPeer as? TelegramSecretChat, canRemoveGlobally {
                 strongSelf.maybeAskForPeerChatRemoval(peer: peer, joined: joined, completion: { _ in }, removed: {})
             } else {
                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 var items: [ActionSheetItem] = []
                 var canClear = true
                 var canStop = false
+                var canRemoveGlobally = false
                 
                 var deleteTitle = strongSelf.presentationData.strings.Common_Delete
                 if let channel = chatPeer as? TelegramChannel {
@@ -2142,10 +2147,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         canClear = false
                         deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
                     } else {
-                        deleteTitle = strongSelf.presentationData.strings.Group_LeaveGroup
+                        deleteTitle = strongSelf.presentationData.strings.Group_DeleteGroup
                     }
                     if let addressName = channel.addressName, !addressName.isEmpty {
                         canClear = false
+                    }
+                    if channel.flags.contains(.isCreator) {
+                        canRemoveGlobally = true
+                    }
+                } else if let group = chatPeer as? TelegramGroup {
+                    if case .creator = group.role {
+                        canRemoveGlobally = true
                     }
                 } else if let user = chatPeer as? TelegramUser, user.botInfo != nil {
                     canStop = !user.flags.contains(.isSupport)
@@ -2155,12 +2167,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 }
                 
-                var canRemoveGlobally = false
                 let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
                 if chatPeer is TelegramUser && chatPeer.id != strongSelf.context.account.peerId {
                     if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
                         canRemoveGlobally = true
                     }
+                } else if chatPeer is TelegramSecretChat {
+                    canRemoveGlobally = true
                 }
                 
                 items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
@@ -2265,7 +2278,43 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return
                     }
                     
-                    strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
+                    if canRemoveGlobally, (mainPeer is TelegramGroup || mainPeer is TelegramChannel) {
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        var items: [ActionSheetItem] = []
+                        
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: false, completion: {
+                            })
+                        }))
+                        
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForAllMembers, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteForAllMembersConfirmationText, actions: [
+                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                }),
+                                TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationAction, action: {
+                                    self?.schedulePeerChatRemoval(peer: peer, type: .forEveryone, deleteGloballyIfPossible: true, completion: {
+                                    })
+                                })
+                            ], parseMarkdown: true), in: .window(.root))
+                        }))
+                            
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: items),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        strongSelf.present(actionSheet, in: .window(.root))
+                    } else {
+                        strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
+                    }
                 }))
                 
                 if canStop {
@@ -2310,6 +2359,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         if let user = chatPeer as? TelegramUser, user.botInfo != nil {
             canRemoveGlobally = false
+        }
+        if let _ = chatPeer as? TelegramSecretChat {
+            canRemoveGlobally = true
         }
         
         if canRemoveGlobally {

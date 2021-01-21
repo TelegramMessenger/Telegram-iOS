@@ -3889,6 +3889,25 @@ public extension Api {
                     })
                 }
             
+                public static func getExportedChatInvites(flags: Int32, peer: Api.InputPeer, adminId: Api.InputUser?, offsetDate: Int32?, offsetLink: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvites>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1785900140)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {adminId!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(offsetDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(offsetLink!, buffer: buffer, boxed: false)}
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getExportedChatInvites", parameters: [("flags", flags), ("peer", peer), ("adminId", adminId), ("offsetDate", offsetDate), ("offsetLink", offsetLink), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ExportedChatInvites? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.ExportedChatInvites?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.ExportedChatInvites
+                        }
+                        return result
+                    })
+                }
+            
                 public static func exportChatInvite(flags: Int32, peer: Api.InputPeer, expireDate: Int32?, usageLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedChatInvite>) {
                     let buffer = Buffer()
                     buffer.appendInt32(347716823)
@@ -3924,43 +3943,6 @@ public extension Api {
                     })
                 }
             
-                public static func getChatInviteImporters(peer: Api.InputPeer, link: String, offsetDate: Int32, offsetUser: Api.InputUser, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteImporters>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(654013065)
-                    peer.serialize(buffer, true)
-                    serializeString(link, buffer: buffer, boxed: false)
-                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
-                    offsetUser.serialize(buffer, true)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getChatInviteImporters", parameters: [("peer", peer), ("link", link), ("offsetDate", offsetDate), ("offsetUser", offsetUser), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ChatInviteImporters? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.ChatInviteImporters?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.ChatInviteImporters
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getExportedChatInvites(flags: Int32, peer: Api.InputPeer, adminId: Api.InputUser?, offsetDate: Int32?, offsetLink: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvites>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1785900140)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {adminId!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(offsetDate!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(offsetLink!, buffer: buffer, boxed: false)}
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getExportedChatInvites", parameters: [("flags", flags), ("peer", peer), ("adminId", adminId), ("offsetDate", offsetDate), ("offsetLink", offsetLink), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ExportedChatInvites? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.ExportedChatInvites?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.ExportedChatInvites
-                        }
-                        return result
-                    })
-                }
-            
                 public static func deleteRevokedExportedChatInvites(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1375999075)
@@ -3985,6 +3967,24 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getChatInviteImporters(peer: Api.InputPeer, link: String, offsetDate: Int32, offsetUser: Api.InputUser, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteImporters>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(654013065)
+                    peer.serialize(buffer, true)
+                    serializeString(link, buffer: buffer, boxed: false)
+                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
+                    offsetUser.serialize(buffer, true)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getChatInviteImporters", parameters: [("peer", peer), ("link", link), ("offsetDate", offsetDate), ("offsetUser", offsetUser), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ChatInviteImporters? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.ChatInviteImporters?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.ChatInviteImporters
                         }
                         return result
                     })
@@ -4028,6 +4028,54 @@ public extension Api {
                         var result: Api.messages.AffectedHistory?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.AffectedHistory
+                        }
+                        return result
+                    })
+                }
+            
+                public static func initHistoryImport(peer: Api.InputPeer, file: Api.InputFile, mediaCount: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.HistoryImport>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(873008187)
+                    peer.serialize(buffer, true)
+                    file.serialize(buffer, true)
+                    serializeInt32(mediaCount, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.initHistoryImport", parameters: [("peer", peer), ("file", file), ("mediaCount", mediaCount)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.HistoryImport? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.HistoryImport?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.HistoryImport
+                        }
+                        return result
+                    })
+                }
+            
+                public static func uploadImportedMedia(peer: Api.InputPeer, importId: Int64, fileName: String, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(713433234)
+                    peer.serialize(buffer, true)
+                    serializeInt64(importId, buffer: buffer, boxed: false)
+                    serializeString(fileName, buffer: buffer, boxed: false)
+                    media.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.uploadImportedMedia", parameters: [("peer", peer), ("importId", importId), ("fileName", fileName), ("media", media)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.MessageMedia?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                        }
+                        return result
+                    })
+                }
+            
+                public static func startHistoryImport(peer: Api.InputPeer, importId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1271008444)
+                    peer.serialize(buffer, true)
+                    serializeInt64(importId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.startHistoryImport", parameters: [("peer", peer), ("importId", importId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

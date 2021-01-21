@@ -164,6 +164,59 @@ public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link:
     |> switchToLatest
 }
 
+public struct ExportedInvitations : Equatable {
+    public let list: [ExportedInvitation]?
+    public let totalCount: Int32
+}
+
+public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
+    return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            var flags: Int32 = 0
+            if let _ = offsetLink {
+                flags |= (1 << 2)
+            }
+            if revoked {
+                flags |= (1 << 3)
+            }
+            return account.network.request(Api.functions.messages.getExportedChatInvites(flags: flags, peer: inputPeer, adminId: nil, offsetDate: offsetLink?.date, offsetLink: offsetLink?.link, limit: 50))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.messages.ExportedChatInvites?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<ExportedInvitations?, NoError> in
+                return account.postbox.transaction { transaction -> ExportedInvitations? in
+                    if let result = result, case let .exportedChatInvites(count, apiInvites, users) = result {
+                        var peers: [Peer] = []
+                        var peersMap: [PeerId: Peer] = [:]
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                            peersMap[telegramUser.id] = telegramUser
+                        }
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        
+                        var invites: [ExportedInvitation] = []
+                        for apiInvite in apiInvites {
+                            if let invite = ExportedInvitation(apiExportedInvite: apiInvite) {
+                                invites.append(invite)
+                            }
+                        }
+                        return ExportedInvitations(list: invites, totalCount: count)
+                    } else {
+                        return nil
+                    }
+                }
+            }
+        } else {
+            return .single(nil)
+        }
+    } |> switchToLatest
+}
+
+
 public enum DeletePeerExportedInvitationError {
     case generic
 }

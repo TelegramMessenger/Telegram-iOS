@@ -361,6 +361,7 @@ public enum MultipartUploadSource {
     case resource(MediaResourceReference)
     case data(Data)
     case custom(Signal<MediaResourceData, NoError>)
+    case tempFile(TempBoxFile)
 }
 
 enum MultipartUploadError {
@@ -395,6 +396,15 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                     headerSize = resource.resource.headerSize
                     fetchedResource = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resource)
                     |> map { _ in }
+                case let .tempFile(file):
+                    if let size = fileSize(file.path) {
+                        dataSignal = .single(.resourceData(MediaResourceData(path: file.path, offset: 0, size: size, complete: true)))
+                        headerSize = 0
+                        fetchedResource = .complete()
+                    } else {
+                        subscriber.putError(.generic)
+                        return EmptyDisposable
+                    }
                 case let .data(data):
                     dataSignal = .single(.data(data))
                     headerSize = 0

@@ -339,7 +339,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 
                 var storeForwardInfo: StoreMessageForwardInfo?
                 if let forwardInfo = currentMessage.forwardInfo {
-                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                 }
                 
                 if let fromMedia = currentMessage.media.first, let toMedia = media.first {

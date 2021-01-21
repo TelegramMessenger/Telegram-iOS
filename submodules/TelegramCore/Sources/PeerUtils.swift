@@ -132,7 +132,7 @@ public extension Peer {
             return false
         }
     }
-    
+        
     var isVerified: Bool {
         switch self {
         case let user as TelegramUser:
@@ -264,5 +264,14 @@ public extension PeerId {
         } else {
             return false
         }
+    }
+    
+    var isImport: Bool {
+        if self.namespace == Namespaces.Peer.CloudUser {
+            if self.id == 225079 {
+                return true
+            }
+        }
+        return false
     }
 }

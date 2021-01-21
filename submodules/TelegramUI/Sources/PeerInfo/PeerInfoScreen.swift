@@ -4927,7 +4927,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     func forwardMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.state.selectedMessageIds, !messageIds.isEmpty {
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled]))
-            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peerId in
+            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in
+                let peerId = peer.id
+                
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)

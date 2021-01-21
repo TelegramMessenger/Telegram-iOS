@@ -429,7 +429,13 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     case .collapse:
                         actionTitle = strings.ChatList_Search_ShowLess
                     }
-                    header = ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
+                    let headerType: ChatListSearchItemHeaderType
+                    if filter.contains(.onlyGroups) {
+                        headerType = .chats
+                    } else {
+                        headerType = .localPeers
+                    }
+                    header = ChatListSearchItemHeader(type: headerType, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
                         toggleExpandLocalResults()
                     })
                 }

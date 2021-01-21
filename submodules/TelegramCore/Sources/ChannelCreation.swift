@@ -12,13 +12,16 @@ public enum CreateChannelError {
     case serverProvided(String)
 }
 
-private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil) -> Signal<PeerId, CreateChannelError> {
+private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
     return account.postbox.transaction { transaction -> Signal<PeerId, CreateChannelError> in
         var flags: Int32 = 0
         if isSupergroup {
             flags |= (1 << 1)
         } else {
             flags |= (1 << 0)
+        }
+        if isForHistoryImport {
+            flags |= (1 << 3)
         }
         
         var geoPoint: Api.InputGeoPoint?
@@ -69,8 +72,8 @@ public func createChannel(account: Account, title: String, description: String?)
     return createChannel(account: account, title: title, description: description, isSupergroup: false)
 }
 
-public func createSupergroup(account: Account, title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil) -> Signal<PeerId, CreateChannelError> {
-    return createChannel(account: account, title: title, description: description, isSupergroup: true, location: location)
+public func createSupergroup(account: Account, title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
+    return createChannel(account: account, title: title, description: description, isSupergroup: true, location: location, isForHistoryImport: isForHistoryImport)
 }
 
 public enum DeleteChannelError {
@@ -81,7 +84,7 @@ public func deleteChannel(account: Account, peerId: PeerId) -> Signal<Void, Dele
     return account.postbox.transaction { transaction -> Api.InputChannel? in
         return transaction.getPeer(peerId).flatMap(apiInputChannel)
     }
-    |> mapError { _ -> DeleteChannelError in return .generic }
+    |> mapError { _ -> DeleteChannelError in }
     |> mapToSignal { inputChannel -> Signal<Void, DeleteChannelError> in
         if let inputChannel = inputChannel {
             return account.network.request(Api.functions.channels.deleteChannel(channel: inputChannel))

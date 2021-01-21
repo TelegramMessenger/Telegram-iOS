@@ -11,8 +11,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-457104426] = { return Api.InputGeoPoint.parse_inputGeoPointEmpty($0) }
     dict[1210199983] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
-    dict[-213431562] = { return Api.ChatFull.parse_chatFull($0) }
     dict[2055070967] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[-213431562] = { return Api.ChatFull.parse_chatFull($0) }
     dict[-1159937629] = { return Api.PollResults.parse_pollResults($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -175,6 +175,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1997373508] = { return Api.SendMessageAction.parse_sendMessageRecordRoundAction($0) }
     dict[608050278] = { return Api.SendMessageAction.parse_sendMessageUploadRoundAction($0) }
     dict[-651419003] = { return Api.SendMessageAction.parse_speakingInGroupCallAction($0) }
+    dict[-606432698] = { return Api.SendMessageAction.parse_sendMessageHistoryImportAction($0) }
     dict[-1137792208] = { return Api.PrivacyKey.parse_privacyKeyStatusTimestamp($0) }
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
     dict[1030105979] = { return Api.PrivacyKey.parse_privacyKeyPhoneCall($0) }
@@ -574,6 +575,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
     dict[-968723890] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
     dict[-1228606141] = { return Api.messages.MessageViews.parse_messageViews($0) }
+    dict[375566091] = { return Api.messages.HistoryImport.parse_historyImport($0) }
     dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
     dict[-1387279939] = { return Api.MessageInteractionCounters.parse_messageInteractionCounters($0) }
     dict[-1107852396] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
@@ -656,7 +658,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1056001329] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsSaved($0) }
     dict[873977640] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentials($0) }
     dict[178373535] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsApplePay($0) }
-    dict[-905587442] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsAndroidPay($0) }
+    dict[-1966921727] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsGooglePay($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
     dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
     dict[1399317950] = { return Api.InputSecureFile.parse_inputSecureFile($0) }
@@ -736,7 +738,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1673717362] = { return Api.InputPeerNotifySettings.parse_inputPeerNotifySettings($0) }
     dict[-1634752813] = { return Api.messages.FavedStickers.parse_favedStickersNotModified($0) }
     dict[-209768682] = { return Api.messages.FavedStickers.parse_favedStickers($0) }
-    dict[1776236393] = { return Api.ExportedChatInvite.parse_chatInviteEmpty($0) }
     dict[1847917725] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
     dict[-1389486888] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
     dict[-1392388579] = { return Api.Authorization.parse_authorization($0) }
@@ -1323,6 +1324,8 @@ public struct Api {
             case let _1 as Api.InputChatPhoto:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.MessageViews:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.HistoryImport:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentCharge:
                 _1.serialize(buffer, boxed)

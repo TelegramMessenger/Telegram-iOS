@@ -106,7 +106,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 25)) != 0 {
             channelFlags.insert(.isFake)
         }
-        
+
         let restrictionInfo: PeerAccessRestrictionInfo?
         if let restrictionReason = restrictionReason {
             restrictionInfo = PeerAccessRestrictionInfo(apiReasons: restrictionReason)

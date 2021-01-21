@@ -3,9 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-public func qewfqewfq() {
-}
-
 private struct WindowLayout: Equatable {
     let size: CGSize
     let metrics: LayoutMetrics
@@ -294,7 +291,7 @@ public class Window1 {
         self.systemUserInterfaceStyle = hostView.systemUserInterfaceStyle
         
         let boundsSize = self.hostView.eventView.bounds.size
-        self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, scale: UIScreen.main.scale, statusBarHeight: statusBarHost?.statusBarFrame.height ?? defaultStatusBarHeight, onScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
+        self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, scale: UIScreen.main.scale, statusBarHeight: statusBarHost?.statusBarFrame.height ?? 0.0, onScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
         
         self.statusBarHost = statusBarHost
         let statusBarHeight: CGFloat
@@ -303,7 +300,7 @@ public class Window1 {
             self.keyboardManager = KeyboardManager(host: statusBarHost)
             self.keyboardViewManager = KeyboardViewManager(host: statusBarHost)
         } else {
-            statusBarHeight = self.deviceMetrics.statusBarHeight
+            statusBarHeight = 0.0
             self.keyboardManager = nil
             self.keyboardViewManager = nil
         }
@@ -406,7 +403,7 @@ public class Window1 {
         self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: UIApplication.willChangeStatusBarFrameNotification, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
-            if let strongSelf = self {
+            if let strongSelf = self, strongSelf.statusBarHost != nil {
                 let statusBarHeight: CGFloat = max(defaultStatusBarHeight, (notification.userInfo?[UIApplication.statusBarFrameUserInfoKey] as? NSValue)?.cgRectValue.height ?? defaultStatusBarHeight)
                 
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .easeInOut)
@@ -981,10 +978,12 @@ public class Window1 {
                 var statusBarHeight: CGFloat? = self.deviceMetrics.statusBarHeight(for: boundsSize)
                 if let statusBarHeightValue = statusBarHeight, let statusBarHost = self.statusBarHost {
                     statusBarHeight = max(statusBarHeightValue, statusBarHost.statusBarFrame.size.height)
+                } else {
+                    statusBarHeight = nil
                 }
                 
                 if self.deviceMetrics.type == .tablet, let onScreenNavigationHeight = self.hostView.onScreenNavigationHeight, onScreenNavigationHeight != self.deviceMetrics.onScreenNavigationHeight(inLandscape: false, systemOnScreenNavigationHeight: self.hostView.onScreenNavigationHeight) {
-                    self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, scale: UIScreen.main.scale, statusBarHeight: statusBarHeight ?? defaultStatusBarHeight, onScreenNavigationHeight: onScreenNavigationHeight)
+                    self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, scale: UIScreen.main.scale, statusBarHeight: statusBarHeight ?? 0.0, onScreenNavigationHeight: onScreenNavigationHeight)
                 }
                 
                 let statusBarWasHidden = self.statusBarHidden

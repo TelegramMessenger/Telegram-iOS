@@ -165,12 +165,13 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
         switch entry.entry {
             case .HeaderEntry:
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
-            case let .AdditionalCategory(_, id, title, image, selected, presentationData):
+            case let .AdditionalCategory(_, id, title, image, appearance, selected, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
                     context: context,
                     title: title,
                     image: image,
+                    appearance: appearance,
                     isSelected: selected,
                     action: {
                         nodeInteraction.additionalCategorySelected(id)
@@ -249,7 +250,14 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         switch mode {
                         case let .peers(_, _, additionalCategories, _):
                             if !additionalCategories.isEmpty {
-                                header = ChatListSearchItemHeader(type: .chats, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                                let headerType: ChatListSearchItemHeaderType
+                                if case .action = additionalCategories[0].appearance {
+                                    // TODO: hack, generalize
+                                    headerType = .orImportIntoAnExistingGroup
+                                } else {
+                                    headerType = .chats
+                                }
+                                header = ChatListSearchItemHeader(type: headerType, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                             }
                         default:
                             break
@@ -319,7 +327,14 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         switch mode {
                         case let .peers(_, _, additionalCategories, _):
                             if !additionalCategories.isEmpty {
-                                header = ChatListSearchItemHeader(type: .chats, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                                let headerType: ChatListSearchItemHeaderType
+                                if case .action = additionalCategories[0].appearance {
+                                    // TODO: hack, generalize
+                                    headerType = .orImportIntoAnExistingGroup
+                                } else {
+                                    headerType = .chats
+                                }
+                                header = ChatListSearchItemHeader(type: headerType, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                             }
                         default:
                             break
@@ -355,12 +370,13 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
             case .HeaderEntry:
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
-            case let .AdditionalCategory(index: _, id, title, image, selected, presentationData):
+            case let .AdditionalCategory(index: _, id, title, image, appearance, selected, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
                     context: context,
                     title: title,
                     image: image,
+                    appearance: appearance,
                     isSelected: selected,
                     action: {
                         nodeInteraction.additionalCategorySelected(id)
