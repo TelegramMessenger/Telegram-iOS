@@ -978,6 +978,44 @@ public struct messages {
         }
     
     }
+    public enum HistoryImportParsed: TypeConstructorDescription {
+        case historyImportParsed(flags: Int32, title: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .historyImportParsed(let flags, let title):
+                    if boxed {
+                        buffer.appendInt32(-1919636670)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .historyImportParsed(let flags, let title):
+                return ("historyImportParsed", [("flags", flags), ("title", title)])
+    }
+    }
+    
+        public static func parse_historyImportParsed(_ reader: BufferReader) -> HistoryImportParsed? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_2 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.HistoryImportParsed.historyImportParsed(flags: _1!, title: _2)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum DiscussionMessage: TypeConstructorDescription {
         case discussionMessage(flags: Int32, messages: [Api.Message], maxId: Int32?, readInboxMaxId: Int32?, readOutboxMaxId: Int32?, chats: [Api.Chat], users: [Api.User])
     

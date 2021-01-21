@@ -407,6 +407,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
+                            
+                            if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                                strongSelf.statusNode.pressed = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    item.controllerInteraction.displayImportedMessageTooltip(strongSelf.statusNode)
+                                }
+                            } else {
+                                strongSelf.statusNode.pressed = nil
+                            }
                         }
                     })
                 })

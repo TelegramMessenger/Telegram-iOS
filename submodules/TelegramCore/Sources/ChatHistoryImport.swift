@@ -16,6 +16,36 @@ public enum ChatHistoryImport {
         case generic
     }
     
+    //messages.historyImportParsed flags:# pm:flags.0?true group:flags.1?true title:flags.1?string = messages.HistoryImportParsed;
+    public enum ParsedInfo {
+        case privateChat(title: String?)
+        case group(title: String?)
+    }
+    
+    public enum GetInfoError {
+        case generic
+        case parseError
+    }
+    
+    public static func getInfo(account: Account, header: String) -> Signal<ParsedInfo, GetInfoError> {
+        return account.network.request(Api.functions.messages.checkHistoryImport(importHead: header))
+        |> mapError { _ -> GetInfoError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<ParsedInfo, GetInfoError> in
+            switch result {
+            case let .historyImportParsed(flags, title):
+                if (flags & (1 << 0)) != 0 {
+                    return .single(.privateChat(title: title))
+                } else if (flags & (1 << 1)) != 0 {
+                    return .single(.group(title: title))
+                } else {
+                    return .fail(.parseError)
+                }
+            }
+        }
+    }
+    
     public static func initSession(account: Account, peerId: PeerId, file: TempBoxFile, mediaCount: Int32) -> Signal<Session, InitImportError> {
         return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> InitImportError in
@@ -63,12 +93,12 @@ public enum ChatHistoryImport {
         case generic
     }
     
-    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, type: MediaType) -> Signal<Never, UploadMediaError> {
+    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, type: MediaType) -> Signal<Float, UploadMediaError> {
         return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> UploadMediaError in
             return .generic
         }
-        |> mapToSignal { result -> Signal<Never, UploadMediaError> in
+        |> mapToSignal { result -> Signal<Float, UploadMediaError> in
             let inputMedia: Api.InputMedia
             switch result {
             case let .inputFile(inputFile):
@@ -91,8 +121,8 @@ public enum ChatHistoryImport {
                     }
                     inputMedia = .inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)
                 }
-            case .progress:
-                return .complete()
+            case let .progress(value):
+                return .single(value)
             case .inputSecretFile:
                 return .fail(.generic)
             }
@@ -100,8 +130,8 @@ public enum ChatHistoryImport {
             |> mapError { _ -> UploadMediaError in
                 return .generic
             }
-            |> mapToSignal { result -> Signal<Never, UploadMediaError> in
-                return .complete()
+            |> mapToSignal { result -> Signal<Float, UploadMediaError> in
+                return .single(1.0)
             }
         }
     }

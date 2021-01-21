@@ -215,6 +215,7 @@ swift_library(
         "//Telegram:GeneratedSources",
         "//third-party/ZIPFoundation:ZIPFoundation",
         "//submodules/ChatImportUI:ChatImportUI",
+        "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
     ],
     visibility = [
         "//visibility:public",

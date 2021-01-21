@@ -5903,3 +5903,4 @@ Sorry for the inconvenience.";
 "Common.Save" = "Save";
 
 "ChatList.HeaderImportIntoAnExistingGroup" = "OR IMPORT INTO AN EXISTING GROUP";
+"Conversation.ImportedMessageHint" = "The messages was imported from another app. We can't guarantee it's real.";

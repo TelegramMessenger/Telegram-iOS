@@ -371,6 +371,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var isEmbeddedTitleContentHidden = false
     
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
+    
+    private weak var currentImportMessageTooltip: UndoOverlayController?
 
     public override var customData: Any? {
         return self.chatLocation
@@ -2208,6 +2210,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.present(MessageReactionListController(context: strongSelf.context, messageId: message.id, initialReactions: initialReactions), in: .window(.root))
                 }
             })
+        }, displayImportedMessageTooltip: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            if let _ = strongSelf.currentImportMessageTooltip {
+            } else {
+                let controller = UndoOverlayController(presentationData: strongSelf.presentationData, content: .importedMessage(text: strongSelf.presentationData.strings.Conversation_ImportedMessageHint), elevatedLayout: false, action: { _ in return false })
+                strongSelf.currentImportMessageTooltip = controller
+                strongSelf.present(controller, in: .current)
+            }
         }, displaySwipeToReplyHint: {  [weak self] in
             if let strongSelf = self, let validLayout = strongSelf.validLayout, min(validLayout.size.width, validLayout.size.height) > 320.0 {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: false, action: { _ in return false }), in: .current)

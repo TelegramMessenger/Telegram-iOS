@@ -103,6 +103,7 @@ public final class ChatControllerInteraction {
     let performTextSelectionAction: (UInt32, NSAttributedString, TextSelectionAction) -> Void
     let updateMessageLike: (MessageId, Bool) -> Void
     let openMessageReactions: (MessageId) -> Void
+    let displayImportedMessageTooltip: (ASDisplayNode) -> Void
     let displaySwipeToReplyHint: () -> Void
     let dismissReplyMarkupMessage: (Message) -> Void
     let openMessagePollResults: (MessageId, Data) -> Void
@@ -192,6 +193,7 @@ public final class ChatControllerInteraction {
         performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void,
         updateMessageLike: @escaping (MessageId, Bool) -> Void,
         openMessageReactions: @escaping (MessageId) -> Void,
+        displayImportedMessageTooltip: @escaping (ASDisplayNode) -> Void,
         displaySwipeToReplyHint: @escaping () -> Void,
         dismissReplyMarkupMessage: @escaping (Message) -> Void,
         openMessagePollResults: @escaping (MessageId, Data) -> Void,
@@ -271,6 +273,7 @@ public final class ChatControllerInteraction {
         self.performTextSelectionAction = performTextSelectionAction
         self.updateMessageLike = updateMessageLike
         self.openMessageReactions = openMessageReactions
+        self.displayImportedMessageTooltip = displayImportedMessageTooltip
         self.displaySwipeToReplyHint = displaySwipeToReplyHint
         self.dismissReplyMarkupMessage = dismissReplyMarkupMessage
         self.openMessagePollResults = openMessagePollResults
@@ -320,6 +323,7 @@ public final class ChatControllerInteraction {
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in

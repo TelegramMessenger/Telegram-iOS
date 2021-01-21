@@ -84,6 +84,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var toggleSelection: (Bool) -> Void = { _ in }
     var activateLocalContent: () -> Void = { }
     var requestUpdateLayout: (Bool) -> Void = { _ in }
+    var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
     
     private var context: AccountContext?
     private var message: Message?
@@ -729,6 +730,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                             
                             strongSelf.updateStatus(animated: isAnimated)
+                            
+                            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                                strongSelf.dateAndStatusNode.pressed = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.displayImportedTooltip(strongSelf.dateAndStatusNode)
+                                }
+                            } else {
+                                strongSelf.dateAndStatusNode.pressed = nil
+                            }
                         }
                     })
                 })

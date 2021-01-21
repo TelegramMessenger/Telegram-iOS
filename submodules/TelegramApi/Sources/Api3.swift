@@ -4080,6 +4080,20 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func checkHistoryImport(importHead: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.HistoryImportParsed>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1140726259)
+                    serializeString(importHead, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.checkHistoryImport", parameters: [("importHead", importHead)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.HistoryImportParsed? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.HistoryImportParsed?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.HistoryImportParsed
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {

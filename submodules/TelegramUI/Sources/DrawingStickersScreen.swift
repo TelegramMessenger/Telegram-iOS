@@ -134,6 +134,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in

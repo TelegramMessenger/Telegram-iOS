@@ -127,6 +127,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in
