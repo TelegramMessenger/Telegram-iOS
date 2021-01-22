@@ -3997,6 +3997,7 @@ Unused sets are archived when you add more.";
 "ChatList.DeleteChatConfirmation" = "Are you sure you want to delete chat\nwith %@?";
 "ChatList.DeleteSecretChatConfirmation" = "Are you sure you want to delete secret chat\nwith %@?";
 "ChatList.LeaveGroupConfirmation" = "Are you sure you want to leave %@?";
+"ChatList.DeleteAndLeaveGroupConfirmation" = "Are you sure you want to leave and delete %@?";
 "ChatList.DeleteSavedMessagesConfirmation" = "Are you sure you want to delete\nSaved Messages?";
 
 "Undo.Undo" = "Undo";
@@ -5913,4 +5914,13 @@ Sorry for the inconvenience.";
 "ReportPeer.ReasonFake" = "Fake Account";
 
 "ChatList.HeaderImportIntoAnExistingGroup" = "OR IMPORT INTO AN EXISTING GROUP";
+
+"Group.ErrorAdminsTooMuch" = "Sorry, too many administrators in this group.";
+"Channel.ErrorAdminsTooMuch" = "Sorry, too many administrators in this channel.";
+
+"Conversation.AddMembers" = "Add Members";
+
 "Conversation.ImportedMessageHint" = "The messages was imported from another app. We can't guarantee it's real.";
+
+"CallList.DeleteAllForMe" = "Delete for me";
+"CallList.DeleteAllForEveryone" = "Delete for me and Others";

@@ -128,6 +128,7 @@ final class ChatPanelInterfaceInteraction {
     let activatePinnedListPreview: (ASDisplayNode, ContextGesture) -> Void
     let editMessageMedia: (MessageId, Bool) -> Void
     let joinGroupCall: (CachedChannelData.ActiveCall) -> Void
+    let presentInviteMembers: () -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -208,6 +209,7 @@ final class ChatPanelInterfaceInteraction {
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         activatePinnedListPreview: @escaping (ASDisplayNode, ContextGesture) -> Void,
         joinGroupCall: @escaping (CachedChannelData.ActiveCall) -> Void,
+        presentInviteMembers: @escaping () -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
@@ -289,6 +291,7 @@ final class ChatPanelInterfaceInteraction {
         self.activatePinnedListPreview = activatePinnedListPreview
         self.editMessageMedia = editMessageMedia
         self.joinGroupCall = joinGroupCall
+        self.presentInviteMembers = presentInviteMembers
         self.statuses = statuses
     }
 }

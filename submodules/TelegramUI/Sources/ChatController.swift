@@ -59,6 +59,7 @@ import StatisticsUI
 import MediaResources
 import GalleryData
 import ChatInterfaceState
+import InviteLinksUI
 
 extension ChatLocation {
     var peerId: PeerId {
@@ -364,6 +365,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let peekTimerDisposable = MetaDisposable()
     
     private let createVoiceChatDisposable = MetaDisposable()
+    
+    private let selectAddMemberDisposable = MetaDisposable()
+    private let addMemberDisposable = MetaDisposable()
     
     private var shouldDisplayDownButton = false
 
@@ -2854,6 +2858,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     didDisplayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     didDisplayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                    didDisplayActionsPanel = true
                                 }
                             }
                         }
@@ -2868,6 +2874,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 } else if peerStatusSettings.contains(.canShareContact) {
                                     displayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    displayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     displayActionsPanel = true
                                 }
                             }
@@ -3058,6 +3066,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     didDisplayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     didDisplayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                    didDisplayActionsPanel = true
                                 }
                             }
                         }
@@ -3072,6 +3082,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 } else if peerStatusSettings.contains(.canShareContact) {
                                     displayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    displayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     displayActionsPanel = true
                                 }
                             }
@@ -3440,6 +3452,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.hasActiveGroupCallDisposable?.dispose()
         self.createVoiceChatDisposable.dispose()
         self.checksTooltipDisposable.dispose()
+        self.selectAddMemberDisposable.dispose()
+        self.addMemberDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -6134,6 +6148,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.context.joinGroupCall(peerId: peer.id, activeCall: activeCall)
+        }, presentInviteMembers: { [weak self] in
+            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                return
+            }
+            if !(peer is TelegramGroup || peer is TelegramChannel) {
+                return
+            }
+            presentAddMembers(context: strongSelf.context, parentController: strongSelf, groupPeer: peer, selectAddMemberDisposable: strongSelf.selectAddMemberDisposable, addMemberDisposable: strongSelf.addMemberDisposable)
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
@@ -10480,7 +10502,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             dismissPeerId = peerId
         }
-        self.editMessageDisposable.set((TelegramCore.dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
+        self.editMessageDisposable.set((dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
         |> afterDisposed({
             Queue.mainQueue().async {
             }

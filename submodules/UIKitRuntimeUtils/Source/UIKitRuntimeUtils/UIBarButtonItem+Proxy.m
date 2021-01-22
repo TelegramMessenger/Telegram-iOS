@@ -7,6 +7,7 @@ static const void *setEnabledListenerBagKey = &setEnabledListenerBagKey;
 static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
 static const void *customDisplayNodeKey = &customDisplayNodeKey;
 static const void *backButtonAppearanceKey = &backButtonAppearanceKey;
+static const void *customActionKey = &customActionKey;
 
 @implementation UIBarButtonItem (Proxy)
 
@@ -44,6 +45,10 @@ static const void *backButtonAppearanceKey = &backButtonAppearanceKey;
     return [[self associatedObjectForKey:backButtonAppearanceKey] boolValue];
 }
 
+- (void)setCustomAction:(void (^)())customAction {
+    [self setAssociatedObject:[customAction copy] forKey:customActionKey];
+}
+
 - (void)_c1e56039_setEnabled:(BOOL)enabled
 {
     [self _c1e56039_setEnabled:enabled];
@@ -66,6 +71,12 @@ static const void *backButtonAppearanceKey = &backButtonAppearanceKey;
 
 - (void)performActionOnTarget
 {
+    void (^customAction)() = [self associatedObjectForKey:customActionKey];
+    if (customAction) {
+        customAction();
+        return;
+    }
+    
     if (self.target == nil) {
         return;
     }
