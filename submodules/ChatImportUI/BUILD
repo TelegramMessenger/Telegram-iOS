@@ -21,6 +21,7 @@ swift_library(
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
+        "//submodules/MimeTypes:MimeTypes",
     ],
     visibility = [
         "//visibility:public",

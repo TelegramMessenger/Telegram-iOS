@@ -85,6 +85,8 @@ public class ShareRootControllerImpl {
     private var observer1: AnyObject?
     private var observer2: AnyObject?
     
+    private weak var navigationController: NavigationController?
+    
     public init(initializationData: ShareRootControllerInitializationData, getExtensionContext: @escaping () -> NSExtensionContext?) {
         self.initializationData = initializationData
         self.getExtensionContext = getExtensionContext
@@ -374,6 +376,9 @@ public class ShareRootControllerImpl {
                             if let currentShareController = strongSelf.currentShareController {
                                 currentShareController.dismiss()
                             }
+                            if let navigationController = strongSelf.navigationController {
+                                navigationController.dismiss(animated: false)
+                            }
                             strongSelf.currentShareController = shareController
                             strongSelf.mainWindow?.present(shareController, on: .root)
                         }
@@ -491,6 +496,7 @@ public class ShareRootControllerImpl {
                                             
                                             let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                             let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
+                                            strongSelf.navigationController = navigationController
                                             navigationController.viewControllers = [TempController(context: context)]
                                             strongSelf.mainWindow?.present(navigationController, on: .root)
                                             
@@ -675,6 +681,161 @@ public class ShareRootControllerImpl {
                                                             })], parseMarkdown: true)
                                                             strongSelf.mainWindow?.present(controller, on: .root)
                                                         })
+                                                    }
+                                                    
+                                                    navigationController.viewControllers = [controller]
+                                                    strongSelf.mainWindow?.present(navigationController, on: .root)
+                                                case let .unknown(peerTitle):
+                                                    //TODO:localize
+                                                    var attemptSelectionImpl: ((Peer) -> Void)?
+                                                    var createNewGroupImpl: (() -> Void)?
+                                                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeDisabled, .doNotSearchMessages], hasContactSelector: true, hasGlobalSearch: false, title: "Import Chat", attemptSelection: { peer in
+                                                        attemptSelectionImpl?(peer)
+                                                    }, createNewGroup: {
+                                                        createNewGroupImpl?()
+                                                    }, pretendPresentedInModal: true))
+                                                    
+                                                    controller.customDismiss = {
+                                                        self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                                                    }
+                                                    
+                                                    controller.peerSelected = { peer in
+                                                        attemptSelectionImpl?(peer)
+                                                    }
+                                                    
+                                                    controller.navigationPresentation = .default
+                                                    
+                                                    let beginWithPeer: (PeerId) -> Void = { peerId in
+                                                        navigationController.view.endEditing(true)
+                                                        navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
+                                                            self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                                                        }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                    }
+                                                    
+                                                    attemptSelectionImpl = { [weak controller] peer in
+                                                        controller?.inProgress = true
+                                                        let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                        |> deliverOnMainQueue).start(error: { error in
+                                                            controller?.inProgress = false
+                                                            
+                                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                            let errorText: String
+                                                            switch error {
+                                                            case .generic:
+                                                                errorText = presentationData.strings.Login_UnknownError
+                                                            case .userIsNotMutualContact:
+                                                                errorText = "You can only import messages into private chats with users who added you in their contact list."
+                                                            }
+                                                            let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                                            })])
+                                                            strongSelf.mainWindow?.present(controller, on: .root)
+                                                        }, completed: {
+                                                            controller?.inProgress = false
+                                                            
+                                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                            
+                                                            var errorText: String?
+                                                            if let channel = peer as? TelegramChannel {
+                                                                if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                                                } else {
+                                                                    errorText = "You need to be an admin of the group to import messages into it."
+                                                                }
+                                                            } else if let group = peer as? TelegramGroup {
+                                                                switch group.role {
+                                                                case .creator:
+                                                                    break
+                                                                default:
+                                                                    errorText = "You need to be an admin of the group to import messages into it."
+                                                                }
+                                                            } else if let _ = peer as? TelegramUser {
+                                                            } else {
+                                                                errorText = "You can't import history into this group."
+                                                            }
+                                                            
+                                                            if let errorText = errorText {
+                                                                let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                                                })])
+                                                                strongSelf.mainWindow?.present(controller, on: .root)
+                                                            } else {
+                                                                let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                                if let user = peer as? TelegramUser {
+                                                                    let text: String
+                                                                    if let title = peerTitle {
+                                                                        text = "Are you sure you want to import messages from **\(title)** into the chat with **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))**?"
+                                                                    } else {
+                                                                        text = "Are you sure you want to import messages into the chat with **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))**?"
+                                                                    }
+                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                                    }), TextAlertAction(type: .defaultAction, title: "Import", action: {
+                                                                        beginWithPeer(peer.id)
+                                                                    })], parseMarkdown: true)
+                                                                    strongSelf.mainWindow?.present(controller, on: .root)
+                                                                } else {
+                                                                    let text: String
+                                                                    if let groupTitle = peerTitle {
+                                                                        text = "Are you sure you want to import messages from **\(groupTitle)** into **\(peer.debugDisplayTitle)**?"
+                                                                    } else {
+                                                                        text = "Are you sure you want to import messages into **\(peer.debugDisplayTitle)**?"
+                                                                    }
+                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                                    }), TextAlertAction(type: .defaultAction, title: "Import", action: {
+                                                                        beginWithPeer(peer.id)
+                                                                    })], parseMarkdown: true)
+                                                                    strongSelf.mainWindow?.present(controller, on: .root)
+                                                                }
+                                                            }
+                                                        })
+                                                    }
+                                                    
+                                                    createNewGroupImpl = {
+                                                        let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                        let resolvedGroupTitle: String
+                                                        if let groupTitle = peerTitle {
+                                                            resolvedGroupTitle = groupTitle
+                                                        } else {
+                                                            resolvedGroupTitle = "Group"
+                                                        }
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Create Group and Import Messages", text: "Are you sure you want to create group **\(resolvedGroupTitle)** and import messages from another messaging app?", actions: [TextAlertAction(type: .defaultAction, title: "Create and Import", action: {
+                                                            var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
+                                                            |> map(Optional.init)
+                                                            |> `catch` { _ -> Signal<PeerId?, NoError> in
+                                                                return .single(nil)
+                                                            }
+                                                            
+                                                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                                            let progressSignal = Signal<Never, NoError> { subscriber in
+                                                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                                                                if let strongSelf = self {
+                                                                    strongSelf.mainWindow?.present(controller, on: .root)
+                                                                }
+                                                                return ActionDisposable { [weak controller] in
+                                                                    Queue.mainQueue().async() {
+                                                                        controller?.dismiss()
+                                                                    }
+                                                                }
+                                                            }
+                                                            |> runOn(Queue.mainQueue())
+                                                            |> delay(0.15, queue: Queue.mainQueue())
+                                                            let progressDisposable = progressSignal.start()
+                                                            
+                                                            signal = signal
+                                                            |> afterDisposed {
+                                                                Queue.mainQueue().async {
+                                                                    progressDisposable.dispose()
+                                                                }
+                                                            }
+                                                            let _ = (signal
+                                                            |> deliverOnMainQueue).start(next: { peerId in
+                                                                if let peerId = peerId {
+                                                                    beginWithPeer(peerId)
+                                                                } else {
+                                                                    //TODO:localize
+                                                                }
+                                                            })
+                                                        }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                        })], parseMarkdown: true)
+                                                        strongSelf.mainWindow?.present(controller, on: .root)
                                                     }
                                                     
                                                     navigationController.viewControllers = [controller]
