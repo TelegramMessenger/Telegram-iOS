@@ -361,10 +361,10 @@ private final class PeerExportedInvitationsContextImpl {
         var lastResult = self.results.last
         
         if self.forceUpdate {
+            self.populateCache = true
             self.forceUpdate = false
             lastResult = nil
-        }
-        if !self.forceUpdate && self.loadedFromCache {
+        } else if self.loadedFromCache {
             self.populateCache = false
             self.loadedFromCache = false
         }
