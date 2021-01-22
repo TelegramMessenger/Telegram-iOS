@@ -463,13 +463,41 @@ public class ShareRootControllerImpl {
                                                 mainFileHeader = String(mainFileText[mainFileText.startIndex ..< mainFileText.index(mainFileText.startIndex, offsetBy: 1000)])
                                             }
                                             
+                                            final class TempController: ViewController {
+                                                override public var _presentedInModal: Bool {
+                                                    get {
+                                                        return true
+                                                    } set(value) {
+                                                    }
+                                                }
+                                                
+                                                init(context: AccountContext) {
+                                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                                    
+                                                    super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
+                                                    
+                                                    self.title = "Import Chat"
+                                                    self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+                                                }
+                                                
+                                                required public init(coder aDecoder: NSCoder) {
+                                                    fatalError("init(coder:) has not been implemented")
+                                                }
+                                                
+                                                @objc private func cancelPressed() {
+                                                    //self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                                                }
+                                            }
+                                            
+                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                            let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
+                                            navigationController.viewControllers = [TempController(context: context)]
+                                            strongSelf.mainWindow?.present(navigationController, on: .root)
+                                            
                                             let _ = (ChatHistoryImport.getInfo(account: context.account, header: mainFileHeader)
                                             |> deliverOnMainQueue).start(next: { parseInfo in
                                                 switch parseInfo {
                                                 case let .group(groupTitle):
-                                                    let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                    let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
-                                                    
                                                     //TODO:localize
                                                     var attemptSelectionImpl: ((Peer) -> Void)?
                                                     var createNewGroupImpl: (() -> Void)?
