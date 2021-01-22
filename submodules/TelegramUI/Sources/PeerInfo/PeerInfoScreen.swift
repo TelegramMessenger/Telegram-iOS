@@ -4417,12 +4417,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let members: Promise<[PeerId]> = Promise()
         if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
-            /*var membersDisposable: Disposable?
-            let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { listState in
-                members.set(.single(listState.list.map {$0.peer.id}))
-                membersDisposable?.dispose()
-            })
-            membersDisposable = disposable*/
             members.set(.single([]))
         } else {
             members.set(.single([]))

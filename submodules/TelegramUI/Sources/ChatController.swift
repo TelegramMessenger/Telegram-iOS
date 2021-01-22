@@ -59,6 +59,7 @@ import StatisticsUI
 import MediaResources
 import GalleryData
 import ChatInterfaceState
+import InviteLinksUI
 
 extension ChatLocation {
     var peerId: PeerId {
@@ -342,6 +343,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var reportIrrelvantGeoNoticePromise = Promise<Bool?>()
     private var reportIrrelvantGeoNotice: Bool?
     private var reportIrrelvantGeoDisposable: Disposable?
+    
+    private let selectAddMemberDisposable = MetaDisposable()
+    private let addMemberDisposable = MetaDisposable()
     
     private var hasScheduledMessages: Bool = false
     
@@ -3448,6 +3452,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.hasActiveGroupCallDisposable?.dispose()
         self.createVoiceChatDisposable.dispose()
         self.checksTooltipDisposable.dispose()
+        self.selectAddMemberDisposable.dispose()
+        self.addMemberDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -6146,8 +6152,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
             }
-        }, presentAddMembers: {
-            
+        }, presentAddMembers: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.openAddMember()
+            }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         do {
@@ -11593,6 +11601,257 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             action()
         }
         return false
+    }
+    
+    private func openAddMember() {
+        guard let groupPeer = self.presentationInterfaceState.renderedPeer?.peer else {
+            return
+        }
+        
+        let members: Promise<[PeerId]> = Promise()
+        if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
+            members.set(.single([]))
+        } else {
+            members.set(.single([]))
+        }
+        
+        let _ = (members.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] recentIds in
+            guard let strongSelf = self else {
+                return
+            }
+            var createInviteLinkImpl: (() -> Void)?
+            var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
+            var options: [ContactListAdditionalOption] = []
+            let presentationData = strongSelf.presentationData
+            
+            var canCreateInviteLink = false
+            if let group = groupPeer as? TelegramGroup {
+                switch group.role {
+                case .creator, .admin:
+                    canCreateInviteLink = true
+                default:
+                    break
+                }
+            } else if let channel = groupPeer as? TelegramChannel {
+                if channel.hasPermission(.inviteMembers) {
+                    if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.username == nil) {
+                        canCreateInviteLink = true
+                    }
+                }
+            }
+            
+            if canCreateInviteLink {
+                options.append(ContactListAdditionalOption(title: presentationData.strings.GroupInfo_InviteByLink, icon: .generic(UIImage(bundleImageName: "Contact List/LinkActionIcon")!), action: {
+                    createInviteLinkImpl?()
+                }, clearHighlightAutomatically: true))
+            }
+            
+            let contactsController: ViewController
+            if groupPeer.id.namespace == Namespaces.Peer.CloudGroup {
+                contactsController = strongSelf.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: strongSelf.context, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
+                    if let confirmationImpl = confirmationImpl, case let .peer(peer, _, _) = peer {
+                        return confirmationImpl(peer.id)
+                    } else {
+                        return .single(false)
+                    }
+                }))
+                contactsController.navigationPresentation = .modal
+            } else {
+                contactsController = strongSelf.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: strongSelf.context, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: options, filters: [.excludeSelf, .disable(recentIds)]))
+                contactsController.navigationPresentation = .modal
+            }
+            
+            let context = strongSelf.context
+            confirmationImpl = { [weak contactsController] peerId in
+                return context.account.postbox.loadedPeerWithId(peerId)
+                |> deliverOnMainQueue
+                |> mapToSignal { peer in
+                    let result = ValuePromise<Bool>()
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    if let contactsController = contactsController {
+                        let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0, actions: [
+                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
+                                result.set(false)
+                            }),
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                                result.set(true)
+                            })
+                        ])
+                        contactsController.present(alertController, in: .window(.root))
+                    }
+                    
+                    return result.get()
+                }
+            }
+            
+            let addMember: (ContactListPeer) -> Signal<Void, NoError> = { memberPeer -> Signal<Void, NoError> in
+                if case let .peer(selectedPeer, _, _) = memberPeer {
+                    let memberId = selectedPeer.id
+                    if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
+                        return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                        |> map { _ -> Void in
+                        }
+                        |> `catch` { _ -> Signal<Void, NoError> in
+                            return .complete()
+                        }
+                    } else {
+                        return addGroupMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                        |> deliverOnMainQueue
+                        |> `catch` { error -> Signal<Void, NoError> in
+                            switch error {
+                            case .generic:
+                                return .complete()
+                            case .privacy:
+                                let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    self?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                })
+                                return .complete()
+                            case .notMutualContact:
+                                let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    self?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                })
+                                return .complete()
+                            case .tooManyChannels:
+                                let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    self?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                })
+                                return .complete()
+                            case .groupFull:
+                                let signal = convertGroupToSupergroup(account: context.account, peerId: groupPeer.id)
+                                |> map(Optional.init)
+                                |> `catch` { error -> Signal<PeerId?, NoError> in
+                                    switch error {
+                                    case .tooManyChannels:
+                                        Queue.mainQueue().async {
+                                            self?.push(oldChannelsController(context: context, intent: .upgrade))
+                                        }
+                                    default:
+                                        break
+                                    }
+                                    return .single(nil)
+                                }
+                                |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                                    guard let upgradedPeerId = upgradedPeerId else {
+                                        return .single(nil)
+                                    }
+                                    return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: upgradedPeerId, memberId: memberId)
+                                    |> `catch` { _ -> Signal<Never, NoError> in
+                                        return .complete()
+                                    }
+                                    |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                    }
+                                    |> then(.single(upgradedPeerId))
+                                }
+                                |> deliverOnMainQueue
+                                |> mapToSignal { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                }
+                                return signal
+                            }
+                        }
+                    }
+                } else {
+                    return .complete()
+                }
+            }
+            
+            let addMembers: ([ContactListPeerId]) -> Signal<Void, AddChannelMemberError> = { members -> Signal<Void, AddChannelMemberError> in
+                let memberIds = members.compactMap { contact -> PeerId? in
+                    switch contact {
+                    case let .peer(peerId):
+                        return peerId
+                    default:
+                        return nil
+                    }
+                }
+                return context.account.postbox.multiplePeersView(memberIds)
+                |> take(1)
+                |> deliverOnMainQueue
+                |> castError(AddChannelMemberError.self)
+                |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
+                    if memberIds.count == 1 {
+                        return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberIds[0])
+                        |> map { _ -> Void in
+                        }
+                    } else {
+                        return context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
+                        }
+                    }
+                }
+            }
+            
+            createInviteLinkImpl = { [weak contactsController] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.view.endEditing(true)
+                contactsController?.present(InviteLinkInviteController(context: context, peerId: groupPeer.id, parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
+            }
+
+            strongSelf.push(contactsController)
+            let selectAddMemberDisposable = strongSelf.selectAddMemberDisposable
+            let addMemberDisposable = strongSelf.addMemberDisposable
+            if let contactsController = contactsController as? ContactSelectionController {
+                selectAddMemberDisposable.set((contactsController.result
+                |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
+                    guard let (memberPeer, _) = memberPeer else {
+                        return
+                    }
+                    
+                    contactsController?.displayProgress = true
+                    addMemberDisposable.set((addMember(memberPeer)
+                    |> deliverOnMainQueue).start(completed: {
+                        contactsController?.dismiss()
+                    }))
+                }))
+                contactsController.dismissed = {
+                    selectAddMemberDisposable.set(nil)
+                    addMemberDisposable.set(nil)
+                }
+            }
+            if let contactsController = contactsController as? ContactMultiselectionController {
+                selectAddMemberDisposable.set((contactsController.result
+                |> deliverOnMainQueue).start(next: { [weak contactsController] result in
+                    var peers: [ContactListPeerId] = []
+                    if case let .result(peerIdsValue, _) = result {
+                        peers = peerIdsValue
+                    }
+                    
+                    contactsController?.displayProgress = true
+                    addMemberDisposable.set((addMembers(peers)
+                    |> deliverOnMainQueue).start(error: { error in
+                        if peers.count == 1, case .restricted = error {
+                            switch peers[0] {
+                                case let .peer(peerId):
+                                    let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        self?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    })
+                                default:
+                                    break
+                            }
+                        } else if peers.count == 1, case .notMutualContact = error {
+                            self?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        } else if case .tooMuchJoined = error  {
+                            self?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        }
+                        
+                        contactsController?.dismiss()
+                    },completed: {
+                        contactsController?.dismiss()
+                    }))
+                }))
+                contactsController.dismissed = {
+                    selectAddMemberDisposable.set(nil)
+                    addMemberDisposable.set(nil)
+                }
+            }
+        })
     }
     
     private var effectiveNavigationController: NavigationController? {
