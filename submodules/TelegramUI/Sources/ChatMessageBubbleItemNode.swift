@@ -56,10 +56,16 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         var isFile = false
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
+                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                    messageWithCaptionToAdd = (message, itemAttributes)
+                }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
+                    if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                        messageWithCaptionToAdd = (message, itemAttributes)
+                    }
                     result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
                 } else {
                     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing = .default
@@ -1036,6 +1042,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 effectiveAuthor = source
                 displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
+            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), let author = forwardInfo.author {
+                ignoreForward = true
+                effectiveAuthor = author
+                displayAuthorInfo = !mergedTop.merged && incoming
             } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
                 ignoreForward = true
                 effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())

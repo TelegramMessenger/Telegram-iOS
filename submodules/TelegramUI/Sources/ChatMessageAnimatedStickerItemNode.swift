@@ -1168,6 +1168,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         actionButtonsNode.removeFromSupernode()
                         strongSelf.actionButtonsNode = nil
                     }
+                    
+                    if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                        strongSelf.dateAndStatusNode.pressed = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                        }
+                    } else {
+                        strongSelf.dateAndStatusNode.pressed = nil
+                    }
                 }
             })
         }

@@ -26,6 +26,7 @@ public enum UndoOverlayContent {
     case invitedToVoiceChat(context: AccountContext, peer: Peer, text: String)
     case linkCopied(text: String)
     case banned(text: String)
+    case importedMessage(text: String)
 }
 
 public enum UndoOverlayAction {

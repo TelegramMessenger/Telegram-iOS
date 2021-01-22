@@ -210,6 +210,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .importedMessage(text):
+                self.avatarNode = nil
+                self.iconNode = ASImageNode()
+                self.iconNode?.displayWithoutProcessing = true
+                self.iconNode?.displaysAsynchronously = false
+                self.iconNode?.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/ImportedMessageTooltipIcon"), color: .white)
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                self.animatedStickerNode = nil
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                displayUndo = false
+                self.originalRemainingSeconds = 5
             case let .chatAddedToFolder(chatTitle, folderTitle):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -495,7 +507,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned:
+        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage:
             break
         case .dice:
             self.panelWrapperNode.clipsToBounds = true

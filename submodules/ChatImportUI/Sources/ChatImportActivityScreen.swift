@@ -22,6 +22,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         private let animationNode: AnimatedStickerNode
         private let radialStatus: RadialStatusNode
+        private let radialCheck: RadialStatusNode
         private let radialStatusBackground: ASImageNode
         private let radialStatusText: ImmediateTextNode
         private let progressText: ImmediateTextNode
@@ -46,6 +47,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.animationNode = AnimatedStickerNode()
             
             self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
+            self.radialCheck = RadialStatusNode(backgroundNodeColor: .clear)
             self.radialStatusBackground = ASImageNode()
             self.radialStatusBackground.isUserInteractionEnabled = false
             self.radialStatusBackground.displaysAsynchronously = false
@@ -90,6 +92,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.addSubnode(self.animationNode)
             self.addSubnode(self.radialStatusBackground)
             self.addSubnode(self.radialStatus)
+            self.addSubnode(self.radialCheck)
             self.addSubnode(self.radialStatusText)
             self.addSubnode(self.progressText)
             self.addSubnode(self.statusText)
@@ -159,6 +162,8 @@ public final class ChatImportActivityScreen: ViewController {
             self.animationNode.updateLayout(size: iconSize)
             
             self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: hideIcon ? contentOriginY : (contentOriginY + iconSize.height + maxIconStatusSpacing)), size: radialStatusSize)
+            let checkSize: CGFloat = 130.0
+            self.radialCheck.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
             self.radialStatusBackground.frame = self.radialStatus.frame
             
             self.radialStatusText.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize)
@@ -187,6 +192,18 @@ public final class ChatImportActivityScreen: ViewController {
             if let (layout, navigationHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                 self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: animated, synchronous: true, completion: {})
+                if isDone {
+                    self.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: false, synchronous: true, completion: {})
+                    self.radialCheck.transitionToState(.check(self.presentationData.theme.list.itemAccentColor), animated: animated, synchronous: true, completion: {})
+                    
+                    let transition: ContainedViewLayoutTransition
+                    if animated {
+                        transition = .animated(duration: 0.2, curve: .easeInOut)
+                    } else {
+                        transition = .immediate
+                    }
+                    transition.updateAlpha(node: self.radialStatusText, alpha: 0.0)
+                }
             }
         }
     }
@@ -201,9 +218,11 @@ public final class ChatImportActivityScreen: ViewController {
     private let peerId: PeerId
     private let archive: Archive
     private let mainEntry: TempBoxFile
+    private let mainEntrySize: Int
     private let otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]
+    private let totalBytes: Int
     
-    private var pendingEntries = Set<String>()
+    private var pendingEntries: [String: (Int, Float)] = [:]
     
     private let disposable = MetaDisposable()
     
@@ -222,7 +241,21 @@ public final class ChatImportActivityScreen: ViewController {
         self.mainEntry = mainEntry
         self.otherEntries = otherEntries
         
-        self.pendingEntries = Set(otherEntries.map { $0.1 })
+        if let size = fileSize(self.mainEntry.path) {
+            self.mainEntrySize = size
+        } else {
+            self.mainEntrySize = 0
+        }
+        
+        for (entry, fileName, _) in otherEntries {
+            self.pendingEntries[fileName] = (entry.uncompressedSize, 0.0)
+        }
+        
+        var totalBytes: Int = self.mainEntrySize
+        for entry in self.otherEntries {
+            totalBytes += entry.0.uncompressedSize
+        }
+        self.totalBytes = totalBytes
         
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -253,14 +286,7 @@ public final class ChatImportActivityScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        var totalBytes: Int = 0
-        if let size = fileSize(self.mainEntry.path) {
-            totalBytes += size
-        }
-        for entry in self.otherEntries {
-            totalBytes += entry.0.uncompressedSize
-        }
-        self.displayNode = Node(controller: self, context: self.context, totalBytes: totalBytes)
+        self.displayNode = Node(controller: self, context: self.context, totalBytes: self.totalBytes)
         
         self.displayNodeDidLoad()
     }
@@ -298,8 +324,8 @@ public final class ChatImportActivityScreen: ViewController {
                 return .generic
             }
         }
-        |> mapToSignal { session -> Signal<String, ImportError> in
-            var importSignal: Signal<String, ImportError> = .single("")
+        |> mapToSignal { session -> Signal<(String, Float), ImportError> in
+            var importSignal: Signal<(String, Float), ImportError> = .single(("", 0.0))
             
             for (entry, fileName, mediaType) in otherEntries {
                 let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
@@ -315,14 +341,14 @@ public final class ChatImportActivityScreen: ViewController {
                     return EmptyDisposable
                 }
                 let uploadedMedia = unpackedFile
-                |> mapToSignal { tempFile -> Signal<String, ImportError> in
+                |> mapToSignal { tempFile -> Signal<(String, Float), ImportError> in
                     return ChatHistoryImport.uploadMedia(account: context.account, session: session, file: tempFile, fileName: fileName, type: mediaType)
                     |> mapError { _ -> ImportError in
                         return .generic
                     }
-                    |> map { _ -> String in
+                    |> map { progress -> (String, Float) in
+                        return (fileName, progress)
                     }
-                    |> then(.single(fileName))
                 }
                 
                 importSignal = importSignal
@@ -334,19 +360,28 @@ public final class ChatImportActivityScreen: ViewController {
             |> mapError { _ -> ImportError in
                 return .generic
             }
-            |> map { _ -> String in
+            |> map { _ -> (String, Float) in
             })
             
             return importSignal
         }
-        |> deliverOnMainQueue).start(next: { [weak self] fileName in
+        |> deliverOnMainQueue).start(next: { [weak self] (fileName, progress) in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.pendingEntries.remove(fileName)
+            
+            if let (fileSize, _) = strongSelf.pendingEntries[fileName] {
+                strongSelf.pendingEntries[fileName] = (fileSize, progress)
+            }
+            
+            var totalDoneBytes = strongSelf.mainEntrySize
+            for (_, sizeAndProgress) in strongSelf.pendingEntries {
+                totalDoneBytes += Int(Float(sizeAndProgress.0) * sizeAndProgress.1)
+            }
+            
             var totalProgress: CGFloat = 1.0
             if !strongSelf.otherEntries.isEmpty {
-                totalProgress = CGFloat(strongSelf.otherEntries.count - strongSelf.pendingEntries.count) / CGFloat(strongSelf.otherEntries.count)
+                totalProgress = CGFloat(totalDoneBytes) / CGFloat(strongSelf.totalBytes)
             }
             strongSelf.controllerNode.updateProgress(totalProgress: totalProgress, isDone: false, animated: true)
         }, error: { [weak self] _ in

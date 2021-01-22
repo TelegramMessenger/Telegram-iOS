@@ -469,6 +469,17 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let telegramFile = updatedFile, previousAutomaticDownload != automaticDownload, automaticDownload {
                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: telegramFile, userInitiated: false).start())
                     }
+                    
+                    if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                        strongSelf.dateAndStatusNode.pressed = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                        }
+                    } else {
+                        strongSelf.dateAndStatusNode.pressed = nil
+                    }
                 }
             })
         }
