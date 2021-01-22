@@ -2202,6 +2202,50 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                     
                     if canClear {
+                        let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                                var state = state
+                                state.pendingClearHistoryPeerIds.insert(peer.peerId)
+                                return state
+                            })
+                            strongSelf.forEachController({ controller in
+                                if let controller = controller as? UndoOverlayController {
+                                    controller.dismissWithCommitActionAndReplacementAnimation()
+                                }
+                                return true
+                            })
+                            
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                                guard let strongSelf = self else {
+                                    return false
+                                }
+                                if value == .commit {
+                                    let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                                            var state = state
+                                            state.pendingClearHistoryPeerIds.remove(peer.peerId)
+                                            return state
+                                        })
+                                    })
+                                    return true
+                                } else if value == .undo {
+                                    strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                                        var state = state
+                                        state.pendingClearHistoryPeerIds.remove(peer.peerId)
+                                        return state
+                                    })
+                                    return true
+                                }
+                                return false
+                            }), in: .current)
+                        }
+                        
                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             
@@ -2209,89 +2253,49 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return
                             }
                             
-                            let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.chatListDisplayNode.containerNode.updateState({ state in
-                                    var state = state
-                                    state.pendingClearHistoryPeerIds.insert(peer.peerId)
-                                    return state
-                                })
-                                strongSelf.forEachController({ controller in
-                                    if let controller = controller as? UndoOverlayController {
-                                        controller.dismissWithCommitActionAndReplacementAnimation()
-                                    }
-                                    return true
-                                })
-                                
-                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { value in
-                                    guard let strongSelf = self else {
-                                        return false
-                                    }
-                                    if value == .commit {
-                                        let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            strongSelf.chatListDisplayNode.containerNode.updateState({ state in
-                                                var state = state
-                                                state.pendingClearHistoryPeerIds.remove(peer.peerId)
-                                                return state
-                                            })
-                                        })
-                                        return true
-                                    } else if value == .undo {
-                                        strongSelf.chatListDisplayNode.containerNode.updateState({ state in
-                                            var state = state
-                                            state.pendingClearHistoryPeerIds.remove(peer.peerId)
-                                            return state
-                                        })
-                                        return true
-                                    }
-                                    return false
-                                }), in: .current)
-                            }
-                            
-                            if canRemoveGlobally {
-                                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                                var items: [ActionSheetItem] = []
-                                                            
-                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
-                                
-                                if joined || mainPeer.isDeleted {
-                                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
-                                        beginClear(.forEveryone)
-                                        actionSheet?.dismissAnimated()
-                                    }))
-                                } else {
-                                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
-                                        beginClear(.forEveryone)
-                                        actionSheet?.dismissAnimated()
-                                    }))
-                                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
-                                        beginClear(.forLocalPeer)
-                                        actionSheet?.dismissAnimated()
-                                    }))
-                                }
-                                
-                                actionSheet.setItemGroups([
-                                    ActionSheetItemGroup(items: items),
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                        })
-                                    ])
-                                ])
-                                strongSelf.present(actionSheet, in: .window(.root))
+                            if chatPeer is TelegramSecretChat {
+                                beginClear(.forEveryone)
                             } else {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
-                                    TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                    }),
-                                    TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
-                                        beginClear(.forLocalPeer)
-                                    })
-                                ], parseMarkdown: true), in: .window(.root))
+                                if canRemoveGlobally {
+                                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                                    var items: [ActionSheetItem] = []
+                                                                
+                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                    
+                                    if joined || mainPeer.isDeleted {
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                                            beginClear(.forEveryone)
+                                            actionSheet?.dismissAnimated()
+                                        }))
+                                    } else {
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
+                                            beginClear(.forEveryone)
+                                            actionSheet?.dismissAnimated()
+                                        }))
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                                            beginClear(.forLocalPeer)
+                                            actionSheet?.dismissAnimated()
+                                        }))
+                                    }
+                                    
+                                    actionSheet.setItemGroups([
+                                        ActionSheetItemGroup(items: items),
+                                        ActionSheetItemGroup(items: [
+                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                                actionSheet?.dismissAnimated()
+                                            })
+                                        ])
+                                    ])
+                                    strongSelf.present(actionSheet, in: .window(.root))
+                                } else {
+                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
+                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                        }),
+                                        TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                            beginClear(.forLocalPeer)
+                                        })
+                                    ], parseMarkdown: true), in: .window(.root))
+                                }
                             }
                         }))
                     }

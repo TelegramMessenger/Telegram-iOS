@@ -48,7 +48,18 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
             if self.day != other.day {
                 return false
             }
-            if abs(other.messageTimestamp - self.messageTimestamp) >= 10 * 60 {
+            
+            var effectiveTimestamp = self.messageTimestamp
+            if let forwardInfo = self.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                effectiveTimestamp = forwardInfo.date
+            }
+            
+            var effectiveOtherTimestamp = other.messageTimestamp
+            if let otherForwardInfo = other.forwardInfo, otherForwardInfo.flags.contains(.isImported) {
+                effectiveOtherTimestamp = otherForwardInfo.date
+            }
+            
+            if abs(effectiveTimestamp - effectiveOtherTimestamp) >= 10 * 60 {
                 return false
             }
             if let forwardInfo = self.forwardInfo, let otherForwardInfo = other.forwardInfo {
