@@ -473,6 +473,19 @@ final class MessageHistoryTable: Table {
         self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations, forEachMedia: forEachMedia)
     }
     
+    func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation], forEachMedia: (Media) -> Void) {
+        var indices: [MessageIndex] = []
+        for entry in self.allIndicesWithGlobalTag(tag: tag) {
+            switch entry {
+            case let .message(index):
+                indices.append(index)
+            case .hole:
+                break
+            }
+        }
+        self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations, forEachMedia: forEachMedia)
+    }
+    
     func removeAllMessagesWithForwardAuthor(peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation], forEachMedia: (Media) -> Void) {
         let indices = self.allIndicesWithForwardAuthor(peerId: peerId, forwardAuthorId: forwardAuthorId, namespace: namespace)
         self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations, forEachMedia: forEachMedia)
@@ -2715,6 +2728,10 @@ final class MessageHistoryTable: Table {
             return true
         }, limit: 0)
         return indices
+    }
+    
+    func allIndicesWithGlobalTag(tag: GlobalMessageTags) -> [GlobalMessageHistoryTagsTableEntry] {
+        return self.globalTagsTable.getAll()
     }
     
     func allIndicesWithForwardAuthor(peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) -> [MessageIndex] {

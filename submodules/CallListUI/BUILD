@@ -25,6 +25,7 @@ swift_library(
         "//submodules/MergeLists:MergeLists",
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
         "//submodules/PeerOnlineMarkerNode:PeerOnlineMarkerNode",
+        "//submodules/ContextUI:ContextUI",
     ],
     visibility = [
         "//visibility:public",

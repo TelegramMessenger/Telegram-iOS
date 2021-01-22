@@ -195,6 +195,18 @@ public final class ChatImportActivityScreen: ViewController {
                 if isDone {
                     self.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: false, synchronous: true, completion: {})
                     self.radialCheck.transitionToState(.check(self.presentationData.theme.list.itemAccentColor), animated: animated, synchronous: true, completion: {})
+                    self.radialStatus.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.radialStatus.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                    })
+                    self.radialCheck.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.radialCheck.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                    })
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {

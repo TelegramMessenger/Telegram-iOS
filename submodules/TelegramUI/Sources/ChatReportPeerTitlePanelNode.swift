@@ -17,6 +17,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     case reportUserSpam
     case reportIrrelevantGeoLocation
     case unarchive
+    case inviteMembers
     
     func title(strings: PresentationStrings) -> String {
         switch self {
@@ -38,6 +39,8 @@ private enum ChatReportPeerTitleButton: Equatable {
                 return strings.Conversation_ReportGroupLocation
             case .unarchive:
                 return strings.Conversation_Unarchive
+            case .inviteMembers:
+                return strings.PeerInfo_ButtonAddMember
         }
     }
 }
@@ -90,6 +93,8 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
         } else if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.autoArchived) {
             buttons.append(.reportUserSpam)
             buttons.append(.unarchive)
+        } else if let peerStatusSettings = state.contactStatus?.peerStatusSettings, peerStatusSettings.contains(.inviteMembers) {
+            buttons.append(.inviteMembers)
         } else {
             buttons.append(.reportSpam)
         }
@@ -510,6 +515,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.reportPeer()
                     case .unarchive:
                         self.interfaceInteraction?.unarchivePeer()
+                    case .inviteMembers:
+                        self.interfaceInteraction?.presentInviteMembers()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()
                     case .reportIrrelevantGeoLocation:
