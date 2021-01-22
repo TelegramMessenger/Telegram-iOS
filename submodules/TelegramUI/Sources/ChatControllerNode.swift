@@ -318,6 +318,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var plainInputSeparatorAlpha: CGFloat?
     private var usePlainInputSeparator: Bool
     
+    private var chatImportStatusPanel: ChatImportStatusPanel?
+    
     private let titleAccessoryPanelContainer: ChatControllerTitlePanelNodeContainer
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
     
@@ -905,6 +907,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.titleAccessoryPanelNode = nil
         }
         
+        var dismissedImportStatusPanelNode: ChatImportStatusPanel?
+        var importStatusPanelHeight: CGFloat?
+        if let importState = self.chatPresentationInterfaceState.importState {
+            let importStatusPanelNode: ChatImportStatusPanel
+            if let current = self.chatImportStatusPanel {
+                importStatusPanelNode = current
+            } else {
+                importStatusPanelNode = ChatImportStatusPanel()
+            }
+            
+            if self.chatImportStatusPanel != importStatusPanelNode {
+                 dismissedImportStatusPanelNode = self.chatImportStatusPanel
+                self.chatImportStatusPanel = importStatusPanelNode
+                self.addSubnode(importStatusPanelNode)
+            }
+            
+            importStatusPanelHeight = importStatusPanelNode.update(context: self.context, progress: CGFloat(importState.progress), presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: self.chatPresentationInterfaceState.theme, wallpaper: self.chatPresentationInterfaceState.chatWallpaper), fontSize: self.chatPresentationInterfaceState.fontSize, strings: self.chatPresentationInterfaceState.strings, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), width: layout.size.width)
+        } else if let importStatusPanelNode = self.chatImportStatusPanel {
+            dismissedImportStatusPanelNode = importStatusPanelNode
+            self.chatImportStatusPanel = nil
+        }
+        
         var inputPanelNodeBaseHeight: CGFloat = 0.0
         if let inputPanelNode = self.inputPanelNode {
             inputPanelNodeBaseHeight += inputPanelNode.minimalHeight(interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
@@ -1190,6 +1214,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var titleAccessoryPanelFrame: CGRect?
         if let _ = self.titleAccessoryPanelNode, let panelHeight = titleAccessoryPanelHeight {
             titleAccessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
+            insets.top += panelHeight
+        }
+        
+        var importStatusPanelFrame: CGRect?
+        if let _ = self.chatImportStatusPanel, let panelHeight = importStatusPanelHeight {
+            importStatusPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
         }
         
@@ -1504,6 +1534,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
         }
         
+        if let chatImportStatusPanel = self.chatImportStatusPanel, let importStatusPanelFrame = importStatusPanelFrame, !chatImportStatusPanel.frame.equalTo(importStatusPanelFrame) {
+            chatImportStatusPanel.frame = importStatusPanelFrame
+            //transition.animatePositionAdditive(node: chatImportStatusPanel, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
+        }
+        
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
             if immediatelyLayoutSecondaryInputPanelAndAnimateAppearance {
                 secondaryInputPanelNode.frame = apparentSecondaryInputPanelFrame.offsetBy(dx: 0.0, dy: apparentSecondaryInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentSecondaryInputPanelFrame.maxY)
@@ -1585,6 +1620,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
             transition.updateFrame(node: dismissedTitleAccessoryPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTitleAccessoryPanelNode] _ in
                 dismissedTitleAccessoryPanelNode?.removeFromSupernode()
+            })
+        }
+        
+        if let dismissedImportStatusPanelNode = dismissedImportStatusPanelNode {
+            var dismissedPanelFrame = dismissedImportStatusPanelNode.frame
+            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
+            transition.updateFrame(node: dismissedImportStatusPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedImportStatusPanelNode] _ in
+                dismissedImportStatusPanelNode?.removeFromSupernode()
             })
         }
         

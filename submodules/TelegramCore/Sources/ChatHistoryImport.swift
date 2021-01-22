@@ -16,7 +16,6 @@ public enum ChatHistoryImport {
         case generic
     }
     
-    //messages.historyImportParsed flags:# pm:flags.0?true group:flags.1?true title:flags.1?string = messages.HistoryImportParsed;
     public enum ParsedInfo {
         case privateChat(title: String?)
         case group(title: String?)
