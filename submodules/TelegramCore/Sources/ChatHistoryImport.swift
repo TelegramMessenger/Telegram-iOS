@@ -19,6 +19,7 @@ public enum ChatHistoryImport {
     public enum ParsedInfo {
         case privateChat(title: String?)
         case group(title: String?)
+        case unknown(title: String?)
     }
     
     public enum GetInfoError {
@@ -39,7 +40,7 @@ public enum ChatHistoryImport {
                 } else if (flags & (1 << 1)) != 0 {
                     return .single(.group(title: title))
                 } else {
-                    return .fail(.parseError)
+                    return .single(.unknown(title: title))
                 }
             }
         }
@@ -92,7 +93,7 @@ public enum ChatHistoryImport {
         case generic
     }
     
-    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, type: MediaType) -> Signal<Float, UploadMediaError> {
+    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
         return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> UploadMediaError in
             return .generic
@@ -107,18 +108,18 @@ public enum ChatHistoryImport {
                 case .file, .video, .sticker, .voice:
                     var attributes: [Api.DocumentAttribute] = []
                     attributes.append(.documentAttributeFilename(fileName: fileName))
-                    var mimeType = "application/octet-stream"
+                    var resolvedMimeType = mimeType
                     switch type {
                     case .video:
-                        mimeType = "video/mp4"
+                        resolvedMimeType = "video/mp4"
                     case .sticker:
-                        mimeType = "image/webp"
+                        resolvedMimeType = "image/webp"
                     case .voice:
-                        mimeType = "audio/ogg"
+                        resolvedMimeType = "audio/ogg"
                     default:
                         break
                     }
-                    inputMedia = .inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)
+                    inputMedia = .inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: resolvedMimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)
                 }
             case let .progress(value):
                 return .single(value)
