@@ -59,6 +59,7 @@ import StatisticsUI
 import MediaResources
 import GalleryData
 import ChatInterfaceState
+import InviteLinksUI
 
 extension ChatLocation {
     var peerId: PeerId {
@@ -2857,7 +2858,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     didDisplayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     didDisplayActionsPanel = true
-                                } else if peerStatusSettings.contains(.inviteMembers) {
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     didDisplayActionsPanel = true
                                 }
                             }
@@ -2874,7 +2875,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     displayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     displayActionsPanel = true
-                                } else if peerStatusSettings.contains(.inviteMembers) {
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     displayActionsPanel = true
                                 }
                             }
@@ -3065,7 +3066,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     didDisplayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     didDisplayActionsPanel = true
-                                } else if peerStatusSettings.contains(.inviteMembers) {
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     didDisplayActionsPanel = true
                                 }
                             }
@@ -3082,7 +3083,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     displayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     displayActionsPanel = true
-                                } else if peerStatusSettings.contains(.inviteMembers) {
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     displayActionsPanel = true
                                 }
                             }
@@ -10501,7 +10502,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             dismissPeerId = peerId
         }
-        self.editMessageDisposable.set((TelegramCore.dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
+        self.editMessageDisposable.set((dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
         |> afterDisposed({
             Queue.mainQueue().async {
             }

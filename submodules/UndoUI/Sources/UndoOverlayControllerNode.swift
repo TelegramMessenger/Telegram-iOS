@@ -195,7 +195,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
-                self.originalRemainingSeconds = 5
+                self.originalRemainingSeconds = 4
             case let .banned(text):
                 self.avatarNode = nil
                 self.iconNode = nil

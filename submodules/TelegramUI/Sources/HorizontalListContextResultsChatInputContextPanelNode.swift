@@ -26,6 +26,7 @@ private struct ChatContextResultStableId: Hashable {
 
 private struct HorizontalListContextResultsChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
+    let theme: PresentationTheme
     let result: ChatContextResult
     
     var stableId: ChatContextResultStableId {
@@ -33,7 +34,7 @@ private struct HorizontalListContextResultsChatInputContextPanelEntry: Comparabl
     }
     
     static func ==(lhs: HorizontalListContextResultsChatInputContextPanelEntry, rhs: HorizontalListContextResultsChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.result == rhs.result
+        return lhs.index == rhs.index && lhs.theme === rhs.theme && lhs.result == rhs.result
     }
     
     static func <(lhs: HorizontalListContextResultsChatInputContextPanelEntry, rhs: HorizontalListContextResultsChatInputContextPanelEntry) -> Bool {
@@ -41,7 +42,7 @@ private struct HorizontalListContextResultsChatInputContextPanelEntry: Comparabl
     }
     
     func item(account: Account, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
-        return HorizontalListContextResultsChatInputPanelItem(account: account, result: self.result, resultSelected: resultSelected)
+        return HorizontalListContextResultsChatInputPanelItem(account: account, theme: self.theme, result: self.result, resultSelected: resultSelected)
     }
 }
 
@@ -248,7 +249,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         var index = 0
         var resultIds = Set<ChatContextResultStableId>()
         for result in results.results {
-            let entry = HorizontalListContextResultsChatInputContextPanelEntry(index: index, result: result)
+            let entry = HorizontalListContextResultsChatInputContextPanelEntry(index: index, theme: self.theme, result: result)
             if resultIds.contains(entry.stableId) {
                 continue
             } else {

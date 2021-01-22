@@ -31,7 +31,7 @@ extension PeerStatusSettings {
                     result.insert(.autoArchived)
                 }
                 if (flags & (1 << 8)) != 0 {
-                    result.insert(.inviteMembers)
+                    result.insert(.suggestAddMembers)
                 }
                 self = PeerStatusSettings(flags: result, geoDistance: geoDistance)
         }

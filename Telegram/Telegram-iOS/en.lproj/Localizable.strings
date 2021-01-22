@@ -5914,6 +5914,12 @@ Sorry for the inconvenience.";
 "ReportPeer.ReasonFake" = "Fake Account";
 
 "ChatList.HeaderImportIntoAnExistingGroup" = "OR IMPORT INTO AN EXISTING GROUP";
+
+"Group.ErrorAdminsTooMuch" = "Sorry, too many administrators in this group.";
+"Channel.ErrorAdminsTooMuch" = "Sorry, too many administrators in this channel.";
+
+"Conversation.AddMembers" = "Add Members";
+
 "Conversation.ImportedMessageHint" = "The messages was imported from another app. We can't guarantee it's real.";
 
 "CallList.DeleteAllForMe" = "Delete for me";

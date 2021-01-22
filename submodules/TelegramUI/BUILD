@@ -216,6 +216,7 @@ swift_library(
         "//third-party/ZIPFoundation:ZIPFoundation",
         "//submodules/ChatImportUI:ChatImportUI",
         "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
+        "//submodules/DatePickerNode:DatePickerNode",
     ],
     visibility = [
         "//visibility:public",

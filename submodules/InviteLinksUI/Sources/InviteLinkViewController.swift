@@ -208,6 +208,25 @@ private func preparedTransition(from fromEntries: [InviteLinkViewEntry], to toEn
     return InviteLinkViewTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading)
 }
 
+private let titleFont = Font.bold(17.0)
+private let subtitleFont = Font.with(size: 13, design: .regular, weight: .regular, traits: .monospacedNumbers)
+
+private func textForTimeout(value: Int32) -> String {
+    if value < 3600 {
+        let minutes = value / 60
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(minutes):\(secondsPadding)\(seconds)"
+    } else {
+        let hours = value / 3600
+        let minutes = (value % 3600) / 60
+        let minutesPadding = minutes < 10 ? "0" : ""
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(hours):\(minutesPadding)\(minutes):\(secondsPadding)\(seconds)"
+    }
+}
+
 public final class InviteLinkViewController: ViewController {
     private var controllerNode: Node {
         return self.displayNode as! Node
@@ -327,6 +346,8 @@ public final class InviteLinkViewController: ViewController {
         private let listNode: ListView
         
         private var enqueuedTransitions: [InviteLinkViewTransaction] = []
+        
+        private var countdownTimer: SwiftSignalKit.Timer?
         
         private var validLayout: ContainerViewLayout?
         
@@ -566,11 +587,13 @@ public final class InviteLinkViewController: ViewController {
             self.controller?.dismiss()
             
             let invitationsContext = self.controller?.invitationsContext
+            let revokedInvitationsContext = self.controller?.revokedInvitationsContext
             if let navigationController = navigationController {
-                let controller = inviteLinkEditController(context: self.context, peerId: self.peerId, invite: self.invite, completion: { [weak self] invite in
+                let controller = inviteLinkEditController(context: self.context, peerId: self.peerId, invite: self.invite, completion: { invite in
                     if let invite = invite {
                         if invite.isRevoked {
                             invitationsContext?.remove(invite)
+                            revokedInvitationsContext?.add(invite.withUpdated(isRevoked: true))
                         } else {
                             invitationsContext?.update(invite)
                         }
@@ -591,7 +614,8 @@ public final class InviteLinkViewController: ViewController {
             
             self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             self.headerBackgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_InviteLink, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_InviteLink, font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+            self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: subtitleFont, textColor: self.presentationData.theme.list.itemSecondaryTextColor)
             
             let buttonColor = color(for: invite) ?? self.presentationData.theme.actionSheet.controlAccentColor
             self.editButton.setTitle(self.presentationData.strings.Common_Edit, with: Font.regular(17.0), with: buttonColor, for: .normal)
@@ -679,8 +703,43 @@ public final class InviteLinkViewController: ViewController {
             
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 68.0))
             
+            var subtitleText = ""
+            if self.invite.isRevoked {
+                subtitleText = self.presentationData.strings.InviteLink_Revoked
+            } else if let usageLimit = self.invite.usageLimit, let count = self.invite.count, count >= usageLimit {
+                subtitleText = self.presentationData.strings.InviteLink_UsageLimitReached
+            } else if let expireDate = self.invite.expireDate {
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                if currentTime >= expireDate {
+                    subtitleText = self.presentationData.strings.InviteLink_Expired
+                    self.countdownTimer?.invalidate()
+                    self.countdownTimer = nil
+                } else {
+                    let elapsedTime = expireDate - currentTime
+                    if elapsedTime >= 86400 {
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(timeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
+                    } else {
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).0
+                        if self.countdownTimer == nil {
+                            let countdownTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                                if let strongSelf = self, let layout = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                                }
+                            }, queue: Queue.mainQueue())
+                            self.countdownTimer = countdownTimer
+                            countdownTimer.start()
+                        }
+                    }
+                }
+            }
+            self.subtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+                        
+            let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: layout.size.width, height: headerHeight))
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: 30.0 - UIScreenPixel), size: subtitleSize)
+            transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
+            
             let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: headerHeight))
-            let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: 18.0), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: subtitleSize.height.isZero ? 18.0 : 10.0 + UIScreenPixel), size: titleSize)
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             let editSize = self.editButton.measure(CGSize(width: layout.size.width, height: headerHeight))
