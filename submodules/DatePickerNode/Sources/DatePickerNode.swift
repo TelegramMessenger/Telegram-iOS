@@ -1,425 +1,388 @@
-//import Foundation
-//import Display
-//import UIKit
-//import AsyncDisplayKit
-//import TelegramPresentationData
-//
-//private let textFont = Font.regular(13.0)
-//private let selectedTextFont = Font.bold(13.0)
-//
-//public final class DatePickerTheme: Equatable {
-//    public let backgroundColor: UIColor
-//    public let textColor: UIColor
-//    public let secondaryTextColor: UIColor
-//    public let accentColor: UIColor
-//    public let selectionColor: UIColor
-//    public let selectedCurrentTextColor: UIColor
-//    public let secondarySelectionColor: UIColor
-//    
-//    public init(backgroundColor: UIColor, textColor: UIColor, secondaryTextColor: UIColor, accentColor: UIColor, selectionColor: UIColor, selectedCurrentTextColor: UIColor, secondarySelectionColor: UIColor) {
-//        self.backgroundColor = backgroundColor
-//        self.textColor = textColor
-//        self.secondaryTextColor = secondaryTextColor
-//        self.accentColor = accentColor
-//        self.selectionColor = selectionColor
-//        self.selectedCurrentTextColor = selectedCurrentTextColor
-//        self.secondarySelectionColor = secondarySelectionColor
-//    }
-//    
-//    public static func ==(lhs: DatePickerTheme, rhs: DatePickerTheme) -> Bool {
-//        if lhs.backgroundColor != rhs.backgroundColor {
-//            return false
-//        }
-//        if lhs.textColor != rhs.textColor {
-//            return false
-//        }
-//        if lhs.secondaryTextColor != rhs.secondaryTextColor {
-//            return false
-//        }
-//        if lhs.accentColor != rhs.accentColor {
-//            return false
-//        }
-//        if lhs.selectionColor != rhs.selectionColor {
-//            return false
-//        }
-//        if lhs.selectedCurrentTextColor != rhs.selectedCurrentTextColor {
-//            return false
-//        }
-//        if lhs.secondarySelectionColor != rhs.secondarySelectionColor {
-//            return false
-//        }
-//        return true
-//    }
-//}
-//
+import Foundation
+import Display
+import UIKit
+import AsyncDisplayKit
+import TelegramPresentationData
+import TelegramStringFormatting
+
+private let textFont = Font.regular(13.0)
+private let selectedTextFont = Font.bold(13.0)
+
+public final class DatePickerTheme: Equatable {
+    public let backgroundColor: UIColor
+    public let textColor: UIColor
+    public let secondaryTextColor: UIColor
+    public let accentColor: UIColor
+    public let disabledColor: UIColor
+    public let selectionColor: UIColor
+    public let selectedCurrentTextColor: UIColor
+    public let secondarySelectionColor: UIColor
+    
+    public init(backgroundColor: UIColor, textColor: UIColor, secondaryTextColor: UIColor, accentColor: UIColor, disabledColor: UIColor, selectionColor: UIColor, selectedCurrentTextColor: UIColor, secondarySelectionColor: UIColor) {
+        self.backgroundColor = backgroundColor
+        self.textColor = textColor
+        self.secondaryTextColor = secondaryTextColor
+        self.accentColor = accentColor
+        self.disabledColor = disabledColor
+        self.selectionColor = selectionColor
+        self.selectedCurrentTextColor = selectedCurrentTextColor
+        self.secondarySelectionColor = secondarySelectionColor
+    }
+    
+    public static func ==(lhs: DatePickerTheme, rhs: DatePickerTheme) -> Bool {
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.secondaryTextColor != rhs.secondaryTextColor {
+            return false
+        }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.selectionColor != rhs.selectionColor {
+            return false
+        }
+        if lhs.selectedCurrentTextColor != rhs.selectedCurrentTextColor {
+            return false
+        }
+        if lhs.secondarySelectionColor != rhs.secondarySelectionColor {
+            return false
+        }
+        return true
+    }
+}
+
 //public extension DatePickerTheme {
 //    convenience init(theme: PresentationTheme) {
 //        self.init(backgroundColor: theme.rootController.navigationBar.segmentedBackgroundColor, foregroundColor: theme.rootController.navigationBar.segmentedForegroundColor, shadowColor: .black, textColor: theme.rootController.navigationBar.segmentedTextColor, dividerColor: theme.rootController.navigationBar.segmentedDividerColor)
 //    }
 //}
-//
-//private class SegmentedControlItemNode: HighlightTrackingButtonNode {
-//}
-//
-//private let telegramReleaseDate = Date(timeIntervalSince1970: 1376438400.0)
-//
-//public final class DatePickerNode: ASDisplayNode, UIGestureRecognizerDelegate {
-//    private var theme: DatePickerTheme
-//    private var _items: [SegmentedControlItem]
-//    private var _selectedIndex: Int = 0
-//    
-//    private var validLayout: SegmentedControlLayout?
-//    
-//    private let selectionNode: ASImageNode
-//    private var itemNodes: [SegmentedControlItemNode]
-//    private var dividerNodes: [ASDisplayNode]
-//    
-//    private var gestureRecognizer: UIPanGestureRecognizer?
-//    private var gestureSelectedIndex: Int?
-//    
-//    public var maximumDate: Date? {
-//        didSet {
-//            
-//        }
-//    }
-//    public var minimumDate: Date = telegramReleaseDate {
-//        didSet {
-//            
-//        }
-//    }
-//    public var date: Date = Date() {
-//        didSet {
-//            
-//        }
-//    }
-//
-//    
-//    public var items: [SegmentedControlItem] {
-//        get {
-//            return self._items
-//        }
-//        set {
-//            let previousItems = self._items
-//            self._items = newValue
-//            guard previousItems != newValue else {
-//                return
-//            }
-//            
-//            self.itemNodes.forEach { $0.removeFromSupernode() }
-//            self.itemNodes = self._items.map { item in
-//                let itemNode = SegmentedControlItemNode()
-//                itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
-//                itemNode.titleNode.maximumNumberOfLines = 1
-//                itemNode.titleNode.truncationMode = .byTruncatingTail
-//                itemNode.setTitle(item.title, with: textFont, with: self.theme.textColor, for: .normal)
-//                itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: .selected)
-//                itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: [.selected, .highlighted])
-//                return itemNode
-//            }
-//            self.setupButtons()
-//            self.itemNodes.forEach(self.addSubnode(_:))
-//            
-//            let dividersCount = self._items.count > 2 ? self._items.count - 1 : 0
-//            if self.dividerNodes.count != dividersCount {
-//                self.dividerNodes.forEach { $0.removeFromSupernode() }
-//                self.dividerNodes = (0 ..< dividersCount).map { _ in ASDisplayNode() }
-//            }
-//            
-//            if let layout  = self.validLayout {
-//                let _ = self.updateLayout(layout, transition: .immediate)
-//            }
-//        }
-//    }
-//    
-//    public var selectedIndex: Int {
-//        get {
-//            return self._selectedIndex
-//        }
-//        set {
-//            guard newValue != self._selectedIndex else {
-//                return
-//            }
-//            self._selectedIndex = newValue
-//            if let layout = self.validLayout {
-//                let _ = self.updateLayout(layout, transition: .immediate)
-//            }
-//        }
-//    }
-//    
-//    public func setSelectedIndex(_ index: Int, animated: Bool) {
-//        guard index != self._selectedIndex else {
-//            return
-//        }
-//        self._selectedIndex = index
-//        if let layout = self.validLayout {
-//            let _ = self.updateLayout(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
-//        }
-//    }
-//    
-//    public var selectedIndexChanged: (Int) -> Void = { _ in }
-//    public var selectedIndexShouldChange: (Int, @escaping (Bool) -> Void) -> Void = { _, f in
-//        f(true)
-//    }
-//    
-//    public init(theme: SegmentedControlTheme, items: [SegmentedControlItem], selectedIndex: Int) {
-//        self.theme = theme
-//        self._items = items
-//        self._selectedIndex = selectedIndex
-//        
-//        self.selectionNode = ASImageNode()
-//        self.selectionNode.displaysAsynchronously = false
-//        self.selectionNode.displayWithoutProcessing = true
-//        
-//        self.itemNodes = items.map { item in
-//            let itemNode = SegmentedControlItemNode()
-//            itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
-//            itemNode.titleNode.maximumNumberOfLines = 1
-//            itemNode.titleNode.truncationMode = .byTruncatingTail
-//            itemNode.setTitle(item.title, with: textFont, with: theme.textColor, for: .normal)
-//            itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: .selected)
-//            itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: [.selected, .highlighted])
-//            return itemNode
-//        }
-//        
-//        let dividersCount = items.count > 2 ? items.count - 1 : 0
-//        self.dividerNodes = (0 ..< dividersCount).map { _ in
-//            let node = ASDisplayNode()
-//            node.backgroundColor = theme.dividerColor
-//            return node
-//        }
-//        
-//        super.init()
-//        
-//        self.clipsToBounds = true
-//        self.cornerRadius = 9.0
-//        
-//        self.addSubnode(self.selectionNode)
-//        self.itemNodes.forEach(self.addSubnode(_:))
-//        self.setupButtons()
-//        self.dividerNodes.forEach(self.addSubnode(_:))
-//
-//        self.backgroundColor = self.theme.backgroundColor
-//        self.selectionNode.image = generateSelectionImage(theme: self.theme)
-//    }
-//    
-//    override public func didLoad() {
-//        super.didLoad()
-//        
-//        self.view.disablesInteractiveTransitionGestureRecognizer = true
-//       
-//        let gestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-//        gestureRecognizer.delegate = self
-//        self.view.addGestureRecognizer(gestureRecognizer)
-//        self.gestureRecognizer = gestureRecognizer
-//    }
-//    
-//    private func setupButtons() {
-//        for i in 0 ..< self.itemNodes.count {
-//            let itemNode = self.itemNodes[i]
-//            itemNode.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
-//            itemNode.highligthedChanged = { [weak self, weak itemNode] highlighted in
-//                if let strongSelf = self, let itemNode = itemNode {
-//                    let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
-//                    if strongSelf.selectedIndex == i {
-//                        if let gestureRecognizer = strongSelf.gestureRecognizer, case .began = gestureRecognizer.state {
-//                        } else {
-//                            strongSelf.updateButtonsHighlights(highlightedIndex: highlighted ? i : nil, gestureSelectedIndex: strongSelf.gestureSelectedIndex)
-//                        }
-//                    } else if highlighted {
-//                        transition.updateAlpha(node: itemNode, alpha: 0.4)
-//                    }
-//                    if !highlighted {
-//                        transition.updateAlpha(node: itemNode, alpha: 1.0)
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    
-//    private func updateButtonsHighlights(highlightedIndex: Int?, gestureSelectedIndex: Int?) {
-//        let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
-//        if highlightedIndex == nil && gestureSelectedIndex == nil {
-//            transition.updateTransformScale(node: self.selectionNode, scale: 1.0)
-//        } else {
-//            transition.updateTransformScale(node: self.selectionNode, scale: 0.92)
-//        }
-//        for i in 0 ..< self.itemNodes.count {
-//            let itemNode = self.itemNodes[i]
-//            if i == highlightedIndex || i == gestureSelectedIndex {
-//                transition.updateTransformScale(node: itemNode, scale: 0.92)
-//            } else {
-//                transition.updateTransformScale(node: itemNode, scale: 1.0)
-//            }
-//        }
-//    }
-//    
-//    private func updateButtonsHighlights() {
-//        let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
-//        if let gestureSelectedIndex = self.gestureSelectedIndex {
-//            for i in 0 ..< self.itemNodes.count {
-//                let itemNode = self.itemNodes[i]
-//                transition.updateTransformScale(node: itemNode, scale: i == gestureSelectedIndex ? 0.92 : 1.0)
-//            }
-//        } else {
-//            for itemNode in self.itemNodes {
-//                transition.updateTransformScale(node: itemNode, scale: 1.0)
-//            }
-//        }
-//    }
-//    
-//    public func updateTheme(_ theme: SegmentedControlTheme) {
-//        guard theme != self.theme else {
-//            return
-//        }
-//        self.theme = theme
-//        
-//        self.backgroundColor = self.theme.backgroundColor
-//        self.selectionNode.image = generateSelectionImage(theme: self.theme)
-//        
-//        for itemNode in self.itemNodes {
-//            if let title = itemNode.attributedTitle(for: .normal)?.string {
-//                itemNode.setTitle(title, with: textFont, with: self.theme.textColor, for: .normal)
-//                itemNode.setTitle(title, with: selectedTextFont, with: self.theme.textColor, for: .selected)
-//                itemNode.setTitle(title, with: selectedTextFont, with: self.theme.textColor, for: [.selected, .highlighted])
-//            }
-//        }
-//        
-//        for dividerNode in self.dividerNodes {
-//            dividerNode.backgroundColor = theme.dividerColor
-//        }
-//    }
-//    
-//    public func updateLayout(_ layout: SegmentedControlLayout, transition: ContainedViewLayoutTransition) -> CGSize {
-//        self.validLayout = layout
-//        
-//        let calculatedWidth: CGFloat = 0.0
-//        
-//        let width: CGFloat
-//        switch layout {
-//            case let .stretchToFill(targetWidth):
-//                width = targetWidth
-//            case let .sizeToFit(maximumWidth, minimumWidth):
-//                width = max(minimumWidth, min(maximumWidth, calculatedWidth))
-//        }
-//
-//        let selectedIndex: Int
-//        if let gestureSelectedIndex = self.gestureSelectedIndex {
-//            selectedIndex = gestureSelectedIndex
-//        } else {
-//            selectedIndex = self.selectedIndex
-//        }
-//        
-//        let size = CGSize(width: width, height: 32.0)
-//        if !self.itemNodes.isEmpty {
-//            let itemSize = CGSize(width: floorToScreenPixels(size.width / CGFloat(self.itemNodes.count)), height: size.height)
-//            
-//            transition.updateBounds(node: self.selectionNode, bounds: CGRect(origin: CGPoint(), size: itemSize))
-//            transition.updatePosition(node: self.selectionNode, position: CGPoint(x: itemSize.width / 2.0 + itemSize.width * CGFloat(selectedIndex), y: size.height / 2.0))
-//            
-//            for i in 0 ..< self.itemNodes.count {
-//                let itemNode = self.itemNodes[i]
-//                let _ = itemNode.measure(itemSize)
-//                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: itemSize.width * CGFloat(i), y: (size.height - itemSize.height) / 2.0), size: itemSize))
-//                
-//                let isSelected = selectedIndex == i
-//                if itemNode.isSelected != isSelected {
-//                    if case .animated = transition {
-//                        UIView.transition(with: itemNode.view, duration: 0.2, options: .transitionCrossDissolve, animations: {
-//                            itemNode.isSelected = isSelected
-//                        }, completion: nil)
-//                    } else {
-//                        itemNode.isSelected = isSelected
-//                    }
-//                    if isSelected {
-//                        itemNode.accessibilityTraits.insert(.selected)
-//                    } else {
-//                        itemNode.accessibilityTraits.remove(.selected)
-//                    }
-//                }
-//            }
-//        }
-//        
-//        if !self.dividerNodes.isEmpty {
-//            let dividerSize = CGSize(width: 1.0, height: 16.0)
-//            let delta: CGFloat = size.width / CGFloat(self.dividerNodes.count + 1)
-//            for i in 0 ..< self.dividerNodes.count {
-//                let dividerNode = self.dividerNodes[i]
-//                transition.updateFrame(node: dividerNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(delta * CGFloat(i + 1) - dividerSize.width / 2.0), y: (size.height - dividerSize.height) / 2.0), size: dividerSize))
-//                
-//                let dividerAlpha: CGFloat
-//                if (selectedIndex - 1 ... selectedIndex).contains(i) {
-//                    dividerAlpha = 0.0
-//                } else {
-//                    dividerAlpha = 1.0
-//                }
-//                transition.updateAlpha(node: dividerNode, alpha: dividerAlpha)
-//            }
-//        }
-//        
-//        return size
-//    }
-//    
-//    @objc private func buttonPressed(_ button: SegmentedControlItemNode) {
-//        guard let index = self.itemNodes.firstIndex(of: button) else {
-//            return
-//        }
-//        
-//        self.selectedIndexShouldChange(index, { [weak self] commit in
-//            if let strongSelf = self, commit {
-//                strongSelf._selectedIndex = index
-//                strongSelf.selectedIndexChanged(index)
-//                if let layout = strongSelf.validLayout {
-//                    let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
-//                }
-//            }
-//        })
-//    }
-//    
-//    public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-//        return self.selectionNode.frame.contains(gestureRecognizer.location(in: self.view))
-//    }
-//    
-//    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
-//        let location = recognizer.location(in: self.view)
-//        switch recognizer.state {
-//            case .changed:
-//                if !self.selectionNode.frame.contains(location) {
-//                    let point = CGPoint(x: max(0.0, min(self.bounds.width, location.x)), y: 1.0)
-//                    for i in 0 ..< self.itemNodes.count {
-//                        let itemNode = self.itemNodes[i]
-//                        if itemNode.frame.contains(point) {
-//                            if i != self.gestureSelectedIndex {
-//                                self.gestureSelectedIndex = i
-//                                self.updateButtonsHighlights(highlightedIndex: nil, gestureSelectedIndex: i)
-//                                if let layout = self.validLayout {
-//                                    let _ = self.updateLayout(layout, transition: .animated(duration: 0.35, curve: .slide))
-//                                }
-//                            }
-//                            break
-//                        }
-//                    }
-//                }
-//            case .ended:
-//                if let gestureSelectedIndex = self.gestureSelectedIndex {
-//                    if gestureSelectedIndex != self.selectedIndex  {
-//                        self.selectedIndexShouldChange(gestureSelectedIndex, { [weak self] commit in
-//                            if let strongSelf = self {
-//                                if commit {
-//                                    strongSelf._selectedIndex = gestureSelectedIndex
-//                                    strongSelf.selectedIndexChanged(gestureSelectedIndex)
-//                                } else {
-//                                    if let layout = strongSelf.validLayout {
-//                                        let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
-//                                    }
-//                                }
-//                            }
-//                        })
-//                    }
-//                    self.gestureSelectedIndex = nil
-//                }
-//                self.updateButtonsHighlights(highlightedIndex: nil, gestureSelectedIndex: nil)
-//            default:
-//                break
-//        }
-//    }
-//}
+
+private class SegmentedControlItemNode: HighlightTrackingButtonNode {
+}
+
+private let telegramReleaseDate = Date(timeIntervalSince1970: 1376438400.0)
+private let upperLimitDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
+
+private let dayFont = Font.regular(13.0)
+private let dateFont = Font.with(size: 13.0, design: .regular, traits: .monospacedNumbers)
+private let selectedDateFont = Font.bold(13.0)
+
+private let calendar = Calendar(identifier: .gregorian)
+
+private func monthForDate(_ date: Date) -> Date {
+    var components = calendar.dateComponents([.year, .month], from: date)
+    components.hour = 0
+    components.minute = 0
+    components.second = 0
+    return calendar.date(from: components)!
+}
+
+public final class DatePickerNode: ASDisplayNode, UIScrollViewDelegate {
+    class MonthNode: ASDisplayNode {
+        private let month: Date
+        
+        var theme: DatePickerTheme {
+            didSet {
+                if let size = self.validSize {
+                    self.updateLayout(size: size)
+                }
+            }
+        }
+        
+        var maximumDate: Date? {
+            didSet {
+                if let size = self.validSize {
+                    self.updateLayout(size: size)
+                }
+            }
+        }
+
+        var minimumDate: Date? {
+            didSet {
+                if let size = self.validSize {
+                    self.updateLayout(size: size)
+                }
+            }
+        }
+        
+        var date: Date? {
+            didSet {
+                if let size = self.validSize {
+                    self.updateLayout(size: size)
+                }
+            }
+        }
+        
+        private var validSize: CGSize?
+        
+        private let selectionNode: ASImageNode
+        private let dateNodes: [ImmediateTextNode]
+        
+        private let firstWeekday: Int
+        private let startWeekday: Int
+        private let numberOfDays: Int
+        
+        init(theme: DatePickerTheme, month: Date, minimumDate: Date?, maximumDate: Date?, date: Date?) {
+            self.theme = theme
+            self.month = month
+            self.minimumDate = minimumDate
+            self.maximumDate = maximumDate
+            self.date = date
+            
+            self.selectionNode = ASImageNode()
+            self.selectionNode.displaysAsynchronously = false
+            self.selectionNode.displayWithoutProcessing = true
+            
+            self.dateNodes = (0..<42).map { _ in ImmediateTextNode() }
+            
+            let components = calendar.dateComponents([.year, .month], from: month)
+            let startDayDate = calendar.date(from: components)!
+            
+            self.firstWeekday = calendar.firstWeekday
+            self.startWeekday = calendar.dateComponents([.weekday], from: startDayDate).weekday!
+            self.numberOfDays = calendar.range(of: .day, in: .month, for: month)!.count
+            
+            super.init()
+            
+            self.addSubnode(self.selectionNode)
+            self.dateNodes.forEach { self.addSubnode($0) }
+        }
+                
+        func updateLayout(size: CGSize) {
+            var weekday = self.firstWeekday
+            var started = false
+            var count = 0
+            
+            for i in 0 ..< 42 {
+                let row: Int = Int(floor(Float(i) / 7.0))
+                let col: Int = i % 7
+                
+                if !started && weekday == self.startWeekday {
+                    started = true
+                }
+                if started {
+                    count += 1
+                    
+                    var isAvailableDate = true
+                    if let minimumDate = self.minimumDate {
+                        var components = calendar.dateComponents([.year, .month], from: self.month)
+                        components.day = count
+                        components.hour = 0
+                        components.minute = 0
+                        let date = calendar.date(from: components)!
+                        if date < minimumDate {
+                            isAvailableDate = false
+                        }
+                    }
+                    if let maximumDate = self.maximumDate {
+                        var components = calendar.dateComponents([.year, .month], from: self.month)
+                        components.day = count
+                        components.hour = 0
+                        components.minute = 0
+                        let date = calendar.date(from: components)!
+                        if date > maximumDate {
+                            isAvailableDate = false
+                        }
+                    }
+                    var isSelectedDate = false
+                    var isSelectedAndCurrentDate = false
+                    
+                    let color: UIColor
+                    if !isAvailableDate {
+                        color = self.theme.disabledColor
+                    } else if isSelectedAndCurrentDate {
+                        color = .white
+                    } else if isSelectedDate {
+                        color = self.theme.accentColor
+                    } else {
+                        color = self.theme.textColor
+                    }
+                    
+                    let textNode = self.dateNodes[i]
+                    textNode.attributedText = NSAttributedString(string: "\(count)", font: dateFont, textColor: color)
+                    
+                    let textSize = textNode.updateLayout(size)
+                    textNode.frame = CGRect(origin: CGPoint(x: CGFloat(col) * 20.0, y: CGFloat(row) * 20.0), size: textSize)
+                    
+                    if count == self.numberOfDays {
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    struct State {
+        let minDate: Date
+        let maxDate: Date
+        let date: Date
+        
+        let displayingMonthSelection: Bool
+        let selectedMonth: Date
+    }
+    
+    private var state: State
+    
+    private var theme: DatePickerTheme
+    private let strings: PresentationStrings
+    
+    private let timeTitleNode: ImmediateTextNode
+    private let timeFieldNode: ASImageNode
+    
+    private let monthButtonNode: HighlightTrackingButtonNode
+    private let monthTextNode: ImmediateTextNode
+    private let monthArrowNode: ASImageNode
+    
+    private let previousButtonNode: HighlightableButtonNode
+    private let nextButtonNode: HighlightableButtonNode
+    
+    private let dayNodes: [ImmediateTextNode]
+    private var previousMonthNode: MonthNode?
+    private var currentMonthNode: MonthNode?
+    private var nextMonthNode: MonthNode?
+    private let scrollNode: ASScrollNode
+    
+    private var gestureRecognizer: UIPanGestureRecognizer?
+    private var gestureSelectedIndex: Int?
+    
+    private var validLayout: CGSize?
+    
+    public var maximumDate: Date? {
+        didSet {
+            
+        }
+    }
+    public var minimumDate: Date = telegramReleaseDate {
+        didSet {
+            
+        }
+    }
+    public var date: Date = Date() {
+        didSet {
+            guard self.date != oldValue else {
+                return
+            }
+            if let size = self.validLayout {
+                let _ = self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
+    
+    public init(theme: DatePickerTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        self.state = State(minDate: telegramReleaseDate, maxDate: upperLimitDate, date: Date(), displayingMonthSelection: false, selectedMonth: monthForDate(Date()))
+                
+        self.timeTitleNode = ImmediateTextNode()
+        self.timeFieldNode = ASImageNode()
+        self.timeFieldNode.displaysAsynchronously = false
+        self.timeFieldNode.displayWithoutProcessing = true
+    
+        self.monthButtonNode = HighlightTrackingButtonNode()
+        
+        self.monthTextNode = ImmediateTextNode()
+        
+        self.monthArrowNode = ASImageNode()
+        self.monthArrowNode.displaysAsynchronously = false
+        self.monthArrowNode.displayWithoutProcessing = true
+        
+        self.previousButtonNode = HighlightableButtonNode()
+        self.nextButtonNode = HighlightableButtonNode()
+        
+        self.dayNodes = (0..<7).map { _ in ImmediateTextNode() }
+        
+        self.scrollNode = ASScrollNode()
+        
+        super.init()
+        
+        self.backgroundColor = theme.backgroundColor
+        
+        self.addSubnode(self.monthTextNode)
+        self.addSubnode(self.monthArrowNode)
+        self.addSubnode(self.monthButtonNode)
+        
+        self.addSubnode(self.previousButtonNode)
+        self.addSubnode(self.nextButtonNode)
+        
+        self.addSubnode(self.scrollNode)
+    }
+    
+    override public func didLoad() {
+        super.didLoad()
+        
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        
+        self.scrollNode.view.isPagingEnabled = true
+        self.scrollNode.view.delegate = self
+    }
+    
+    private func updateState(_ state: State, animated: Bool) {
+        self.state = state
+        if let size = self.validLayout {
+            self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+        }
+    }
+    
+    public func updateTheme(_ theme: DatePickerTheme) {
+        guard theme != self.theme else {
+            return
+        }
+        self.theme = theme
+        
+        self.backgroundColor = self.theme.backgroundColor
+    }
+    
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.view.window?.endEditing(true)
+    }
+    
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            if let size = self.validLayout {
+                self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
+    
+    public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        if let size = self.validLayout {
+            self.updateLayout(size: size, transition: .immediate)
+        }
+    }
+    
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = size
+    
+        let topInset: CGFloat = 60.0
+        
+        let scrollSize = CGSize(width: size.width, height: size.height - topInset)
+        self.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: scrollSize)
+        self.scrollNode.view.contentSize = CGSize(width: scrollSize.width * 3.0, height: scrollSize.height)
+        self.scrollNode.view.contentOffset = CGPoint(x: scrollSize.width, y: 0.0)
+        
+        for i in 0 ..< self.dayNodes.count {
+            let dayNode = self.dayNodes[i]
+            
+            let day = Int32(i)
+            dayNode.attributedText = NSAttributedString(string: shortStringForDayOfWeek(strings: self.strings, day: day), font: dayFont, textColor: theme.secondaryTextColor)
+            let size = dayNode.updateLayout(size)
+            dayNode.frame = CGRect(origin: CGPoint(x: CGFloat(i) * 20.0, y: 0.0), size: size)
+        }
+    }
+    
+    @objc private func monthButtonPressed(_ button: SegmentedControlItemNode) {
+        
+    }
+    
+    @objc private func previousButtonPressed(_ button: SegmentedControlItemNode) {
+     
+    }
+    
+    @objc private func nextButtonPressed(_ button: SegmentedControlItemNode) {
+     
+    }
+}

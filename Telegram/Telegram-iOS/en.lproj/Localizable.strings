@@ -5914,3 +5914,7 @@ Sorry for the inconvenience.";
 
 "ChatList.HeaderImportIntoAnExistingGroup" = "OR IMPORT INTO AN EXISTING GROUP";
 
+"Group.ErrorAdminsTooMuch" = "Sorry, too many administrators in this group.";
+"Channel.ErrorAdminsTooMuch" = "Sorry, too many administrators in this channel.";
+
+"Conversation.AddMembers" = "Add Members";

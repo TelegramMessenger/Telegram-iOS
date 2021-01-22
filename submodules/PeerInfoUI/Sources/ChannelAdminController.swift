@@ -1052,6 +1052,12 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     default:
                                         break
                                     }
+                                case .adminsTooMuch:
+                                    if case .broadcast = channel.info {
+                                        text = presentationData.strings.Channel_ErrorAdminsTooMuch
+                                    } else {
+                                        text = presentationData.strings.Group_ErrorAdminsTooMuch
+                                    }
                                 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }, completed: {
@@ -1119,6 +1125,14 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         let text = presentationData.strings.Invite_ChannelsTooMuch
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
+                                } else if case .adminsTooMuch = error {
+                                    let text: String
+                                    if case .broadcast = channel.info {
+                                        text = presentationData.strings.Channel_ErrorAdminsTooMuch
+                                    } else {
+                                        text = presentationData.strings.Group_ErrorAdminsTooMuch
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 dismissImpl?()
                             }, completed: {
@@ -1164,6 +1178,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             |> deliverOnMainQueue).start(error: { error in
                                 if case let .addMemberError(error) = error, case .privacy = error, let admin = adminView.peers[adminView.peerId] {
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                } else if case .adminsTooMuch = error {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 
                                 dismissImpl?()
@@ -1226,6 +1242,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                             text = presentationData.strings.Invite_ChannelsTooMuch
                                         }
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    } else if case .adminsTooMuch = error {
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
                                 case .conversionFailed, .conversionTooManyChannels:
                                     pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))

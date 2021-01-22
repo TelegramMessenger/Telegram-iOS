@@ -2842,6 +2842,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     didDisplayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     didDisplayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                    didDisplayActionsPanel = true
                                 }
                             }
                         }
@@ -2856,6 +2858,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 } else if peerStatusSettings.contains(.canShareContact) {
                                     displayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    displayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     displayActionsPanel = true
                                 }
                             }
@@ -3046,6 +3050,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     didDisplayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                     didDisplayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                    didDisplayActionsPanel = true
                                 }
                             }
                         }
@@ -3060,6 +3066,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 } else if peerStatusSettings.contains(.canShareContact) {
                                     displayActionsPanel = true
                                 } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    displayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
                                     displayActionsPanel = true
                                 }
                             }
@@ -6126,6 +6134,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
             }
+        }, presentAddMembers: {
+            
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         do {
@@ -10468,7 +10478,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             dismissPeerId = peerId
         }
-        self.editMessageDisposable.set((TelegramCore.dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
+        self.editMessageDisposable.set((dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
         |> afterDisposed({
             Queue.mainQueue().async {
             }

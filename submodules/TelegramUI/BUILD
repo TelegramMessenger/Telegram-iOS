@@ -215,6 +215,7 @@ swift_library(
         "//Telegram:GeneratedSources",
         "//third-party/ZIPFoundation:ZIPFoundation",
         "//submodules/ChatImportUI:ChatImportUI",
+        "//submodules/DatePickerNode:DatePickerNode",
     ],
     visibility = [
         "//visibility:public",
