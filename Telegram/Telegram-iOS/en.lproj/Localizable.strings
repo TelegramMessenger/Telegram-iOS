@@ -5924,3 +5924,4 @@ Sorry for the inconvenience.";
 
 "CallList.DeleteAllForMe" = "Delete for me";
 "CallList.DeleteAllForEveryone" = "Delete for me and Others";
+"Conversation.ImportProgress" = "Importing Messages... %@%";

@@ -109,6 +109,15 @@ private func peerIdsRequiringLocalChatStateFromUpdateGroups(_ groups: [UpdateGro
     
     for group in groups {
         peerIds.formUnion(peerIdsRequiringLocalChatStateFromUpdates(group.updates))
+        
+        for chat in group.chats {
+            if let channel = parseTelegramGroupOrChannel(chat: chat) as? TelegramChannel {
+                if case .member = channel.participationStatus {
+                    peerIds.insert(channel.id)
+                }
+            }
+        }
+        
         switch group {
         case let .ensurePeerHasLocalState(peerId):
             peerIds.insert(peerId)
@@ -1408,7 +1417,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
     }
     
     var pollChannelSignals: [Signal<(AccountMutableState, Bool, Int32?), NoError>] = []
-    if channelsToPoll.isEmpty {
+    if channelsToPoll.isEmpty && missingUpdatesFromChannels.isEmpty {
         pollChannelSignals = []
     } else if shouldResetChannels {
         var channelPeers: [Peer] = []
