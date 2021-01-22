@@ -1093,6 +1093,13 @@ public final class GroupCallParticipantsContext {
     }
     
     public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?, volume: Int32?) {
+        
+        var muteState = muteState
+        if muteState == nil, let _ = volume {
+            muteState = self.stateValue.overlayState.pendingMuteStateChanges[peerId]?.state
+                ?? self.stateValue.state.participants.first(where: { $0.peer.id == peerId })?.muteState
+        }
+        
         if let current = self.stateValue.overlayState.pendingMuteStateChanges[peerId] {
             if current.state == muteState {
                 return
@@ -1128,10 +1135,12 @@ public final class GroupCallParticipantsContext {
                 return .single(nil)
             }
             var flags: Int32 = 0
-            if let muteState = muteState, (!muteState.canUnmute || peerId == account.peerId || muteState.mutedByYou) {
-                flags |= 1 << 0
-            } else if let _ = volume {
+            if let _ = volume {
                 flags |= 1 << 1
+            } else {
+                if let muteState = muteState, (!muteState.canUnmute || peerId == account.peerId || muteState.mutedByYou) {
+                    flags |= 1 << 0
+                }
             }
             
             return account.network.request(Api.functions.phone.editGroupCallMember(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), userId: inputUser, volume: volume))
