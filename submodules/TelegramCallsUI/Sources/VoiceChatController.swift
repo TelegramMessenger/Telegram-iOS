@@ -354,7 +354,8 @@ public final class VoiceChatController: ViewController {
                                 text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, .destructive)
                                 icon = .microphone(true, UIColor(rgb: 0xff3b30))
                             } else {
-                                if let volume = peerEntry.volume, volume != 10000 {
+                                let volumeValue = peerEntry.volume.flatMap { $0 / 100 }
+                                if let volume = volumeValue, volume != 100 {
                                     text = .text("\(volume / 100)% \(presentationData.strings.VoiceChat_StatusSpeaking)", .constructive)
                                 } else {
                                     text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
@@ -1275,6 +1276,7 @@ public final class VoiceChatController: ViewController {
         
         @objc private func closePressed() {
             self.controller?.dismiss(closing: false)
+            self.controller?.dismissAllTooltips()
         }
         
         @objc private func leavePressed() {
@@ -1284,11 +1286,13 @@ public final class VoiceChatController: ViewController {
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?.controller?.dismiss(closing: true)
             }))
+            self.controller?.dismissAllTooltips()
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 self.controller?.dismiss(closing: false)
+                self.controller?.dismissAllTooltips()
             }
         }
         
@@ -2144,6 +2148,8 @@ public final class VoiceChatController: ViewController {
                         topInset = self.listNode.frame.height
                     }
                     self.panGestureArguments = (topInset, 0.0)
+                    
+                    self.controller?.dismissAllTooltips()
                 case .changed:
                     var translation = recognizer.translation(in: self.contentContainer.view).y
                     var topInset: CGFloat = 0.0
@@ -2457,6 +2463,20 @@ public final class VoiceChatController: ViewController {
         }
         
         self.dismiss()
+    }
+    
+    private func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
     }
     
     private func detachActionButton() {

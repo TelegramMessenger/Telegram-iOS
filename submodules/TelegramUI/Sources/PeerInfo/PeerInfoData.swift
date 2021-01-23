@@ -654,17 +654,17 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     discussionPeer = peer
                 }
                 
-                if currentInvitationsContext == nil {
-                    var canManageInvitations = false
-                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || ((channel.adminRights != nil && channel.hasPermission(.pinMessages)) && cachedData.flags.contains(.canChangeUsername)) {
-                        canManageInvitations = true
-                    }
-                    if canManageInvitations {
-                        let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: true)
-                        invitationsContextPromise.set(.single(invitationsContext))
-                        invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
-                    }
-                }
+//                if currentInvitationsContext == nil {
+//                    var canManageInvitations = false
+//                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || ((channel.adminRights != nil && channel.hasPermission(.pinMessages)) && cachedData.flags.contains(.canChangeUsername)) {
+//                        canManageInvitations = true
+//                    }
+//                    if canManageInvitations {
+//                        let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: true)
+//                        invitationsContextPromise.set(.single(invitationsContext))
+//                        invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
+//                    }
+//                }
                                                 
                 return PeerInfoScreenData(
                     peer: peerView.peers[peerId],
@@ -811,19 +811,19 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                 }
                 
-                if currentInvitationsContext == nil {
-                    var canManageInvitations = false
-                    if let group = peerViewMainPeer(peerView) as? TelegramGroup, case .creator = group.role {
-                        canManageInvitations = true
-                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || ((channel.adminRights != nil && channel.hasPermission(.pinMessages)) && cachedData.flags.contains(.canChangeUsername)) {
-                        canManageInvitations = true
-                    }
-                    if canManageInvitations {
-                        let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: true)
-                        invitationsContextPromise.set(.single(invitationsContext))
-                        invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
-                    }
-                }
+//                if currentInvitationsContext == nil {
+//                    var canManageInvitations = false
+//                    if let group = peerViewMainPeer(peerView) as? TelegramGroup, case .creator = group.role {
+//                        canManageInvitations = true
+//                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || ((channel.adminRights != nil && channel.hasPermission(.pinMessages)) && cachedData.flags.contains(.canChangeUsername)) {
+//                        canManageInvitations = true
+//                    }
+//                    if canManageInvitations {
+//                        let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, revoked: false, forceUpdate: true)
+//                        invitationsContextPromise.set(.single(invitationsContext))
+//                        invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
+//                    }
+//                }
               
                 return PeerInfoScreenData(
                     peer: peerView.peers[groupId],

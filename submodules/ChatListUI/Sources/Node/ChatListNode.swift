@@ -440,7 +440,7 @@ public final class ChatListNode: ListView {
         return _contentsReady.get()
     }
     
-    public var peerSelected: ((Peer, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
+    public var peerSelected: ((Peer, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
     public var disabledPeerSelected: ((Peer) -> Void)?
     public var additionalCategorySelected: ((Int) -> Void)?
     public var groupSelected: ((PeerGroupId) -> Void)?
@@ -565,7 +565,7 @@ public final class ChatListNode: ListView {
             }
         }, peerSelected: { [weak self] peer, promoInfo in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(peer, true, promoInfo)
+                peerSelected(peer, true, true, promoInfo)
             }
         }, disabledPeerSelected: { [weak self] peer in
             if let strongSelf = self, let disabledPeerSelected = strongSelf.disabledPeerSelected {
@@ -594,7 +594,18 @@ public final class ChatListNode: ListView {
             self?.additionalCategorySelected?(id)
         }, messageSelected: { [weak self] peer, message, promoInfo in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(peer, true, promoInfo)
+                var activateInput = false
+                for media in message.media {
+                    if let action = media as? TelegramMediaAction {
+                        switch action.action {
+                            case .peerJoined, .groupCreated, .channelMigratedFromGroup, .historyCleared:
+                                activateInput = true
+                            default:
+                                break
+                        }
+                    }
+                }
+                peerSelected(peer, true, activateInput, promoInfo)
             }
         }, groupSelected: { [weak self] groupId in
             if let strongSelf = self, let groupSelected = strongSelf.groupSelected {
@@ -1750,7 +1761,7 @@ public final class ChatListNode: ListView {
                     }
                     let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: strongSelf.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound, scrollPosition: .center(.top), animated: true, filter: strongSelf.chatListFilter)
                     strongSelf.setChatListLocation(location)
-                    strongSelf.peerSelected?(peer, false, nil)
+                    strongSelf.peerSelected?(peer, false, false, nil)
                 })
             case .previous(unread: false), .next(unread: false):
                 var target: (ChatListIndex, Peer)? = nil
@@ -1774,7 +1785,7 @@ public final class ChatListNode: ListView {
                 if let target = target {
                     let location: ChatListNodeLocation = .scroll(index: target.0, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true, filter: self.chatListFilter)
                     self.setChatListLocation(location)
-                    self.peerSelected?(target.1, false, nil)
+                    self.peerSelected?(target.1, false, false, nil)
                 }
             case let .peerId(peerId):
                 let _ = (self.context.account.postbox.transaction { transaction -> Peer? in
@@ -1784,7 +1795,7 @@ public final class ChatListNode: ListView {
                     guard let strongSelf = self, let peer = peer else {
                         return
                     }
-                    strongSelf.peerSelected?(peer, false, nil)
+                    strongSelf.peerSelected?(peer, false, false, nil)
                 })
             case let .index(index):
                 guard index < 10 else {
@@ -1803,7 +1814,7 @@ public final class ChatListNode: ListView {
                         if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _, _) = entries[10 - index - 1] {
                             let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true, filter: filter)
                             self.setChatListLocation(location)
-                            self.peerSelected?(renderedPeer.peer!, false, nil)
+                            self.peerSelected?(renderedPeer.peer!, false, false, nil)
                         }
                     })
                 })

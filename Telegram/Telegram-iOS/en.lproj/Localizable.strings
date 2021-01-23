@@ -5920,3 +5920,5 @@ Sorry for the inconvenience.";
 "Conversation.AddMembers" = "Add Members";
 
 "Conversation.ImportedMessageHint" = "The messages was imported from another app. We can't guarantee it's real.";
+
+"Conversation.GreetingText" = "Send a message or tap on the greeting below.";

@@ -1219,9 +1219,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         invitesText = ""
                     }
                     
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-                        interaction.editingOpenInviteLinksSetup()
-                    }))
+//                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+//                        interaction.editingOpenInviteLinksSetup()
+//                    }))
                     
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, action: {
                         interaction.editingOpenDiscussionGroupSetup()
@@ -1303,9 +1303,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     invitesText = ""
                                 }
                                 
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-                                    interaction.editingOpenInviteLinksSetup()
-                                }))
+//                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+//                                    interaction.editingOpenInviteLinksSetup()
+//                                }))
                             }
                             
                             if cachedData.flags.contains(.canChangeUsername) {
@@ -1387,9 +1387,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     invitesText = ""
                 }
                 
-                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-                    interaction.editingOpenInviteLinksSetup()
-                }))
+//                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+//                    interaction.editingOpenInviteLinksSetup()
+//                }))
                 
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
                     interaction.editingOpenPreHistorySetup()
@@ -1412,6 +1412,8 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, text: presentationData.strings.GroupInfo_Administrators, action: {
                     interaction.openParticipantsSection(.admins)
                 }))
+            } else if case .admin = group.role {
+                
             }
         }
     }
@@ -3667,9 +3669,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let options: [PeerReportOption]
         if user {
-            options = [.spam, .violence, .pornography, .childAbuse]
+            options = [.spam, .fake, .violence, .pornography, .childAbuse]
         } else {
-            options = [.spam, .violence, .pornography, .childAbuse, .copyright, .other]
+            options = [.spam, .fake, .violence, .pornography, .childAbuse, .copyright, .other]
         }
         controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), options: options, present: { [weak controller] c, a in
             controller?.present(c, in: .window(.root), with: a)

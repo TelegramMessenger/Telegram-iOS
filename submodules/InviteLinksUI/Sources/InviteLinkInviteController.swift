@@ -352,16 +352,16 @@ public final class InviteLinkInviteController: ViewController {
                     }
                 })))
                 
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
-                }, action: { _, f in
-                    f(.dismissWithoutContent)
-                    
-                    if let invite = invite {
-                        let controller = InviteLinkQRCodeController(context: context, invite: invite)
-                        self?.controller?.present(controller, in: .window(.root))
-                    }
-                })))
+//                items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+//                    return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+//                }, action: { _, f in
+//                    f(.dismissWithoutContent)
+//                    
+//                    if let invite = invite {
+//                        let controller = InviteLinkQRCodeController(context: context, invite: invite)
+//                        self?.controller?.present(controller, in: .window(.root))
+//                    }
+//                })))
                 
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
@@ -407,7 +407,8 @@ public final class InviteLinkInviteController: ViewController {
             let previousEntries = Atomic<[InviteLinkInviteEntry]?>(value: nil)
             
             let peerView = context.account.postbox.peerView(id: peerId)
-            self.disposable = (combineLatest(self.presentationDataPromise.get(), peerView, self.invitesContext.state)
+            let invites: Signal<PeerExportedInvitationsState, NoError> = .single(PeerExportedInvitationsState())
+            self.disposable = (combineLatest(self.presentationDataPromise.get(), peerView, invites)
             |> deliverOnMainQueue).start(next: { [weak self] presentationData, view, invites in
                 if let strongSelf = self {
                     var entries: [InviteLinkInviteEntry] = []
@@ -426,19 +427,19 @@ public final class InviteLinkInviteController: ViewController {
                         entries.append(.mainLink(presentationData.theme, mainInvite))
                     }
                     
-                    let additionalInvites = invites.invitations.filter { $0.link != mainInvite?.link }
-                    var index: Int32 = 0
-                    for i in stride(from: 0, to: additionalInvites.endIndex, by: 2) {
-                        var invitesPair: [ExportedInvitation] = []
-                        invitesPair.append(additionalInvites[i])
-                        if i + 1 < additionalInvites.count {
-                            invitesPair.append(additionalInvites[i + 1])
-                        }
-                        entries.append(.links(index, presentationData.theme, invitesPair))
-                        index += 1
-                    }
+//                    let additionalInvites = invites.invitations.filter { $0.link != mainInvite?.link }
+//                    var index: Int32 = 0
+//                    for i in stride(from: 0, to: additionalInvites.endIndex, by: 2) {
+//                        var invitesPair: [ExportedInvitation] = []
+//                        invitesPair.append(additionalInvites[i])
+//                        if i + 1 < additionalInvites.count {
+//                            invitesPair.append(additionalInvites[i + 1])
+//                        }
+//                        entries.append(.links(index, presentationData.theme, invitesPair))
+//                        index += 1
+//                    }
                     
-                    entries.append(.manage(presentationData.theme, presentationData.strings.InviteLink_Manage, additionalInvites.isEmpty))
+//                    entries.append(.manage(presentationData.theme, presentationData.strings.InviteLink_Manage, additionalInvites.isEmpty))
                        
                     let previousEntries = previousEntries.swap(entries)
                     
@@ -467,7 +468,6 @@ public final class InviteLinkInviteController: ViewController {
             self.contentNode.addSubnode(self.headerNode)
             
             self.headerNode.addSubnode(self.headerBackgroundNode)
-//            self.headerNode.addSubnode(self.titleNode)
             self.headerNode.addSubnode(self.doneButton)
             
             self.doneButton.addTarget(self, action: #selector(self.doneButtonPressed), forControlEvents: .touchUpInside)

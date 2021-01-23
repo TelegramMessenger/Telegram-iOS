@@ -258,6 +258,22 @@ public struct PeerExportedInvitationsState: Equatable {
     public var hasLoadedOnce: Bool
     public var canLoadMore: Bool
     public var count: Int32
+    
+    public init() {
+        self.invitations = []
+        self.isLoadingMore = false
+        self.hasLoadedOnce = false
+        self.canLoadMore = false
+        self.count = 0
+    }
+    
+    public init(invitations: [ExportedInvitation], isLoadingMore: Bool, hasLoadedOnce: Bool, canLoadMore: Bool, count: Int32) {
+        self.invitations = invitations
+        self.isLoadingMore = isLoadingMore
+        self.hasLoadedOnce = hasLoadedOnce
+        self.canLoadMore = canLoadMore
+        self.count = count
+    }
 }
 
 final class CachedPeerExportedInvitations: PostboxCoding {
