@@ -178,7 +178,6 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
                 let delta = translation / self.bounds.width * 2.0
                 self.value = max(0.0, min(2.0, self.value + delta))
                 self.valueChanged(self.value, true)
-                break
             default:
                 break
         }
