@@ -15,6 +15,7 @@ import ReactionSelectionNode
 import TelegramUniversalVideoContent
 import ChatInterfaceState
 import FastBlur
+import ConfettiEffect
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode

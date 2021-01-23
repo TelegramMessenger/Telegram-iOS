@@ -459,14 +459,14 @@ private class ChatListStatusProgressNode: ChatListStatusContentNode {
         
         super.init()
         
-        self.statusNode.transitionToState(.progress(color: color, lineWidth: 1.0, value: progress, cancelEnabled: false))
+        self.statusNode.transitionToState(.progress(color: color, lineWidth: 1.0, value: progress, cancelEnabled: false, animateRotation: true))
         
         self.addSubnode(self.statusNode)
     }
     
     override func updateWithState(_ state: ChatListStatusNodeState, animated: Bool) {
         if case let .progress(color, progress) = state {
-            self.statusNode.transitionToState(.progress(color: color, lineWidth: 1.0, value: progress, cancelEnabled: false), animated: animated, completion: {})
+            self.statusNode.transitionToState(.progress(color: color, lineWidth: 1.0, value: progress, cancelEnabled: false, animateRotation: true), animated: animated, completion: {})
         }
     }
     

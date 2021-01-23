@@ -757,6 +757,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var canDisplayFirstFrame: Bool = false
     private var playbackMode: AnimatedStickerPlaybackMode = .loop
     
+    public var stopAtNearestLoop: Bool = false
+    
     private let playbackStatus = Promise<AnimatedStickerStatus>()
     public var status: Signal<AnimatedStickerStatus, NoError> {
         return self.playbackStatus.get()
@@ -966,7 +968,13 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             
                             if frame.isLastFrame {
                                 var stopped = false
+                                var stopNow = false
                                 if case .once = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if strongSelf.stopAtNearestLoop {
+                                    stopNow = true
+                                }
+                                if stopNow {
                                     strongSelf.stop()
                                     strongSelf.isPlaying = false
                                     stopped = true
@@ -1043,7 +1051,13 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             
                             if frame.isLastFrame {
                                 var stopped = false
+                                var stopNow = false
                                 if case .once = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if strongSelf.stopAtNearestLoop {
+                                    stopNow = true
+                                }
+                                if stopNow {
                                     strongSelf.stop()
                                     strongSelf.isPlaying = false
                                     stopped = true

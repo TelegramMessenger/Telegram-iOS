@@ -460,7 +460,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                     
                                     switch status {
                                         case let .Fetching(_, progress):
-                                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false, animateRotation: true)
                                         case .Remote:
                                             //state = .download(statusForegroundColor)
                                             state = .none

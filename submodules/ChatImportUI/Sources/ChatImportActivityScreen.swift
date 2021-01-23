@@ -13,6 +13,7 @@ import AnimatedStickerNode
 import AppBundle
 import ZIPFoundation
 import MimeTypes
+import ConfettiEffect
 
 public final class ChatImportActivityScreen: ViewController {
     private final class Node: ViewControllerTracingNode {
@@ -22,6 +23,7 @@ public final class ChatImportActivityScreen: ViewController {
         private var presentationData: PresentationData
         
         private let animationNode: AnimatedStickerNode
+        private let doneAnimationNode: AnimatedStickerNode
         private let radialStatus: RadialStatusNode
         private let radialCheck: RadialStatusNode
         private let radialStatusBackground: ASImageNode
@@ -38,6 +40,8 @@ public final class ChatImportActivityScreen: ViewController {
         private let totalBytes: Int
         private var isDone: Bool = false
         
+        private var feedback: HapticFeedback?
+        
         init(controller: ChatImportActivityScreen, context: AccountContext, totalBytes: Int) {
             self.controller = controller
             self.context = context
@@ -46,6 +50,8 @@ public final class ChatImportActivityScreen: ViewController {
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
             self.animationNode = AnimatedStickerNode()
+            self.doneAnimationNode = AnimatedStickerNode()
+            self.doneAnimationNode.isHidden = true
             
             self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
             self.radialCheck = RadialStatusNode(backgroundNodeColor: .clear)
@@ -89,8 +95,19 @@ public final class ChatImportActivityScreen: ViewController {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 170 * 2, height: 170 * 2, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 self.animationNode.visibility = true
             }
+            if let path = getAppBundle().path(forResource: "HistoryImportDone", ofType: "tgs") {
+                self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 170 * 2, height: 170 * 2, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                self.doneAnimationNode.started = { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.animationNode.isHidden = true
+                }
+                self.doneAnimationNode.visibility = false
+            }
             
             self.addSubnode(self.animationNode)
+            self.addSubnode(self.doneAnimationNode)
             self.addSubnode(self.radialStatusBackground)
             self.addSubnode(self.radialStatus)
             self.addSubnode(self.radialCheck)
@@ -112,6 +129,15 @@ public final class ChatImportActivityScreen: ViewController {
                     }
                 }
             }
+            
+            self.animationNode.completed = { [weak self] stopped in
+                guard let strongSelf = self, stopped else {
+                    return
+                }
+                strongSelf.animationNode.visibility = false
+                strongSelf.doneAnimationNode.visibility = true
+                strongSelf.doneAnimationNode.isHidden = false
+            }
         }
         
         @objc private func statusButtonPressed() {
@@ -119,6 +145,7 @@ public final class ChatImportActivityScreen: ViewController {
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+            let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
             
             //TODO:localize
@@ -156,11 +183,14 @@ public final class ChatImportActivityScreen: ViewController {
             }
             
             transition.updateAlpha(node: self.animationNode, alpha: hideIcon ? 0.0 : 1.0)
+            transition.updateAlpha(node: self.doneAnimationNode, alpha: hideIcon ? 0.0 : 1.0)
             
             let contentOriginY = navigationHeight + floor((layout.size.height - contentHeight) / 2.0)
             
             self.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
             self.animationNode.updateLayout(size: iconSize)
+            self.doneAnimationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
+            self.doneAnimationNode.updateLayout(size: iconSize)
             
             self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: hideIcon ? contentOriginY : (contentOriginY + iconSize.height + maxIconStatusSpacing)), size: radialStatusSize)
             let checkSize: CGFloat = 130.0
@@ -184,17 +214,22 @@ public final class ChatImportActivityScreen: ViewController {
             self.statusButtonText.isHidden = !self.isDone
             self.statusButton.isHidden = !self.isDone
             self.progressText.isHidden = self.isDone
+            
+            if isFirstLayout {
+                self.updateProgress(totalProgress: self.totalProgress, isDone: self.isDone, animated: false)
+            }
         }
         
         func updateProgress(totalProgress: CGFloat, isDone: Bool, animated: Bool) {
             self.totalProgress = totalProgress
+            let wasDone = self.isDone
             self.isDone = isDone
             
             if let (layout, navigationHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.02, self.totalProgress), cancelEnabled: false), animated: animated, synchronous: true, completion: {})
+                self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.02, self.totalProgress), cancelEnabled: false, animateRotation: false), animated: animated, synchronous: true, completion: {})
                 if isDone {
-                    self.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: false, synchronous: true, completion: {})
+                    self.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
                     self.radialCheck.transitionToState(.check(self.presentationData.theme.list.itemAccentColor), animated: animated, synchronous: true, completion: {})
                     self.radialStatus.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
                         guard let strongSelf = self else {
@@ -216,6 +251,17 @@ public final class ChatImportActivityScreen: ViewController {
                         transition = .immediate
                     }
                     transition.updateAlpha(node: self.radialStatusText, alpha: 0.0)
+                    
+                    if !wasDone {
+                        self.view.addSubview(ConfettiView(frame: self.view.bounds))
+                        
+                        if self.feedback == nil {
+                            self.feedback = HapticFeedback()
+                        }
+                        self.feedback?.success()
+                        
+                        self.animationNode.stopAtNearestLoop = true
+                    }
                 }
             }
         }

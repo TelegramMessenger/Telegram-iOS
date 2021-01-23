@@ -287,10 +287,10 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             }
             if isLoading, let progress = progress {
                 strongSelf.hasProgress = true
-                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false), completion: {})
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false, animateRotation: true), completion: {})
             } else if strongSelf.hasProgress {
                 strongSelf.hasProgress = false
-                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: false), completion: { [weak self] in
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: false, animateRotation: true), completion: { [weak self] in
                      guard let strongSelf = self else {
                         return
                     }
@@ -1517,7 +1517,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             if let updatingAvatar = updatingAvatar {
                 overlayHidden = false
                 
-                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true))
+                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true, animateRotation: true))
                 
                 if case let .image(representation) = updatingAvatar {
                     if representation != self.currentRepresentation {
