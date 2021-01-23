@@ -12,6 +12,7 @@ import RadialStatusNode
 import AnimatedStickerNode
 import AppBundle
 import ZIPFoundation
+import MimeTypes
 
 public final class ChatImportActivityScreen: ViewController {
     private final class Node: ViewControllerTracingNode {
@@ -191,10 +192,22 @@ public final class ChatImportActivityScreen: ViewController {
             
             if let (layout, navigationHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: animated, synchronous: true, completion: {})
+                self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.02, self.totalProgress), cancelEnabled: false), animated: animated, synchronous: true, completion: {})
                 if isDone {
                     self.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: self.totalProgress, cancelEnabled: false), animated: false, synchronous: true, completion: {})
                     self.radialCheck.transitionToState(.check(self.presentationData.theme.list.itemAccentColor), animated: animated, synchronous: true, completion: {})
+                    self.radialStatus.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.radialStatus.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                    })
+                    self.radialCheck.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.radialCheck.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                    })
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {
@@ -271,6 +284,10 @@ public final class ChatImportActivityScreen: ViewController {
         }
         
         self.beginImport()
+        
+        if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
+            application.isIdleTimerDisabled = true
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -279,6 +296,10 @@ public final class ChatImportActivityScreen: ViewController {
     
     deinit {
         self.disposable.dispose()
+        
+        if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
+            application.isIdleTimerDisabled = false
+        }
     }
     
     @objc private func cancelPressed() {
@@ -342,7 +363,15 @@ public final class ChatImportActivityScreen: ViewController {
                 }
                 let uploadedMedia = unpackedFile
                 |> mapToSignal { tempFile -> Signal<(String, Float), ImportError> in
-                    return ChatHistoryImport.uploadMedia(account: context.account, session: session, file: tempFile, fileName: fileName, type: mediaType)
+                    var mimeTypeValue = "application/binary"
+                    let fileExtension = (tempFile.path as NSString).pathExtension
+                    if !fileExtension.isEmpty {
+                        if let value = TGMimeTypeMap.mimeType(forExtension: fileExtension.lowercased()) {
+                            mimeTypeValue = value
+                        }
+                    }
+                    
+                    return ChatHistoryImport.uploadMedia(account: context.account, session: session, file: tempFile, fileName: fileName, mimeType: mimeTypeValue, type: mediaType)
                     |> mapError { _ -> ImportError in
                         return .generic
                     }
@@ -394,6 +423,10 @@ public final class ChatImportActivityScreen: ViewController {
                 return
             }
             strongSelf.controllerNode.updateProgress(totalProgress: 1.0, isDone: true, animated: true)
+            
+            if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
+                application.isIdleTimerDisabled = false
+            }
         }))
     }
 }

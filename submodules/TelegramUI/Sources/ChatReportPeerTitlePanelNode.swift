@@ -515,12 +515,12 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.reportPeer()
                     case .unarchive:
                         self.interfaceInteraction?.unarchivePeer()
+                    case .addMembers:
+                        self.interfaceInteraction?.presentInviteMembers()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()
                     case .reportIrrelevantGeoLocation:
                         self.interfaceInteraction?.reportPeerIrrelevantGeoLocation()
-                    case .addMembers:
-                        self.interfaceInteraction?.presentAddMembers()
                 }
                 break
             }

@@ -1093,6 +1093,7 @@ public final class GroupCallParticipantsContext {
     }
     
     public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?, volume: Int32?) {
+        
         if let current = self.stateValue.overlayState.pendingMuteStateChanges[peerId] {
             if current.state == muteState {
                 return
@@ -1128,10 +1129,11 @@ public final class GroupCallParticipantsContext {
                 return .single(nil)
             }
             var flags: Int32 = 0
+            if let volume = volume, volume > 0 {
+                flags |= 1 << 1
+            }
             if let muteState = muteState, (!muteState.canUnmute || peerId == account.peerId || muteState.mutedByYou) {
                 flags |= 1 << 0
-            } else if let _ = volume {
-                flags |= 1 << 1
             }
             
             return account.network.request(Api.functions.phone.editGroupCallMember(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), userId: inputUser, volume: volume))

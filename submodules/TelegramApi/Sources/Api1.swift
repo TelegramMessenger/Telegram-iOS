@@ -985,10 +985,10 @@ public struct messages {
     switch self {
                 case .historyImportParsed(let flags, let title):
                     if boxed {
-                        buffer.appendInt32(-1919636670)
+                        buffer.appendInt32(1578088377)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -1004,9 +1004,9 @@ public struct messages {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_2 = parseString(reader) }
+            if Int(_1!) & Int(1 << 2) != 0 {_2 = parseString(reader) }
             let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
             if _c1 && _c2 {
                 return Api.messages.HistoryImportParsed.historyImportParsed(flags: _1!, title: _2)
             }

@@ -133,8 +133,8 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, viewReplies: { _, _ in
         }, activatePinnedListPreview: { _, _ in
         }, joinGroupCall: { _ in
+        }, presentInviteMembers: {
         }, editMessageMedia: { _, _ in
-        }, presentAddMembers: {
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
