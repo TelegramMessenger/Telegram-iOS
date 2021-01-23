@@ -4569,13 +4569,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 var inputTextMaxLength: Int32 = 4096
+                                var webpageUrl: String?
                                 for media in message.media {
                                     if media is TelegramMediaImage || media is TelegramMediaFile {
                                         inputTextMaxLength = strongSelf.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
-                                        break
+                                    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                        webpageUrl = content.url
                                     }
                                 }
-                                return $0.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(message.text, entities: entities)), disableUrlPreview: nil, inputTextMaxLength: inputTextMaxLength))
+                                let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                                var disableUrlPreview: String?
+                                if let detectedWebpageUrl = detectUrl(inputText), webpageUrl == nil {
+                                    disableUrlPreview = detectedWebpageUrl
+                                }
+                                return $0.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreview: disableUrlPreview, inputTextMaxLength: inputTextMaxLength))
                             }
                             
                             updated = updatedChatEditInterfaceMessageState(state: updated, message: message)
