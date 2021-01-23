@@ -218,17 +218,29 @@ private class ItemNode: ASDisplayNode {
         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         
         let availability = invitationAvailability(invite)
+        let transitionFraction: CGFloat
         let color: ItemBackgroundColor
+        let nextColor: ItemBackgroundColor
         if invite.isRevoked {
             color = .gray
+            nextColor = .gray
+            transitionFraction = 0.0
         } else if invite.expireDate == nil && invite.usageLimit == nil {
             color = .blue
+            nextColor = .blue
+            transitionFraction = 0.0
         } else if availability >= 0.5 {
             color = .green
+            nextColor = .yellow
+            transitionFraction = (availability - 0.5) / 0.5
         } else if availability > 0.0 {
             color = .yellow
+            nextColor = .red
+            transitionFraction = availability / 0.5
         } else {
             color = .red
+            nextColor = .red
+            transitionFraction = 0.0
         }
         
         let previousParams = self.params
@@ -239,8 +251,9 @@ private class ItemNode: ASDisplayNode {
             self.updateTimer?.invalidate()
             self.updateTimer = nil
             
-            if let _ = invite.expireDate, availability > 0.0 {
-                let updateTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
+            if let expireDate = invite.expireDate, availability > 0.0 {
+                let timeout = min(2.0, max(0.001, Double(expireDate - currentTime)))
+                let updateTimer = SwiftSignalKit.Timer(timeout: timeout, repeat: true, completion: { [weak self] in
                     if let strongSelf = self {
                         if let (size, wide, invite, _, presentationData) = strongSelf.params {
                             let _ = strongSelf.update(size: size, wide: wide, share: share, invite: invite, presentationData: presentationData, transition: .animated(duration: 0.3, curve: .linear))
@@ -255,9 +268,14 @@ private class ItemNode: ASDisplayNode {
             self.updateTimer = nil
         }
     
-        let colors: NSArray = [color.colors.top.cgColor, color.colors.bottom.cgColor]
+        let topColor = color.colors.top
+        let bottomColor = color.colors.bottom
+        let nextTopColor = nextColor.colors.top
+        let nextBottomColor = nextColor.colors.bottom
+        let colors: NSArray = [nextTopColor.mixedWith(topColor, alpha: transitionFraction).cgColor, nextBottomColor.mixedWith(bottomColor, alpha: transitionFraction).cgColor]
+                
         if let (_, _, previousInvite, previousColor, _) = previousParams, previousInvite == invite {
-            if previousColor != color {
+            if previousColor != color && color == .red {
                 if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
                     snapshotView.frame = self.wrapperNode.bounds
                     self.wrapperNode.view.addSubview(snapshotView)
@@ -266,12 +284,18 @@ private class ItemNode: ASDisplayNode {
                     })
                 }
                 self.backgroundGradientLayer.colors = colors as? [Any]
+            } else if (color == .green && nextColor == .yellow) || (color == .yellow && nextColor == .red) {
+                let previousColors = self.backgroundGradientLayer.colors
+                if transition.isAnimated {
+                    self.backgroundGradientLayer.animate(from: previousColors as AnyObject, to: self.backgroundGradientLayer.colors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 2.5)
+                }
+                self.backgroundGradientLayer.colors = colors as? [Any]
             }
         } else {
             self.backgroundGradientLayer.colors = colors as? [Any]
         }
                 
-        let secondaryTextColor = color.colors.text
+        let secondaryTextColor = nextColor.colors.text.mixedWith(color.colors.text, alpha: transitionFraction)
 
         let itemWidth = wide ? size.width : floor((size.width - itemSpacing) / 2.0)
         var inviteLink = invite.link.replacingOccurrences(of: "https://", with: "")

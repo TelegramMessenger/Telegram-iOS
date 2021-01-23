@@ -53,23 +53,6 @@ private enum InviteLinkViewEntryId: Hashable {
     case importer(PeerId)
 }
 
-private func color(for invite: ExportedInvitation) -> UIColor? {
-    let color: UIColor?
-    let availability = invitationAvailability(invite)
-    if invite.isRevoked {
-        color = nil
-    } else if invite.expireDate == nil && invite.usageLimit == nil {
-        color = nil
-    } else if availability >= 0.5 {
-        color = UIColor(rgb: 0x4aca62)
-    } else if availability > 0.0 {
-        color = UIColor(rgb: 0xf8a953)
-    } else {
-        color = UIColor(rgb: 0xf2656a)
-    }
-    return color
-}
-
 private enum InviteLinkViewEntry: Comparable, Identifiable {
     case link(PresentationTheme, ExportedInvitation)
     case creatorHeader(PresentationTheme, String)
@@ -170,9 +153,8 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
     func item(account: Account, presentationData: PresentationData, interaction: InviteLinkViewInteraction) -> ListViewItem {
         switch self {
             case let .link(_, invite):
-                let buttonColor = color(for: invite)
                 let availability = invitationAvailability(invite)
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, count: 0, peers: [], displayButton: !invite.isRevoked && !availability.isZero, displayImporters: false, buttonColor: buttonColor, sectionId: 0, style: .plain, copyAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, count: 0, peers: [], displayButton: !invite.isRevoked && !availability.isZero, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, copyAction: {
                     interaction.copyLink(invite)
                 }, shareAction: {
                     interaction.shareLink(invite)
@@ -383,13 +365,13 @@ public final class InviteLinkViewController: ViewController {
             self.subtitleNode.maximumNumberOfLines = 1
             self.subtitleNode.textAlignment = .center
             
-            let buttonColor = color(for: invite) ?? presentationData.theme.actionSheet.controlAccentColor
+            let accentColor = presentationData.theme.actionSheet.controlAccentColor
             
             self.editButton = HighlightableButtonNode()
-            self.editButton.setTitle(self.presentationData.strings.Common_Edit, with: Font.regular(17.0), with: buttonColor, for: .normal)
+            self.editButton.setTitle(self.presentationData.strings.Common_Edit, with: Font.regular(17.0), with: accentColor, for: .normal)
             
             self.doneButton = HighlightableButtonNode()
-            self.doneButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: buttonColor, for: .normal)
+            self.doneButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: accentColor, for: .normal)
             
             self.historyBackgroundNode = ASDisplayNode()
             self.historyBackgroundNode.isLayerBacked = true
@@ -617,9 +599,9 @@ public final class InviteLinkViewController: ViewController {
             self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_InviteLink, font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: subtitleFont, textColor: self.presentationData.theme.list.itemSecondaryTextColor)
             
-            let buttonColor = color(for: invite) ?? self.presentationData.theme.actionSheet.controlAccentColor
-            self.editButton.setTitle(self.presentationData.strings.Common_Edit, with: Font.regular(17.0), with: buttonColor, for: .normal)
-            self.doneButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: buttonColor, for: .normal)
+            let accentColor = self.presentationData.theme.actionSheet.controlAccentColor
+            self.editButton.setTitle(self.presentationData.strings.Common_Edit, with: Font.regular(17.0), with: accentColor, for: .normal)
+            self.doneButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: accentColor, for: .normal)
         }
         
         private func enqueueTransition(_ transition: InviteLinkViewTransaction) {

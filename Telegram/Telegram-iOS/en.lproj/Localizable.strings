@@ -5922,6 +5922,8 @@ Sorry for the inconvenience.";
 
 "Conversation.ImportedMessageHint" = "The messages was imported from another app. We can't guarantee it's real.";
 
+"Conversation.GreetingText" = "Send a message or tap on the greeting below.";
+
 "CallList.DeleteAllForMe" = "Delete for me";
 "CallList.DeleteAllForEveryone" = "Delete for me and Others";
 "Conversation.ImportProgress" = "Importing Messages... %@%";

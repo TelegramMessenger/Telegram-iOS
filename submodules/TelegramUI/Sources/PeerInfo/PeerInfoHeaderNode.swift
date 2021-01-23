@@ -2754,6 +2754,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
     
+    var initializedCredibilityIcon = false
     func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
@@ -2775,19 +2776,35 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         
-        if themeUpdated {
-            if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
-                let image = generateImage(sourceImage.size, contextGenerator: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
-                    context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                    context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
-                    context.fill(CGRect(origin: CGPoint(), size: size))
-                })
-                self.titleCredibilityIconNode.image = image
-                self.titleExpandedCredibilityIconNode.image = image
+        if themeUpdated || !initializedCredibilityIcon {
+            let image: UIImage?
+            if let peer = peer {
+                self.initializedCredibilityIcon = true
+                if peer.isFake {
+                    image = PresentationResourcesChatList.fakeIcon(presentationData.theme, type: .regular)
+                } else if peer.isScam {
+                    image = PresentationResourcesChatList.scamIcon(presentationData.theme, type: .regular)
+                } else if peer.isVerified {
+                    if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
+                        image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
+                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
+                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                            context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
+                        })
+                    } else {
+                        image = nil
+                    }
+                } else {
+                    image = nil
+                }
+            } else {
+                image = nil
             }
+            self.titleCredibilityIconNode.image = image
+            self.titleExpandedCredibilityIconNode.image = image
         }
         
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
@@ -2925,10 +2942,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if let image = self.titleCredibilityIconNode.image {
             transition.updateFrame(node: self.titleCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
-            self.titleCredibilityIconNode.isHidden = !isVerified
             
             transition.updateFrame(node: self.titleExpandedCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
-            self.titleExpandedCredibilityIconNode.isHidden = !isVerified
         }
         
         let titleFrame: CGRect
