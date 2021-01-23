@@ -552,7 +552,7 @@ public class ShareRootControllerImpl {
                                                     attemptSelectionImpl = { peer in
                                                         var errorText: String?
                                                         if let channel = peer as? TelegramChannel {
-                                                            if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                                            if channel.hasPermission(.changeInfo) {
                                                             } else {
                                                                 errorText = "You need to be an admin of the group to import messages into it."
                                                             }
@@ -752,7 +752,7 @@ public class ShareRootControllerImpl {
                                                             
                                                             var errorText: String?
                                                             if let channel = peer as? TelegramChannel {
-                                                                if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                                                if channel.hasPermission(.changeInfo) {
                                                                 } else {
                                                                     errorText = "You need to be an admin of the group to import messages into it."
                                                                 }
