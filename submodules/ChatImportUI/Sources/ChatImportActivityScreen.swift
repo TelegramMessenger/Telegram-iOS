@@ -14,6 +14,7 @@ import AppBundle
 import ZIPFoundation
 import MimeTypes
 import ConfettiEffect
+import TelegramUniversalVideoContent
 
 public final class ChatImportActivityScreen: ViewController {
     private final class Node: ViewControllerTracingNode {
@@ -40,6 +41,7 @@ public final class ChatImportActivityScreen: ViewController {
         private let totalBytes: Int
         private var isDone: Bool = false
         
+        private var videoNode: UniversalVideoNode?
         private var feedback: HapticFeedback?
         
         init(controller: ChatImportActivityScreen, context: AccountContext, totalBytes: Int) {
@@ -137,6 +139,23 @@ public final class ChatImportActivityScreen: ViewController {
                 strongSelf.animationNode.visibility = false
                 strongSelf.doneAnimationNode.visibility = true
                 strongSelf.doneAnimationNode.isHidden = false
+            }
+            
+            if let path = getAppBundle().path(forResource: "BlankVideo", ofType: "m4v"), let size = fileSize(path) {
+                let decoration = ChatBubbleVideoDecoration(corners: ImageCorners(), nativeSize: CGSize(width: 100.0, height: 100.0), contentMode: .aspectFit, backgroundColor: .black)
+                
+                let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: 12345), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: size, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
+                
+                let videoContent = NativeVideoContent(id: .message(1, MediaId(namespace: 0, id: 1)), fileReference: .standalone(media: dummyFile), streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black)
+                
+                let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
+                videoNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0))
+                videoNode.alpha = 0.01
+                self.videoNode = videoNode
+                
+                self.addSubnode(videoNode)
+                videoNode.canAttachContent = true
+                videoNode.play()
             }
         }
         
