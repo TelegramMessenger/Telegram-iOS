@@ -227,7 +227,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         
                         var fetching = false
                         if initialBuffering {
-                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true), animated: false, completion: {})
                         } else {
                             var state: RadialStatusNodeState = .none
                             
@@ -237,7 +237,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                         case let .Fetching(_, progress):
                                             fetching = true
                                             isPaused = true
-                                            state = .progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false)
+                                            state = .progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false, animateRotation: true)
                                         default:
                                             break
                                     }

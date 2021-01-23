@@ -44,13 +44,13 @@ private final class ParticleLayer: CALayer {
     }
 }
 
-final class ConfettiView: UIView {
+public final class ConfettiView: UIView {
     private var particles: [ParticleLayer] = []
     private var displayLink: ConstantDisplayLinkAnimator?
     
     private var localTime: Float = 0.0
     
-    override init(frame: CGRect) {
+    override public init(frame: CGRect) {
         super.init(frame: frame)
         
         self.isUserInteractionEnabled = false
@@ -142,7 +142,7 @@ final class ConfettiView: UIView {
         self.displayLink?.isPaused = false
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     

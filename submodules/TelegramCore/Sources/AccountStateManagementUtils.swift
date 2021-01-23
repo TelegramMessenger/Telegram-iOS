@@ -1421,7 +1421,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
         pollChannelSignals = []
     } else if shouldResetChannels {
         var channelPeers: [Peer] = []
-        for peerId in channelsToPoll {
+        for peerId in channelsToPoll.union(missingUpdatesFromChannels) {
             if let peer = updatedState.peers[peerId] {
                 channelPeers.append(peer)
             } else {

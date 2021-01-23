@@ -22,6 +22,7 @@ import OverlayStatusController
 import PresentationDataUtils
 import ChatImportUI
 import ZIPFoundation
+import ActivityIndicator
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
@@ -462,10 +463,10 @@ public class ShareRootControllerImpl {
                                         
                                         if let mainFile = mainFile, let mainFileText = try? String(contentsOf: URL(fileURLWithPath: mainFile.path)) {
                                             let mainFileHeader: String
-                                            if mainFileText.count < 1000 {
+                                            if mainFileText.count < 2000 {
                                                 mainFileHeader = mainFileText
                                             } else {
-                                                mainFileHeader = String(mainFileText[mainFileText.startIndex ..< mainFileText.index(mainFileText.startIndex, offsetBy: 1000)])
+                                                mainFileHeader = String(mainFileText[mainFileText.startIndex ..< mainFileText.index(mainFileText.startIndex, offsetBy: 2000)])
                                             }
                                             
                                             final class TempController: ViewController {
@@ -476,11 +477,16 @@ public class ShareRootControllerImpl {
                                                     }
                                                 }
                                                 
+                                                private let activityIndicator: ActivityIndicator
+                                                
                                                 init(context: AccountContext) {
                                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                                     
+                                                    self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.itemAccentColor, 22.0, 1.0, false))
+                                                    
                                                     super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
                                                     
+                                                    //TODO:localize
                                                     self.title = "Import Chat"
                                                     self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
                                                 }
@@ -491,6 +497,19 @@ public class ShareRootControllerImpl {
                                                 
                                                 @objc private func cancelPressed() {
                                                     //self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                                                }
+                                                
+                                                override func displayNodeDidLoad() {
+                                                    super.displayNodeDidLoad()
+                                                    
+                                                    self.displayNode.addSubnode(self.activityIndicator)
+                                                }
+                                                
+                                                override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+                                                    super.containerLayoutUpdated(layout, transition: transition)
+                                                    
+                                                    let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: floor((layout.size.height - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
                                                 }
                                             }
                                             
@@ -533,7 +552,7 @@ public class ShareRootControllerImpl {
                                                     attemptSelectionImpl = { peer in
                                                         var errorText: String?
                                                         if let channel = peer as? TelegramChannel {
-                                                            if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                                            if channel.hasPermission(.changeInfo) {
                                                             } else {
                                                                 errorText = "You need to be an admin of the group to import messages into it."
                                                             }
@@ -620,10 +639,8 @@ public class ShareRootControllerImpl {
                                                     }
                                                     
                                                     navigationController.viewControllers = [controller]
-                                                    strongSelf.mainWindow?.present(navigationController, on: .root)
                                                 case let .privateChat(title):
                                                     let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                    let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
                                                     
                                                     //TODO:localize
                                                     var attemptSelectionImpl: ((Peer) -> Void)?
@@ -684,7 +701,6 @@ public class ShareRootControllerImpl {
                                                     }
                                                     
                                                     navigationController.viewControllers = [controller]
-                                                    strongSelf.mainWindow?.present(navigationController, on: .root)
                                                 case let .unknown(peerTitle):
                                                     //TODO:localize
                                                     var attemptSelectionImpl: ((Peer) -> Void)?
@@ -736,7 +752,7 @@ public class ShareRootControllerImpl {
                                                             
                                                             var errorText: String?
                                                             if let channel = peer as? TelegramChannel {
-                                                                if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                                                if channel.hasPermission(.changeInfo) {
                                                                 } else {
                                                                     errorText = "You need to be an admin of the group to import messages into it."
                                                                 }
@@ -839,7 +855,6 @@ public class ShareRootControllerImpl {
                                                     }
                                                     
                                                     navigationController.viewControllers = [controller]
-                                                    strongSelf.mainWindow?.present(navigationController, on: .root)
                                                 }
                                             }, error: { _ in
                                                 beginShare()

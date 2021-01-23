@@ -22,6 +22,7 @@ swift_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
         "//submodules/MimeTypes:MimeTypes",
+        "//submodules/ConfettiEffect:ConfettiEffect",
     ],
     visibility = [
         "//visibility:public",

@@ -501,12 +501,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     switch status {
                         case let .Fetching(_, progress):
                             let adjustedProgress = max(progress, 0.027)
-                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
+                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false, animateRotation: true)
                         case .Local:
                             state = .none
                             local = true
                         case .Remote:
-                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false)
+                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false, animateRotation: true)
                     }
                     strongSelf.statusNode.transitionToState(state, completion: {})
                     

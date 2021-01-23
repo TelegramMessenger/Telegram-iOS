@@ -11,7 +11,7 @@ public func revokePersistentPeerExportedInvitation(account: Account, peerId: Pee
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             if let _ = peer as? TelegramChannel {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -30,7 +30,7 @@ public func revokePersistentPeerExportedInvitation(account: Account, peerId: Pee
                     }
                 }
             } else if let _ = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -62,7 +62,8 @@ public enum CreatePeerExportedInvitationError {
 }
 
 public func createPeerExportedInvitation(account: Account, peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
-    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
+    return .fail(.generic)
+    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
             if let _ = expireDate {
@@ -85,7 +86,7 @@ public func createPeerExportedInvitation(account: Account, peerId: PeerId, expir
         }
     }
     |> castError(CreatePeerExportedInvitationError.self)
-    |> switchToLatest
+    |> switchToLatest*/
 }
 
 public enum EditPeerExportedInvitationError {
@@ -93,7 +94,8 @@ public enum EditPeerExportedInvitationError {
 }
 
 public func editPeerExportedInvitation(account: Account, peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
-    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
+    return .fail(.generic)
+    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
             if let _ = expireDate {
@@ -126,7 +128,7 @@ public func editPeerExportedInvitation(account: Account, peerId: PeerId, link: S
         }
     }
     |> castError(EditPeerExportedInvitationError.self)
-    |> switchToLatest
+    |> switchToLatest*/
 }
 
 public enum RevokePeerExportedInvitationError {
@@ -134,7 +136,8 @@ public enum RevokePeerExportedInvitationError {
 }
 
 public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> {
-    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
+    return .fail(.generic)
+    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil))
@@ -161,7 +164,7 @@ public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link:
         }
     }
     |> castError(RevokePeerExportedInvitationError.self)
-    |> switchToLatest
+    |> switchToLatest*/
 }
 
 public struct ExportedInvitations : Equatable {
@@ -170,7 +173,8 @@ public struct ExportedInvitations : Equatable {
 }
 
 public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
-    return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
+    return .single(nil)
+    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
             if let _ = offsetLink {
@@ -213,7 +217,7 @@ public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: B
         } else {
             return .single(nil)
         }
-    } |> switchToLatest
+    } |> switchToLatest*/
 }
 
 
@@ -222,7 +226,8 @@ public enum DeletePeerExportedInvitationError {
 }
 
 public func deletePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<Never, DeletePeerExportedInvitationError> {
-    return account.postbox.transaction { transaction -> Signal<Never, DeletePeerExportedInvitationError> in
+    return .fail(.generic)
+    /*return account.postbox.transaction { transaction -> Signal<Never, DeletePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.deleteExportedChatInvite(peer: inputPeer, link: link))
             |> mapError { _ in return DeletePeerExportedInvitationError.generic }
@@ -232,11 +237,12 @@ public func deletePeerExportedInvitation(account: Account, peerId: PeerId, link:
         }
     }
     |> castError(DeletePeerExportedInvitationError.self)
-    |> switchToLatest
+    |> switchToLatest*/
 }
 
 public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+    return .complete()
+    /*return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.deleteRevokedExportedChatInvites(peer: inputPeer))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
@@ -247,7 +253,7 @@ public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: Pe
             return .complete()
         }
     }
-    |> switchToLatest
+    |> switchToLatest*/
 }
 
 private let cachedPeerExportedInvitationsCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20)
@@ -367,7 +373,7 @@ private final class PeerExportedInvitationsContextImpl {
     }
     
     func loadMore() {
-        if self.isLoadingMore {
+        /*if self.isLoadingMore {
             return
         }
         self.isLoadingMore = true
@@ -461,7 +467,7 @@ private final class PeerExportedInvitationsContextImpl {
                 strongSelf.loadMore()
             }
         }))
-        self.updateState()
+        self.updateState()*/
     }
     
     public func add(_ invite: ExportedInvitation) {
@@ -717,7 +723,7 @@ private final class PeerInvitationImportersContextImpl {
         if self.isLoadingMore {
             return
         }
-        self.isLoadingMore = true
+        /*self.isLoadingMore = true
         let account = self.account
         let peerId = self.peerId
         let link = self.link
@@ -805,7 +811,7 @@ private final class PeerInvitationImportersContextImpl {
             }
             strongSelf.updateState()
         }))
-        self.updateState()
+        self.updateState()*/
     }
     
     private func updateState() {

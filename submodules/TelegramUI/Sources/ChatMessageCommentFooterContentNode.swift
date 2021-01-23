@@ -335,7 +335,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                                     transition.updateFrameAdditive(node: statusNode, frame: statusFrame)
                                 }
                                 
-                                statusNode.transitionToState(.progress(color: messageTheme.accentTextColor, lineWidth: 1.5, value: nil, cancelEnabled: false), animated: false, synchronous: false, completion: {})
+                                statusNode.transitionToState(.progress(color: messageTheme.accentTextColor, lineWidth: 1.5, value: nil, cancelEnabled: false, animateRotation: true), animated: false, synchronous: false, completion: {})
                             } else {
                                 strongSelf.arrowNode.isHidden = false
                                 if let statusNode = strongSelf.statusNode {
