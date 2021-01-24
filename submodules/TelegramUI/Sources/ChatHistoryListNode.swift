@@ -1700,7 +1700,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             let loadState: ChatHistoryNodeLoadState
             if transition.historyView.filteredEntries.isEmpty {
-                loadState = .empty
+                if let firstEntry = transition.historyView.originalView.entries.first {
+                    var isPeerJoined = false
+                    for media in firstEntry.message.media {
+                        if let action = media as? TelegramMediaAction, action.action == .peerJoined {
+                            isPeerJoined = true
+                            break
+                        }
+                    }
+                    loadState = .empty(isPeerJoined ? .joined : .generic)
+                } else {
+                    loadState = .empty(.generic)
+                }
             } else {
                 loadState = .messages
             }
@@ -1732,8 +1743,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let loadState: ChatHistoryNodeLoadState
                 if let historyView = strongSelf.historyView {
-                    if historyView.filteredEntries.isEmpty {
-                        loadState = .empty
+                    if let firstEntry = historyView.originalView.entries.first, historyView.filteredEntries.isEmpty {
+                        var isPeerJoined = false
+                        for media in firstEntry.message.media {
+                            if let action = media as? TelegramMediaAction, action.action == .peerJoined {
+                                isPeerJoined = true
+                                break
+                            }
+                        }
+                        loadState = .empty(isPeerJoined ? .joined : .generic)
                     } else {
                         loadState = .messages
                     }

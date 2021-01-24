@@ -809,7 +809,7 @@ final class ChatEmptyNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, emptyType: ChatHistoryNodeLoadState.EmptyType, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
@@ -838,7 +838,11 @@ final class ChatEmptyNode: ASDisplayNode {
             } else if let _ = interfaceState.peerNearbyData {
                 contentType = .peerNearby
             } else if let _ = peer as? TelegramUser {
-                contentType = .greeting
+                if case .joined = emptyType {
+                    contentType = .greeting
+                } else {
+                    contentType = .regular
+                }
             } else {
                 contentType = .regular
             }
