@@ -14,6 +14,8 @@ public enum ChatHistoryImport {
     
     public enum InitImportError {
         case generic
+        case chatAdminRequired
+        case invalidChatType
     }
     
     public enum ParsedInfo {
@@ -63,8 +65,15 @@ public enum ChatHistoryImport {
                         return .fail(.generic)
                     }
                     return account.network.request(Api.functions.messages.initHistoryImport(peer: inputPeer, file: inputFile, mediaCount: mediaCount))
-                    |> mapError { _ -> InitImportError in
-                        return .generic
+                    |> mapError { error -> InitImportError in
+                        switch error.errorDescription {
+                        case "CHAT_ADMIN_REQUIRED":
+                            return .chatAdminRequired
+                        case "IMPORT_PEER_TYPE_INVALID":
+                            return .invalidChatType
+                        default:
+                            return .generic
+                        }
                     }
                     |> map { result -> Session in
                         switch result {

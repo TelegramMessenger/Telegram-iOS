@@ -17,9 +17,15 @@ import ConfettiEffect
 import TelegramUniversalVideoContent
 
 public final class ChatImportActivityScreen: ViewController {
+    enum ImportError {
+        case generic
+        case chatAdminRequired
+        case invalidChatType
+    }
+    
     private enum State {
         case progress(CGFloat)
-        case error
+        case error(ImportError)
         case done
     }
     
@@ -213,8 +219,17 @@ public final class ChatImportActivityScreen: ViewController {
             switch self.state {
             case .progress:
                 self.statusText.attributedText = NSAttributedString(string: "Please keep this window open\nduring the import.", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
-            case .error:
-                self.statusText.attributedText = NSAttributedString(string: "An error occurred.", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
+            case let .error(error):
+                let errorText: String
+                switch error {
+                case .chatAdminRequired:
+                    errorText = "You need to be an admin."
+                case .invalidChatType:
+                    errorText = "You can't import this history in this type of chat."
+                case .generic:
+                    errorText = "An error occurred."
+                }
+                self.statusText.attributedText = NSAttributedString(string: errorText, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
             case .done:
                 self.statusText.attributedText = NSAttributedString(string: "This chat has been imported\nsuccessfully.", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             }
@@ -427,10 +442,6 @@ public final class ChatImportActivityScreen: ViewController {
     }
     
     private func beginImport() {
-        enum ImportError {
-            case generic
-        }
-        
         for (key, value) in self.pendingEntries {
             self.pendingEntries[key] = (value.0, 0.0)
         }
@@ -459,8 +470,15 @@ public final class ChatImportActivityScreen: ViewController {
             }
             
             return ChatHistoryImport.initSession(account: context.account, peerId: peerId, file: mainEntry, mediaCount: Int32(otherEntries.count))
-            |> mapError { _ -> ImportError in
-                return .generic
+            |> mapError { error -> ImportError in
+                switch error {
+                case .chatAdminRequired:
+                    return .chatAdminRequired
+                case .invalidChatType:
+                    return .invalidChatType
+                case .generic:
+                    return .generic
+                }
             }
         }
         |> mapToSignal { session -> Signal<(String, Float), ImportError> in
@@ -531,11 +549,11 @@ public final class ChatImportActivityScreen: ViewController {
                 totalProgress = CGFloat(totalDoneBytes) / CGFloat(strongSelf.totalBytes)
             }
             strongSelf.controllerNode.updateState(state: .progress(totalProgress), animated: true)
-        }, error: { [weak self] _ in
+        }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.controllerNode.updateState(state: .error, animated: true)
+            strongSelf.controllerNode.updateState(state: .error(error), animated: true)
         }, completed: { [weak self] in
             guard let strongSelf = self else {
                 return
