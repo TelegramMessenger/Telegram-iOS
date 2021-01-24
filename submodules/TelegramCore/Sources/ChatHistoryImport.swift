@@ -100,6 +100,7 @@ public enum ChatHistoryImport {
     
     public enum UploadMediaError {
         case generic
+        case chatAdminRequired
     }
     
     public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
@@ -136,8 +137,13 @@ public enum ChatHistoryImport {
                 return .fail(.generic)
             }
             return account.network.request(Api.functions.messages.uploadImportedMedia(peer: session.inputPeer, importId: session.id, fileName: fileName, media: inputMedia))
-            |> mapError { _ -> UploadMediaError in
-                return .generic
+            |> mapError { error -> UploadMediaError in
+                switch error.errorDescription {
+                case "CHAT_ADMIN_REQUIRED":
+                    return .chatAdminRequired
+                default:
+                    return .generic
+                }
             }
             |> mapToSignal { result -> Signal<Float, UploadMediaError> in
                 return .single(1.0)

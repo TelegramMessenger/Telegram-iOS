@@ -508,8 +508,13 @@ public final class ChatImportActivityScreen: ViewController {
                     }
                     
                     return ChatHistoryImport.uploadMedia(account: context.account, session: session, file: tempFile, fileName: fileName, mimeType: mimeTypeValue, type: mediaType)
-                    |> mapError { _ -> ImportError in
-                        return .generic
+                    |> mapError { error -> ImportError in
+                        switch error {
+                        case .chatAdminRequired:
+                            return .chatAdminRequired
+                        case .generic:
+                            return .generic
+                        }
                     }
                     |> map { progress -> (String, Float) in
                         return (fileName, progress)
