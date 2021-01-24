@@ -1789,7 +1789,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                         }
                     }
+                } else if case .empty(.joined) = loadState, let entry = transition.historyView.originalView.entries.first {
+                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(entry.message.index)
                 }
+                
                 if !strongSelf.didSetInitialData {
                     strongSelf.didSetInitialData = true
                     strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))
