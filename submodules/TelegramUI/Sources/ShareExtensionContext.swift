@@ -415,12 +415,31 @@ public class ShareRootControllerImpl {
                                             beginShare()
                                             return
                                         }
-                                        guard let _ = archive["_chat.txt"] else {
+                                        
+                                        let mainFileNames: [NSRegularExpression] = [
+                                            try! NSRegularExpression(pattern: "_chat\\.txt"),
+                                            try! NSRegularExpression(pattern: "KakaoTalkChats\\.txt"),
+                                            try! NSRegularExpression(pattern: "Talk_.*?\\.txt"),
+                                        ]
+                                        
+                                        var maybeMainFileName: String?
+                                        mainFileLoop: for entry in archive {
+                                            let entryFileName = entry.path(using: .utf8).replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
+                                            let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
+                                            for expression in mainFileNames {
+                                                if expression.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                    maybeMainFileName = entryFileName
+                                                    break mainFileLoop
+                                                }
+                                            }
+                                        }
+                                        
+                                        guard let mainFileName = maybeMainFileName else {
                                             beginShare()
                                             return
                                         }
                                         
-                                        let photoRegex = try! NSRegularExpression(pattern: "[\\d]+-PHOTO-.*?\\.jpg")
+                                        let photoRegex = try! NSRegularExpression(pattern: ".*?\\.jpg")
                                         let videoRegex = try! NSRegularExpression(pattern: "[\\d]+-VIDEO-.*?\\.mp4")
                                         let stickerRegex = try! NSRegularExpression(pattern: "[\\d]+-STICKER-.*?\\.webp")
                                         let voiceRegex = try! NSRegularExpression(pattern: "[\\d]+-AUDIO-.*?\\.opus")
@@ -435,7 +454,7 @@ public class ShareRootControllerImpl {
                                                     continue
                                                 }
                                                 let tempFile = TempBox.shared.tempFile(fileName: entryPath)
-                                                if entryPath == "_chat.txt" {
+                                                if entryPath == mainFileName {
                                                     let _ = try archive.extract(entry, to: URL(fileURLWithPath: tempFile.path))
                                                     mainFile = tempFile
                                                 } else {

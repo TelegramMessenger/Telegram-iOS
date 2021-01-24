@@ -23,6 +23,7 @@ swift_library(
         "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
         "//submodules/MimeTypes:MimeTypes",
         "//submodules/ConfettiEffect:ConfettiEffect",
+        "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
     ],
     visibility = [
         "//visibility:public",
