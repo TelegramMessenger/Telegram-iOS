@@ -534,9 +534,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         let addedWidth = intersection.width + 20
                         fittedLayoutSize.width += addedWidth
                     }
-                    if let statusFrameValue = statusFrame, let iconFrame = iconFrame, iconFrame.intersects(statusFrameValue) {
-                        fittedLayoutSize.height += 15.0
-                        statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
+                    if let statusFrameValue = statusFrame, let iconFrame = iconFrame {
+                        if iconFrame.intersects(statusFrameValue) {
+                            fittedLayoutSize.height += 15.0
+                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
+                        }
+                    } else if let statusFrameValue = statusFrame {
+                        if progressFrame.intersects(statusFrameValue) {
+                            fittedLayoutSize.height += 10.0
+                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
+                        }
                     }
                     
                     if (isAudio && !isVoice) || file.previewRepresentations.isEmpty {
