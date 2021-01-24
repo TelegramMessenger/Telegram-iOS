@@ -59,12 +59,10 @@ BUILD_CONFIGURATION="$1"
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
 	CODESIGNING_SUBPATH="transient-data/telegram-codesigning/codesigning"
-	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	CODESIGNING_SUBPATH="transient-data/telegram-codesigning/codesigning"
-	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
-	CODESIGNING_SUBPATH="fake-codesigning"
+	CODESIGNING_SUBPATH="build-system/fake-codesigning"
 else
 	echo "Unknown configuration $1"
 	exit 1
