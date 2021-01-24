@@ -114,7 +114,7 @@ elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning"
 	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 
-	cp -R fake-codesigning/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning/"
+	cp -R build-system/fake-codesigning/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning/"
 	cp -R build-system/example-configuration/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration/"
 fi
 
