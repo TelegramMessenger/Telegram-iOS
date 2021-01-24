@@ -353,7 +353,7 @@ public final class VoiceChatController: ViewController {
                             } else {
                                 let volumeValue = peerEntry.volume.flatMap { $0 / 100 }
                                 if let volume = volumeValue, volume != 100 {
-                                    text = .text("\(volume / 100)% \(presentationData.strings.VoiceChat_StatusSpeaking)", .constructive)
+                                    text = .text("\(volume)% \(presentationData.strings.VoiceChat_StatusSpeaking)", .constructive)
                                 } else {
                                     text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
                                 }

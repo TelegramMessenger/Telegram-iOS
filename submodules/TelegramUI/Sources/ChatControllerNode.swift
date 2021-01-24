@@ -307,6 +307,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let loadingNode: ChatLoadingNode
     private var emptyNode: ChatEmptyNode?
     private var emptyType: ChatHistoryNodeLoadState.EmptyType?
+    private var didDisplayEmptyGreeting = false
     private var validEmptyNodeLayout: (CGSize, UIEdgeInsets)?
     var restrictedNode: ChatRecentActionsEmptyNode?
     
@@ -539,6 +540,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 var emptyType: ChatHistoryNodeLoadState.EmptyType?
                 if case let .empty(type) = loadState {
                     emptyType = type
+                    if case .joined = type {
+                        if strongSelf.didDisplayEmptyGreeting {
+                            emptyType = .generic
+                        } else {
+                            strongSelf.didDisplayEmptyGreeting = true
+                        }
+                    }
                 }
                 strongSelf.updateIsEmpty(emptyType, animated: animated)
             }
