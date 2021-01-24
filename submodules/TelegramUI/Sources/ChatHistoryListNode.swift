@@ -1743,15 +1743,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let loadState: ChatHistoryNodeLoadState
                 if let historyView = strongSelf.historyView {
-                    if let firstEntry = historyView.originalView.entries.first, historyView.filteredEntries.isEmpty {
-                        var isPeerJoined = false
-                        for media in firstEntry.message.media {
-                            if let action = media as? TelegramMediaAction, action.action == .peerJoined {
-                                isPeerJoined = true
-                                break
+                    if historyView.filteredEntries.isEmpty {
+                        if let firstEntry = historyView.originalView.entries.first {
+                            var isPeerJoined = false
+                            for media in firstEntry.message.media {
+                                if let action = media as? TelegramMediaAction, action.action == .peerJoined {
+                                    isPeerJoined = true
+                                    break
+                                }
                             }
+                            loadState = .empty(isPeerJoined ? .joined : .generic)
+                        } else {
+                            loadState = .empty(.generic)
                         }
-                        loadState = .empty(isPeerJoined ? .joined : .generic)
                     } else {
                         loadState = .messages
                     }
