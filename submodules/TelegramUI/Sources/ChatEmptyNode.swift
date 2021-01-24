@@ -870,7 +870,7 @@ final class ChatEmptyNode: ASDisplayNode {
             self.addSubnode(node)
             contentTransition = .immediate
         }
-        self.isUserInteractionEnabled = [.regular, .peerNearby].contains(contentType)
+        self.isUserInteractionEnabled = [.peerNearby, .greeting].contains(contentType)
         
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         

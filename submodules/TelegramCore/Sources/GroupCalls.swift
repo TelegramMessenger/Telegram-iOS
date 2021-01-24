@@ -1093,7 +1093,6 @@ public final class GroupCallParticipantsContext {
     }
     
     public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?, volume: Int32?) {
-        
         if let current = self.stateValue.overlayState.pendingMuteStateChanges[peerId] {
             if current.state == muteState {
                 return

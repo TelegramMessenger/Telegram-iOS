@@ -438,6 +438,10 @@ final class ContextActionsContainerNode: ASDisplayNode {
         }
     }
     
+    var hasAdditionalActions: Bool {
+        return self.additionalActionsNode != nil
+    }
+    
     init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool, blurBackground: Bool) {
         self.blurBackground = blurBackground
         self.shadowNode = ASImageNode()
@@ -533,5 +537,15 @@ final class ContextActionsContainerNode: ASDisplayNode {
     
     func animateIn() {
         self.textSelectionTipNode?.animateIn()
+    }
+    
+    func animateOut(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let additionalActionsNode = self.additionalActionsNode else {
+            return
+        }
+        
+        transition.animatePosition(node: additionalActionsNode, to: CGPoint(x: 0.0, y: offset / 2.0), additive: true)
+        additionalActionsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+        additionalActionsNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.15, removeOnCompletion: false)
     }
 }
