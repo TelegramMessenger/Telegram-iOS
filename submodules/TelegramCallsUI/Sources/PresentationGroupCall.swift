@@ -1316,7 +1316,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    public func updateMuteState(peerId: PeerId, isMuted: Bool) {
+    public func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState? {
         let canThenUnmute: Bool
         if isMuted {
             var mutedByYou = false
@@ -1334,14 +1334,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 mutedByYou = true
                 canThenUnmute = true
             }
-            self.participantsContext?.updateMuteState(peerId: peerId, muteState: isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute, mutedByYou: mutedByYou) : nil, volume: nil)
+            let muteState = isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute, mutedByYou: mutedByYou) : nil
+            self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil)
+            return muteState
         } else {
             if peerId == self.accountContext.account.peerId {
                 self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
+                return nil
             } else if self.stateValue.canManageCall || self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false), volume: nil)
+                let muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil)
+                return muteState
             } else {
                 self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
+                return nil
             }
         }
     }
