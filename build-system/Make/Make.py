@@ -297,12 +297,15 @@ def generate_project(arguments):
     disable_extensions = False
     if arguments.disableExtensions is not None:
         disable_extensions = arguments.disableExtensions
-
+    if arguments.disableProvisioningProfiles is not None:
+        disable_provisioning_profiles = arguments.disableProvisioningProfiles
+    
     call_executable(['killall', 'Xcode'], check_result=False)
 
     generate(
         build_environment=bazel_command_line.build_environment,
         disable_extensions=disable_extensions,
+        disable_provisioning_profiles=disable_provisioning_profiles,
         configuration_path=bazel_command_line.configuration_path,
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments()
     )
@@ -436,6 +439,16 @@ if __name__ == '__main__':
         help='''
             The generated project will not include app extensions.
             This allows Xcode to properly index the source code.
+            '''
+    )
+
+    generateProjectParser.add_argument(
+        '--disableProvisioningProfiles',
+        action='store_true',
+        default=False,
+        help='''
+            This allows to build the project for simulator without having any codesigning identities installed.
+            Building for an actual device will fail.
             '''
     )
 
