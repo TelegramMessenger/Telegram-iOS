@@ -99,8 +99,12 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 
 	case "$BUILD_CONFIGURATION" in
-		"hockeyapp")
+		"hockeyapp"|"appcenter-experimental"|"appcenter-experimental-2")
 			generate-configuration.sh internal release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+			;;
+
+		"appstore")
+			generate-configuration.sh appstore release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 			;;
 
 		*)
@@ -108,21 +112,12 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 			exit 1
 			;;
 	esac
+elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning"
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 
-	if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-		if [ -z "$TELEGRAM_BUILD_APPSTORE_PASSWORD" ]; then
-			echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
-			exit 1
-		fi
-		if [ -z "$TELEGRAM_BUILD_APPSTORE_TEAM_NAME" ]; then
-			echo "TELEGRAM_BUILD_APPSTORE_TEAM_NAME is not set"
-			exit 1
-		fi
-		if [ -z "$TELEGRAM_BUILD_APPSTORE_USERNAME" ]; then
-			echo "TELEGRAM_BUILD_APPSTORE_USERNAME is not set"
-			exit 1
-		fi
-	fi
+	cp -R fake-codesigning/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning/"
+	cp -R build-system/example-configuration/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration/"
 fi
 
 if [ ! -d "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" ]; then
@@ -184,16 +179,10 @@ fi
 
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration" telegram@"$VM_IP":telegram-configuration
-#scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_TEAMS_SUBPATH" telegram@"$VM_IP":codesigning_teams
 
-#if [ "$BUILD_CONFIGURATION" == "verify" ]; then
-#	ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "mkdir -p telegram-ios-shared/fastlane; echo '' > telegram-ios-shared/fastlane/Fastfile"
-#else
-#	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/transient-data/telegram-ios-shared" telegram@"$VM_IP":telegram-ios-shared
-#fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BAZEL_HTTP_CACHE_URL=\"$BAZEL_HTTP_CACHE_URL\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export BUILD_NUMBER=\"$BUILD_NUMBER\"; export BAZEL_HTTP_CACHE_URL=\"$BAZEL_HTTP_CACHE_URL\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
 OUTPUT_PATH="build/artifacts"
 rm -rf "$OUTPUT_PATH"
