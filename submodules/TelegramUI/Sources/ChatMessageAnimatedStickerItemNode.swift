@@ -149,6 +149,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var didSetUpAnimationNode = false
     private var isPlaying = false
     private var animateGreeting = false
+    private var animatingGreeting = false
     private weak var greetingStickerParentNode: ASDisplayNode?
     private weak var greetingStickerListNode: ASDisplayNode?
     private var greetingCompletion: (() -> Void)?
@@ -242,7 +243,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 return
             }
             if image != nil {
-                if firstTime && !strongSelf.placeholderNode.isEmpty {
+                if firstTime && !strongSelf.placeholderNode.isEmpty && !strongSelf.animateGreeting && !strongSelf.animatingGreeting {
                     strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     strongSelf.removePlaceholder(animated: true)
                 } else {
@@ -965,6 +966,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     if let animationNode = strongSelf.animationNode, let parentNode = strongSelf.greetingStickerParentNode, strongSelf.animateGreeting {
                         strongSelf.animateGreeting = false
+                        strongSelf.animatingGreeting = true
                         
                         let initialFrame = animationNode.view.convert(animationNode.bounds, to: parentNode.view)
                         parentNode.addSubnode(animationNode)
@@ -991,6 +993,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 strongSelf.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 
                                 strongSelf.greetingCompletion?()
+                                strongSelf.animatingGreeting = false
                             }
                         })
                         

@@ -547,6 +547,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             strongSelf.didDisplayEmptyGreeting = true
                         }
                     }
+                } else if case .messages = loadState {
+                    strongSelf.didDisplayEmptyGreeting = true
                 }
                 strongSelf.updateIsEmpty(emptyType, animated: animated)
             }

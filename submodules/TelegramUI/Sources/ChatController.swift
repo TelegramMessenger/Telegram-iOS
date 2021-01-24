@@ -6301,7 +6301,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if strongSelf.shouldDisplayChecksTooltip {
-                        strongSelf.displayChecksTooltip()
+                        Queue.mainQueue().after(1.0) {
+                            strongSelf.displayChecksTooltip()
+                        }
                         strongSelf.shouldDisplayChecksTooltip = false
                         strongSelf.checksTooltipDisposable.set(dismissServerProvidedSuggestion(account: strongSelf.context.account, suggestion: .newcomerTicks).start())
                     }

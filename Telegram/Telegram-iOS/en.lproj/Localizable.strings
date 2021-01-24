@@ -5929,3 +5929,6 @@ Sorry for the inconvenience.";
 "CallList.DeleteAllForMe" = "Delete for me";
 "CallList.DeleteAllForEveryone" = "Delete for me and Others";
 "Conversation.ImportProgress" = "Importing Messages... %@%";
+
+"Conversation.AudioRateTooltipSpeedUp" = "The audio will now play 2 times faster.";
+"Conversation.AudioRateTooltipNormal" = "The audio will now play at normal speed.";
