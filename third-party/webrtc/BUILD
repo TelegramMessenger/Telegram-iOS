@@ -3266,7 +3266,8 @@ common_arm_specific_sources = ["webrtc-ios/src/" + path for path in [
 ]]
 
 armv7_specific_sources = ["webrtc-ios/src/" + path for path in [
-
+    "common_audio/signal_processing/filter_ar_fast_q12.c",
+    "common_audio/signal_processing/complex_bit_reverse.c",
 ]]
 
 arm64_specific_sources = ["webrtc-ios/src/" + path for path in [

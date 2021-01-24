@@ -2144,14 +2144,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if case .broadcast = channel.info {
                         canClear = false
                         deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
+                        if channel.flags.contains(.isCreator) {
+                            canRemoveGlobally = true
+                        }
                     } else {
                         deleteTitle = strongSelf.presentationData.strings.Group_DeleteGroup
+                        if channel.flags.contains(.isCreator) {
+                            canRemoveGlobally = true
+                        }
                     }
                     if let addressName = channel.addressName, !addressName.isEmpty {
                         canClear = false
-                    }
-                    if channel.flags.contains(.isCreator) {
-                        canRemoveGlobally = true
                     }
                 } else if let group = chatPeer as? TelegramGroup {
                     if case .creator = group.role {
@@ -2184,12 +2187,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         })
                     }))
                     
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForAllMembers, color: .destructive, action: { [weak actionSheet] in
+                    let deleteForAllText: String
+                    if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                        deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllSubscribers
+                    } else {
+                        deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllMembers
+                    }
+                    
+                    items.append(ActionSheetButtonItem(title: deleteForAllText, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: strongSelf.presentationData.strings.ChannelInfo_DeleteGroupConfirmation, actions: [
+                        
+                        let deleteForAllConfirmation: String
+                        if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                            deleteForAllConfirmation = strongSelf.presentationData.strings.ChannelInfo_DeleteChannelConfirmation
+                        } else {
+                            deleteForAllConfirmation = strongSelf.presentationData.strings.ChannelInfo_DeleteGroupConfirmation
+                        }
+                        
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: deleteForAllConfirmation, actions: [
                             TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
                             }),
                             TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationAction, action: {
@@ -2268,12 +2286,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                             actionSheet?.dismissAnimated()
                                         }))
                                     } else {
-                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
-                                            beginClear(.forEveryone)
-                                            actionSheet?.dismissAnimated()
-                                        }))
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
                                             beginClear(.forLocalPeer)
+                                            actionSheet?.dismissAnimated()
+                                        }))
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
+                                            beginClear(.forEveryone)
                                             actionSheet?.dismissAnimated()
                                         }))
                                     }
@@ -2328,12 +2346,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     })
                                 }))
                                 
-                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForAllMembers, color: .destructive, action: { [weak actionSheet] in
+                                let deleteForAllText: String
+                                if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                                    deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllSubscribers
+                                } else {
+                                    deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllMembers
+                                }
+                                
+                                items.append(ActionSheetButtonItem(title: deleteForAllText, color: .destructive, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteForAllMembersConfirmationText, actions: [
+                                    
+                                    let deleteForAllConfirmation: String
+                                    if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                                        deleteForAllConfirmation = strongSelf.presentationData.strings.ChatList_DeleteForAllSubscribersConfirmationText
+                                    } else {
+                                        deleteForAllConfirmation = strongSelf.presentationData.strings.ChatList_DeleteForAllMembersConfirmationText
+                                    }
+                                    
+                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: deleteForAllConfirmation, actions: [
                                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
                                         }),
                                         TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationAction, action: {
@@ -2421,6 +2454,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     completion(true)
                 }))
             } else {
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible, completion: {
+                        removed()
+                    })
+                    completion(true)
+                }))
                 items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     guard let strongSelf = self else {
@@ -2437,13 +2477,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             completion(true)
                         })
                     ], parseMarkdown: true), in: .window(.root))
-                }))
-                items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak self, weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible, completion: {
-                        removed()
-                    })
-                    completion(true)
                 }))
             }
             actionSheet.setItemGroups([

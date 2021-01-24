@@ -4276,7 +4276,9 @@ Unused sets are archived when you add more.";
 "ChatList.DeleteForEveryoneConfirmationText" = "This will **delete all messages** in this chat for **both participants**.";
 "ChatList.DeleteForEveryoneConfirmationAction" = "Delete All";
 "ChatList.DeleteForAllMembers" = "Delete for all members";
+"ChatList.DeleteForAllSubscribers" = "Delete for all subscribers";
 "ChatList.DeleteForAllMembersConfirmationText" = "This will **delete all messages** in this chat for **all participants**.";
+"ChatList.DeleteForAllSubscribersConfirmationText" = "This will **delete all messages** in this channel for **all subscribers**.";
 
 "ChatList.DeleteSavedMessagesConfirmationTitle" = "Warning!";
 "ChatList.DeleteSavedMessagesConfirmationText" = "This will **delete all messages** in this chat.";
