@@ -542,7 +542,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     } else if let statusFrameValue = statusFrame {
                         if progressFrame.intersects(statusFrameValue) {
                             fittedLayoutSize.height += 10.0
-                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
+                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 10.0)
                         }
                     }
                     

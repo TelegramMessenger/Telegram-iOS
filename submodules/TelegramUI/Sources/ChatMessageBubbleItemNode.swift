@@ -56,14 +56,14 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         var isFile = false
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
-                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
                     messageWithCaptionToAdd = (message, itemAttributes)
                 }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
-                    if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                    if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
                         messageWithCaptionToAdd = (message, itemAttributes)
                     }
                     result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
