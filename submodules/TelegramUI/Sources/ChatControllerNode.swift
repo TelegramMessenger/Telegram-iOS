@@ -743,14 +743,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)? {
+    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)? {
         if let greetingStickerNode = self.emptyNode?.greetingStickerNode {
-            self.historyNode.itemHeaderNodesAlpha = 0.0
-            return (greetingStickerNode, self, self.historyNode, { [weak self] in
-                self?.historyNode.forEachItemHeaderNode { node in
-                    node.alpha = 1.0
-                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                }
+            let historyNode = self.historyNode
+            historyNode.alpha = 0.0
+            return (greetingStickerNode, self, self.historyNode, { completion in
+                historyNode.alpha = 1.0
+                historyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { _ in
+                    completion()
+                })
             })
         } else {
             return nil
