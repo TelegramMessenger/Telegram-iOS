@@ -104,7 +104,7 @@ public enum ChatHistoryImport {
     }
     
     public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false)
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, useLargerParts: true, useMultiplexedRequests: true)
         |> mapError { _ -> UploadMediaError in
             return .generic
         }

@@ -5922,7 +5922,7 @@ Sorry for the inconvenience.";
 
 "Conversation.AddMembers" = "Add Members";
 
-"Conversation.ImportedMessageHint" = "The messages was imported from another app. We can't guarantee it's real.";
+"Conversation.ImportedMessageHint" = "This message was imported from another app. We can't guarantee it's real.";
 
 "Conversation.GreetingText" = "Send a message or tap on the greeting below.";
 
@@ -5933,7 +5933,7 @@ Sorry for the inconvenience.";
 "Conversation.AudioRateTooltipSpeedUp" = "The audio will now play 2 times faster.";
 "Conversation.AudioRateTooltipNormal" = "The audio will now play at normal speed.";
 
-"ChatImport.Title" = "Import Chat";
+"ChatImport.Title" = "Select Chat";
 "ChatImport.SelectionErrorNotAdmin" = "You need to be an admin of the group to import messages into it.";
 "ChatImport.SelectionErrorGroupGeneric" = "You can't import history into this group.";
 "ChatImport.SelectionConfirmationGroupWithTitle" = "Are you sure you want to import messages from **%1$@** into **%2$@**?";
@@ -5956,5 +5956,6 @@ Sorry for the inconvenience.";
 "ChatImportActivity.InProgress" = "Please keep this window open\nduring the import.";
 "ChatImportActivity.ErrorNotAdmin" = "You need to be an admin.";
 "ChatImportActivity.ErrorInvalidChatType" = "You can't import this history in this type of chat.";
+"ChatImportActivity.ErrorUserBlocked" = "You need to be an admin.";
 "ChatImportActivity.ErrorGeneric" = "An error occurred.";
 "ChatImportActivity.Success" = "Chat imported\nsuccessfully.";

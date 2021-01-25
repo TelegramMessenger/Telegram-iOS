@@ -82,6 +82,33 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         self.context.authTokenForDatacenter(withIdRequired: self.datacenterId, authToken:self.mtProto.requiredAuthToken, masterDatacenterId: self.mtProto.authTokenMasterDatacenterId)
     }
     
+    static func uploadPart(multiplexedManager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64, tag: MediaResourceFetchTag?, fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil) -> Signal<Void, UploadPartError> {
+        let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
+        if asBigPart {
+            let totalParts: Int32
+            if let bigTotalParts = bigTotalParts {
+                totalParts = Int32(bigTotalParts)
+            } else {
+                totalParts = -1
+            }
+            saveFilePart = Api.functions.upload.saveBigFilePart(fileId: fileId, filePart: Int32(index), fileTotalParts: totalParts, bytes: Buffer(data: data))
+        } else {
+            saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
+        }
+        
+        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, data: saveFilePart, tag: tag, continueInBackground: true)
+        |> mapError { error -> UploadPartError in
+            if error.errorCode == 400 {
+                return .invalidMedia
+            } else {
+               return .generic
+            }
+        }
+        |> mapToSignal { _ -> Signal<Void, UploadPartError> in
+            return .complete()
+        }
+    }
+    
     func uploadPart(fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil) -> Signal<Void, UploadPartError> {
         return Signal<Void, MTRpcError> { subscriber in
             let request = MTRequest()
