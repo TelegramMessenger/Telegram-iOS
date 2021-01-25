@@ -58,9 +58,9 @@ cp "$BAZEL" "tools/bazel"
 BUILD_CONFIGURATION="$1"
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
-	CODESIGNING_SUBPATH="transient-data/telegram-codesigning/codesigning"
+	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	CODESIGNING_SUBPATH="transient-data/telegram-codesigning/codesigning"
+	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	CODESIGNING_SUBPATH="build-system/fake-codesigning"
 else
@@ -118,8 +118,8 @@ elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	cp -R build-system/example-configuration/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration/"
 fi
 
-if [ ! -d "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" ]; then
-	echo "$BUILDBOX_DIR/$CODESIGNING_SUBPATH does not exist"
+if [ ! -d "$CODESIGNING_SUBPATH" ]; then
+	echo "$CODESIGNING_SUBPATH does not exist"
 	exit 1
 fi
 
@@ -175,7 +175,7 @@ elif [ "$BUILD_MACHINE" == "macOS" ]; then
 	echo "VM_IP=$VM_IP"
 fi
 
-scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration" telegram@"$VM_IP":telegram-configuration
 
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
