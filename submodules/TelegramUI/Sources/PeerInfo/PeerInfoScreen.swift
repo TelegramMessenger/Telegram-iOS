@@ -461,7 +461,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
-        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
+        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: UIEdgeInsets(), maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
@@ -1529,6 +1529,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, peerId: peerId)
         
         super.init()
+        
+        self.paneContainerNode.parentController = controller
         
         self._interaction = PeerInfoInteraction(
             openUsername: { [weak self] value in
@@ -2903,7 +2905,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] sticker in
                     if let strongSelf = self {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) }), completion: { _ in
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
                             if strongSelf.nearbyPeerDistance != nil {
                                 var viewControllers = navigationController.viewControllers
                                 viewControllers = viewControllers.filter { controller in
@@ -3172,7 +3174,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] sticker in
                 if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData:  strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) }), completion: { _ in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData:  strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
                         if strongSelf.nearbyPeerDistance != nil {
                             var viewControllers = navigationController.viewControllers
                             viewControllers = viewControllers.filter { controller in
@@ -3547,7 +3549,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] sticker in
                 if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) }), completion: { _ in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
                         if strongSelf.nearbyPeerDistance != nil {
                             var viewControllers = navigationController.viewControllers
                             viewControllers = viewControllers.filter { controller in

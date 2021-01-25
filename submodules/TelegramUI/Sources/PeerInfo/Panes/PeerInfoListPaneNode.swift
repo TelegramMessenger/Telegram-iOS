@@ -14,11 +14,14 @@ import UniversalMediaPlayer
 import TelegramBaseController
 import OverlayStatusController
 import ListMessageItem
+import UndoUI
 
 final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let peerId: PeerId
     private let chatControllerInteraction: ChatControllerInteraction
+    
+    weak var parentController: ViewController?
     
     private let listNode: ChatHistoryListNode
     
@@ -232,6 +235,35 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                             return
                         }
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
+                        
+                        if let controller = strongSelf.parentController {
+                            var hasTooltip = false
+                            controller.forEachController({ controller in
+                                if let controller = controller as? UndoOverlayController {
+                                    hasTooltip = true
+                                    controller.dismissWithCommitAction()
+                                }
+                                return true
+                            })
+                            
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            let slowdown = baseRate == .x1
+                            controller.present(
+                                UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .audioRate(
+                                        slowdown: slowdown,
+                                        text: slowdown ? presentationData.strings.Conversation_AudioRateTooltipNormal : presentationData.strings.Conversation_AudioRateTooltipSpeedUp
+                                    ),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: hasTooltip,
+                                    action: { action in
+                                        return true
+                                    }
+                                ),
+                                in: .current
+                            )
+                        }
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in

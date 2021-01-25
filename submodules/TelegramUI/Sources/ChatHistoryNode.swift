@@ -10,9 +10,14 @@ public enum ChatHistoryNodeHistoryState: Equatable {
     case loaded(isEmpty: Bool)
 }
 
-public enum ChatHistoryNodeLoadState {
+public enum ChatHistoryNodeLoadState: Equatable {
+    public enum EmptyType: Equatable {
+        case generic
+        case joined
+    }
+    
     case loading
-    case empty
+    case empty(EmptyType)
     case messages
 }
 

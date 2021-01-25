@@ -88,7 +88,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, userId, date, activeDate, source, volume, mutedCnt):
+                    case let .groupCallParticipant(flags, userId, date, activeDate, source, volume):
                         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                         let ssrc = UInt32(bitPattern: source)
                         guard let peer = transaction.getPeer(peerId) else {
@@ -228,7 +228,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, userId, date, activeDate, source, volume, mutedCnt):
+                    case let .groupCallParticipant(flags, userId, date, activeDate, source, volume):
                         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                         let ssrc = UInt32(bitPattern: source)
                         guard let peer = transaction.getPeer(peerId) else {
@@ -1093,7 +1093,6 @@ public final class GroupCallParticipantsContext {
     }
     
     public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?, volume: Int32?) {
-        
         if let current = self.stateValue.overlayState.pendingMuteStateChanges[peerId] {
             if current.state == muteState {
                 return
@@ -1195,7 +1194,7 @@ public final class GroupCallParticipantsContext {
 extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
     init(_ apiParticipant: Api.GroupCallParticipant) {
         switch apiParticipant {
-        case let .groupCallParticipant(flags, userId, date, activeDate, source, volume, mutedCnt):
+        case let .groupCallParticipant(flags, userId, date, activeDate, source, volume):
             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
             let ssrc = UInt32(bitPattern: source)
             let muted = (flags & (1 << 0)) != 0
@@ -1237,7 +1236,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
         var participantUpdates: [GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate] = []
         for participant in participants {
             switch participant {
-            case let .groupCallParticipant(flags, userId, date, activeDate, source, volume, mutedCnt):
+            case let .groupCallParticipant(flags, userId, date, activeDate, source, volume):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                 let ssrc = UInt32(bitPattern: source)
                 let muted = (flags & (1 << 0)) != 0

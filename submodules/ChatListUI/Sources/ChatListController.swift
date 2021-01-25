@@ -24,6 +24,7 @@ import LocalizedPeerData
 import TelegramIntents
 import TooltipUI
 import TelegramCallsUI
+import StickerResources
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -142,6 +143,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let filterDisposable = MetaDisposable()
     private let featuredFiltersDisposable = MetaDisposable()
     private var processedFeaturedFilters = false
+    
+    private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
+    private let preloadStickerDisposable = MetaDisposable()
     
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
@@ -591,43 +595,53 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         scrollToEndIfExists = true
                     }
                     
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
-                        self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
-                        if let promoInfo = promoInfo {
-                            switch promoInfo {
-                            case .proxy:
-                                let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
-                                |> deliverOnMainQueue).start(next: { value in
-                                    guard let strongSelf = self else {
-                                        return
+                    let _ = (strongSelf.preloadedSticker.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] greetingSticker in
+                        if let strongSelf = self {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput, scrollToEndIfExists: scrollToEndIfExists, greetingData: greetingSticker.flatMap({ ChatGreetingData(sticker: $0) }), animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
+                                self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
+                                if let promoInfo = promoInfo {
+                                    switch promoInfo {
+                                    case .proxy:
+                                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
+                                        |> deliverOnMainQueue).start(next: { value in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            if !value {
+                                                controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
+                                                let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                            }
+                                        })
+                                    case let .psa(type, _):
+                                        let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
+                                        |> deliverOnMainQueue).start(next: { value in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            if !value {
+                                                var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
+                                                let key = "ChatList.PsaAlert.\(type)"
+                                                if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
+                                                    text = string
+                                                } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
+                                                    text = string
+                                                }
+                                                
+                                                controller.displayPromoAnnouncement(text: text)
+                                                let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                                            }
+                                        })
                                     }
-                                    if !value {
-                                        controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
-                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
-                                    }
-                                })
-                            case let .psa(type, _):
-                                let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
-                                |> deliverOnMainQueue).start(next: { value in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    if !value {
-                                        var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
-                                        let key = "ChatList.PsaAlert.\(type)"
-                                        if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
-                                            text = string
-                                        } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
-                                            text = string
-                                        }
-                                        
-                                        controller.displayPromoAnnouncement(text: text)
-                                        let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
-                                    }
-                                })
+                                }
+                            }))
+                            
+                            if activateInput {
+                                strongSelf.prepareRandomGreetingSticker()
                             }
                         }
-                    }))
+                    })
                 }
             }
         }
@@ -1075,6 +1089,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.ready.set(self.chatListDisplayNode.containerNode.ready)
         
         self.displayNodeDidLoad()
+    }
+    
+    public override func displayNodeDidLoad() {
+        super.displayNodeDidLoad()
+        
+        Queue.mainQueue().after(1.0) {
+            self.prepareRandomGreetingSticker()
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -2707,6 +2729,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self?.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
             }))
         }
+    }
+    
+    private func prepareRandomGreetingSticker() {
+        let context = self.context
+        self.preloadedSticker.set(.single(nil)
+        |> then(randomGreetingSticker(account: context.account)
+        |> map { item in
+            return item?.file
+        }))
+        
+        self.preloadStickerDisposable.set((self.preloadedSticker.get()
+        |> mapToSignal { sticker -> Signal<Void, NoError> in
+            if let sticker = sticker {
+                let _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: sticker)).start()
+                return chatMessageAnimationData(postbox: context.account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+            } else {
+                return .complete()
+            }
+        }).start())
     }
     
     override public func tabBarDisabledAction() {

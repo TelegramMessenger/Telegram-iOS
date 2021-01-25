@@ -13,6 +13,7 @@ import AccountContext
 import OverlayStatusController
 import PresentationDataUtils
 import TelegramCallsUI
+import UndoUI
 
 public enum MediaAccessoryPanelVisibility {
     case none
@@ -676,6 +677,33 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             return
                         }
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
+                        
+                        var hasTooltip = false
+                        strongSelf.forEachController({ controller in
+                            if let controller = controller as? UndoOverlayController {
+                                hasTooltip = true
+                                controller.dismissWithCommitAction()
+                            }
+                            return true
+                        })
+                        
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        let slowdown = baseRate == .x1
+                        strongSelf.present(
+                            UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .audioRate(
+                                    slowdown: slowdown,
+                                    text: slowdown ? presentationData.strings.Conversation_AudioRateTooltipNormal : presentationData.strings.Conversation_AudioRateTooltipSpeedUp
+                                ),
+                                elevatedLayout: false,
+                                animateInAsReplacement: hasTooltip,
+                                action: { action in
+                                    return true
+                                }
+                            ),
+                            in: .current
+                        )
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in

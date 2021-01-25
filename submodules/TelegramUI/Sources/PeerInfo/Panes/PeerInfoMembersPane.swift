@@ -104,6 +104,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let membersContext: PeerInfoMembersContext
     private let action: (PeerInfoMember, PeerMembersListAction) -> Void
     
+    weak var parentController: ViewController?
+    
     private let listNode: ListView
     private var currentEntries: [PeerMembersListEntry] = []
     private var enclosingPeer: Peer?

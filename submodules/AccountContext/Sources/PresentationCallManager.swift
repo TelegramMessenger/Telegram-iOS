@@ -297,7 +297,7 @@ public protocol PresentationGroupCall: class {
     func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
-    func updateMuteState(peerId: PeerId, isMuted: Bool)
+    func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
     
     func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)

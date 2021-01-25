@@ -128,8 +128,8 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     CGSize dimensions = CGSizeZero;
     if ([self.item isKindOfClass:[TGMediaAsset class]])
         dimensions = ((TGMediaAsset *)self.item).dimensions;
-//    else if ([self.item isKindOfClass:[TGCameraCapturedVideo class]])
-//        dimensions = [((TGCameraCapturedVideo *)self.item).avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject.naturalSize;
+    else if ([self.item isKindOfClass:[TGCameraCapturedVideo class]])
+        dimensions = ((TGCameraCapturedVideo *)self.item).dimensions;
     
     if (!CGSizeEqualToSize(dimensions, CGSizeZero))
         _quality.maximumValue = [TGMediaVideoConverter bestAvailablePresetForDimensions:dimensions] - 1;

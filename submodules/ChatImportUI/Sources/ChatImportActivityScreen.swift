@@ -11,15 +11,22 @@ import PresentationDataUtils
 import RadialStatusNode
 import AnimatedStickerNode
 import AppBundle
-import ZIPFoundation
+import ZipArchive
 import MimeTypes
 import ConfettiEffect
 import TelegramUniversalVideoContent
+import SolidRoundedButtonNode
 
 public final class ChatImportActivityScreen: ViewController {
+    enum ImportError {
+        case generic
+        case chatAdminRequired
+        case invalidChatType
+    }
+    
     private enum State {
         case progress(CGFloat)
-        case error
+        case error(ImportError)
         case done
     }
     
@@ -40,6 +47,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         private let statusButtonText: ImmediateTextNode
         private let statusButton: HighlightableButtonNode
+        private let doneButton: SolidRoundedButtonNode
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
@@ -94,6 +102,8 @@ public final class ChatImportActivityScreen: ViewController {
             
             self.statusButton = HighlightableButtonNode()
             
+            self.doneButton = SolidRoundedButtonNode(title: self.presentationData.strings.ChatImportActivity_OpenApp, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+            
             super.init()
             
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
@@ -123,6 +133,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.addSubnode(self.statusText)
             self.addSubnode(self.statusButtonText)
             self.addSubnode(self.statusButton)
+            self.addSubnode(self.doneButton)
             
             self.statusButton.addTarget(self, action: #selector(self.statusButtonPressed), forControlEvents: .touchUpInside)
             self.statusButton.highligthedChanged = { [weak self] highlighted in
@@ -161,6 +172,18 @@ public final class ChatImportActivityScreen: ViewController {
                 self.addSubnode(videoNode)
                 videoNode.canAttachContent = true
                 videoNode.play()
+                
+                self.doneButton.pressed = { [weak self] in
+                    guard let strongSelf = self, let controller = strongSelf.controller else {
+                        return
+                    }
+                    
+                    if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
+                        let selector = NSSelectorFromString("openURL:")
+                        let url = URL(string: "tg://localpeer?id=\(controller.peerId.toInt64())")!
+                        application.perform(selector, with: url)
+                    }
+                }
             }
         }
         
@@ -176,8 +199,6 @@ public final class ChatImportActivityScreen: ViewController {
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
-            
-            //TODO:localize
             
             let iconSize = CGSize(width: 170.0, height: 170.0)
             let radialStatusSize = CGSize(width: 186.0, height: 186.0)
@@ -204,19 +225,28 @@ public final class ChatImportActivityScreen: ViewController {
             
             switch self.state {
             case .progress, .done:
-                self.statusButtonText.attributedText = NSAttributedString(string: "Done", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
+                self.statusButtonText.attributedText = NSAttributedString(string: self.presentationData.strings.Common_Done, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
             case .error:
-                self.statusButtonText.attributedText = NSAttributedString(string: "Retry", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
+                self.statusButtonText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_Retry, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
             }
             let statusButtonTextSize = self.statusButtonText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
             
             switch self.state {
             case .progress:
-                self.statusText.attributedText = NSAttributedString(string: "Please keep this window open\nduring the import.", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
-            case .error:
-                self.statusText.attributedText = NSAttributedString(string: "An error occurred.", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
+                self.statusText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_InProgress, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+            case let .error(error):
+                let errorText: String
+                switch error {
+                case .chatAdminRequired:
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorNotAdmin
+                case .invalidChatType:
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorGeneric
+                case .generic:
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorInvalidChatType
+                }
+                self.statusText.attributedText = NSAttributedString(string: errorText, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
             case .done:
-                self.statusText.attributedText = NSAttributedString(string: "This chat has been imported\nsuccessfully.", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                self.statusText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_Success, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             }
             
             let statusTextSize = self.statusText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
@@ -225,11 +255,20 @@ public final class ChatImportActivityScreen: ViewController {
             var hideIcon = false
             if case .compact = layout.metrics.heightClass, layout.size.width > layout.size.height {
                 hideIcon = true
-                contentHeight = radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 100.0
+                contentHeight = progressTextSize.height + progressStatusSpacing + 160.0
             } else {
                 contentHeight = iconSize.height + maxIconStatusSpacing + radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 100.0
             }
             
+            transition.updateAlpha(node: self.radialStatus, alpha: hideIcon ? 0.0 : 1.0)
+            transition.updateAlpha(node: self.radialStatusBackground, alpha: hideIcon ? 0.0 : 1.0)
+            switch self.state {
+            case .done:
+                break
+            default:
+                transition.updateAlpha(node: self.radialStatusText, alpha: hideIcon ? 0.0 : 1.0)
+            }
+            transition.updateAlpha(node: self.radialCheck, alpha: hideIcon ? 0.0 : 1.0)
             transition.updateAlpha(node: self.animationNode, alpha: hideIcon ? 0.0 : 1.0)
             transition.updateAlpha(node: self.doneAnimationNode, alpha: hideIcon ? 0.0 : 1.0)
             
@@ -240,26 +279,48 @@ public final class ChatImportActivityScreen: ViewController {
             self.doneAnimationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
             self.doneAnimationNode.updateLayout(size: iconSize)
             
-            self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: hideIcon ? contentOriginY : (contentOriginY + iconSize.height + maxIconStatusSpacing)), size: radialStatusSize)
+            self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: contentOriginY + iconSize.height + maxIconStatusSpacing), size: radialStatusSize)
             let checkSize: CGFloat = 130.0
             self.radialCheck.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
             self.radialStatusBackground.frame = self.radialStatus.frame
             
             self.radialStatusText.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize)
             
-            self.progressText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: self.radialStatus.frame.maxY + maxProgressTextSpacing), size: progressTextSize)
+            self.progressText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: hideIcon ? contentOriginY : (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize)
             
             if case .progress = self.state {
                 self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.maxY + progressStatusSpacing), size: statusTextSize)
                 self.statusButtonText.isHidden = true
                 self.statusButton.isHidden = true
+                self.doneButton.isHidden = true
                 self.progressText.isHidden = false
+            } else if case .error = self.state {
+                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
+                self.statusButtonText.isHidden = false
+                self.statusButton.isHidden = false
+                self.doneButton.isHidden = true
+                self.progressText.isHidden = true
             } else {
                 self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
                 self.statusButtonText.isHidden = false
                 self.statusButton.isHidden = false
+                self.doneButton.isHidden = true
                 self.progressText.isHidden = true
-            }
+            }/* else {
+                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
+                self.statusButtonText.isHidden = true
+                self.statusButton.isHidden = true
+                self.doneButton.isHidden = false
+                self.progressText.isHidden = true
+            }*/
+            
+            let buttonSideInset: CGFloat = 75.0
+            let buttonWidth = max(240.0, min(layout.size.width - buttonSideInset * 2.0, horizontalContainerFillingSizeForLayout(layout: layout, sideInset: buttonSideInset)))
+            
+            let buttonHeight = self.doneButton.updateLayout(width: buttonWidth, transition: .immediate)
+            
+            let doneButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing + 10.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+            self.doneButton.frame = doneButtonFrame
             
             let statusButtonTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusButtonTextSize.width) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing), size: statusButtonTextSize)
             self.statusButtonText.frame = statusButtonTextFrame
@@ -336,11 +397,11 @@ public final class ChatImportActivityScreen: ViewController {
     private let context: AccountContext
     private var presentationData: PresentationData
     fileprivate let cancel: () -> Void
-    private var peerId: PeerId
-    private let archive: Archive
+    fileprivate var peerId: PeerId
+    private let archivePath: String
     private let mainEntry: TempBoxFile
     private let mainEntrySize: Int
-    private let otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]
+    private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>)]
     private let totalBytes: Int
     
     private var pendingEntries: [String: (Int, Float)] = [:]
@@ -354,13 +415,31 @@ public final class ChatImportActivityScreen: ViewController {
         }
     }
     
-    public init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archive: Archive, mainEntry: TempBoxFile, otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]) {
+    public init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archivePath: String, mainEntry: TempBoxFile, otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]) {
         self.context = context
         self.cancel = cancel
         self.peerId = peerId
-        self.archive = archive
+        self.archivePath = archivePath
         self.mainEntry = mainEntry
-        self.otherEntries = otherEntries
+        
+        self.otherEntries = otherEntries.map { entry -> (SSZipEntry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>) in
+            let signal = Signal<TempBoxFile?, NoError> { subscriber in
+                let tempFile = TempBox.shared.tempFile(fileName: entry.1)
+                if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
+                    subscriber.putNext(tempFile)
+                    subscriber.putCompletion()
+                } else {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+                }
+                
+                return EmptyDisposable
+            }
+            |> runOn(Queue.concurrentDefaultQueue())
+            let promise = Promise<TempBoxFile?>()
+            promise.set(signal)
+            return (entry.0, entry.1, entry.2, promise)
+        }
         
         if let size = fileSize(self.mainEntry.path) {
             self.mainEntrySize = size
@@ -369,12 +448,12 @@ public final class ChatImportActivityScreen: ViewController {
         }
         
         for (entry, fileName, _) in otherEntries {
-            self.pendingEntries[fileName] = (entry.uncompressedSize, 0.0)
+            self.pendingEntries[fileName] = (Int(entry.uncompressedSize), 0.0)
         }
         
         var totalBytes: Int = self.mainEntrySize
         for entry in self.otherEntries {
-            totalBytes += entry.0.uncompressedSize
+            totalBytes += Int(entry.0.uncompressedSize)
         }
         self.totalBytes = totalBytes
         
@@ -382,8 +461,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true, hideBadge: true))
         
-        //TODO:localize
-        self.title = "Importing Chat"
+        self.title = self.presentationData.strings.ChatImportActivity_Title
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         
@@ -427,10 +505,6 @@ public final class ChatImportActivityScreen: ViewController {
     }
     
     private func beginImport() {
-        enum ImportError {
-            case generic
-        }
-        
         for (key, value) in self.pendingEntries {
             self.pendingEntries[key] = (value.0, 0.0)
         }
@@ -438,7 +512,6 @@ public final class ChatImportActivityScreen: ViewController {
         self.controllerNode.updateState(state: .progress(0.0), animated: true)
         
         let context = self.context
-        let archive = self.archive
         let mainEntry = self.mainEntry
         let otherEntries = self.otherEntries
         
@@ -459,25 +532,31 @@ public final class ChatImportActivityScreen: ViewController {
             }
             
             return ChatHistoryImport.initSession(account: context.account, peerId: peerId, file: mainEntry, mediaCount: Int32(otherEntries.count))
-            |> mapError { _ -> ImportError in
-                return .generic
+            |> mapError { error -> ImportError in
+                switch error {
+                case .chatAdminRequired:
+                    return .chatAdminRequired
+                case .invalidChatType:
+                    return .invalidChatType
+                case .generic:
+                    return .generic
+                }
             }
         }
         |> mapToSignal { session -> Signal<(String, Float), ImportError> in
             var importSignal: Signal<(String, Float), ImportError> = .single(("", 0.0))
             
-            for (entry, fileName, mediaType) in otherEntries {
-                let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
-                    let tempFile = TempBox.shared.tempFile(fileName: fileName)
-                    do {
-                        let _ = try archive.extract(entry, to: URL(fileURLWithPath: tempFile.path))
-                        subscriber.putNext(tempFile)
-                        subscriber.putCompletion()
-                    } catch {
-                        subscriber.putError(.generic)
+            for (_, fileName, mediaType, fileData) in otherEntries {
+                let unpackedFile: Signal<TempBoxFile, ImportError> = fileData.get()
+                |> take(1)
+                |> deliverOnMainQueue
+                |> castError(ImportError.self)
+                |> mapToSignal { file -> Signal<TempBoxFile, ImportError> in
+                    if let file = file {
+                        return .single(file)
+                    } else {
+                        return .fail(.generic)
                     }
-                    
-                    return EmptyDisposable
                 }
                 let uploadedMedia = unpackedFile
                 |> mapToSignal { tempFile -> Signal<(String, Float), ImportError> in
@@ -490,8 +569,13 @@ public final class ChatImportActivityScreen: ViewController {
                     }
                     
                     return ChatHistoryImport.uploadMedia(account: context.account, session: session, file: tempFile, fileName: fileName, mimeType: mimeTypeValue, type: mediaType)
-                    |> mapError { _ -> ImportError in
-                        return .generic
+                    |> mapError { error -> ImportError in
+                        switch error {
+                        case .chatAdminRequired:
+                            return .chatAdminRequired
+                        case .generic:
+                            return .generic
+                        }
                     }
                     |> map { progress -> (String, Float) in
                         return (fileName, progress)
@@ -531,11 +615,11 @@ public final class ChatImportActivityScreen: ViewController {
                 totalProgress = CGFloat(totalDoneBytes) / CGFloat(strongSelf.totalBytes)
             }
             strongSelf.controllerNode.updateState(state: .progress(totalProgress), animated: true)
-        }, error: { [weak self] _ in
+        }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.controllerNode.updateState(state: .error, animated: true)
+            strongSelf.controllerNode.updateState(state: .error(error), animated: true)
         }, completed: { [weak self] in
             guard let strongSelf = self else {
                 return
