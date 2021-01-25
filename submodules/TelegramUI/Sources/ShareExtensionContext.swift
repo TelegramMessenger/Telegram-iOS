@@ -648,7 +648,7 @@ public class ShareRootControllerImpl {
                                                                 }
                                                             })
                                                         }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                        })], parseMarkdown: true)
+                                                        })], actionLayout: .vertical, parseMarkdown: true)
                                                         strongSelf.mainWindow?.present(controller, on: .root)
                                                     }
                                                     
@@ -861,7 +861,7 @@ public class ShareRootControllerImpl {
                                                                 }
                                                             })
                                                         }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                        })], parseMarkdown: true)
+                                                        })], actionLayout: .vertical, parseMarkdown: true)
                                                         strongSelf.mainWindow?.present(controller, on: .root)
                                                     }
                                                     
