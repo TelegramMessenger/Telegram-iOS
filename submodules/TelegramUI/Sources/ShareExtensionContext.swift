@@ -223,7 +223,7 @@ public class ShareRootControllerImpl {
             }
             |> castError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
-                Logger.shared.logToFile = loggingSettings.logToFile
+                Logger.shared.logToFile = true//loggingSettings.logToFile
                 Logger.shared.logToConsole = loggingSettings.logToConsole
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData

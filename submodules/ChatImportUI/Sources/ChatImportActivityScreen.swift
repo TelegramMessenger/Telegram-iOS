@@ -18,54 +18,34 @@ import TelegramUniversalVideoContent
 import SolidRoundedButtonNode
 
 private final class ProgressEstimator {
-    private var samples: [(Double, Float)] = []
-    
-    private var estimatedCompletion: Double?
+    private var averageProgressPerSecond: Double = 0.0
+    private var lastMeasurement: (Double, Float)?
     
     init() {
     }
     
-    func addSample(progress: Float) {
+    func update(progress: Float) -> Double? {
         let timestamp = CACurrentMediaTime()
+        if let (lastTimestamp, lastProgress) = self.lastMeasurement {
+            if abs(lastProgress - progress) >= 0.01 || abs(lastTimestamp - timestamp) > 1.0 {
+                let immediateProgressPerSecond = Double(progress - lastProgress) / (timestamp - lastTimestamp)
+                let alpha: Double = 0.05
+                self.averageProgressPerSecond = alpha * immediateProgressPerSecond + (1.0 - alpha) * self.averageProgressPerSecond
+                self.lastMeasurement = (timestamp, progress)
+            }
+        } else {
+            self.lastMeasurement = (timestamp, progress)
+        }
         
-        self.samples.append((CACurrentMediaTime(), progress))
+        //print("progress = \(progress)")
+        //print("averageProgressPerSecond = \(self.averageProgressPerSecond)")
         
-        self.samples = self.samples.filter({ $0.0 >= timestamp - 3.0 })
-    }
-    
-    func estimateETA() -> Double? {
-        if self.samples.count < 2 {
+        if self.averageProgressPerSecond < 0.0001 {
             return nil
-        }
-        
-        var totalTime: Double = 0.0
-        var totalProgress: Double = 0.0
-        var lastProgress: Double = 0.0
-        var lastTimestamp: Double = 0.0
-        for i in 1 ..< samples.count {
-            totalTime += samples[i].0 - samples[i - 1].0
-            totalProgress += Double(samples[i].1 - samples[i - 1].1)
-            lastProgress = Double(samples[i].1)
-            lastTimestamp = samples[i].0
-        }
-        
-        let remainingProgress = 1.0 - lastProgress
-        let timeOffset = CACurrentMediaTime() - lastTimestamp
-        let remainingTime = remainingProgress * totalTime / totalProgress - timeOffset
-        /*print("remainingProgress = \(remainingProgress)")
-        print("totalTime = \(totalTime)")
-        print("totalProgress = \(totalProgress)")
-        print("ETA = \(remainingProgress * totalTime / totalProgress) - \(timeOffset) = \(remainingTime)")*/
-        return max(0.0, remainingTime)
-    }
-    
-    func markEstimatedCompletion() {
-        self.estimatedCompletion = CACurrentMediaTime()
-    }
-    
-    func markActualCompletion() {
-        if let estimatedCompletion = self.estimatedCompletion {
-            print("Estimator error: \(CACurrentMediaTime() - estimatedCompletion)")
+        } else {
+            let remainingProgress = Double(1.0 - progress)
+            let remainingTime = remainingProgress / self.averageProgressPerSecond
+            return remainingTime
         }
     }
 }
@@ -282,7 +262,7 @@ public final class ChatImportActivityScreen: ViewController {
                 effectiveProgress = 1.0
             }
             
-            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: 42.0, design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: 36.0, design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
             
             self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(effectiveProgress * CGFloat(self.totalBytes)))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes))))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
@@ -305,9 +285,9 @@ public final class ChatImportActivityScreen: ViewController {
                 case .chatAdminRequired:
                     errorText = self.presentationData.strings.ChatImportActivity_ErrorNotAdmin
                 case .invalidChatType:
-                    errorText = self.presentationData.strings.ChatImportActivity_ErrorGeneric
-                case .generic:
                     errorText = self.presentationData.strings.ChatImportActivity_ErrorInvalidChatType
+                case .generic:
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorGeneric
                 }
                 self.statusText.attributedText = NSAttributedString(string: errorText, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
             case .done:
@@ -479,6 +459,7 @@ public final class ChatImportActivityScreen: ViewController {
     private let totalMediaBytes: Int
     
     private var progressEstimator: ProgressEstimator?
+    private var totalMediaProgress: Float = 0.0
     private var beganCompletion: Bool = false
     
     private var pendingEntries: [String: (Int, Float)] = [:]
@@ -704,11 +685,7 @@ public final class ChatImportActivityScreen: ViewController {
                 totalMediaProgress = CGFloat(totalDoneMediaBytes) / CGFloat(strongSelf.totalMediaBytes)
             }
             strongSelf.controllerNode.updateState(state: .progress(totalProgress), animated: true)
-            
-            if let progressEstimator = strongSelf.progressEstimator {
-                progressEstimator.addSample(progress: Float(totalMediaProgress))
-                strongSelf.updateProgressEstimation()
-            }
+            strongSelf.totalMediaProgress = Float(totalMediaProgress)
         }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -728,10 +705,13 @@ public final class ChatImportActivityScreen: ViewController {
     
     fileprivate func updateProgressEstimation() {
         if !self.beganCompletion, let progressEstimator = self.progressEstimator, let remainingAnimationSeconds = self.controllerNode.remainingAnimationSeconds {
-            if let eta = progressEstimator.estimateETA(), eta <= remainingAnimationSeconds + 1.5 {
-                self.beganCompletion = true
-                progressEstimator.markEstimatedCompletion()
-                self.controllerNode.transitionToDoneAnimation()
+            if let remainingSeconds = progressEstimator.update(progress: self.totalMediaProgress) {
+                //print("remainingSeconds: \(remainingSeconds)")
+                //print("remainingAnimationSeconds + 1.0: \(remainingAnimationSeconds + 1.0)")
+                if remainingSeconds <= remainingAnimationSeconds + 1.0 {
+                    self.beganCompletion = true
+                    self.controllerNode.transitionToDoneAnimation()
+                }
             }
         }
     }

@@ -32,6 +32,7 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         image: UIImage?,
         appearance: ChatListNodeAdditionalCategory.Appearance,
         isSelected: Bool,
+        header: ListViewItemHeader?,
         action: @escaping () -> Void
     ) {
         self.presentationData = presentationData
@@ -47,7 +48,7 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         case .option:
             self.header = ChatListSearchItemHeader(type: .chatTypes, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
         case .action:
-            self.header = nil
+            self.header = header
         }
     }
     
