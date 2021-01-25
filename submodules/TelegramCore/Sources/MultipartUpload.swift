@@ -117,6 +117,7 @@ private final class MultipartUploadManager {
     var defaultPartSize: Int
     var bigTotalParts: Int?
     var bigParts: Bool
+    private let useLargerParts: Bool
     
     let queue = Queue()
     let fileId: Int64
@@ -145,6 +146,8 @@ private final class MultipartUploadManager {
         arc4random_buf(&fileId, 8)
         self.fileId = fileId
         
+        self.useLargerParts = useLargerParts
+        
         self.state = MultipartUploadState(encryptionKey: encryptionKey)
         
         self.committedOffset = 0
@@ -168,7 +171,7 @@ private final class MultipartUploadManager {
             self.bigParts = true
         } else if useLargerParts {
             self.bigParts = false
-            self.defaultPartSize = 64 * 1024
+            self.defaultPartSize = 128 * 1024
             self.bigTotalParts = nil
         } else {
             self.bigParts = false
@@ -206,7 +209,11 @@ private final class MultipartUploadManager {
                     self.bigParts = true
                 } else {
                     self.bigParts = false
-                    self.defaultPartSize = 16 * 1024
+                    if self.useLargerParts {
+                        self.defaultPartSize = 128 * 1024
+                    } else {
+                        self.defaultPartSize = 16 * 1024
+                    }
                     self.bigTotalParts = nil
                 }
             }
@@ -372,9 +379,24 @@ enum MultipartUploadError {
     case generic
 }
 
-func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool, useLargerParts: Bool = false) -> Signal<MultipartUploadResult, MultipartUploadError> {
-    return network.upload(tag: tag)
-    |> mapToSignalPromotingError { download -> Signal<MultipartUploadResult, MultipartUploadError> in
+func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool, useLargerParts: Bool = false, useMultiplexedRequests: Bool = false) -> Signal<MultipartUploadResult, MultipartUploadError> {
+    enum UploadInterface {
+        case download(Download)
+        case multiplexed(manager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64)
+    }
+    
+    let uploadInterface: Signal<UploadInterface, NoError>
+    if useMultiplexedRequests {
+        uploadInterface = .single(.multiplexed(manager: network.multiplexedRequestManager, datacenterId: network.datacenterId, consumerId: arc4random64()))
+    } else {
+        uploadInterface = network.upload(tag: tag)
+        |> map { download -> UploadInterface in
+            return .download(download)
+        }
+    }
+    
+    return uploadInterface
+    |> mapToSignalPromotingError { uploadInterface -> Signal<MultipartUploadResult, MultipartUploadError> in
         return Signal { subscriber in
             var encryptionKey: SecretFileEncryptionKey?
             if encrypt {
@@ -424,7 +446,12 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
             }
             
             let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, useLargerParts: useLargerParts, uploadPart: { part in
-                return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, asBigPart: part.bigPart, bigTotalParts: part.bigTotalParts)
+                switch uploadInterface {
+                case let .download(download):
+                    return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, asBigPart: part.bigPart, bigTotalParts: part.bigTotalParts)
+                case let .multiplexed(multiplexed, datacenterId, consumerId):
+                    return Download.uploadPart(multiplexedManager: multiplexed, datacenterId: datacenterId, consumerId: consumerId, tag: nil, fileId: part.fileId, index: part.index, data: part.data, asBigPart: part.bigPart, bigTotalParts: part.bigTotalParts)
+                }
             }, progress: { progress in
                 subscriber.putNext(.progress(progress))
             }, completed: { result in
