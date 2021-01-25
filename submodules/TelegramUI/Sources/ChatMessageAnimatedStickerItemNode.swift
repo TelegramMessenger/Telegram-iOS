@@ -970,7 +970,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let initialFrame = animationNode.view.convert(animationNode.bounds, to: parentNode.view)
                         parentNode.addSubnode(animationNode)
                         animationNode.frame = initialFrame
-                        
+                                                
                         var targetPositionY = initialFrame.center.y
                         if let listNode = strongSelf.greetingStickerListNode as? ListView {
                             targetPositionY = listNode.frame.height - listNode.insets.top - animationNodeFrame.height / 2.0 - 12.0
@@ -982,10 +982,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         animationNode.layer.animatePosition(from: initialFrame.center, to: targetPosition, duration: 0.4, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.3, 0.0, 0.0, 1.0), removeOnCompletion: false, completion: { [weak self] finished in
                             if let strongSelf = self {
+                                let initialDateNodeFrame = strongSelf.dateAndStatusNode.frame
+                                if strongSelf.animatingGreeting {
+                                    if strongSelf.dateAndStatusNode.supernode !== parentNode {
+                                        let dateNodeFrame = strongSelf.dateAndStatusNode.view.convert(strongSelf.dateAndStatusNode.bounds, to: parentNode.view)
+                                        parentNode.addSubnode(strongSelf.dateAndStatusNode)
+                                        strongSelf.dateAndStatusNode.frame = dateNodeFrame
+                                        
+                                        strongSelf.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    }
+                                }
+                                
                                 strongSelf.greetingCompletion?({
                                     animationNode.layer.removeAllAnimations()
                                     strongSelf.animationNode?.frame = animationNodeFrame
                                     strongSelf.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: strongSelf.imageNode)
+                                    
+                                    strongSelf.contextSourceNode.contentNode.addSubnode(strongSelf.dateAndStatusNode)
+                                    strongSelf.dateAndStatusNode.frame = initialDateNodeFrame
                                     
                                     if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
                                         animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
@@ -1023,7 +1037,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     dateAndStatusApply(false)
-                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
+                    let dateAndStatusFrame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
+                    if strongSelf.dateAndStatusNode.supernode != strongSelf.greetingStickerParentNode {
+                        strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
+                    }
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {
