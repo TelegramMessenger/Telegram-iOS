@@ -159,7 +159,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker {
             let sticker: Signal<TelegramMediaFile?, NoError>
-            if let preloadedSticker = interfaceState.peerNearbyData?.sticker {
+            if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = .single(preloadedSticker)
             } else {
                 sticker = randomGreetingSticker(account: self.account)
@@ -336,7 +336,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker {
             let sticker: Signal<TelegramMediaFile?, NoError>
-            if let preloadedSticker = interfaceState.peerNearbyData?.sticker {
+            if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = .single(preloadedSticker)
             } else {
                 sticker = randomGreetingSticker(account: self.account)

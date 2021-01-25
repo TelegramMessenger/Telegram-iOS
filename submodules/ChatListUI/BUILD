@@ -58,6 +58,7 @@ swift_library(
         "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/TelegramCallsUI:TelegramCallsUI",
+        "//submodules/StickerResources:StickerResources",
     ],
     visibility = [
         "//visibility:public",
