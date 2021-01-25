@@ -497,6 +497,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     var nextItemOrigin = CGPoint(x: initialSpacing + itemInsets.left, y: 0.0)
                     var index = 0
                     var previousSection: GridSection?
+                    
+                    var previousFillsRow = false
+                    
                     for item in self.items {
                         var itemSize = defaultItemSize
                         
@@ -507,6 +510,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         } else if (previousSection != nil) != (section != nil) {
                             keepSection = false
                         }
+                        
+                    
+                        if !previousFillsRow && item.fillsRowWithDynamicHeight != nil {
+                            keepSection = false
+                        }
+                        previousFillsRow = item.fillsRowWithDynamicHeight != nil
                         
                         if !keepSection {
                             if incrementedCurrentRow {
