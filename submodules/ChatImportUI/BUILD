@@ -24,6 +24,7 @@ swift_library(
         "//submodules/MimeTypes:MimeTypes",
         "//submodules/ConfettiEffect:ConfettiEffect",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     visibility = [
         "//visibility:public",
