@@ -255,11 +255,20 @@ public final class ChatImportActivityScreen: ViewController {
             var hideIcon = false
             if case .compact = layout.metrics.heightClass, layout.size.width > layout.size.height {
                 hideIcon = true
-                contentHeight = radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 140.0
+                contentHeight = progressTextSize.height + progressStatusSpacing + 160.0
             } else {
                 contentHeight = iconSize.height + maxIconStatusSpacing + radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 100.0
             }
             
+            transition.updateAlpha(node: self.radialStatus, alpha: hideIcon ? 0.0 : 1.0)
+            transition.updateAlpha(node: self.radialStatusBackground, alpha: hideIcon ? 0.0 : 1.0)
+            switch self.state {
+            case .done:
+                break
+            default:
+                transition.updateAlpha(node: self.radialStatusText, alpha: hideIcon ? 0.0 : 1.0)
+            }
+            transition.updateAlpha(node: self.radialCheck, alpha: hideIcon ? 0.0 : 1.0)
             transition.updateAlpha(node: self.animationNode, alpha: hideIcon ? 0.0 : 1.0)
             transition.updateAlpha(node: self.doneAnimationNode, alpha: hideIcon ? 0.0 : 1.0)
             
@@ -270,14 +279,14 @@ public final class ChatImportActivityScreen: ViewController {
             self.doneAnimationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
             self.doneAnimationNode.updateLayout(size: iconSize)
             
-            self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: hideIcon ? contentOriginY : (contentOriginY + iconSize.height + maxIconStatusSpacing)), size: radialStatusSize)
+            self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: contentOriginY + iconSize.height + maxIconStatusSpacing), size: radialStatusSize)
             let checkSize: CGFloat = 130.0
             self.radialCheck.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
             self.radialStatusBackground.frame = self.radialStatus.frame
             
             self.radialStatusText.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize)
             
-            self.progressText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: self.radialStatus.frame.maxY + maxProgressTextSpacing), size: progressTextSize)
+            self.progressText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: hideIcon ? contentOriginY : (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize)
             
             if case .progress = self.state {
                 self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.maxY + progressStatusSpacing), size: statusTextSize)
@@ -299,8 +308,8 @@ public final class ChatImportActivityScreen: ViewController {
                 self.progressText.isHidden = true
             }
             
-            let buttonSideInset: CGFloat = 40.0
-            let buttonWidth = min(layout.size.width - buttonSideInset * 2.0, horizontalContainerFillingSizeForLayout(layout: layout, sideInset: buttonSideInset))
+            let buttonSideInset: CGFloat = 75.0
+            let buttonWidth = max(240.0, min(layout.size.width - buttonSideInset * 2.0, horizontalContainerFillingSizeForLayout(layout: layout, sideInset: buttonSideInset)))
             
             let buttonHeight = self.doneButton.updateLayout(width: buttonWidth, transition: .immediate)
             
