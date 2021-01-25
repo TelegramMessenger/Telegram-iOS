@@ -1530,6 +1530,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         super.init()
         
+        self.paneContainerNode.parentController = controller
+        
         self._interaction = PeerInfoInteraction(
             openUsername: { [weak self] value in
                 self?.openUsername(value: value)

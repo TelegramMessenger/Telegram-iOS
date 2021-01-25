@@ -1089,8 +1089,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.ready.set(self.chatListDisplayNode.containerNode.ready)
         
         self.displayNodeDidLoad()
+    }
+    
+    public override func displayNodeDidLoad() {
+        super.displayNodeDidLoad()
         
-        self.prepareRandomGreetingSticker()
+        Queue.mainQueue().after(1.0) {
+            self.prepareRandomGreetingSticker()
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
