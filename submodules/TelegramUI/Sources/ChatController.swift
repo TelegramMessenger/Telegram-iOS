@@ -2721,6 +2721,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let previous = strongSelf.peerView, let group = previous.peers[previous.peerId] as? TelegramGroup, group.migrationReference == nil, let updatedGroup = peerView.peers[peerView.peerId] as? TelegramGroup, let migrationReference = updatedGroup.migrationReference {
                             upgradedToPeerId = migrationReference.peerId
                         }
+                        
+                        var shouldDismiss = false
+                        if let previous = strongSelf.peerView, let group = previous.peers[previous.peerId] as? TelegramGroup, group.membership != .Removed, let updatedGroup = peerView.peers[peerView.peerId] as? TelegramGroup, updatedGroup.membership == .Removed {
+                            shouldDismiss = true
+                        } else if let previous = strongSelf.peerView, let channel = previous.peers[previous.peerId] as? TelegramChannel, channel.participationStatus != .kicked, let updatedChannel = peerView.peers[peerView.peerId] as? TelegramChannel, updatedChannel.participationStatus == .kicked {
+                            shouldDismiss = true
+                        } else if let previous = strongSelf.peerView, let secretChat = previous.peers[previous.peerId] as? TelegramSecretChat, case .active = secretChat.embeddedState, let updatedSecretChat = peerView.peers[peerView.peerId] as? TelegramSecretChat, case .terminated = updatedSecretChat.embeddedState {
+                            shouldDismiss = true
+                        }
+                        
                         var wasGroupChannel: Bool?
                         if let previousPeerView = strongSelf.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
                             if case .group = info {
@@ -2918,6 +2928,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     navigationController.setViewControllers(viewControllers, animated: false)
                                 }
                             }
+                        } else if shouldDismiss {
+                            strongSelf.dismiss()
                         }
                     }
                 }))
