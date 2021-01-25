@@ -432,6 +432,7 @@ public final class ChatImportActivityScreen: ViewController {
             let signal = Signal<TempBoxFile?, NoError> { subscriber in
                 let tempFile = TempBox.shared.tempFile(fileName: entry.1)
                 if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
+                    //print("Extract \(entry.0.path) to \(tempFile.path)")
                     subscriber.putNext(tempFile)
                     subscriber.putCompletion()
                 } else {
