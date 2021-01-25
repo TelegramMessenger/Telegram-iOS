@@ -302,11 +302,17 @@ public final class ChatImportActivityScreen: ViewController {
                 self.progressText.isHidden = true
             } else {
                 self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
+                self.statusButtonText.isHidden = false
+                self.statusButton.isHidden = false
+                self.doneButton.isHidden = true
+                self.progressText.isHidden = true
+            }/* else {
+                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
                 self.statusButtonText.isHidden = true
                 self.statusButton.isHidden = true
                 self.doneButton.isHidden = false
                 self.progressText.isHidden = true
-            }
+            }*/
             
             let buttonSideInset: CGFloat = 75.0
             let buttonWidth = max(240.0, min(layout.size.width - buttonSideInset * 2.0, horizontalContainerFillingSizeForLayout(layout: layout, sideInset: buttonSideInset)))
@@ -395,7 +401,7 @@ public final class ChatImportActivityScreen: ViewController {
     private let archive: Archive
     private let mainEntry: TempBoxFile
     private let mainEntrySize: Int
-    private let otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]
+    private let otherEntries: [(Entry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>)]
     private let totalBytes: Int
     
     private var pendingEntries: [String: (Int, Float)] = [:]
@@ -415,7 +421,25 @@ public final class ChatImportActivityScreen: ViewController {
         self.peerId = peerId
         self.archive = archive
         self.mainEntry = mainEntry
-        self.otherEntries = otherEntries
+        
+        self.otherEntries = otherEntries.map { entry -> (Entry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>) in
+            let signal = Signal<TempBoxFile?, NoError> { subscriber in
+                let tempFile = TempBox.shared.tempFile(fileName: entry.1)
+                do {
+                    let _ = try archive.extract(entry.0, to: URL(fileURLWithPath: tempFile.path))
+                    subscriber.putNext(tempFile)
+                    subscriber.putCompletion()
+                } catch {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+                }
+                
+                return EmptyDisposable
+            }
+            let promise = Promise<TempBoxFile?>()
+            promise.set(signal)
+            return (entry.0, entry.1, entry.2, promise)
+        }
         
         if let size = fileSize(self.mainEntry.path) {
             self.mainEntrySize = size
@@ -523,18 +547,16 @@ public final class ChatImportActivityScreen: ViewController {
         |> mapToSignal { session -> Signal<(String, Float), ImportError> in
             var importSignal: Signal<(String, Float), ImportError> = .single(("", 0.0))
             
-            for (entry, fileName, mediaType) in otherEntries {
-                let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
-                    let tempFile = TempBox.shared.tempFile(fileName: fileName)
-                    do {
-                        let _ = try archive.extract(entry, to: URL(fileURLWithPath: tempFile.path))
-                        subscriber.putNext(tempFile)
-                        subscriber.putCompletion()
-                    } catch {
-                        subscriber.putError(.generic)
+            for (_, fileName, mediaType, fileData) in otherEntries {
+                let unpackedFile: Signal<TempBoxFile, ImportError> = fileData.get()
+                |> take(1)
+                |> castError(ImportError.self)
+                |> mapToSignal { file -> Signal<TempBoxFile, ImportError> in
+                    if let file = file {
+                        return .single(file)
+                    } else {
+                        return .fail(.generic)
                     }
-                    
-                    return EmptyDisposable
                 }
                 let uploadedMedia = unpackedFile
                 |> mapToSignal { tempFile -> Signal<(String, Float), ImportError> in
