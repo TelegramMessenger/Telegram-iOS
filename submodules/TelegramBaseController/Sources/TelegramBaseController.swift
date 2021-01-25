@@ -691,7 +691,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         let slowdown = baseRate == .x1
                         strongSelf.present(
                             UndoOverlayController(
-                                presentationData: strongSelf.presentationData,
+                                presentationData: presentationData,
                                 content: .audioRate(
                                     slowdown: slowdown,
                                     text: slowdown ? presentationData.strings.Conversation_AudioRateTooltipNormal : presentationData.strings.Conversation_AudioRateTooltipSpeedUp

@@ -13,6 +13,8 @@ import ContextUI
 protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
     
+    var parentController: ViewController? { get set }
+    
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
     func transferVelocity(_ velocity: CGFloat)
@@ -375,7 +377,8 @@ private final class PeerInfoPendingPane {
         requestPerformPeerMemberAction: @escaping (PeerInfoMember, PeerMembersListAction) -> Void,
         peerId: PeerId,
         key: PeerInfoPaneKey,
-        hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void
+        hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void,
+        parentController: ViewController?
     ) {
         let paneNode: PeerInfoPaneNode
         switch key {
@@ -402,7 +405,7 @@ private final class PeerInfoPendingPane {
                 preconditionFailure()
             }
         }
-        
+        paneNode.parentController = parentController
         self.pane = PeerInfoPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
         |> take(1)
@@ -420,6 +423,8 @@ private final class PeerInfoPendingPane {
 final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let peerId: PeerId
+    
+    weak var parentController: ViewController?
     
     private let coveringBackgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
@@ -750,7 +755,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                         if leftScope {
                             apply()
                         }
-                    }
+                    },
+                    parentController: self.parentController
                 )
                 self.pendingPanes[key] = pane
                 pane.pane.node.frame = paneFrame
