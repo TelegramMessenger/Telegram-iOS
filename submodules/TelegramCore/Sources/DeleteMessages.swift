@@ -104,16 +104,16 @@ public func clearCallHistory(account: Account, forEveryone: Bool) -> Signal<Neve
         }
         
         let signal = account.network.request(Api.functions.messages.deletePhoneCallHistory(flags: flags))
-        |> map { result -> Api.messages.AffectedHistory? in
+        |> map { result -> Api.messages.AffectedFoundMessages? in
             return result
         }
-        |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+        |> `catch` { _ -> Signal<Api.messages.AffectedFoundMessages?, Bool> in
             return .fail(false)
         }
         |> mapToSignal { result -> Signal<Void, Bool> in
             if let result = result {
                 switch result {
-                case let .affectedHistory(pts, ptsCount, offset):
+                case let .affectedFoundMessages(pts, ptsCount, offset, _):
                     account.stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
                     if offset == 0 {
                         return .fail(true)

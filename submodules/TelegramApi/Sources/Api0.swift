@@ -559,6 +559,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2037963464] = { return Api.InputMessage.parse_inputMessagePinned($0) }
     dict[-58224696] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
+    dict[-275956116] = { return Api.messages.AffectedFoundMessages.parse_affectedFoundMessages($0) }
     dict[-1567175714] = { return Api.MessageFwdAuthor.parse_messageFwdAuthor($0) }
     dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
     dict[-1963717851] = { return Api.WallPaper.parse_wallPaperNoFile($0) }
@@ -1300,6 +1301,8 @@ public struct Api {
             case let _1 as Api.PhoneCallProtocol:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsDateRangeDays:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.AffectedFoundMessages:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageFwdAuthor:
                 _1.serialize(buffer, boxed)
