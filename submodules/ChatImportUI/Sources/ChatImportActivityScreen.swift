@@ -11,7 +11,7 @@ import PresentationDataUtils
 import RadialStatusNode
 import AnimatedStickerNode
 import AppBundle
-import ZIPFoundation
+import ZipArchive
 import MimeTypes
 import ConfettiEffect
 import TelegramUniversalVideoContent
@@ -398,10 +398,10 @@ public final class ChatImportActivityScreen: ViewController {
     private var presentationData: PresentationData
     fileprivate let cancel: () -> Void
     fileprivate var peerId: PeerId
-    private let archive: Archive
+    private let archivePath: String
     private let mainEntry: TempBoxFile
     private let mainEntrySize: Int
-    private let otherEntries: [(Entry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>)]
+    private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>)]
     private let totalBytes: Int
     
     private var pendingEntries: [String: (Int, Float)] = [:]
@@ -415,27 +415,27 @@ public final class ChatImportActivityScreen: ViewController {
         }
     }
     
-    public init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archive: Archive, mainEntry: TempBoxFile, otherEntries: [(Entry, String, ChatHistoryImport.MediaType)]) {
+    public init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archivePath: String, mainEntry: TempBoxFile, otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]) {
         self.context = context
         self.cancel = cancel
         self.peerId = peerId
-        self.archive = archive
+        self.archivePath = archivePath
         self.mainEntry = mainEntry
         
-        self.otherEntries = otherEntries.map { entry -> (Entry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>) in
+        self.otherEntries = otherEntries.map { entry -> (SSZipEntry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>) in
             let signal = Signal<TempBoxFile?, NoError> { subscriber in
                 let tempFile = TempBox.shared.tempFile(fileName: entry.1)
-                do {
-                    let _ = try archive.extract(entry.0, to: URL(fileURLWithPath: tempFile.path))
+                if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
                     subscriber.putNext(tempFile)
                     subscriber.putCompletion()
-                } catch {
+                } else {
                     subscriber.putNext(nil)
                     subscriber.putCompletion()
                 }
                 
                 return EmptyDisposable
             }
+            |> runOn(Queue.concurrentDefaultQueue())
             let promise = Promise<TempBoxFile?>()
             promise.set(signal)
             return (entry.0, entry.1, entry.2, promise)
@@ -448,12 +448,12 @@ public final class ChatImportActivityScreen: ViewController {
         }
         
         for (entry, fileName, _) in otherEntries {
-            self.pendingEntries[fileName] = (entry.uncompressedSize, 0.0)
+            self.pendingEntries[fileName] = (Int(entry.uncompressedSize), 0.0)
         }
         
         var totalBytes: Int = self.mainEntrySize
         for entry in self.otherEntries {
-            totalBytes += entry.0.uncompressedSize
+            totalBytes += Int(entry.0.uncompressedSize)
         }
         self.totalBytes = totalBytes
         
@@ -512,7 +512,6 @@ public final class ChatImportActivityScreen: ViewController {
         self.controllerNode.updateState(state: .progress(0.0), animated: true)
         
         let context = self.context
-        let archive = self.archive
         let mainEntry = self.mainEntry
         let otherEntries = self.otherEntries
         
@@ -550,6 +549,7 @@ public final class ChatImportActivityScreen: ViewController {
             for (_, fileName, mediaType, fileData) in otherEntries {
                 let unpackedFile: Signal<TempBoxFile, ImportError> = fileData.get()
                 |> take(1)
+                |> deliverOnMainQueue
                 |> castError(ImportError.self)
                 |> mapToSignal { file -> Signal<TempBoxFile, ImportError> in
                     if let file = file {

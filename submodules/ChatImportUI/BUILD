@@ -15,7 +15,7 @@ swift_library(
         "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/AppBundle:AppBundle",
-        "//third-party/ZIPFoundation:ZIPFoundation",
+        "//third-party/ZipArchive:ZipArchive",
         "//submodules/AccountContext:AccountContext",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/RadialStatusNode:RadialStatusNode",

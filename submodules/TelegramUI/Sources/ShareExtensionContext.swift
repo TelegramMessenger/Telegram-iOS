@@ -21,7 +21,7 @@ import MobileCoreServices
 import OverlayStatusController
 import PresentationDataUtils
 import ChatImportUI
-import ZIPFoundation
+import ZipArchive
 import ActivityIndicator
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -392,7 +392,7 @@ public class ShareRootControllerImpl {
                             if attachment.hasItemConformingToTypeIdentifier(kUTTypeFileURL as String) {
                                 attachment.loadItem(forTypeIdentifier: kUTTypeFileURL as String, completionHandler: { result, error in
                                     Queue.mainQueue().async {
-                                        guard let url = result as? URL else {
+                                        guard let url = result as? URL, url.isFileURL else {
                                             beginShare()
                                             return
                                         }
@@ -405,7 +405,10 @@ public class ShareRootControllerImpl {
                                             beginShare()
                                             return
                                         }
-                                        guard let archive = Archive(url: url, accessMode: .read) else {
+                                        
+                                        let archivePath = url.path
+                                        
+                                        guard let entries = SSZipArchive.getEntriesForFile(atPath: archivePath) else {
                                             beginShare()
                                             return
                                         }
@@ -417,8 +420,8 @@ public class ShareRootControllerImpl {
                                         ]
                                         
                                         var maybeMainFileName: String?
-                                        mainFileLoop: for entry in archive {
-                                            let entryFileName = entry.path(using: .utf8).replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
+                                        mainFileLoop: for entry in entries {
+                                            let entryFileName = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
                                             let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
                                             for expression in mainFileNames {
                                                 if expression.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
@@ -438,19 +441,20 @@ public class ShareRootControllerImpl {
                                         let stickerRegex = try! NSRegularExpression(pattern: "[\\d]+-STICKER-.*?\\.webp")
                                         let voiceRegex = try! NSRegularExpression(pattern: "[\\d]+-AUDIO-.*?\\.opus")
                                         
-                                        var otherEntries: [(Entry, String, ChatHistoryImport.MediaType)] = []
+                                        var otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)] = []
                                         
                                         var mainFile: TempBoxFile?
                                         do {
-                                            for entry in archive {
-                                                let entryPath = entry.path(using: .utf8).replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
+                                            for entry in entries {
+                                                let entryPath = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
                                                 if entryPath.isEmpty {
                                                     continue
                                                 }
                                                 let tempFile = TempBox.shared.tempFile(fileName: entryPath)
                                                 if entryPath == mainFileName {
-                                                    let _ = try archive.extract(entry, to: URL(fileURLWithPath: tempFile.path))
-                                                    mainFile = tempFile
+                                                    if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.path, toPath: tempFile.path) {
+                                                        mainFile = tempFile
+                                                    }
                                                 } else {
                                                     let entryFileName = (entryPath as NSString).lastPathComponent
                                                     if !entryFileName.isEmpty {
@@ -557,7 +561,7 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePath, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { peer in
@@ -671,7 +675,7 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePath, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
@@ -733,7 +737,7 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePath, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in

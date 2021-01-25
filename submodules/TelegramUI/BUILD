@@ -213,7 +213,7 @@ swift_library(
         "//submodules/AnimatedNavigationStripeNode:AnimatedNavigationStripeNode",
         "//submodules/AudioBlob:AudioBlob",
         "//Telegram:GeneratedSources",
-        "//third-party/ZIPFoundation:ZIPFoundation",
+        "//third-party/ZipArchive:ZipArchive",
         "//submodules/ChatImportUI:ChatImportUI",
         "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
         "//submodules/DatePickerNode:DatePickerNode",
