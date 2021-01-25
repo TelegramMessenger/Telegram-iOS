@@ -24,6 +24,8 @@ fi
 
 OUTPUT_PATH="build/artifacts"
 
+BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" sh buildbox/build-telegram.sh verify
+
 if [ "$CONFIGURATION" == "appstore" ]; then
 	if [ -z "$IPA_PATH" ]; then
 		IPA_PATH="$OUTPUT_PATH/Telegram.ipa"
@@ -42,8 +44,6 @@ VERIFY_PATH="TelegramVerifyBuild.ipa"
 
 rm -f "$VERIFY_PATH"
 cp "$IPA_PATH" "$VERIFY_PATH"
-
-BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" sh buildbox/build-telegram.sh verify
 
 python3 tools/ipadiff.py "$IPA_PATH" "$VERIFY_PATH"
 retVal=$?

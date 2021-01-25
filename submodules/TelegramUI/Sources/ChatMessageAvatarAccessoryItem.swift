@@ -63,14 +63,18 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
                 return false
             }
             if let forwardInfo = self.forwardInfo, let otherForwardInfo = other.forwardInfo, forwardInfo.flags.contains(.isImported), otherForwardInfo.flags.contains(.isImported) {
-                if let authorSignature = forwardInfo.authorSignature, let otherAuthorSignature = otherForwardInfo.authorSignature {
-                    if authorSignature != otherAuthorSignature {
-                        return false
+                if (forwardInfo.authorSignature != nil) == (otherForwardInfo.authorSignature != nil) && (forwardInfo.author != nil) == (otherForwardInfo.author != nil) {
+                    if let authorSignature = forwardInfo.authorSignature, let otherAuthorSignature = otherForwardInfo.authorSignature {
+                        if authorSignature != otherAuthorSignature {
+                            return false
+                        }
+                    } else if let authorId = forwardInfo.author?.id, let otherAuthorId = otherForwardInfo.author?.id {
+                        if authorId != otherAuthorId {
+                            return false
+                        }
                     }
-                } else if let authorId = forwardInfo.author?.id, let otherAuthorId = other.forwardInfo?.author?.id {
-                    if authorId != otherAuthorId {
-                        return false
-                    }
+                } else {
+                    return false
                 }
             } else if let forwardInfo = self.forwardInfo, forwardInfo.flags.contains(.isImported) {
                 return false
