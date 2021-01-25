@@ -17,6 +17,59 @@ import ConfettiEffect
 import TelegramUniversalVideoContent
 import SolidRoundedButtonNode
 
+private final class ProgressEstimator {
+    private var samples: [(Double, Float)] = []
+    
+    private var estimatedCompletion: Double?
+    
+    init() {
+    }
+    
+    func addSample(progress: Float) {
+        let timestamp = CACurrentMediaTime()
+        
+        self.samples.append((CACurrentMediaTime(), progress))
+        
+        self.samples = self.samples.filter({ $0.0 >= timestamp - 3.0 })
+    }
+    
+    func estimateETA() -> Double? {
+        if self.samples.count < 2 {
+            return nil
+        }
+        
+        var totalTime: Double = 0.0
+        var totalProgress: Double = 0.0
+        var lastProgress: Double = 0.0
+        var lastTimestamp: Double = 0.0
+        for i in 1 ..< samples.count {
+            totalTime += samples[i].0 - samples[i - 1].0
+            totalProgress += Double(samples[i].1 - samples[i - 1].1)
+            lastProgress = Double(samples[i].1)
+            lastTimestamp = samples[i].0
+        }
+        
+        let remainingProgress = 1.0 - lastProgress
+        let timeOffset = CACurrentMediaTime() - lastTimestamp
+        let remainingTime = remainingProgress * totalTime / totalProgress - timeOffset
+        /*print("remainingProgress = \(remainingProgress)")
+        print("totalTime = \(totalTime)")
+        print("totalProgress = \(totalProgress)")
+        print("ETA = \(remainingProgress * totalTime / totalProgress) - \(timeOffset) = \(remainingTime)")*/
+        return max(0.0, remainingTime)
+    }
+    
+    func markEstimatedCompletion() {
+        self.estimatedCompletion = CACurrentMediaTime()
+    }
+    
+    func markActualCompletion() {
+        if let estimatedCompletion = self.estimatedCompletion {
+            print("Estimator error: \(CACurrentMediaTime() - estimatedCompletion)")
+        }
+    }
+}
+
 public final class ChatImportActivityScreen: ViewController {
     enum ImportError {
         case generic
@@ -56,6 +109,8 @@ public final class ChatImportActivityScreen: ViewController {
         
         private var videoNode: UniversalVideoNode?
         private var feedback: HapticFeedback?
+        
+        fileprivate var remainingAnimationSeconds: Double?
         
         init(controller: ChatImportActivityScreen, context: AccountContext, totalBytes: Int) {
             self.controller = controller
@@ -109,11 +164,11 @@ public final class ChatImportActivityScreen: ViewController {
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             
             if let path = getAppBundle().path(forResource: "HistoryImport", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 170 * 2, height: 170 * 2, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 190 * 2, height: 190 * 2, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 self.animationNode.visibility = true
             }
             if let path = getAppBundle().path(forResource: "HistoryImportDone", ofType: "tgs") {
-                self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 170 * 2, height: 170 * 2, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 190 * 2, height: 190 * 2, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 self.doneAnimationNode.started = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -155,6 +210,16 @@ public final class ChatImportActivityScreen: ViewController {
                 strongSelf.animationNode.visibility = false
                 strongSelf.doneAnimationNode.visibility = true
                 strongSelf.doneAnimationNode.isHidden = false
+            }
+            
+            self.animationNode.frameUpdated = { [weak self] index, totalCount in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let remainingSeconds = Double(totalCount - index) / 60.0
+                strongSelf.remainingAnimationSeconds = remainingSeconds
+                strongSelf.controller?.updateProgressEstimation()
             }
             
             if let path = getAppBundle().path(forResource: "BlankVideo", ofType: "m4v"), let size = fileSize(path) {
@@ -200,9 +265,9 @@ public final class ChatImportActivityScreen: ViewController {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
             
-            let iconSize = CGSize(width: 170.0, height: 170.0)
+            let iconSize = CGSize(width: 190.0, height: 190.0)
             let radialStatusSize = CGSize(width: 186.0, height: 186.0)
-            let maxIconStatusSpacing: CGFloat = 62.0
+            let maxIconStatusSpacing: CGFloat = 46.0
             let maxProgressTextSpacing: CGFloat = 33.0
             let progressStatusSpacing: CGFloat = 14.0
             let statusButtonSpacing: CGFloat = 19.0
@@ -331,6 +396,10 @@ public final class ChatImportActivityScreen: ViewController {
             }
         }
         
+        func transitionToDoneAnimation() {
+            self.animationNode.stopAtNearestLoop = true
+        }
+        
         func updateState(state: State, animated: Bool) {
             var wasDone = false
             if case .done = self.state {
@@ -388,8 +457,6 @@ public final class ChatImportActivityScreen: ViewController {
                             self.feedback = HapticFeedback()
                         }
                         self.feedback?.success()
-                        
-                        self.animationNode.stopAtNearestLoop = true
                     }
                 }
             }
@@ -409,6 +476,10 @@ public final class ChatImportActivityScreen: ViewController {
     private let mainEntrySize: Int
     private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>)]
     private let totalBytes: Int
+    private let totalMediaBytes: Int
+    
+    private var progressEstimator: ProgressEstimator?
+    private var beganCompletion: Bool = false
     
     private var pendingEntries: [String: (Int, Float)] = [:]
     
@@ -458,11 +529,12 @@ public final class ChatImportActivityScreen: ViewController {
             self.pendingEntries[fileName] = (Int(entry.uncompressedSize), 0.0)
         }
         
-        var totalBytes: Int = self.mainEntrySize
+        var totalMediaBytes = 0
         for entry in self.otherEntries {
-            totalBytes += Int(entry.0.uncompressedSize)
+            totalMediaBytes += Int(entry.0.uncompressedSize)
         }
-        self.totalBytes = totalBytes
+        self.totalBytes = self.mainEntrySize + totalMediaBytes
+        self.totalMediaBytes = totalMediaBytes
         
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -515,6 +587,9 @@ public final class ChatImportActivityScreen: ViewController {
         for (key, value) in self.pendingEntries {
             self.pendingEntries[key] = (value.0, 0.0)
         }
+        
+        self.progressEstimator = ProgressEstimator()
+        self.beganCompletion = false
         
         self.controllerNode.updateState(state: .progress(0.0), animated: true)
         
@@ -612,16 +687,28 @@ public final class ChatImportActivityScreen: ViewController {
                 }
             }
             
-            var totalDoneBytes = strongSelf.mainEntrySize
+            var totalDoneMediaBytes = 0
             for (_, sizeAndProgress) in strongSelf.pendingEntries {
-                totalDoneBytes += Int(Float(sizeAndProgress.0) * sizeAndProgress.1)
+                totalDoneMediaBytes += Int(Float(sizeAndProgress.0) * sizeAndProgress.1)
             }
+            
+            let totalDoneBytes = strongSelf.mainEntrySize + totalDoneMediaBytes
             
             var totalProgress: CGFloat = 1.0
             if !strongSelf.otherEntries.isEmpty {
                 totalProgress = CGFloat(totalDoneBytes) / CGFloat(strongSelf.totalBytes)
             }
+            var totalMediaProgress: CGFloat = 1.0
+            if !strongSelf.otherEntries.isEmpty {
+                totalProgress = CGFloat(totalDoneBytes) / CGFloat(strongSelf.totalBytes)
+                totalMediaProgress = CGFloat(totalDoneMediaBytes) / CGFloat(strongSelf.totalMediaBytes)
+            }
             strongSelf.controllerNode.updateState(state: .progress(totalProgress), animated: true)
+            
+            if let progressEstimator = strongSelf.progressEstimator {
+                progressEstimator.addSample(progress: Float(totalMediaProgress))
+                strongSelf.updateProgressEstimation()
+            }
         }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -637,5 +724,15 @@ public final class ChatImportActivityScreen: ViewController {
                 application.isIdleTimerDisabled = false
             }
         }))
+    }
+    
+    fileprivate func updateProgressEstimation() {
+        if !self.beganCompletion, let progressEstimator = self.progressEstimator, let remainingAnimationSeconds = self.controllerNode.remainingAnimationSeconds {
+            if let eta = progressEstimator.estimateETA(), eta <= remainingAnimationSeconds + 1.5 {
+                self.beganCompletion = true
+                progressEstimator.markEstimatedCompletion()
+                self.controllerNode.transitionToDoneAnimation()
+            }
+        }
     }
 }

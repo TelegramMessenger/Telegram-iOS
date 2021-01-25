@@ -163,7 +163,7 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
         }
     case _ as TelegramMediaAction:
         if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
-            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) ?? "")
+            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: false) ?? "")
         } else {
             return nil
         }
