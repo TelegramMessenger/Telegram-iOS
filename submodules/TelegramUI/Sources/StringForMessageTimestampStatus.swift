@@ -42,9 +42,7 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
     }
     
     if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
-        //TODO:localize
-        
-        dateText = dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date) + ", " + stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat) + " Imported " + dateText
+        dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).0
     }
     
     var authorTitle: String?

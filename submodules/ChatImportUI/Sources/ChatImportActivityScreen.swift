@@ -15,6 +15,7 @@ import ZIPFoundation
 import MimeTypes
 import ConfettiEffect
 import TelegramUniversalVideoContent
+import SolidRoundedButtonNode
 
 public final class ChatImportActivityScreen: ViewController {
     enum ImportError {
@@ -46,6 +47,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         private let statusButtonText: ImmediateTextNode
         private let statusButton: HighlightableButtonNode
+        private let doneButton: SolidRoundedButtonNode
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
@@ -100,6 +102,8 @@ public final class ChatImportActivityScreen: ViewController {
             
             self.statusButton = HighlightableButtonNode()
             
+            self.doneButton = SolidRoundedButtonNode(title: self.presentationData.strings.ChatImportActivity_OpenApp, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+            
             super.init()
             
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
@@ -129,6 +133,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.addSubnode(self.statusText)
             self.addSubnode(self.statusButtonText)
             self.addSubnode(self.statusButton)
+            self.addSubnode(self.doneButton)
             
             self.statusButton.addTarget(self, action: #selector(self.statusButtonPressed), forControlEvents: .touchUpInside)
             self.statusButton.highligthedChanged = { [weak self] highlighted in
@@ -167,6 +172,18 @@ public final class ChatImportActivityScreen: ViewController {
                 self.addSubnode(videoNode)
                 videoNode.canAttachContent = true
                 videoNode.play()
+                
+                self.doneButton.pressed = { [weak self] in
+                    guard let strongSelf = self, let controller = strongSelf.controller else {
+                        return
+                    }
+                    
+                    if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
+                        let selector = NSSelectorFromString("openURL:")
+                        let url = URL(string: "tg://localpeer?id=\(controller.peerId.toInt64())")!
+                        application.perform(selector, with: url)
+                    }
+                }
             }
         }
         
@@ -182,8 +199,6 @@ public final class ChatImportActivityScreen: ViewController {
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
-            
-            //TODO:localize
             
             let iconSize = CGSize(width: 170.0, height: 170.0)
             let radialStatusSize = CGSize(width: 186.0, height: 186.0)
@@ -210,28 +225,28 @@ public final class ChatImportActivityScreen: ViewController {
             
             switch self.state {
             case .progress, .done:
-                self.statusButtonText.attributedText = NSAttributedString(string: "Done", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
+                self.statusButtonText.attributedText = NSAttributedString(string: self.presentationData.strings.Common_Done, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
             case .error:
-                self.statusButtonText.attributedText = NSAttributedString(string: "Retry", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
+                self.statusButtonText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_Retry, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
             }
             let statusButtonTextSize = self.statusButtonText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
             
             switch self.state {
             case .progress:
-                self.statusText.attributedText = NSAttributedString(string: "Please keep this window open\nduring the import.", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+                self.statusText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_InProgress, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
             case let .error(error):
                 let errorText: String
                 switch error {
                 case .chatAdminRequired:
-                    errorText = "You need to be an admin."
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorNotAdmin
                 case .invalidChatType:
-                    errorText = "You can't import this history in this type of chat."
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorGeneric
                 case .generic:
-                    errorText = "An error occurred."
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorInvalidChatType
                 }
                 self.statusText.attributedText = NSAttributedString(string: errorText, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
             case .done:
-                self.statusText.attributedText = NSAttributedString(string: "This chat has been imported\nsuccessfully.", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                self.statusText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_Success, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             }
             
             let statusTextSize = self.statusText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
@@ -240,7 +255,7 @@ public final class ChatImportActivityScreen: ViewController {
             var hideIcon = false
             if case .compact = layout.metrics.heightClass, layout.size.width > layout.size.height {
                 hideIcon = true
-                contentHeight = radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 100.0
+                contentHeight = radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 140.0
             } else {
                 contentHeight = iconSize.height + maxIconStatusSpacing + radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 100.0
             }
@@ -268,13 +283,29 @@ public final class ChatImportActivityScreen: ViewController {
                 self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.maxY + progressStatusSpacing), size: statusTextSize)
                 self.statusButtonText.isHidden = true
                 self.statusButton.isHidden = true
+                self.doneButton.isHidden = true
                 self.progressText.isHidden = false
-            } else {
+            } else if case .error = self.state {
                 self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
                 self.statusButtonText.isHidden = false
                 self.statusButton.isHidden = false
+                self.doneButton.isHidden = true
+                self.progressText.isHidden = true
+            } else {
+                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
+                self.statusButtonText.isHidden = true
+                self.statusButton.isHidden = true
+                self.doneButton.isHidden = false
                 self.progressText.isHidden = true
             }
+            
+            let buttonSideInset: CGFloat = 40.0
+            let buttonWidth = min(layout.size.width - buttonSideInset * 2.0, horizontalContainerFillingSizeForLayout(layout: layout, sideInset: buttonSideInset))
+            
+            let buttonHeight = self.doneButton.updateLayout(width: buttonWidth, transition: .immediate)
+            
+            let doneButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing + 10.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+            self.doneButton.frame = doneButtonFrame
             
             let statusButtonTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusButtonTextSize.width) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing), size: statusButtonTextSize)
             self.statusButtonText.frame = statusButtonTextFrame
@@ -351,7 +382,7 @@ public final class ChatImportActivityScreen: ViewController {
     private let context: AccountContext
     private var presentationData: PresentationData
     fileprivate let cancel: () -> Void
-    private var peerId: PeerId
+    fileprivate var peerId: PeerId
     private let archive: Archive
     private let mainEntry: TempBoxFile
     private let mainEntrySize: Int
@@ -397,8 +428,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true, hideBadge: true))
         
-        //TODO:localize
-        self.title = "Importing Chat"
+        self.title = self.presentationData.strings.ChatImportActivity_Title
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         

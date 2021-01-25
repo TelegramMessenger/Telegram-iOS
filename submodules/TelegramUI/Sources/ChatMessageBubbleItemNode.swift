@@ -2968,6 +2968,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             
                             if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                                 item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), forwardInfo.author == nil {
+                                item.controllerInteraction.displayImportedMessageTooltip(avatarNode)
                             } else {
                                 if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId), let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {

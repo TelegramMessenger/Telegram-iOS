@@ -5932,3 +5932,29 @@ Sorry for the inconvenience.";
 
 "Conversation.AudioRateTooltipSpeedUp" = "The audio will now play 2 times faster.";
 "Conversation.AudioRateTooltipNormal" = "The audio will now play at normal speed.";
+
+"ChatImport.Title" = "Import Chat";
+"ChatImport.SelectionErrorNotAdmin" = "You need to be an admin of the group to import messages into it.";
+"ChatImport.SelectionErrorGroupGeneric" = "You can't import history into this group.";
+"ChatImport.SelectionConfirmationGroupWithTitle" = "Are you sure you want to import messages from **%1$@** into **%2$@**?";
+"ChatImport.SelectionConfirmationGroupWithoutTitle" = "Are you sure you want to import messages into **%@**?";
+"ChatImport.SelectionConfirmationAlertTitle" = "Import Messages";
+"ChatImport.SelectionConfirmationAlertImportAction" = "Import";
+"ChatImport.CreateGroupAlertTitle" = "Create Group and Import Messages";
+"ChatImport.CreateGroupAlertText" = "Are you sure you want to create group **%@** and import messages from another messaging app?";
+"ChatImport.CreateGroupAlertImportAction" = "Create and Import";
+"ChatImport.UserErrorNotMutual" = "You can only import messages into private chats with users who added you in their contact list.";
+"ChatImport.SelectionConfirmationUserWithTitle" = "Are you sure you want to import messages from **%1$@** into the chat with **%2$@**?";
+"ChatImport.SelectionConfirmationUserWithoutTitle" = "Are you sure you want to import messages into the chat with **%@**?";
+
+"PeerSelection.CreateNewGroup" = "Create a New Group";
+"Message.ImportedDateFormat" = "%1$@, %2$@ Imported %3$@";
+
+"ChatImportActivity.Title" = "Importing Chat";
+"ChatImportActivity.OpenApp" = "Open Telegram";
+"ChatImportActivity.Retry" = "Retry";
+"ChatImportActivity.InProgress" = "Please keep this window open\nduring the import.";
+"ChatImportActivity.ErrorNotAdmin" = "You need to be an admin.";
+"ChatImportActivity.ErrorInvalidChatType" = "You can't import this history in this type of chat.";
+"ChatImportActivity.ErrorGeneric" = "An error occurred.";
+"ChatImportActivity.Success" = "This chat has been imported\nsuccessfully.";
