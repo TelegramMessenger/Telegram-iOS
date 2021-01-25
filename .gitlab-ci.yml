@@ -69,7 +69,7 @@ beta_testflight:
     - ios_beta
   stage: build
   only:
-    - beta1
+    - beta
   except:
     - tags
   script:
