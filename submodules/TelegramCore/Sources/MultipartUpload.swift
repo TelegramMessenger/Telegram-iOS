@@ -138,7 +138,7 @@ private final class MultipartUploadManager {
     
     let state: MultipartUploadState
     
-    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, hintFileIsLarge: Bool, uploadPart: @escaping (UploadPart) -> Signal<Void, UploadPartError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult?) -> Void) {
+    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, hintFileIsLarge: Bool, useLargerParts: Bool, uploadPart: @escaping (UploadPart) -> Signal<Void, UploadPartError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult?) -> Void) {
         self.dataSignal = data
         
         var fileId: Int64 = 0
@@ -166,6 +166,10 @@ private final class MultipartUploadManager {
             self.defaultPartSize = 512 * 1024
             self.bigTotalParts = nil
             self.bigParts = true
+        } else if useLargerParts {
+            self.bigParts = false
+            self.defaultPartSize = 64 * 1024
+            self.bigTotalParts = nil
         } else {
             self.bigParts = false
             self.defaultPartSize = 16 * 1024
@@ -368,7 +372,7 @@ enum MultipartUploadError {
     case generic
 }
 
-func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool) -> Signal<MultipartUploadResult, MultipartUploadError> {
+func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool, useLargerParts: Bool = false) -> Signal<MultipartUploadResult, MultipartUploadError> {
     return network.upload(tag: tag)
     |> mapToSignalPromotingError { download -> Signal<MultipartUploadResult, MultipartUploadError> in
         return Signal { subscriber in
@@ -419,7 +423,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                     fetchedResource = .complete()
             }
             
-            let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, uploadPart: { part in
+            let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, useLargerParts: useLargerParts, uploadPart: { part in
                 return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, asBigPart: part.bigPart, bigTotalParts: part.bigTotalParts)
             }, progress: { progress in
                 subscriber.putNext(.progress(progress))

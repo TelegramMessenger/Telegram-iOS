@@ -549,8 +549,8 @@ public final class ChatImportActivityScreen: ViewController {
                 }
             }
         }
-        |> mapToSignal { session -> Signal<(String, Float), ImportError> in
-            var importSignal: Signal<(String, Float), ImportError> = .single(("", 0.0))
+        |> mapToSignal { session -> Signal<[(String, Float)], ImportError> in
+            var mediaSignals: [Signal<(String, Float), ImportError>] = []
             
             for (_, fileName, mediaType, fileData) in otherEntries {
                 let unpackedFile: Signal<TempBoxFile, ImportError> = fileData.get()
@@ -588,27 +588,27 @@ public final class ChatImportActivityScreen: ViewController {
                     }
                 }
                 
-                importSignal = importSignal
-                |> then(uploadedMedia)
+                mediaSignals.append(Signal<(String, Float), ImportError>.single((fileName, 0.0))
+                |> then(uploadedMedia))
             }
             
-            importSignal = importSignal
+            return combineLatest(mediaSignals)
             |> then(ChatHistoryImport.startImport(account: context.account, session: session)
             |> mapError { _ -> ImportError in
                 return .generic
             }
-            |> map { _ -> (String, Float) in
+            |> map { _ -> [(String, Float)] in
             })
-            
-            return importSignal
         }
-        |> deliverOnMainQueue).start(next: { [weak self] (fileName, progress) in
+        |> deliverOnMainQueue).start(next: { [weak self] fileNameAndProgress in
             guard let strongSelf = self else {
                 return
             }
             
-            if let (fileSize, _) = strongSelf.pendingEntries[fileName] {
-                strongSelf.pendingEntries[fileName] = (fileSize, progress)
+            for (fileName, progress) in fileNameAndProgress {
+                if let (fileSize, _) = strongSelf.pendingEntries[fileName] {
+                    strongSelf.pendingEntries[fileName] = (fileSize, progress)
+                }
             }
             
             var totalDoneBytes = strongSelf.mainEntrySize
