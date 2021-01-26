@@ -5,7 +5,7 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
-XCODE_VERSION="11.5"
+XCODE_VERSION="12.0.1"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
@@ -81,7 +81,7 @@ COMMIT_ID="$(git rev-parse HEAD)"
 COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
 if [ -z "$2" ]; then
 	COMMIT_COUNT=$(git rev-list --count HEAD)
-	COMMIT_COUNT="$(($COMMIT_COUNT+1000))"
+	COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
 	BUILD_NUMBER="$COMMIT_COUNT"
 else
 	BUILD_NUMBER="$2"

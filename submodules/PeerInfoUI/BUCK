@@ -65,6 +65,7 @@ static_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
         "//submodules/StatisticsUI:StatisticsUI",
+        "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

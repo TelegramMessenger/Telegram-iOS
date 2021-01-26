@@ -77,6 +77,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         
         if chatPeer.id == context.account.peerId {
             self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
+        } else if chatPeer.id.isReplies {
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .repliesIcon)
         } else {
             var overrideImage: AvatarNodeImageOverride?
             if chatPeer.isDeleted {

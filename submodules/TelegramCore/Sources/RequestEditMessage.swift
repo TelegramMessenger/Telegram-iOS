@@ -25,6 +25,7 @@ public enum RequestEditMessageError {
     case generic
     case restricted
     case textTooLong
+    case invalidGrouping
 }
 
 public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false, scheduleTime: Int32? = nil) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
@@ -176,6 +177,8 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
                         return .invalidReference
                     } else if error.errorDescription.hasSuffix("_TOO_LONG") {
                         return .error(.textTooLong)
+                    } else if error.errorDescription.hasPrefix("MEDIA_GROUPED_INVALID") {
+                        return .error(.invalidGrouping)
                     } else if error.errorDescription.hasPrefix("CHAT_SEND_") && error.errorDescription.hasSuffix("_FORBIDDEN") {
                         return .error(.restricted)
                     }
@@ -252,7 +255,7 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
     }
 }
 
-public func requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, coordinate: (latitude: Double, longitude: Double)?) -> Signal<Void, NoError> {
+public func requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, stop: Bool, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)?, heading: Int32?, proximityNotificationRadius: Int32?) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> (Api.InputPeer, TelegramMediaMap)? in
         guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
             return nil
@@ -272,11 +275,33 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
             return .complete()
         }
         let inputMedia: Api.InputMedia
-        if let coordinate = coordinate, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
-            inputMedia = .inputMediaGeoLive(flags: 1 << 1, geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude), period: liveBroadcastingTimeout)
+        if let liveBroadcastingTimeout = media.liveBroadcastingTimeout, !stop {
+            var flags: Int32 = 1 << 1
+            let inputGeoPoint: Api.InputGeoPoint
+            if let coordinate = coordinate {
+                var geoFlags: Int32 = 0
+                if let _ = coordinate.accuracyRadius {
+                    geoFlags |= 1 << 0
+                }
+                inputGeoPoint = .inputGeoPoint(flags: geoFlags, lat: coordinate.latitude, long: coordinate.longitude, accuracyRadius: coordinate.accuracyRadius.flatMap({ Int32($0) }))
+            } else {
+                var geoFlags: Int32 = 0
+                if let _ = media.accuracyRadius {
+                    geoFlags |= 1 << 0
+                }
+                inputGeoPoint = .inputGeoPoint(flags: geoFlags, lat: media.latitude, long: media.longitude, accuracyRadius: media.accuracyRadius.flatMap({ Int32($0) }))
+            }
+            if let _ = heading {
+                flags |= 1 << 2
+            }
+            if let _ = proximityNotificationRadius {
+                flags |= 1 << 3
+            }
+            inputMedia = .inputMediaGeoLive(flags: flags, geoPoint: inputGeoPoint, heading: heading, period: liveBroadcastingTimeout, proximityNotificationRadius: proximityNotificationRadius)
         } else {
-            inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(lat: media.latitude, long: media.longitude), period: nil)
+            inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(flags: 0, lat: media.latitude, long: media.longitude, accuracyRadius: nil), heading: nil, period: nil, proximityNotificationRadius: nil)
         }
+
         return network.request(Api.functions.messages.editMessage(flags: 1 << 14, peer: inputPeer, id: messageId.id, message: nil, media: inputMedia, replyMarkup: nil, entities: nil, scheduleDate: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
@@ -286,7 +311,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
             if let updates = updates {
                 stateManager.addUpdates(updates)
             }
-            if coordinate == nil {
+            if coordinate == nil && proximityNotificationRadius == nil {
                 return postbox.transaction { transaction -> Void in
                     transaction.updateMessage(messageId, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
@@ -295,7 +320,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
                         }
                         var updatedLocalTags = currentMessage.localTags
                         updatedLocalTags.remove(.OutgoingLiveLocation)
-                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: updatedLocalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: updatedLocalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
                     })
                 }
             } else {
@@ -304,4 +329,3 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
         }
     }
 }
-

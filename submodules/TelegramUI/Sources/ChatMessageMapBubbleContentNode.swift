@@ -145,7 +145,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
             var mode: ChatMessageLiveLocationPositionNode.Mode = .location(selectedMedia)
             if let selectedMedia = selectedMedia, let peer = item.message.author {
                 if selectedMedia.liveBroadcastingTimeout != nil {
-                    mode = .liveLocation(peer, activeLiveBroadcastingTimeout != nil)
+                    mode = .liveLocation(peer: peer, active: activeLiveBroadcastingTimeout != nil, latitude: selectedMedia.latitude, longitude: selectedMedia.longitude, heading: selectedMedia.heading)
                 }
             }
             let (pinSize, pinApply) = makePinLayout(item.context, item.presentationData.theme.theme, mode)
@@ -157,7 +157,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 if activeLiveBroadcastingTimeout != nil || selectedMedia?.venue != nil {
                     var relativePosition = position
                     if case let .linear(top, _) = position {
-                        relativePosition = .linear(top: top, bottom: ChatMessageBubbleRelativePosition.Neighbour)
+                        relativePosition = .linear(top: top, bottom: .Neighbour(false, .freeform, .default))
                     }
                     imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: relativePosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
                     
@@ -176,11 +176,16 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     edited = true
                 }
                 var viewCount: Int?
+                var dateReplies = 0
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
+                    } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
+                        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                            dateReplies = Int(attribute.count)
+                        }
                     }
                 }
                 
@@ -207,7 +212,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
-                    case .linear(_, .None):
+                    case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if selectedMedia?.venue != nil || activeLiveBroadcastingTimeout != nil {
                             if item.message.effectivelyIncoming(item.context.account.peerId) {
                                 statusType = .BubbleIncoming
@@ -241,7 +246,12 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions)
+                    var isReplyThread = false
+                    if case .replyThread = item.chatLocation {
+                        isReplyThread = true
+                    }
+                    
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
                     statusSize = size
                     statusApply = apply
                 }

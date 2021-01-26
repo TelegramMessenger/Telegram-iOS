@@ -138,7 +138,7 @@ public final class ItemListNodeVisibleEntries: Sequence {
     }
 }
 
-public final class ItemListControllerNodeView: UITracingLayerView, PreviewingHostView {
+public final class ItemListControllerNodeView: UITracingLayerView {
     var onLayout: (() -> Void)?
     
     init(controller: ItemListController?) {
@@ -169,14 +169,6 @@ public final class ItemListControllerNodeView: UITracingLayerView, PreviewingHos
             self.inHitTest = false
             return result
         }
-    }
-    
-    public var previewingDelegate: PreviewingHostViewDelegate? {
-        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
-            return self?.controller?.previewingController(from: sourceView, for: point)
-        }, commitController: { [weak self] controller in
-            self?.controller?.previewingCommit(controller)
-        })
     }
     
     weak var controller: ItemListController?

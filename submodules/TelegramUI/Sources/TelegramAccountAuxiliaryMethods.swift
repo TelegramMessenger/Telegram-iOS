@@ -8,6 +8,7 @@ import OpenInExternalAppUI
 import MusicAlbumArtResources
 import LocalMediaResources
 import LocationResources
+import ChatInterfaceState
 
 public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState: { interfaceState, inputState -> PeerChatInterfaceState? in
     if interfaceState == nil {

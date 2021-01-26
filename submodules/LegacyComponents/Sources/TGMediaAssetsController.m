@@ -17,7 +17,6 @@
 
 #import "TGModernBarButton.h"
 #import <LegacyComponents/TGMediaPickerToolbarView.h>
-#import "TGMediaAssetsTipView.h"
 
 #import <LegacyComponents/TGMediaAsset+TGMediaEditableItem.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
@@ -67,7 +66,7 @@
 
 + (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection selectionLimit:(int)selectionLimit
 {
-    if (intent != TGMediaAssetsControllerSendMediaIntent)
+    if (intent != TGMediaAssetsControllerSendMediaIntent && intent != TGMediaAssetsControllerSendFileIntent)
         allowGrouping = false;
     
     TGMediaAssetsController *assetsController = [[TGMediaAssetsController alloc] initWithContext:context intent:intent saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping selectionLimit:selectionLimit];
@@ -586,23 +585,6 @@
     }
 }
 
-- (void)viewWillAppear:(BOOL)animated
-{
-    [super viewWillAppear:animated];
-    
-    if (_intent == TGMediaAssetsControllerSendFileIntent && self.shouldShowFileTipIfNeeded && iosMajorVersion() >= 7)
-    {
-        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"didShowDocumentPickerTip_v2"] boolValue])
-        {
-            [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"didShowDocumentPickerTip_v2"];
-            
-            TGMediaAssetsTipView *tipView = [[TGMediaAssetsTipView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.view.bounds.size.width, self.view.bounds.size.height)];
-            tipView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            [self.navigationController.view addSubview:tipView];
-        }
-    }
-}
-
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
@@ -735,6 +717,9 @@
                         dict[@"fileName"] = assetData.fileName;
                         dict[@"mimeType"] = TGMimeTypeForFileUTI(assetData.fileUTI);
                         
+                        if (groupedId != nil)
+                            dict[@"groupedId"] = groupedId;
+                        
                         id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }] catch:^SSignal *(id error)
@@ -750,12 +735,23 @@
                             dict[@"asset"] = asset;
                             dict[@"previewImage"] = image;
                             dict[@"mimeType"] = TGMimeTypeForFileUTI(asset.uniformTypeIdentifier);
-                            dict[@"fileName"] = asset.fileName;
+                            
+                            NSString *fileName = asset.fileName;
+                            NSRange range = [fileName.lowercaseString rangeOfString:@".heic"];
+                            if (range.location != NSNotFound)
+                                fileName = [fileName stringByReplacingCharactersInRange:range withString:@".JPG"];
+                            
+                            dict[@"fileName"] = fileName;
+                            
+                            if (groupedId != nil)
+                                dict[@"groupedId"] = groupedId;
                             
                             id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                             return generatedItem;
                         }];
                     }]];
+                    
+                    i++;
                 }
                 else
                 {
@@ -857,6 +853,8 @@
                                 return generatedItem;
                             }];
                         }]];
+                        
+                        i++;
                     }
                     else
                     {
@@ -971,9 +969,14 @@
                         if (adjustments.paintingData.stickers.count > 0)
                             dict[@"stickers"] = adjustments.paintingData.stickers;
                         
+                        if (groupedId != nil)
+                            dict[@"groupedId"] = groupedId;
+                        
                         id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }]];
+                    
+                    i++;
                 }
                 else
                 {

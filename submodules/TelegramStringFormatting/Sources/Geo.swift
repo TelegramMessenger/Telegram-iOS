@@ -25,3 +25,22 @@ public func shortStringForDistance(strings: PresentationStrings, distance: Int32
     }
     return result
 }
+
+private var sharedDistanceFormatter: MKDistanceFormatter?
+public func stringForDistance(strings: PresentationStrings, distance: CLLocationDistance) -> String {
+    let distanceFormatter: MKDistanceFormatter
+    if let currentDistanceFormatter = sharedDistanceFormatter {
+        distanceFormatter = currentDistanceFormatter
+    } else {
+        distanceFormatter = MKDistanceFormatter()
+        distanceFormatter.unitStyle = .full
+        sharedDistanceFormatter = distanceFormatter
+    }
+    
+    let locale = localeWithStrings(strings)
+    if distanceFormatter.locale != locale {
+        distanceFormatter.locale = locale
+    }
+    
+    return distanceFormatter.string(fromDistance: distance)
+}

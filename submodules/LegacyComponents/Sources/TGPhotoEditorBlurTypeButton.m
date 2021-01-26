@@ -121,7 +121,7 @@
 - (void)layoutSubviews
 {
     _imageView.frame = CGRectMake((self.frame.size.width - 50) / 2, (self.frame.size.height - 68) / 2, 50, 50);
-    _titleLabel.frame = CGRectMake(0, _imageView.frame.origin.y  +_imageView.frame.size.height - 1, self.frame.size.width, 16);
+    _titleLabel.frame = CGRectMake(0, _imageView.frame.origin.y + _imageView.frame.size.height - 1, self.frame.size.width, 16);
 }
 
 @end

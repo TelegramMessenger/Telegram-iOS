@@ -781,7 +781,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 default:
                     break
             }
-            if case .buffering(true, _, _) = statusValue.status {
+            if case .buffering(true, _, _, _) = statusValue.status {
                 //initialBuffering = true
             } else if Double(0.0).isLess(than: statusValue.duration) {
                 if let scrubbingTimestampValue = self.scrubbingTimestampValue {

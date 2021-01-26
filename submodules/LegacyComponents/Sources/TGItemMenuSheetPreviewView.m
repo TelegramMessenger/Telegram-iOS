@@ -425,7 +425,7 @@ typedef enum
     if (gestureRecognizer == _panGestureRecognizer)
     {
         NSString *viewClassName = NSStringFromClass(otherGestureRecognizer.view.class);
-        if ([viewClassName rangeOfString:@"WKScroll"].location != NSNotFound || [viewClassName rangeOfString:@"UIWebViewScroll"].location != NSNotFound)
+        if ([viewClassName rangeOfString:@"WKScroll"].location != NSNotFound)
         {
             return true;
         }

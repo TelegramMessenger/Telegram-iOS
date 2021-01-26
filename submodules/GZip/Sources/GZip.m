@@ -4,7 +4,7 @@
 
 bool TGIsGzippedData(NSData *data) {
     const UInt8 *bytes = (const UInt8 *)data.bytes;
-    return (data.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b);
+    return data.length >= 2 && ((bytes[0] == 0x1f && bytes[1] == 0x8b) || (bytes[0] == 0x78 && bytes[1] == 0x9c));
 }
 
 NSData *TGGZipData(NSData *data, float level) {

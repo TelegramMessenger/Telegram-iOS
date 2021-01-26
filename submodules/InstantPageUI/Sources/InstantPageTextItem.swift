@@ -753,8 +753,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     let cfRunRange = CTRunGetStringRange(run)
                     let runRange = NSMakeRange(cfRunRange.location == kCFNotFound ? NSNotFound : cfRunRange.location, cfRunRange.length)
                     string.enumerateAttributes(in: runRange, options: []) { attributes, range, _ in
-                        if let id = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaIdAttribute)] as? Int64, let dimensions = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaDimensionsAttribute)] as? CGSize {
-                            var imageFrame = CGRect(origin: CGPoint(), size: dimensions)
+                        if let id = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaIdAttribute)] as? Int64, let dimensions = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaDimensionsAttribute)] as? PixelDimensions {
+                            var imageFrame = CGRect(origin: CGPoint(), size: dimensions.cgSize)
                             
                             let xOffset = CTLineGetOffsetForStringIndex(line, CTRunGetStringRange(run).location, nil)
                             let yOffset = fontLineHeight.isZero ? 0.0 : floorToScreenPixels((fontLineHeight - imageFrame.size.height) / 2.0)

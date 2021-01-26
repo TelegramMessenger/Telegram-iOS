@@ -84,13 +84,18 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.valueChanged = valueChanged
         
         self.pickerView = UIDatePicker()
-        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .date
         self.pickerView.locale = Locale(identifier: strings.baseLanguageCode)
         
         self.pickerView.minimumDate = Date(timeIntervalSince1970: 1376438400.0)
         self.pickerView.maximumDate = Date(timeIntervalSinceNow: 2.0)
+        
+        if #available(iOS 13.4, *) {
+            self.pickerView.preferredDatePickerStyle = .wheels
+        }
+        
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
         super.init(theme: theme)
         

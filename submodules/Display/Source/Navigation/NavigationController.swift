@@ -363,6 +363,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        let initialPrefersOnScreenNavigationHidden = self.collectPrefersOnScreenNavigationHidden()
+        
         var overlayLayout = layout
         
         if let globalOverlayContainerParent = self.globalOverlayContainerParent {
@@ -997,10 +999,15 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.isUpdatingContainers = false
         
         if notifyGlobalOverlayControllersUpdated {
-            self.globalOverlayControllersUpdated?()
+            self.internalGlobalOverlayControllersUpdated()
         }
         
         self.updateSupportedOrientations?()
+        
+        let updatedPrefersOnScreenNavigationHidden = self.collectPrefersOnScreenNavigationHidden()
+        if initialPrefersOnScreenNavigationHidden != updatedPrefersOnScreenNavigationHidden {
+            self.currentWindow?.invalidatePrefersOnScreenNavigationHidden()
+        }
     }
     
     private func controllerRemoved(_ controller: ViewController) {
@@ -1193,7 +1200,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if overlayContainer.controller === controller {
                         overlayContainer.removeFromSupernode()
                         strongSelf.globalOverlayContainers.remove(at: i)
-                        strongSelf.globalOverlayControllersUpdated?()
+                        strongSelf.internalGlobalOverlayControllersUpdated()
                         break
                     }
                 }
@@ -1203,6 +1210,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if overlayContainer.controller === controller {
                         overlayContainer.removeFromSupernode()
                         strongSelf.overlayContainers.remove(at: i)
+                        strongSelf.internalOverlayControllersUpdated()
                         break
                     }
                 }
@@ -1403,5 +1411,22 @@ open class NavigationController: UINavigationController, ContainableController, 
                 return nil
             }
         }
+    }
+    
+    private func internalGlobalOverlayControllersUpdated() {
+        self.globalOverlayControllersUpdated?()
+        self.currentWindow?.invalidatePrefersOnScreenNavigationHidden()
+    }
+    
+    private func internalOverlayControllersUpdated() {
+        self.currentWindow?.invalidatePrefersOnScreenNavigationHidden()
+    }
+    
+    private func collectPrefersOnScreenNavigationHidden() -> Bool {
+        var hidden = false
+        if let overlayController = self.topOverlayController {
+            hidden = hidden || overlayController.prefersOnScreenNavigationHidden
+        }
+        return hidden
     }
 }

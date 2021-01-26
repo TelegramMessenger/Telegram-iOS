@@ -18,6 +18,7 @@ import PresentationDataUtils
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
     case video(FileMediaReference)
+    case file(FileMediaReference)
     
     static func ==(lhs: ChatMediaGalleryThumbnail, rhs: ChatMediaGalleryThumbnail) -> Bool {
         switch lhs {
@@ -29,6 +30,12 @@ enum ChatMediaGalleryThumbnail: Equatable {
                 }
             case let .video(lhsVideo):
                 if case let .video(rhsVideo) = rhs, lhsVideo.media.isEqual(to: rhsVideo.media) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .file(lhsFile):
+                if case let .file(rhsFile) = rhs, lhsFile.media.isEqual(to: rhsFile.media) {
                     return true
                 } else {
                     return false
@@ -45,8 +52,12 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
         self.account = account
         if let imageReference = mediaReference.concrete(TelegramMediaImage.self) {
             self.thumbnail = .image(imageReference)
-        } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self), fileReference.media.isVideo {
-            self.thumbnail = .video(fileReference)
+        } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
+            if fileReference.media.isVideo {
+                self.thumbnail = .video(fileReference)
+            } else {
+                self.thumbnail = .file(fileReference)
+            }
         } else {
             return nil
         }
@@ -74,6 +85,12 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
+            case let .file(fileReference):
+                if let representation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                    return (chatWebpageSnippetFile(account: self.account, fileReference: fileReference, representation: representation), representation.dimensions.cgSize)
+                } else {
+                    return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
+                }
         }
     }
 }
@@ -87,15 +104,17 @@ class ChatImageGalleryItem: GalleryItem {
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
+    let displayInfoOnTop: Bool
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
         self.location = location
+        self.displayInfoOnTop = displayInfoOnTop
         self.performAction = performAction
         self.openActionOptions = openActionOptions
         self.present = present
@@ -125,8 +144,11 @@ class ChatImageGalleryItem: GalleryItem {
         if let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
         }
-        
-        node.setMessage(self.message)
+                
+        if self.displayInfoOnTop {
+            node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
+        }
+        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         
         return node
     }
@@ -134,8 +156,11 @@ class ChatImageGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
-            
-            node.setMessage(self.message)
+        
+            if self.displayInfoOnTop {
+                node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
+            }
+            node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         }
     }
     
@@ -145,7 +170,7 @@ class ChatImageGalleryItem: GalleryItem {
             for m in self.message.media {
                 if let m = m as? TelegramMediaImage {
                     mediaReference = .message(message: MessageReference(self.message), media: m)
-                } else if let m = m as? TelegramMediaFile, m.isVideo {
+                } else if let m = m as? TelegramMediaFile {
                     mediaReference = .message(message: MessageReference(self.message), media: m)
                 }
             }
@@ -167,10 +192,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private var tilingNode: TilingNode?
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    fileprivate let _titleView = Promise<UIView?>()
     fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>(nil)
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
+    fileprivate var titleContentView: GalleryTitleView?
     
     private var contextAndMedia: (AccountContext, AnyMediaReference)?
     
@@ -207,6 +234,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusNodeContainer.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
         
         self.statusNodeContainer.isUserInteractionEnabled = false
+        
+        self.titleContentView = GalleryTitleView(frame: CGRect())
+        self._titleView.set(.single(self.titleContentView))
     }
     
     deinit {
@@ -227,8 +257,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
-    fileprivate func setMessage(_ message: Message) {
-        self.footerContentNode.setMessage(message)
+    fileprivate func setMessage(_ message: Message, displayInfo: Bool) {
+        self.footerContentNode.setMessage(message, displayInfo: displayInfo)
     }
     
     fileprivate func setImage(imageReference: ImageMediaReference) {
@@ -577,6 +607,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
+    }
+    
+    override func titleView() -> Signal<UIView?, NoError> {
+        return self._titleView.get()
     }
     
     override func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {

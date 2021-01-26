@@ -150,6 +150,11 @@ public struct PeerGeoLocation: PostboxCoding, Equatable {
 }
 
 public final class CachedChannelData: CachedPeerData {
+    public enum LinkedDiscussionPeerId: Equatable {
+        case unknown
+        case known(PeerId?)
+    }
+    
     public let isNotAccessible: Bool
     public let flags: CachedChannelFlags
     public let about: String?
@@ -161,7 +166,7 @@ public final class CachedChannelData: CachedPeerData {
     public let stickerPack: StickerPackCollectionInfo?
     public let minAvailableMessageId: MessageId?
     public let migrationReference: ChannelMigrationReference?
-    public let linkedDiscussionPeerId: PeerId?
+    public let linkedDiscussionPeerId: LinkedDiscussionPeerId
     public let peerGeoLocation: PeerGeoLocation?
     public let slowModeTimeout: Int32?
     public let slowModeValidUntilTimestamp: Int32?
@@ -190,7 +195,7 @@ public final class CachedChannelData: CachedPeerData {
         self.stickerPack = nil
         self.minAvailableMessageId = nil
         self.migrationReference = nil
-        self.linkedDiscussionPeerId = nil
+        self.linkedDiscussionPeerId = .unknown
         self.peerGeoLocation = nil
         self.slowModeTimeout = nil
         self.slowModeValidUntilTimestamp = nil
@@ -200,7 +205,7 @@ public final class CachedChannelData: CachedPeerData {
         self.photo = nil
     }
     
-    public init(isNotAccessible: Bool, flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, stickerPack: StickerPackCollectionInfo?, minAvailableMessageId: MessageId?, migrationReference: ChannelMigrationReference?, linkedDiscussionPeerId: PeerId?, peerGeoLocation: PeerGeoLocation?, slowModeTimeout: Int32?, slowModeValidUntilTimestamp: Int32?, hasScheduledMessages: Bool, statsDatacenterId: Int32, invitedBy: PeerId?, photo: TelegramMediaImage?) {
+    public init(isNotAccessible: Bool, flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, stickerPack: StickerPackCollectionInfo?, minAvailableMessageId: MessageId?, migrationReference: ChannelMigrationReference?, linkedDiscussionPeerId: LinkedDiscussionPeerId, peerGeoLocation: PeerGeoLocation?, slowModeTimeout: Int32?, slowModeValidUntilTimestamp: Int32?, hasScheduledMessages: Bool, statsDatacenterId: Int32, invitedBy: PeerId?, photo: TelegramMediaImage?) {
         self.isNotAccessible = isNotAccessible
         self.flags = flags
         self.about = about
@@ -226,8 +231,10 @@ public final class CachedChannelData: CachedPeerData {
             peerIds.insert(botInfo.peerId)
         }
         
-        if let linkedDiscussionPeerId = linkedDiscussionPeerId {
-            peerIds.insert(linkedDiscussionPeerId)
+        if case let .known(linkedDiscussionPeerIdValue) = linkedDiscussionPeerId {
+            if let linkedDiscussionPeerIdValue = linkedDiscussionPeerIdValue {
+                peerIds.insert(linkedDiscussionPeerIdValue)
+            }
         }
         
         if let invitedBy = invitedBy {
@@ -288,7 +295,7 @@ public final class CachedChannelData: CachedPeerData {
         return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation, slowModeTimeout: self.slowModeTimeout, slowModeValidUntilTimestamp: self.slowModeValidUntilTimestamp, hasScheduledMessages: self.hasScheduledMessages, statsDatacenterId: self.statsDatacenterId, invitedBy: self.invitedBy, photo: self.photo)
     }
     
-    public func withUpdatedLinkedDiscussionPeerId(_ linkedDiscussionPeerId: PeerId?) -> CachedChannelData {
+    public func withUpdatedLinkedDiscussionPeerId(_ linkedDiscussionPeerId: LinkedDiscussionPeerId) -> CachedChannelData {
         return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation, slowModeTimeout: self.slowModeTimeout, slowModeValidUntilTimestamp: self.slowModeValidUntilTimestamp, hasScheduledMessages: self.hasScheduledMessages, statsDatacenterId: self.statsDatacenterId, invitedBy: self.invitedBy, photo: self.photo)
     }
     
@@ -361,9 +368,13 @@ public final class CachedChannelData: CachedPeerData {
         }
         
         if let linkedDiscussionPeerId = decoder.decodeOptionalInt64ForKey("dgi") {
-            self.linkedDiscussionPeerId = PeerId(linkedDiscussionPeerId)
+            if linkedDiscussionPeerId == 0 {
+                self.linkedDiscussionPeerId = .known(nil)
+            } else {
+                self.linkedDiscussionPeerId = .known(PeerId(linkedDiscussionPeerId))
+            }
         } else {
-            self.linkedDiscussionPeerId = nil
+            self.linkedDiscussionPeerId = .unknown
         }
         
         if let peerGeoLocation = decoder.decodeObjectForKey("pgl", decoder: { PeerGeoLocation(decoder: $0) }) as? PeerGeoLocation {
@@ -385,8 +396,10 @@ public final class CachedChannelData: CachedPeerData {
             self.photo = nil
         }
         
-        if let linkedDiscussionPeerId = self.linkedDiscussionPeerId {
-            peerIds.insert(linkedDiscussionPeerId)
+        if case let .known(linkedDiscussionPeerIdValue) = self.linkedDiscussionPeerId {
+            if let linkedDiscussionPeerIdValue = linkedDiscussionPeerIdValue {
+                peerIds.insert(linkedDiscussionPeerIdValue)
+            }
         }
         
         self.peerIds = peerIds
@@ -446,10 +459,15 @@ public final class CachedChannelData: CachedPeerData {
         } else {
             encoder.encodeNil(forKey: "mr")
         }
-        if let linkedDiscussionPeerId = self.linkedDiscussionPeerId {
-            encoder.encodeInt64(linkedDiscussionPeerId.toInt64(), forKey: "dgi")
-        } else {
+        switch self.linkedDiscussionPeerId {
+        case .unknown:
             encoder.encodeNil(forKey: "dgi")
+        case let .known(value):
+            if let value = value {
+                encoder.encodeInt64(value.toInt64(), forKey: "dgi")
+            } else {
+                encoder.encodeInt64(0, forKey: "dgi")
+            }
         }
         if let peerGeoLocation = self.peerGeoLocation {
             encoder.encodeObject(peerGeoLocation, forKey: "pgl")

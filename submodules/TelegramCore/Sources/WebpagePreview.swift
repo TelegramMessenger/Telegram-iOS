@@ -83,7 +83,6 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
                 return .single(nil)
             }
             |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
-                
                 if let result = result, let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
                     return postbox.transaction { transaction -> TelegramMediaWebpage in
                         updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: updatedWebpage)

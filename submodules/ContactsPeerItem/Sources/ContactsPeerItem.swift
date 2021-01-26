@@ -140,6 +140,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let deletePeer: ((PeerId) -> Void)?
     let itemHighlighting: ContactItemHighlighting?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    let arrowAction: (() -> Void)?
     
     public let selectable: Bool
     
@@ -147,7 +148,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, arrowAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.style = style
         self.sectionId = sectionId
@@ -172,6 +173,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.itemHighlighting = itemHighlighting
         self.selectable = enabled || disabledAction != nil
         self.contextAction = contextAction
+        self.arrowAction = arrowAction
         
         if let index = index {
             var letter: String = "#"
@@ -318,6 +320,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var badgeTextNode: TextNode?
     private var selectionNode: CheckNode?
     private var actionButtonNodes: [HighlightableButtonNode]?
+    private var arrowButtonNode: HighlightableButtonNode?
     
     private var isHighlighted: Bool = false
 
@@ -503,6 +506,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 break
             }
             
+            var arrowButtonImage: UIImage?
+            if let _ = item.arrowAction {
+                arrowButtonImage = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Arrow"), color: item.presentationData.theme.list.disclosureArrowColor)
+            }
+            
             var actionButtons: [ActionButton]?
             struct ActionButton {
                 let image: UIImage?
@@ -548,6 +556,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     if let user = peer as? TelegramUser {
                         if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
+                        } else if peer.id.isReplies {
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleBoldFont, textColor: textColor)
                         } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                             let string = NSMutableAttributedString()
                             switch item.displayOrder {
@@ -665,6 +675,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             additionalTitleInset += badgeSize
             
+            if let arrowButtonImage = arrowButtonImage {
+                additionalTitleInset += arrowButtonImage.size.width + 4.0
+            }
+            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: multilineStatus ? 3 : 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -735,6 +749,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         var overrideImage: AvatarNodeImageOverride?
                                         if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
                                             overrideImage = .savedMessagesIcon
+                                        } else if peer.id.isReplies, case .generalSearch = item.peerMode {
+                                            overrideImage = .repliesIcon
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }
@@ -856,6 +872,23 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 actionButtonNodes.forEach { $0.removeFromSupernode() }
                             }
                             
+                            if let arrowButtonImage = arrowButtonImage {
+                                if strongSelf.arrowButtonNode == nil {
+                                    let arrowButtonNode = HighlightableButtonNode()
+                                    arrowButtonNode.addTarget(self, action: #selector(strongSelf.arrowButtonPressed), forControlEvents: .touchUpInside)
+                                    strongSelf.arrowButtonNode = arrowButtonNode
+                                    strongSelf.containerNode.addSubnode(arrowButtonNode)
+                                }
+                                if let arrowButtonNode = strongSelf.arrowButtonNode {
+                                    arrowButtonNode.setImage(arrowButtonImage, for: .normal)
+                                    
+                                    transition.updateFrame(node: arrowButtonNode, frame: CGRect(origin: CGPoint(x: params.width - params.rightInset - 12.0 - arrowButtonImage.size.width, y: floor((nodeLayout.contentSize.height - arrowButtonImage.size.height) / 2.0)), size: arrowButtonImage.size))
+                                }
+                            } else if let arrowButtonNode = strongSelf.arrowButtonNode {
+                                strongSelf.arrowButtonNode = nil
+                                arrowButtonNode.removeFromSupernode()
+                            }
+                            
                             let badgeBackgroundWidth: CGFloat
                             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage, let (badgeTextLayout, badgeTextApply) = badgeTextLayoutAndApply {
                                 let badgeBackgroundNode: ASImageNode
@@ -876,7 +909,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 badgeBackgroundNode.image = currentBadgeBackgroundImage
                                 
                                 badgeBackgroundWidth = max(badgeTextLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
-                                let badgeBackgroundFrame = CGRect(x: revealOffset + params.width - params.rightInset - badgeBackgroundWidth - 6.0, y: floor((nodeLayout.contentSize.height - currentBadgeBackgroundImage.size.height) / 2.0), width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+                                var badgeBackgroundFrame = CGRect(x: revealOffset + params.width - params.rightInset - badgeBackgroundWidth - 6.0, y: floor((nodeLayout.contentSize.height - currentBadgeBackgroundImage.size.height) / 2.0), width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+                                
+                                if let arrowButtonImage = arrowButtonImage {
+                                    badgeBackgroundFrame.origin.x -= arrowButtonImage.size.width + 6.0
+                                }
+                                
                                 let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeTextLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 2.0), size: badgeTextLayout.size)
                                 
                                 let badgeTextNode = badgeTextApply()
@@ -1062,6 +1100,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             return item.header
         } else {
             return nil
+        }
+    }
+    
+    @objc func arrowButtonPressed() {
+        if let (item, _, _, _, _, _) = self.layoutParams {
+            item.arrowAction?()
         }
     }
 }

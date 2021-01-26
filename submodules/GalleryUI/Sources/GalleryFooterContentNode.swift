@@ -3,16 +3,19 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import Postbox
 
 public final class GalleryControllerInteraction {
     public let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     public let dismissController: () -> Void
     public let replaceRootController: (ViewController, Promise<Bool>?) -> Void
+    public let editMedia: (MessageId) -> Void
     
-    public init(presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, dismissController: @escaping () -> Void, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void) {
+    public init(presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, dismissController: @escaping () -> Void, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, editMedia: @escaping (MessageId) -> Void) {
         self.presentController = presentController
         self.dismissController = dismissController
         self.replaceRootController = replaceRootController
+        self.editMedia = editMedia
     }
 }
 

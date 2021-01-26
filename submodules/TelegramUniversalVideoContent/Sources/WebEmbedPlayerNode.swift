@@ -75,18 +75,24 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
     
     let impl: WebEmbedImplementation
     
+    private let openUrl: (URL) -> Void
     private let intrinsicDimensions: CGSize
     private let webView: WKWebView
     
     private let semaphore = DispatchSemaphore(value: 0)
     private let queue = Queue()
     
-    init(impl: WebEmbedImplementation, intrinsicDimensions: CGSize) {
+    init(impl: WebEmbedImplementation, intrinsicDimensions: CGSize, openUrl: @escaping (URL) -> Void) {
         self.impl = impl
         self.intrinsicDimensions = intrinsicDimensions
+        self.openUrl = openUrl
         
         let userContentController = WKUserContentController()
-        userContentController.addUserScript(WKUserScript(source: "var meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); meta.setAttribute('content', 'width=device-width'); document.getElementsByTagName('head')[0].appendChild(meta)", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        if impl is YoutubeEmbedImplementation {
+            
+        } else {
+            userContentController.addUserScript(WKUserScript(source: "var meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); meta.setAttribute('content', 'width=device-width'); document.getElementsByTagName('head')[0].appendChild(meta)", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        }
         
         let configuration = WKWebViewConfiguration()
         configuration.allowsInlineMediaPlayback = true
@@ -112,6 +118,8 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         
         self.webView.navigationDelegate = self
         self.webView.scrollView.isScrollEnabled = false
+        self.webView.allowsLinkPreview = false
+        self.webView.allowsBackForwardNavigationGestures = false
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.webView.accessibilityIgnoresInvertColors = true
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
@@ -159,19 +167,19 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
     }
     
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        
+        print("w")
     }
-    
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         self.impl.pageReady()
     }
-    
+
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         if let error = error as? WKError, error.code.rawValue == 204 {
             return
         }
     }
-    
+
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url, url.scheme == "embed" {
             self.impl.callback(url: url)
@@ -179,6 +187,9 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         } else if let _ = navigationAction.targetFrame {
             decisionHandler(.allow)
         } else {
+            if let url = navigationAction.request.url, url.absoluteString.contains("youtube") {
+                self.openUrl(url)
+            }
             decisionHandler(.cancel)
         }
     }
@@ -198,6 +209,12 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
                 Queue.mainQueue().async(impl)
                 strongSelf.semaphore.wait()
             }
+        }
+    }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {
+        if impl is YoutubeEmbedImplementation {
+            self.webView.isUserInteractionEnabled = !hidden
         }
     }
 }

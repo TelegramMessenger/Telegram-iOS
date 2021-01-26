@@ -5,16 +5,19 @@ final class AccountManagerAtomicState: Codable {
         case records
         case currentRecordId
         case currentAuthRecord
+        case accessChallengeData
     }
     
     var records: [AccountRecordId: AccountRecord]
     var currentRecordId: AccountRecordId?
     var currentAuthRecord: AuthAccountRecord?
+    var accessChallengeData: PostboxAccessChallengeData
     
-    init(records: [AccountRecordId: AccountRecord] = [:], currentRecordId: AccountRecordId? = nil, currentAuthRecord: AuthAccountRecord? = nil) {
+    init(records: [AccountRecordId: AccountRecord] = [:], currentRecordId: AccountRecordId? = nil, currentAuthRecord: AuthAccountRecord? = nil, accessChallengeData: PostboxAccessChallengeData = .none) {
         self.records = records
         self.currentRecordId = currentRecordId
         self.currentAuthRecord = currentAuthRecord
+        self.accessChallengeData = accessChallengeData
     }
     
     init(from decoder: Decoder) throws {
@@ -34,6 +37,12 @@ final class AccountManagerAtomicState: Codable {
             self.currentRecordId = try container.decodeIfPresent(AccountRecordId.self, forKey: .currentRecordId)
         }
         self.currentAuthRecord = try container.decodeIfPresent(AuthAccountRecord.self, forKey: .currentAuthRecord)
+        
+        if let accessChallengeData = try? container.decodeIfPresent(PostboxAccessChallengeData.self, forKey: .accessChallengeData) {
+            self.accessChallengeData = accessChallengeData
+        } else {
+            self.accessChallengeData = .none
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -43,5 +52,6 @@ final class AccountManagerAtomicState: Codable {
         let currentRecordIdString: String? = self.currentRecordId.flatMap({ "\($0.rawValue)" })
         try container.encodeIfPresent(currentRecordIdString, forKey: .currentRecordId)
         try container.encodeIfPresent(self.currentAuthRecord, forKey: .currentAuthRecord)
+        try container.encode(self.accessChallengeData, forKey: .accessChallengeData)
     }
 }

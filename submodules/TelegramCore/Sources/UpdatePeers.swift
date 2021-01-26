@@ -44,6 +44,14 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
     transaction.updatePeersInternal(peers, update: { previous, updated in
         let peerId = updated.id
         
+        var updated = updated
+        
+        if let previous = previous as? TelegramUser, let updatedUser = updated as? TelegramUser {
+            updated = TelegramUser.merge(lhs: previous, rhs: updatedUser)
+        } else if let previous = previous as? TelegramChannel, let updatedChannel = updated as? TelegramChannel {
+            updated = mergeChannel(lhs: previous, rhs: updatedChannel)
+        }
+        
         switch peerId.namespace {
             case Namespaces.Peer.CloudUser:
                 break

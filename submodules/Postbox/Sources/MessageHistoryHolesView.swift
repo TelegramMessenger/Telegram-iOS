@@ -37,3 +37,40 @@ public final class MessageHistoryHolesView {
         self.entries = mutableView.entries
     }
 }
+
+public struct MessageHistoryExternalHolesViewEntry: Equatable, Hashable {
+    public let hole: MessageHistoryViewHole
+    public let direction: MessageHistoryViewRelativeHoleDirection
+    public let count: Int
+    
+    public init(hole: MessageHistoryViewHole, direction: MessageHistoryViewRelativeHoleDirection, count: Int) {
+        self.hole = hole
+        self.direction = direction
+        self.count = count
+    }
+}
+
+final class MutableMessageHistoryExternalHolesView {
+    fileprivate var entries = Set<MessageHistoryExternalHolesViewEntry>()
+    
+    init() {
+    }
+    
+    func update(_ holes: Set<MessageHistoryExternalHolesViewEntry>) -> Bool {
+        if self.entries != holes {
+            self.entries = holes
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+public final class MessageHistoryExternalHolesView {
+    public let entries: Set<MessageHistoryExternalHolesViewEntry>
+    
+    init(_ mutableView: MutableMessageHistoryExternalHolesView) {
+        self.entries = mutableView.entries
+    }
+}
+

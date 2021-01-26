@@ -139,6 +139,7 @@ private final class OverlayStatusControllerImpl: ViewController, StandalonePrese
     private let type: OverlayStatusControllerType
     
     private var animatedDidAppear = false
+    private var isDismissed = false
     
     private var controllerNode: OverlayStatusControllerNode {
         return self.displayNode as! OverlayStatusControllerNode
@@ -181,8 +182,12 @@ private final class OverlayStatusControllerImpl: ViewController, StandalonePrese
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        if self.isDismissed {
+            completion?()
+            return
+        }
+        self.isDismissed = true
         self.controllerNode.dismiss()
-        completion?()
     }
 }
 

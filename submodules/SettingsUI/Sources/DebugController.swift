@@ -13,6 +13,7 @@ import ItemListUI
 import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
+import TelegramCallsUI
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -50,6 +51,7 @@ private enum DebugControllerSection: Int32 {
 private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case sendOneLog(PresentationTheme)
+    case sendShareLogs
     case sendNotificationLogs(PresentationTheme)
     case sendCriticalLogs(PresentationTheme)
     case accounts(PresentationTheme)
@@ -64,6 +66,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
+    case resetDatabaseAndCache(PresentationTheme)
     case resetHoles(PresentationTheme)
     case reindexUnread(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
@@ -71,8 +74,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case alternativeFolderTabs(Bool)
+    case snapPinListToTop(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
+    case voiceConference
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
     case enableVoipTcp(Bool)
@@ -81,7 +86,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .sendLogs, .sendOneLog, .sendNotificationLogs, .sendCriticalLogs:
+        case .sendLogs, .sendOneLog, .sendShareLogs, .sendNotificationLogs, .sendCriticalLogs:
             return DebugControllerSection.logs.rawValue
         case .accounts:
             return DebugControllerSection.logs.rawValue
@@ -89,7 +94,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .snapPinListToTop, .playerEmbedding, .playlistPlayback, .voiceConference:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -106,54 +111,62 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 0
         case .sendOneLog:
             return 1
-        case .sendNotificationLogs:
+        case .sendShareLogs:
             return 2
-        case .sendCriticalLogs:
+        case .sendNotificationLogs:
             return 3
-        case .accounts:
+        case .sendCriticalLogs:
             return 4
-        case .logToFile:
+        case .accounts:
             return 5
-        case .logToConsole:
+        case .logToFile:
             return 6
-        case .redactSensitiveData:
+        case .logToConsole:
             return 7
-        case .enableRaiseToSpeak:
+        case .redactSensitiveData:
             return 8
-        case .keepChatNavigationStack:
+        case .enableRaiseToSpeak:
             return 9
-        case .skipReadHistory:
+        case .keepChatNavigationStack:
             return 10
-        case .crashOnSlowQueries:
+        case .skipReadHistory:
             return 11
-        case .clearTips:
+        case .crashOnSlowQueries:
             return 12
-        case .reimport:
+        case .clearTips:
             return 13
-        case .resetData:
+        case .reimport:
             return 14
-        case .resetDatabase:
+        case .resetData:
             return 15
-        case .resetHoles:
+        case .resetDatabase:
             return 16
-        case .reindexUnread:
+        case .resetDatabaseAndCache:
             return 17
-        case .resetBiometricsData:
+        case .resetHoles:
             return 18
-        case .optimizeDatabase:
+        case .reindexUnread:
+            return 19
+        case .resetBiometricsData:
             return 20
-        case .photoPreview:
+        case .optimizeDatabase:
             return 21
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 22
-        case .alternativeFolderTabs:
+        case .knockoutWallpaper:
             return 23
-        case .playerEmbedding:
+        case .alternativeFolderTabs:
             return 24
-        case .playlistPlayback:
+        case .snapPinListToTop:
             return 25
+        case .playerEmbedding:
+            return 26
+        case .playlistPlayback:
+            return 27
+        case .voiceConference:
+            return 28
         case let .preferredVideoCodec(index, _, _, _):
-            return 26 + index
+            return 29 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -173,7 +186,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         let arguments = arguments as! DebugControllerArguments
         switch self {
         case let .sendLogs(theme):
-            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -190,12 +203,29 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 if let strongController = controller {
                                     strongController.dismiss()
                                     
-                                    let messages = logs.map { (name, path) -> EnqueueMessage in
-                                        let id = arc4random64()
-                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                        return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                    let lineFeed = "\n".data(using: .utf8)!
+                                    var logData: Data = Data()
+                                    for (name, path) in logs {
+                                        if !logData.isEmpty {
+                                            logData.append(lineFeed)
+                                            logData.append(lineFeed)
+                                        }
+                                        
+                                        logData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+                                        
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                            logData.append(data)
+                                        }
                                     }
-                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                                    
+                                    let id = arc4random64()
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: logData.count, isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
+                                    
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: logData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt")])
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                    
+                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
                             }
                             arguments.pushController(controller)
@@ -224,7 +254,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             })
         case let .sendOneLog(theme):
-            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Latest Log", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Latest Logs (Up to 4 MB)", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                         let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -241,14 +271,39 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     if let strongController = controller {
                                         strongController.dismiss()
                                         
-                                        let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
+                                        let lineFeed = "\n".data(using: .utf8)!
+                                        var logData: Data = Data()
                                         
-                                        let messages = updatedLogs.map { (name, path) -> EnqueueMessage in
-                                            let id = arc4random64()
-                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                            return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                        var latestLogs: [(String, String)] = []
+                                        if logs.count < 2 {
+                                            latestLogs = logs
+                                        } else {
+                                            for i in (logs.count - 2) ..< logs.count {
+                                                latestLogs.append(logs[i])
+                                            }
                                         }
-                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                                        
+                                        for (name, path) in latestLogs {
+                                            if !logData.isEmpty {
+                                                logData.append(lineFeed)
+                                                logData.append(lineFeed)
+                                            }
+                                            
+                                            logData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+                                            
+                                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                                logData.append(data)
+                                            }
+                                        }
+                                        
+                                        let id = arc4random64()
+                                        let fileResource = LocalFileMediaResource(fileId: id, size: logData.count, isSecretRelated: false)
+                                        context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
+                                        
+                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: logData.count, attributes: [.FileName(fileName: "Log-iOS-Short.txt")])
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                        
+                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                     }
                                 }
                                 arguments.pushController(controller)
@@ -278,9 +333,77 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         arguments.presentController(actionSheet, nil)
                     })
             })
+        case let .sendShareLogs:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Share Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
+                let _ = (Logger.shared.collectLogs(prefix: "/share-logs")
+                |> deliverOnMainQueue).start(next: { logs in
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    
+                    var items: [ActionSheetButtonItem] = []
+                    
+                    if let context = arguments.context {
+                        items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            
+                            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                            controller.peerSelected = { [weak controller] peerId in
+                                if let strongController = controller {
+                                    strongController.dismiss()
+                                    
+                                    let lineFeed = "\n".data(using: .utf8)!
+                                    var logData: Data = Data()
+                                    for (name, path) in logs {
+                                        if !logData.isEmpty {
+                                            logData.append(lineFeed)
+                                            logData.append(lineFeed)
+                                        }
+                                        
+                                        logData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+                                        
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                            logData.append(data)
+                                        }
+                                    }
+                                    
+                                    let id = arc4random64()
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: logData.count, isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
+                                    
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: logData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt")])
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                    
+                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                                }
+                            }
+                            arguments.pushController(controller)
+                        }))
+                    }
+                    items.append(ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        let composeController = MFMailComposeViewController()
+                        composeController.mailComposeDelegate = arguments.mailComposeDelegate
+                        composeController.setSubject("Telegram Logs")
+                        for (name, path) in logs {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                                composeController.addAttachmentData(data, mimeType: "application/text", fileName: name)
+                            }
+                        }
+                        arguments.getRootController()?.present(composeController, animated: true, completion: nil)
+                    }))
+                    
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                        ])])
+                    arguments.presentController(actionSheet, nil)
+                })
+            })
         case let .sendNotificationLogs(theme):
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Notification Logs", label: "", sectionId: self.section, style: .blocks, action: {
-                let _ = (Logger(basePath: arguments.sharedContext.basePath + "/notificationServiceLogs").collectLogs()
+                let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/notificationServiceLogs").collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                         guard let context = arguments.context else {
                             return
@@ -468,6 +591,30 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         actionSheet?.dismissAnimated()
                         let databasePath = context.account.basePath + "/postbox/db"
                         let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                        exit(0)
+                        preconditionFailure()
+                    }),
+                    ]), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                arguments.presentController(actionSheet, nil)
+            })
+        case let .resetDatabaseAndCache(theme):
+            return ItemListActionItem(presentationData: presentationData, title: "Clear Database and Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: "All secret chats will be lost."),
+                    ActionSheetButtonItem(title: "Clear Database", color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let databasePath = context.account.basePath + "/postbox"
+                        let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                        exit(0)
                         preconditionFailure()
                     }),
                     ]), ActionSheetItemGroup(items: [
@@ -559,6 +706,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .snapPinListToTop(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Pin List Top Edge", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.snapPinListToTop = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .playerEmbedding(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -578,6 +735,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return settings
                     })
                 }).start()
+            })
+        case .voiceConference:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
+                /*guard let context = arguments.context else {
+                    return
+                }
+                let controller = GroupCallController(context: context)
+                controller.navigationPresentation = .modal
+                arguments.pushController(controller)*/
             })
         case let .preferredVideoCodec(_, title, value, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
@@ -626,6 +792,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.sendOneLog(presentationData.theme))
+    entries.append(.sendShareLogs)
     entries.append(.sendNotificationLogs(presentationData.theme))
     entries.append(.sendCriticalLogs(presentationData.theme))
     entries.append(.accounts(presentationData.theme))
@@ -646,14 +813,18 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     }
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
+    entries.append(.resetDatabaseAndCache(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.reindexUnread(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     //entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
+    entries.append(.snapPinListToTop(experimentalSettings.snapPinListToTop))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
+    
+    //entries.append(.voiceConference)
     
     let codecs: [(String, String?)] = [
         ("No Preference", nil),

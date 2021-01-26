@@ -4,8 +4,8 @@ objc_library(
     enable_modules = True,
     module_name = "MtProtoKit",
     srcs = glob([
-        "Sources/*.m",
-        "Sources/*.h",
+        "Sources/**/*.m",
+        "Sources/**/*.h",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",
@@ -20,6 +20,10 @@ objc_library(
         "Foundation",
         "Security",
         "SystemConfiguration",
+        "CFNetwork",
+    ],
+    sdk_dylibs = [
+        "libz",
     ],
     visibility = [
         "//visibility:public",

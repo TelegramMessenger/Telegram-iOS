@@ -12,6 +12,8 @@ import RadialStatusNode
 import TelegramStringFormatting
 import GridMessageSelectionNode
 import UniversalMediaPlayer
+import ListMessageItem
+import ChatMessageInteractiveMediaBadge
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -1009,6 +1011,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        let previousParams = self.currentParams
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -1016,7 +1019,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         let availableWidth = size.width - sideInset * 2.0
         
         let itemsLayout: ItemsLayout
-        if let current = self.itemsLayout {
+        if let current = self.itemsLayout, previousParams?.size.width == size.width {
             itemsLayout = current
         } else {
             switch self.contentType {

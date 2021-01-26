@@ -10,6 +10,8 @@ import LocalizedPeerData
 private enum MessageGroupType {
     case photos
     case videos
+    case music
+    case files
     case generic
 }
 
@@ -18,9 +20,13 @@ private func singleMessageType(message: Message) -> MessageGroupType {
         if let _ = media as? TelegramMediaImage {
             return .photos
         } else if let file = media as? TelegramMediaFile {
+            if file.isMusic {
+                return .music
+            }
             if file.isVideo && !file.isInstantVideo {
                 return .videos
             }
+            return .files
         }
     }
     return .generic
@@ -78,6 +84,20 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     textIsReady = true
                 } else {
                     messageText = strings.ChatList_MessageVideos(Int32(messages.count))
+                    textIsReady = true
+                }
+            case .music:
+                if !messageText.isEmpty {
+                    textIsReady = true
+                } else {
+                    messageText = strings.ChatList_MessageMusic(Int32(messages.count))
+                    textIsReady = true
+                }
+            case .files:
+                if !messageText.isEmpty {
+                    textIsReady = true
+                } else {
+                    messageText = strings.ChatList_MessageFiles(Int32(messages.count))
                     textIsReady = true
                 }
             case .generic:

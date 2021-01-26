@@ -25,7 +25,7 @@ private func createChannel(account: Account, title: String, description: String?
         var address: String?
         if let location = location {
             flags |= (1 << 2)
-            geoPoint = .inputGeoPoint(lat: location.latitude, long: location.longitude)
+            geoPoint = .inputGeoPoint(flags: 0, lat: location.latitude, long: location.longitude, accuracyRadius: nil)
             address = location.address
         }
         

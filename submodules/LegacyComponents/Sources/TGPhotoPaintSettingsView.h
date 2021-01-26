@@ -35,10 +35,6 @@ typedef enum
 - (void)setIcon:(TGPhotoPaintSettingsViewIcon)icon animated:(bool)animated;
 - (void)setHighlighted:(bool)highlighted;
 
-+ (UIImage *)landscapeLeftBackgroundImage;
-+ (UIImage *)landscapeRightBackgroundImage;
-+ (UIImage *)portraitBackgroundImage;
-
 @end
 
 @protocol TGPhotoPaintPanelView

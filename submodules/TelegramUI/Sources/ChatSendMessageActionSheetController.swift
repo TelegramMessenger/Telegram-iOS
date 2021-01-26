@@ -69,9 +69,11 @@ final class ChatSendMessageActionSheetController: ViewController {
         
         var reminders = false
         var isSecret = false
+        var canSchedule = false
         if case let .peer(peerId) = self.interfaceState.chatLocation {
             reminders = peerId == context.account.peerId
             isSecret = peerId.namespace == Namespaces.Peer.SecretChat
+            canSchedule = !isSecret
         }
         
         self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, gesture: gesture, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
@@ -80,7 +82,7 @@ final class ChatSendMessageActionSheetController: ViewController {
         }, sendSilently: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(true)
             self?.dismiss(cancel: false)
-        }, schedule: isSecret ? nil : { [weak self] in
+        }, schedule: !canSchedule ? nil : { [weak self] in
             self?.controllerInteraction?.scheduleCurrentMessage()
             self?.dismiss(cancel: false)
         }, cancel: { [weak self] in

@@ -8,14 +8,10 @@ import SwiftSignalKit
 import TelegramPresentationData
 import LegacyComponents
 import AccountContext
+import ChatInterfaceState
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0
-
-enum ChatTextInputMediaRecordingButtonMode: Int32 {
-    case audio = 0
-    case video = 1
-}
 
 private func findTargetView(_ view: UIView, point: CGPoint) -> UIView? {
     if view.bounds.contains(point) && view.tag == 0x01f2bca {

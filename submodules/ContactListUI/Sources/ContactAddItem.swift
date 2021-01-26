@@ -220,7 +220,7 @@ class ContactsAddItemNode: ListViewItemNode {
                     if let updatedIcon = updatedIcon {
                         strongSelf.iconNode.image = updatedIcon
                     }
-                    transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(x: 14.0, y: 5.0, width: 40.0, height: 40.0))
+                    transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(x: params.leftInset + 14.0, y: 5.0, width: 40.0, height: 40.0))
                     
                     let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))

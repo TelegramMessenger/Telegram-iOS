@@ -12,6 +12,7 @@ import AccountContext
 import SearchUI
 import ChatListSearchItemHeader
 import WebSearchUI
+import SearchBarNode
 
 enum WallpaperSearchColor: CaseIterable {
     case blue
@@ -53,6 +54,35 @@ enum WallpaperSearchColor: CaseIterable {
                 return "Gray"
             case .white:
                 return "White"
+        }
+    }
+    
+    var displayColor: UIColor {
+        switch self {
+            case .blue:
+                return UIColor(rgb: 0x0076ff)
+            case .red:
+                return UIColor(rgb: 0xff0000)
+            case .orange:
+                return UIColor(rgb: 0xff8a00)
+            case .yellow:
+                return UIColor(rgb: 0xffca00)
+            case .green:
+                return UIColor(rgb: 0x00e432)
+            case .teal:
+                return UIColor(rgb: 0x1fa9ab)
+            case .purple:
+                return UIColor(rgb: 0x7300aa)
+            case .pink:
+                return UIColor(rgb: 0xf9bec5)
+            case .brown:
+                return UIColor(rgb: 0x734021)
+            case .black:
+                return UIColor(rgb: 0x000000)
+            case .gray:
+                return UIColor(rgb: 0x5c585f)
+            case .white:
+                return UIColor(rgb: 0xffffff)
         }
     }
     
@@ -341,7 +371,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     override var isSearching: Signal<Bool, NoError> {
         return self._isSearching.get()
     }
-    
+        
     init(context: AccountContext, openResult: @escaping (ChatContextResult) -> Void) {
         self.context = context
         self.queryPromise = Promise<WallpaperSearchQuery>(self.queryValue)
@@ -658,23 +688,30 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
             self.queryPromise.set(.single(query))
             
             if updateInterface {
-                let prefix: NSAttributedString?
+                let tokens: [SearchBarToken]
                 let text: String
                 let placeholder: String
                 switch query {
                     case let .generic(query):
-                        prefix = nil
+                        tokens = []
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_Search
                     case let .color(color, query):
-                        let prefixString = NSMutableAttributedString()
-                        prefixString.append(NSAttributedString(string: self.presentationData.strings.WallpaperSearch_ColorPrefix, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationSearchBar.inputTextColor))
-                        prefixString.append(NSAttributedString(string: "\(color.localizedString(strings: self.presentationData.strings)) ", font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationSearchBar.accentColor))
-                        prefix = prefixString
+                        let backgroundColor = color.displayColor
+                        let foregroundColor: UIColor
+                        let strokeColor: UIColor
+                        if color == .white {
+                            foregroundColor = .black
+                            strokeColor = self.presentationData.theme.rootController.navigationSearchBar.inputClearButtonColor
+                        } else {
+                            foregroundColor = .white
+                            strokeColor = color.displayColor
+                        }
+                        tokens = [SearchBarToken(id: 0, icon: UIImage(bundleImageName: "Settings/WallpaperSearchColorIcon"), title: color.localizedString(strings: self.presentationData.strings), style: SearchBarToken.Style(backgroundColor: backgroundColor, foregroundColor: foregroundColor, strokeColor: strokeColor))]
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_SearchShort
                 }
-                self.setQuery?(prefix, text)
+                self.setQuery?(nil, tokens, text)
                 self.setPlaceholder?(placeholder)
             }
         }
@@ -685,6 +722,10 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     }
     
     override func searchTextClearPrefix() {
+        self.updateQuery({ $0.updatedWithColor(nil) }, updateInterface: true)
+    }
+    
+    override func searchTextClearTokens() {
         self.updateQuery({ $0.updatedWithColor(nil) }, updateInterface: true)
     }
     

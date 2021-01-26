@@ -10,6 +10,7 @@ import RadialStatusNode
 import AppBundle
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import SlotMachineAnimationNode
 import AnimationUI
 import SyncCore
 import Postbox
@@ -24,6 +25,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let iconCheckNode: RadialStatusNode?
     private let animationNode: AnimationNode?
     private var animatedStickerNode: AnimatedStickerNode?
+    private var slotMachineNode: SlotMachineAnimationNode?
     private var stillStickerNode: TransformImageNode?
     private var stickerImageSize: CGSize?
     private var stickerOffset: CGPoint?
@@ -36,6 +38,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let panelWrapperNode: ASDisplayNode
     private let action: (UndoOverlayAction) -> Bool
     private let dismiss: () -> Void
+    
+    private let content: UndoOverlayContent
     
     private let effectView: UIView
     
@@ -51,6 +55,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (UndoOverlayAction) -> Bool, dismiss: @escaping () -> Void) {
         self.elevatedLayout = elevatedLayout
+        self.content = content
         
         self.action = action
         self.dismiss = dismiss
@@ -137,7 +142,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
-                self.originalRemainingSeconds = 5
+                self.originalRemainingSeconds = 3
             case let .info(text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -199,6 +204,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 self.textNode.attributedText = string
                 displayUndo = false
+                self.originalRemainingSeconds = 5
+            case let .messagesUnpinned(title, text, undo, isHidden):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: isHidden ? "anim_message_hidepin" : "anim_message_unpin", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                if !text.isEmpty {
+                    self.textNode.attributedText = attributedText
+                }
+                
+                displayUndo = undo
                 self.originalRemainingSeconds = 5
             case let .emoji(path, text):
                 self.iconNode = nil
@@ -339,23 +361,50 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         break
                 }
                 
-                let animatedStickerNode = AnimatedStickerNode()
-                self.animatedStickerNode = animatedStickerNode
-                
-                let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .dice(dice.emoji), forceActualized: false)
-                |> deliverOnMainQueue).start(next: { stickerPack in
+                if dice.emoji == "🎰" {
+                    let slotMachineNode = SlotMachineAnimationNode(size: CGSize(width: 42.0, height: 42.0))
+                    self.slotMachineNode = slotMachineNode
+                    
+                    slotMachineNode.setState(.rolling)
                     if let value = dice.value {
-                        switch stickerPack {
-                            case let .result(_, items, _):
-                                let item = items[Int(value)]
-                                if let item = item as? StickerPackItem {
-                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                                }
-                            default:
-                                break
-                        }
+                        slotMachineNode.setState(.value(value, true))
                     }
-                })
+                } else {
+                    let animatedStickerNode = AnimatedStickerNode()
+                    self.animatedStickerNode = animatedStickerNode
+                    
+                    let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .dice(dice.emoji), forceActualized: false)
+                    |> deliverOnMainQueue).start(next: { stickerPack in
+                        if let value = dice.value {
+                            switch stickerPack {
+                                case let .result(_, items, _):
+                                    let item = items[Int(value)]
+                                    if let item = item as? StickerPackItem {
+                                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                    }
+                                default:
+                                    break
+                            }
+                        }
+                    })
+                }
+            case let .setProximityAlert(title, text, cancelled):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: cancelled ? "anim_proximity_cancelled" : "anim_proximity_set", colors: [:], scale: 0.45)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                if !text.isEmpty {
+                    self.textNode.attributedText = attributedText
+                }
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -384,7 +433,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder:
+        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert:
             break
         case .dice:
             self.panelWrapperNode.clipsToBounds = true
@@ -397,6 +446,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.animationNode.flatMap(self.panelWrapperNode.addSubnode)
         self.stillStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.slotMachineNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
         self.panelWrapperNode.addSubnode(self.buttonNode)
@@ -489,8 +539,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let firstLayout = self.validLayout == nil
         self.validLayout = layout
         
-        var leftInset: CGFloat = 50.0
+        var preferredSize: CGSize?
         if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
+            if case .messagesUnpinned = self.content {
+                let factor: CGFloat = 0.5
+                preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
+            } else {
+                preferredSize = iconSize
+            }
+        }
+        
+        var leftInset: CGFloat = 50.0
+        if let iconSize = preferredSize {
             if iconSize.width > leftInset {
                 leftInset = iconSize.width - 8.0
             }
@@ -564,7 +624,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             }
         }
         
-        if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
+        if let animationNode = self.animationNode, let iconSize = preferredSize {
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: animationNode, frame: iconFrame)
         }
@@ -587,12 +647,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             if let animatedStickerNode = self.animatedStickerNode {
                 animatedStickerNode.updateLayout(size: iconFrame.size)
                 transition.updateFrame(node: animatedStickerNode, frame: iconFrame)
+            } else if let slotMachineNode = self.slotMachineNode {
+                transition.updateFrame(node: slotMachineNode, frame: iconFrame)
             }
         } else if let animatedStickerNode = self.animatedStickerNode {
             let iconSize = CGSize(width: 32.0, height: 32.0)
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             animatedStickerNode.updateLayout(size: iconFrame.size)
             transition.updateFrame(node: animatedStickerNode, frame: iconFrame)
+        } else if let slotMachineNode = self.slotMachineNode {
+            let iconSize = CGSize(width: 32.0, height: 32.0)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            transition.updateFrame(node: slotMachineNode, frame: iconFrame)
         }
         
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))

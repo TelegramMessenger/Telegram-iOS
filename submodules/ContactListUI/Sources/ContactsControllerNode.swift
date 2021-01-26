@@ -15,18 +15,6 @@ import SearchUI
 import AppBundle
 import ContextUI
 
-private final class ContactsControllerNodeView: UITracingLayerView, PreviewingHostView {
-    var previewingDelegate: PreviewingHostViewDelegate? {
-        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
-            return self?.controller?.previewingController(from: sourceView, for: point)
-        }, commitController: { [weak self] controller in
-            self?.controller?.previewingCommit(controller)
-        })
-    }
-    
-    weak var controller: ContactsController?
-}
-
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
@@ -67,6 +55,7 @@ final class ContactsControllerNode: ASDisplayNode {
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
+    var requestAddContact: ((String) -> Void)?
     var openPeopleNearby: (() -> Void)?
     var openInvite: (() -> Void)?
     
@@ -108,7 +97,7 @@ final class ContactsControllerNode: ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            return ContactsControllerNodeView()
+            return UITracingLayerView()
         })
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
@@ -148,12 +137,6 @@ final class ContactsControllerNode: ASDisplayNode {
     
     deinit {
         self.presentationDataDisposable?.dispose()
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        (self.view as? ContactsControllerNodeView)?.controller = self.controller
     }
     
     private func updateThemeAndStrings() {
@@ -202,7 +185,11 @@ final class ContactsControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], addContact: { [weak self] phoneNumber in
+            if let requestAddContact = self?.requestAddContact {
+                requestAddContact(phoneNumber)
+            }
+        }, openPeer: { [weak self] peer in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                 requestOpenPeerFromSearch(peer)
             }

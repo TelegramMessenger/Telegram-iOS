@@ -236,37 +236,4 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
     }
 }
 
-+ (UIImage *)landscapeLeftBackgroundImage
-{
-    static dispatch_once_t onceToken;
-    static UIImage *image;
-    dispatch_once(&onceToken, ^
-    {
-        image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupLandscapeLeftBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
-    });
-    return image;
-}
-
-+ (UIImage *)landscapeRightBackgroundImage
-{
-    static dispatch_once_t onceToken;
-    static UIImage *image;
-    dispatch_once(&onceToken, ^
-    {
-        image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupLandscapeRightBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
-    });
-    return image;
-}
-
-+ (UIImage *)portraitBackgroundImage
-{
-    static dispatch_once_t onceToken;
-    static UIImage *image;
-    dispatch_once(&onceToken, ^
-    {
-        image = [TGTintedImage(TGComponentsImageNamed(@"PaintPopupPortraitBackground"), UIColorRGB(0xf7f7f7)) resizableImageWithCapInsets:UIEdgeInsetsMake(32.0f, 32.0f, 32.0f, 32.0f)];
-    });
-    return image;
-}
-
 @end

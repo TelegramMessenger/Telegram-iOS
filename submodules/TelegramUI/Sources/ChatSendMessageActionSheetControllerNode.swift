@@ -395,7 +395,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         UIView.animate(withDuration: 0.2, animations: {
             if #available(iOS 9.0, *) {
-                self.effectView.effect = makeCustomZoomBlurEffect()
+                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
             } else {
                 self.effectView.alpha = 1.0
             }

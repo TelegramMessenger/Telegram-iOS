@@ -1120,7 +1120,7 @@
     [_playerItemDisposable setDisposable:[[itemSignal deliverOn:[SQueue mainQueue]] startWithNext:^(AVPlayerItem *playerItem)
     {
         __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-        if (strongSelf == nil)
+        if (strongSelf == nil || ![playerItem isKindOfClass:[AVPlayerItem class]])
             return;
         
         strongSelf->_player = [AVPlayer playerWithPlayerItem:playerItem];
@@ -1290,6 +1290,9 @@
 
 - (void)_seekToPosition:(NSTimeInterval)position manual:(bool)__unused manual
 {
+    if (self.player == nil) {
+        return;
+    }
     CMTime targetTime = CMTimeMakeWithSeconds(position, NSEC_PER_SEC);
     
     if (CMTIME_COMPARE_INLINE(targetTime, !=, _chaseTime))

@@ -137,7 +137,9 @@ public struct InstantPageGalleryEntry: Equatable {
                     }))
                 }), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
             } else {
-                if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
+                if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent, openUrl: { url in
+                    
+                }) {
                     return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage, nil), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
                 } else {
                     preconditionFailure()
@@ -356,12 +358,13 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
             if let strongSelf = self {
                 strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
-            }, dismissController: { [weak self] in
-                self?.dismiss(forceAway: true)
-            }, replaceRootController: { [weak self] controller, ready in
-                if let strongSelf = self {
-                    strongSelf.replaceRootController(controller, ready)
-                }
+        }, dismissController: { [weak self] in
+            self?.dismiss(forceAway: true)
+        }, replaceRootController: { [weak self] controller, ready in
+            if let strongSelf = self {
+                strongSelf.replaceRootController(controller, ready)
+            }
+        }, editMedia: { _ in
         })
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()

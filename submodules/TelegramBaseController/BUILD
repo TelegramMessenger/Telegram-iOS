@@ -17,7 +17,6 @@ swift_library(
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",
         "//submodules/AccountContext:AccountContext",
-        "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/Markdown:Markdown",

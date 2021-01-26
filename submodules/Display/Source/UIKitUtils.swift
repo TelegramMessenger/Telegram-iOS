@@ -19,8 +19,8 @@ public func springAnimationValueAt(_ animation: CABasicAnimation, _ t: CGFloat) 
     return springAnimationValueAtImpl(animation, t)
 }
 
-public func makeCustomZoomBlurEffect() -> UIBlurEffect? {
-    return makeCustomZoomBlurEffectImpl()
+public func makeCustomZoomBlurEffect(isLight: Bool) -> UIBlurEffect? {
+    return makeCustomZoomBlurEffectImpl(isLight)
 }
 
 public func applySmoothRoundedCorners(_ layer: CALayer) {

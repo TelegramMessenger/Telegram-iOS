@@ -24,10 +24,6 @@ const CGFloat TGPhotoBrushSettingsItemHeight = 44.0f;
     NSArray *_brushViews;
     NSArray *_brushIconViews;
     NSArray *_brushSeparatorViews;
-    
-    UIImage *_landscapeLeftBackgroundImage;
-    UIImage *_landscapeRightBackgroundImage;
-    UIImage *_portraitBackgroundImage;
 }
 @end
 

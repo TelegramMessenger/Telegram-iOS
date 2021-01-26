@@ -4,8 +4,6 @@
 
 #import <objc/runtime.h>
 
-#import <LegacyComponents/UIDevice+PlatformInfo.h>
-
 #import <LegacyComponents/TGPaintUtils.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
@@ -2431,7 +2429,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 + (bool)useLegacyCamera
 {
-    return iosMajorVersion() < 7 || [UIDevice currentDevice].platformType == UIDevice4iPhone || [UIDevice currentDevice].platformType == UIDevice4GiPod;
+    return false;
 }
 
 + (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator

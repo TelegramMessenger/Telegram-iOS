@@ -163,6 +163,8 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                 } else {
                     updatedButtons = []
                 }
+            case .replyThread:
+                updatedButtons = []
         }
         
         var buttonsUpdated = false

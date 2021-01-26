@@ -287,9 +287,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     
         var invertArrow = false
         switch self.location {
-        case let .point(rect):
+        case let .point(rect, arrowPosition):
             let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
-            backgroundFrame = CGRect(origin: CGPoint(x: rect.midX - backgroundWidth / 2.0, y: rect.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+            switch arrowPosition {
+                case .bottom:
+                    backgroundFrame = CGRect(origin: CGPoint(x: rect.midX - backgroundWidth / 2.0, y: rect.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+                case .right:
+                    backgroundFrame = CGRect(origin: CGPoint(x: rect.minX - backgroundWidth - bottomInset, y: rect.midY - backgroundHeight / 2.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+            }
+            
             if backgroundFrame.minX < sideInset {
                 backgroundFrame.origin.x = sideInset
             }
@@ -312,24 +318,35 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         if let effectView = self.effectView {
             transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         }
-        if let image = self.arrowNode.image, case let .point(rect) = self.location {
+        if let image = self.arrowNode.image, case let .point(rect, arrowPosition) = self.location {
             let arrowSize = image.size
             let arrowCenterX = rect.midX
             
             let arrowFrame: CGRect
             
-            if invertArrow {
-                arrowFrame = CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: -arrowSize.height), size: arrowSize)
-            } else {
-                arrowFrame = CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: backgroundFrame.height), size: arrowSize)
+            switch arrowPosition {
+                case .bottom:
+                    if invertArrow {
+                        arrowFrame = CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: -arrowSize.height), size: arrowSize)
+                    } else {
+                        arrowFrame = CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: backgroundFrame.height), size: arrowSize)
+                    }
+                    ContainedViewLayoutTransition.immediate.updateTransformScale(node: self.arrowContainer, scale: CGPoint(x: 1.0, y: invertArrow ? -1.0 : 1.0))
+                    
+                    transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: -backgroundFrame.minX, dy: 0.0))
+                    
+                    self.arrowNode.frame = CGRect(origin: CGPoint(), size: arrowSize)
+                    self.arrowEffectView?.frame = CGRect(origin: CGPoint(), size: arrowSize)
+                case .right:
+                    arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.width + arrowSize.height, y: rect.midY), size: CGSize(width: arrowSize.height, height: arrowSize.width))
+                    
+                    ContainedViewLayoutTransition.immediate.updateTransformRotation(node: self.arrowContainer, angle: -CGFloat.pi / 2.0)
+                    
+                    transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 0.0, dy: -backgroundFrame.minY - floorToScreenPixels((backgroundFrame.height - arrowSize.width) / 2.0)))
+                    
+                    self.arrowNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
+                    self.arrowEffectView?.frame = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
             }
-            
-            transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: -backgroundFrame.minX, dy: 0.0))
-            
-            ContainedViewLayoutTransition.immediate.updateTransformScale(node: self.arrowContainer, scale: CGPoint(x: 1.0, y: invertArrow ? -1.0 : 1.0))
-            
-            self.arrowNode.frame = CGRect(origin: CGPoint(), size: arrowFrame.size)
-            self.arrowEffectView?.frame = CGRect(origin: CGPoint(), size: arrowFrame.size)
         } else {
             self.arrowNode.isHidden = true
             self.arrowEffectView?.isHidden = true
@@ -375,10 +392,19 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             if let _ = self.validLayout {
                 self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -13.0 - self.backgroundNode.frame.height), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             }
-        case .point:
+        case let .point(_, arrowPosition):
             self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.01)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4, damping: 105.0)
-            let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
-            self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, damping: 105.0, additive: true)
+           
+            let startPoint: CGPoint
+            switch arrowPosition {
+                case .bottom:
+                    let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
+                    startPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
+                case .right:
+                    startPoint = CGPoint(x: self.arrowContainer.frame.maxX - self.containerNode.bounds.width / 2.0, y: self.arrowContainer.frame.minY - self.containerNode.bounds.height / 2.0)
+            }
+            
+            self.containerNode.layer.animateSpring(from: NSValue(cgPoint: startPoint), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, damping: 105.0, additive: true)
             self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         
@@ -407,14 +433,22 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             if let _ = self.validLayout {
                 self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -13.0 - self.backgroundNode.frame.height), duration: 0.3, removeOnCompletion: false, additive: true)
             }
-        case .point:
+        case let .point(_, arrowPosition):
             self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                 completion()
             })
             self.containerNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
             
-            let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
-            self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0), duration: 0.2, removeOnCompletion: false, additive: true)
+            let targetPoint: CGPoint
+            switch arrowPosition {
+                case .bottom:
+                    let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
+                    targetPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
+                case .right:
+                    targetPoint = CGPoint(x: self.arrowContainer.frame.maxX - self.containerNode.bounds.width / 2.0, y: self.arrowContainer.frame.minY - self.containerNode.bounds.height / 2.0)
+            }
+            
+            self.containerNode.layer.animatePosition(from: CGPoint(), to: targetPoint, duration: 0.2, removeOnCompletion: false, additive: true)
         }
     }
     
@@ -442,8 +476,13 @@ public final class TooltipScreen: ViewController {
         case dismiss(consume: Bool)
     }
     
+    public enum ArrowPosition {
+        case bottom
+        case right
+    }
+    
     public enum Location {
-        case point(CGRect)
+        case point(CGRect, ArrowPosition)
         case top
     }
     

@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramPresentationData
+import ChatInterfaceState
 
 enum PeerMediaCollectionMode: Int32 {
     case photoOrVideo

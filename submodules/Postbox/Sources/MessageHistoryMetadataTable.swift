@@ -13,6 +13,7 @@ private enum MetadataPrefix: Int8 {
     case ShouldReindexUnreadCountsState = 10
     case TotalUnreadCountStates = 11
     case PeerHistoryTagInitialized = 12
+    case PeerHistoryThreadHoleIndexInitialized = 13
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
@@ -45,6 +46,7 @@ final class MessageHistoryMetadataTable: Table {
     }
     
     let sharedPeerHistoryInitializedKey = ValueBoxKey(length: 8 + 1)
+    let sharedPeerThreadHoleIndexInitializedKey = ValueBoxKey(length: 8 + 1 + 8)
     let sharedGroupFeedIndexInitializedKey = ValueBoxKey(length: 4 + 1)
     let sharedChatListGroupHistoryInitializedKey = ValueBoxKey(length: 4 + 1)
     let sharedPeerNextMessageIdByNamespaceKey = ValueBoxKey(length: 8 + 1 + 4)
@@ -74,6 +76,13 @@ final class MessageHistoryMetadataTable: Table {
         self.sharedPeerHistoryInitializedKey.setInt64(0, value: id.toInt64())
         self.sharedPeerHistoryInitializedKey.setInt8(8, value: MetadataPrefix.PeerHistoryInitialized.rawValue)
         return self.sharedPeerHistoryInitializedKey
+    }
+    
+    private func peerThreadHoleIndexInitializedKey(peerId: PeerId, threadId: Int64) -> ValueBoxKey {
+        self.sharedPeerThreadHoleIndexInitializedKey.setInt64(0, value: peerId.toInt64())
+        self.sharedPeerThreadHoleIndexInitializedKey.setInt8(8, value: MetadataPrefix.PeerHistoryThreadHoleIndexInitialized.rawValue)
+        self.sharedPeerThreadHoleIndexInitializedKey.setInt64(0, value: threadId)
+        return self.sharedPeerThreadHoleIndexInitializedKey
     }
     
     private func peerHistoryInitializedTagKey(id: PeerId, tag: UInt32) -> ValueBoxKey {
@@ -209,6 +218,18 @@ final class MessageHistoryMetadataTable: Table {
                 return false
             }
         }
+    }
+    
+    func isThreadHoleIndexInitialized(peerId: PeerId, threadId: Int64) -> Bool {
+        if self.valueBox.exists(self.table, key: self.peerThreadHoleIndexInitializedKey(peerId: peerId, threadId: threadId)) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    func setIsThreadHoleIndexInitialized(peerId: PeerId, threadId: Int64) {
+        self.valueBox.set(self.table, key: self.peerThreadHoleIndexInitializedKey(peerId: peerId, threadId: threadId), value: MemoryBuffer())
     }
     
     func setPeerTagInitialized(peerId: PeerId, tag: MessageTags) {

@@ -16,6 +16,9 @@ objc_library(
     sdk_frameworks = [
         "Foundation",
     ],
+    sdk_dylibs = [
+        "libz",
+    ],
     visibility = [
         "//visibility:public",
     ],
