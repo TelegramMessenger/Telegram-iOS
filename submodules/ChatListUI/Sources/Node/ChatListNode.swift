@@ -166,6 +166,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
             case .HeaderEntry:
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
             case let .AdditionalCategory(_, id, title, image, appearance, selected, presentationData):
+                var header: ChatListSearchItemHeader?
+                if case .action = appearance {
+                    // TODO: hack, generalize
+                    header = ChatListSearchItemHeader(type: .orImportIntoAnExistingGroup, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
                     context: context,
@@ -173,6 +178,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     image: image,
                     appearance: appearance,
                     isSelected: selected,
+                    header: header,
                     action: {
                         nodeInteraction.additionalCategorySelected(id)
                     }
@@ -371,6 +377,11 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
             case .HeaderEntry:
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
             case let .AdditionalCategory(index: _, id, title, image, appearance, selected, presentationData):
+                var header: ChatListSearchItemHeader?
+                if case .action = appearance {
+                    // TODO: hack, generalize
+                    header = ChatListSearchItemHeader(type: .orImportIntoAnExistingGroup, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
                     context: context,
@@ -378,6 +389,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                     image: image,
                     appearance: appearance,
                     isSelected: selected,
+                    header: header,
                     action: {
                         nodeInteraction.additionalCategorySelected(id)
                     }

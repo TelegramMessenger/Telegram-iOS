@@ -522,6 +522,7 @@
 "Notification.Kicked" = "%@ removed %@";
 "Notification.CreatedChat" = "%@ created a group";
 "Notification.CreatedChannel" = "Channel created";
+"Notification.CreatedGroup" = "Group created";
 "Notification.CreatedChatWithTitle" = "%@ created the group \"%@\" ";
 "Notification.Joined" = "%@ joined Telegram";
 "Notification.ChangedGroupName" = "%@ changed group name to \"%@\" ";
@@ -5915,7 +5916,7 @@ Sorry for the inconvenience.";
 
 "ReportPeer.ReasonFake" = "Fake Account";
 
-"ChatList.HeaderImportIntoAnExistingGroup" = "OR IMPORT INTO AN EXISTING GROUP";
+"ChatList.HeaderImportIntoAnExistingGroup" = "SELECT A CHAT TO IMPORT MESSAGES TO";
 
 "Group.ErrorAdminsTooMuch" = "Sorry, too many administrators in this group.";
 "Channel.ErrorAdminsTooMuch" = "Sorry, too many administrators in this channel.";
@@ -5947,7 +5948,7 @@ Sorry for the inconvenience.";
 "ChatImport.SelectionConfirmationUserWithTitle" = "Import messages from **%1$@** into the chat with **%2$@**?";
 "ChatImport.SelectionConfirmationUserWithoutTitle" = "Import messages into the chat with **%@?**";
 
-"PeerSelection.CreateNewGroup" = "Create a New Group";
+"PeerSelection.ImportIntoNewGroup" = "Import to a New Group";
 "Message.ImportedDateFormat" = "%1$@, %2$@ Imported %3$@";
 
 "ChatImportActivity.Title" = "Importing Chat";

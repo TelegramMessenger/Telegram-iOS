@@ -262,12 +262,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 }
                             default:
                                 hideAuthor = true
-                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) {
+                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: true) {
                                     messageText = text
                                 }
                         }
                     case _ as TelegramMediaExpiredContent:
-                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) {
+                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: true) {
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:

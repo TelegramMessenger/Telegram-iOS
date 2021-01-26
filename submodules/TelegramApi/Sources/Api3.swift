@@ -3917,15 +3917,15 @@ public extension Api {
                     })
                 }
             
-                public static func deletePhoneCallHistory(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
+                public static func deletePhoneCallHistory(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedFoundMessages>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1828657989)
+                    buffer.appendInt32(-104078327)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.deletePhoneCallHistory", parameters: [("flags", flags)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
+                    return (FunctionDescription(name: "messages.deletePhoneCallHistory", parameters: [("flags", flags)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedFoundMessages? in
                         let reader = BufferReader(buffer)
-                        var result: Api.messages.AffectedHistory?
+                        var result: Api.messages.AffectedFoundMessages?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.AffectedHistory
+                            result = Api.parse(reader, signature: signature) as? Api.messages.AffectedFoundMessages
                         }
                         return result
                     })
