@@ -406,6 +406,25 @@ public class ShareRootControllerImpl {
                                         var otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)] = []
                                         var mainFile: TempBoxFile?
                                         
+                                        let appConfiguration = context.currentAppConfiguration.with({ $0 })
+                                        
+                                        /*
+                                         history_import_filters: {
+                                             "zip": {
+                                                 "main_file_patterns": [
+                                                     "_chat\\.txt",
+                                                     "KakaoTalkChats\\.txt",
+                                                     "Talk_.*?\\.txt"
+                                                 ]
+                                             },
+                                             "txt": {
+                                                 "patterns": [
+                                                     "^\\[LINE\\]"
+                                                 ]
+                                             }
+                                         }
+                                         */
+                                        
                                         if fileExtension.lowercased() == "zip" {
                                             let archivePath = url.path
                                             archivePathValue = archivePath
@@ -415,11 +434,23 @@ public class ShareRootControllerImpl {
                                                 return
                                             }
                                             
-                                            let mainFileNames: [NSRegularExpression] = [
-                                                try! NSRegularExpression(pattern: "_chat\\.txt"),
-                                                try! NSRegularExpression(pattern: "KakaoTalkChats\\.txt"),
-                                                try! NSRegularExpression(pattern: "Talk_.*?\\.txt"),
+                                            var mainFileNameExpressions: [String] = [
+                                                "_chat\\.txt",
+                                                "KakaoTalkChats\\.txt",
+                                                "Talk_.*?\\.txt",
                                             ]
+                                            
+                                            if let data = appConfiguration.data, let dict = data["history_import_filters"] as? [String: Any] {
+                                                if let zip = dict["zip"] as? [String: Any] {
+                                                    if let patterns = zip["main_file_patterns"] as? [String] {
+                                                        mainFileNameExpressions = patterns
+                                                    }
+                                                }
+                                            }
+                                            
+                                            let mainFileNames: [NSRegularExpression] = mainFileNameExpressions.compactMap { string -> NSRegularExpression? in
+                                                return try? NSRegularExpression(pattern: string)
+                                            }
                                             
                                             var maybeMainFileName: String?
                                             mainFileLoop: for entry in entries {
@@ -476,8 +507,32 @@ public class ShareRootControllerImpl {
                                                 }
                                             }
                                         } else if fileExtension.lowercased() == "txt" {
+                                            var fileScanExpressions: [String] = [
+                                                "^\\[LINE\\]",
+                                            ]
+                                            
+                                            if let data = appConfiguration.data, let dict = data["history_import_filters"] as? [String: Any] {
+                                                if let zip = dict["txt"] as? [String: Any] {
+                                                    if let patterns = zip["patterns"] as? [String] {
+                                                        fileScanExpressions = patterns
+                                                    }
+                                                }
+                                            }
+                                            
+                                            let filePatterns: [NSRegularExpression] = fileScanExpressions.compactMap { string -> NSRegularExpression? in
+                                                return try? NSRegularExpression(pattern: string)
+                                            }
+                                            
                                             if let mainFileText = try? String(contentsOf: URL(fileURLWithPath: url.path)) {
-                                                if !mainFileText.hasPrefix("[LINE]") {
+                                                let fullRange = NSRange(mainFileText.startIndex ..< mainFileText.endIndex, in: mainFileText)
+                                                var foundMatch = false
+                                                for pattern in filePatterns {
+                                                    if pattern.firstMatch(in: mainFileText, options: [], range: fullRange) != nil {
+                                                        foundMatch = true
+                                                        break
+                                                    }
+                                                }
+                                                if !foundMatch {
                                                     beginShare()
                                                     return
                                                 }
