@@ -103,7 +103,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     self.currentRotationAngle = rotationAngle
                     self.currentAspect = aspect
                     var transform = CGAffineTransform(rotationAngle: CGFloat(rotationAngle))
-                    if abs(rotationAngle).remainder(dividingBy: Double.pi / 2.0) > 0.1 {
+                    if abs(rotationAngle).remainder(dividingBy: Double.pi) > 0.1 {
                         transform = transform.scaledBy(x: CGFloat(aspect), y: CGFloat(1.0 / aspect))
                     }
                     videoLayer.setAffineTransform(transform)
