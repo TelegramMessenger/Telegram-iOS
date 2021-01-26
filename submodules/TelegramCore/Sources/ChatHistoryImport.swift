@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import SyncCore
-import TelegramCore
 import TelegramApi
 
 public enum ChatHistoryImport {
@@ -16,6 +15,7 @@ public enum ChatHistoryImport {
         case generic
         case chatAdminRequired
         case invalidChatType
+        case userBlocked
     }
     
     public enum ParsedInfo {
@@ -49,7 +49,7 @@ public enum ChatHistoryImport {
     }
     
     public static func initSession(account: Account, peerId: PeerId, file: TempBoxFile, mediaCount: Int32) -> Signal<Session, InitImportError> {
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false, useLargerParts: true, increaseParallelParts: true, useMultiplexedRequests: false, useCompression: true)
         |> mapError { _ -> InitImportError in
             return .generic
         }
@@ -71,6 +71,8 @@ public enum ChatHistoryImport {
                             return .chatAdminRequired
                         case "IMPORT_PEER_TYPE_INVALID":
                             return .invalidChatType
+                        case "USER_IS_BLOCKED":
+                            return .userBlocked
                         default:
                             return .generic
                         }
