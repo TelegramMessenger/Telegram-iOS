@@ -50,19 +50,201 @@ private final class ProgressEstimator {
     }
 }
 
-public final class ChatImportActivityScreen: ViewController {
+private final class ImportManager {
     enum ImportError {
         case generic
         case chatAdminRequired
         case invalidChatType
     }
     
-    private enum State {
-        case progress(CGFloat)
+    enum State {
+        case progress(totalBytes: Int, totalUploadedBytes: Int)
         case error(ImportError)
         case done
     }
     
+    private let account: Account
+    private let archivePath: String
+    private let entries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]
+    
+    private var session: ChatHistoryImport.Session?
+    
+    private let disposable = MetaDisposable()
+    
+    private let totalBytes: Int
+    private var pendingEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]
+    private var entryProgress: [String: (Int, Int)] = [:]
+    private var activeEntries: [String: Disposable] = [:]
+    
+    private var stateValue: State {
+        didSet {
+            self.statePromise.set(.single(self.stateValue))
+        }
+    }
+    private let statePromise = Promise<State>()
+    var state: Signal<State, NoError> {
+        return self.statePromise.get()
+    }
+    
+    init(account: Account, peerId: PeerId, mainFile: TempBoxFile, archivePath: String, entries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]) {
+        self.account = account
+        self.archivePath = archivePath
+        self.entries = entries
+        self.pendingEntries = entries
+        
+        var totalBytes = 0
+        for entry in self.entries {
+            self.entryProgress[entry.0.path] = (Int(entry.0.uncompressedSize), 0)
+            totalBytes += Int(entry.0.uncompressedSize)
+        }
+        self.totalBytes = totalBytes
+        
+        self.stateValue = .progress(totalBytes: totalBytes, totalUploadedBytes: 0)
+        
+        self.disposable.set((ChatHistoryImport.initSession(account: self.account, peerId: peerId, file: mainFile, mediaCount: Int32(entries.count))
+        |> mapError { error -> ImportError in
+            switch error {
+            case .chatAdminRequired:
+                return .chatAdminRequired
+            case .invalidChatType:
+                return .invalidChatType
+            case .generic:
+                return .generic
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] session in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.session = session
+            strongSelf.updateState()
+        }, error: { [weak self] error in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.failWithError(error)
+        }))
+    }
+    
+    deinit {
+        self.disposable.dispose()
+        for (_, disposable) in self.activeEntries {
+            disposable.dispose()
+        }
+    }
+    
+    private func updateProgress() {
+        if case .error = self.stateValue {
+            return
+        }
+        
+        var totalSize = 0
+        var totalUploadedSize = 0
+        for (_, entrySizes) in self.entryProgress {
+            totalSize += entrySizes.0
+            totalUploadedSize += entrySizes.1
+        }
+        
+        self.stateValue = .progress(totalBytes: self.totalBytes, totalUploadedBytes: totalUploadedSize)
+    }
+    
+    private func failWithError(_ error: ImportError) {
+        self.stateValue = .error(error)
+        for (_, disposable) in self.activeEntries {
+            disposable.dispose()
+        }
+    }
+    
+    private func complete() {
+        guard let session = self.session else {
+            self.failWithError(.generic)
+        }
+        self.disposable.set((ChatHistoryImport.startImport(account: self.account, session: session)
+        |> deliverOnMainQueue).start(error: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.failWithError(.generic)
+        }, completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.stateValue = .done
+        }))
+    }
+    
+    private func updateState() {
+        guard let session = self.session else {
+            return
+        }
+        if self.activeEntries.count >= 2 {
+            return
+        }
+        if self.pendingEntries.isEmpty {
+            self.complete()
+            return
+        }
+        if case .error = self.stateValue {
+            return
+        }
+        
+        let entry = self.pendingEntries.removeFirst()
+        let archivePath = self.archivePath
+        let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
+            let tempFile = TempBox.shared.tempFile(fileName: entry.0.path)
+            print("Extracting \(entry.0.path) to \(tempFile.path)...")
+            let startTime = CACurrentMediaTime()
+            if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
+                print("[Done in \(CACurrentMediaTime() - startTime) s] Extract \(entry.0.path) to \(tempFile.path)")
+                subscriber.putNext(tempFile)
+                subscriber.putCompletion()
+            } else {
+                subscriber.putError(.generic)
+            }
+            
+            return EmptyDisposable
+        }
+        
+        let account = self.account
+        
+        let uploadedEntrySignal: Signal<Float, ImportError> = unpackedFile
+        |> mapToSignal { tempFile -> Signal<Float, ImportError> in
+            return ChatHistoryImport.uploadMedia(account: account, session: session, file: tempFile, fileName: entry.0.path, mimeType: entry.1, type: entry.2)
+            |> mapError { error -> ImportError in
+                switch error {
+                case .chatAdminRequired:
+                    return .chatAdminRequired
+                case .generic:
+                    return .generic
+                }
+            }
+        }
+        
+        self.activeEntries[entry.1] = (uploadedEntrySignal
+        |> deliverOnMainQueue).start(next: { [weak self] progress in
+            guard let strongSelf = self else {
+                return
+            }
+            if let (size, _) = strongSelf.entryProgress[entry.0.path] {
+                strongSelf.entryProgress[entry.0.path] = (size, Int(progress * Float(entry.0.uncompressedSize)))
+                strongSelf.updateProgress()
+            }
+        }, error: { [weak self] error in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.failWithError(error)
+        }, completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.activeEntries.removeValue(forKey: entry.0.path)
+            strongSelf.updateState()
+        })
+    }
+}
+
+public final class ChatImportActivityScreen: ViewController {
     private final class Node: ViewControllerTracingNode {
         private weak var controller: ChatImportActivityScreen?
         
@@ -85,7 +267,7 @@ public final class ChatImportActivityScreen: ViewController {
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
         private let totalBytes: Int
-        private var state: State = .progress(0.0)
+        private var state: ImportManager.State
         
         private var videoNode: UniversalVideoNode?
         private var feedback: HapticFeedback?
@@ -96,6 +278,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.controller = controller
             self.context = context
             self.totalBytes = totalBytes
+            self.state = .progress(totalBytes: totalBytes, totalUploadedBytes: 0)
             
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
@@ -254,8 +437,12 @@ public final class ChatImportActivityScreen: ViewController {
             
             let effectiveProgress: CGFloat
             switch state {
-            case let .progress(value):
-                effectiveProgress = value
+            case let .progress(totalBytes, totalUploadedBytes):
+                if totalBytes == 0 {
+                    effectiveProgress = 1.0
+                } else {
+                    effectiveProgress = CGFloat(totalUploadedBytes) / CGFloat(totalBytes)
+                }
             case .error:
                 effectiveProgress = 0.0
             case .done:
@@ -380,7 +567,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.animationNode.stopAtNearestLoop = true
         }
         
-        func updateState(state: State, animated: Bool) {
+        func updateState(state: ImportManager.State, animated: Bool) {
             var wasDone = false
             if case .done = self.state {
                 wasDone = true
@@ -392,8 +579,12 @@ public final class ChatImportActivityScreen: ViewController {
                 
                 let effectiveProgress: CGFloat
                 switch state {
-                case let .progress(value):
-                    effectiveProgress = value
+                case let .progress(totalBytes, totalUploadedBytes):
+                    if totalBytes == 0 {
+                        effectiveProgress = 1.0
+                    } else {
+                        effectiveProgress = CGFloat(totalUploadedBytes) / CGFloat(totalBytes)
+                    }
                 case .error:
                     effectiveProgress = 0.0
                 case .done:
@@ -454,10 +645,9 @@ public final class ChatImportActivityScreen: ViewController {
     private let archivePath: String
     private let mainEntry: TempBoxFile
     private let mainEntrySize: Int
-    private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType, Signal<TempBoxFile?, NoError>)]
-    private let totalBytes: Int
-    private let totalMediaBytes: Int
+    private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]
     
+    private var importManager: ImportManager?
     private var progressEstimator: ProgressEstimator?
     private var totalMediaProgress: Float = 0.0
     private var beganCompletion: Bool = false
@@ -465,6 +655,7 @@ public final class ChatImportActivityScreen: ViewController {
     private var pendingEntries: [String: (Int, Float)] = [:]
     
     private let disposable = MetaDisposable()
+    private let progressDisposable = MetaDisposable()
     
     override public var _presentedInModal: Bool {
         get {
@@ -480,26 +671,8 @@ public final class ChatImportActivityScreen: ViewController {
         self.archivePath = archivePath
         self.mainEntry = mainEntry
         
-        var isFirstFile = true
-        self.otherEntries = otherEntries.map { entry -> (SSZipEntry, String, ChatHistoryImport.MediaType, Signal<TempBoxFile?, NoError>) in
-            let signal = Signal<TempBoxFile?, NoError> { subscriber in
-                let tempFile = TempBox.shared.tempFile(fileName: entry.1)
-                print("Extracting \(entry.0.path) to \(tempFile.path)...")
-                let startTime = CACurrentMediaTime()
-                if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
-                    print("[Done in \(CACurrentMediaTime() - startTime) s] Extract \(entry.0.path) to \(tempFile.path)")
-                    subscriber.putNext(tempFile)
-                    subscriber.putCompletion()
-                } else {
-                    subscriber.putNext(nil)
-                    subscriber.putCompletion()
-                }
-                
-                return EmptyDisposable
-            }
-            //let promise = Promise<TempBoxFile?>()
-            //promise.set(signal)
-            return (entry.0, entry.1, entry.2, signal)
+        self.otherEntries = otherEntries.map { entry -> (SSZipEntry, String, ChatHistoryImport.MediaType) in
+            return (entry.0, entry.1, entry.2)
         }
         
         if let size = fileSize(self.mainEntry.path) {
@@ -516,8 +689,8 @@ public final class ChatImportActivityScreen: ViewController {
         for entry in self.otherEntries {
             totalMediaBytes += Int(entry.0.uncompressedSize)
         }
-        self.totalBytes = self.mainEntrySize + totalMediaBytes
-        self.totalMediaBytes = totalMediaBytes
+        //self.totalBytes = self.mainEntrySize + totalMediaBytes
+        //self.totalMediaBytes = totalMediaBytes
         
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -544,6 +717,7 @@ public final class ChatImportActivityScreen: ViewController {
     
     deinit {
         self.disposable.dispose()
+        self.progressDisposable.dispose()
         
         if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
             application.isIdleTimerDisabled = false
@@ -574,16 +748,10 @@ public final class ChatImportActivityScreen: ViewController {
         self.progressEstimator = ProgressEstimator()
         self.beganCompletion = false
         
-        self.controllerNode.updateState(state: .progress(0.0), animated: true)
-        
-        let context = self.context
-        let mainEntry = self.mainEntry
-        let otherEntries = self.otherEntries
-        
-        let resolvedPeerId: Signal<PeerId, ImportError>
+        let resolvedPeerId: Signal<PeerId, ImportManager.ImportError>
         if self.peerId.namespace == Namespaces.Peer.CloudGroup {
             resolvedPeerId = convertGroupToSupergroup(account: self.context.account, peerId: self.peerId)
-            |> mapError { _ -> ImportError in
+            |> mapError { _ -> ImportManager.ImportError in
                 return .generic
             }
         } else {
@@ -591,117 +759,24 @@ public final class ChatImportActivityScreen: ViewController {
         }
         
         self.disposable.set((resolvedPeerId
-        |> mapToSignal { [weak self] peerId -> Signal<ChatHistoryImport.Session, ImportError> in
-            Queue.mainQueue().async {
-                self?.peerId = peerId
-            }
-            
-            return ChatHistoryImport.initSession(account: context.account, peerId: peerId, file: mainEntry, mediaCount: Int32(otherEntries.count))
-            |> mapError { error -> ImportError in
-                switch error {
-                case .chatAdminRequired:
-                    return .chatAdminRequired
-                case .invalidChatType:
-                    return .invalidChatType
-                case .generic:
-                    return .generic
-                }
-            }
-        }
-        |> mapToSignal { session -> Signal<[(String, Float)], ImportError> in
-            var mediaSignals: [Signal<(String, Float), ImportError>] = []
-            
-            for (_, fileName, mediaType, fileData) in otherEntries {
-                let unpackedFile: Signal<TempBoxFile, ImportError> = fileData
-                |> take(1)
-                |> deliverOnMainQueue
-                |> castError(ImportError.self)
-                |> mapToSignal { file -> Signal<TempBoxFile, ImportError> in
-                    if let file = file {
-                        return .single(file)
-                    } else {
-                        return .fail(.generic)
-                    }
-                }
-                let uploadedMedia = unpackedFile
-                |> mapToSignal { tempFile -> Signal<(String, Float), ImportError> in
-                    var mimeTypeValue = "application/binary"
-                    let fileExtension = (tempFile.path as NSString).pathExtension
-                    if !fileExtension.isEmpty {
-                        if let value = TGMimeTypeMap.mimeType(forExtension: fileExtension.lowercased()) {
-                            mimeTypeValue = value
-                        }
-                    }
-                    
-                    return ChatHistoryImport.uploadMedia(account: context.account, session: session, file: tempFile, fileName: fileName, mimeType: mimeTypeValue, type: mediaType)
-                    |> mapError { error -> ImportError in
-                        switch error {
-                        case .chatAdminRequired:
-                            return .chatAdminRequired
-                        case .generic:
-                            return .generic
-                        }
-                    }
-                    |> map { progress -> (String, Float) in
-                        return (fileName, progress)
-                    }
-                }
-                
-                mediaSignals.append(Signal<(String, Float), ImportError>.single((fileName, 0.0))
-                |> then(uploadedMedia))
-            }
-            
-            return combineLatest(mediaSignals)
-            |> then(ChatHistoryImport.startImport(account: context.account, session: session)
-            |> mapError { _ -> ImportError in
-                return .generic
-            }
-            |> map { _ -> [(String, Float)] in
-            })
-        }
-        |> deliverOnMainQueue).start(next: { [weak self] fileNameAndProgress in
+        |> deliverOnMainQueue).start(next: { [weak self] peerId in
             guard let strongSelf = self else {
                 return
             }
-            
-            for (fileName, progress) in fileNameAndProgress {
-                if let (fileSize, _) = strongSelf.pendingEntries[fileName] {
-                    strongSelf.pendingEntries[fileName] = (fileSize, progress)
+            let importManager = ImportManager(account: strongSelf.context.account, peerId: peerId, mainFile: strongSelf.mainEntry, archivePath: strongSelf.archivePath, entries: strongSelf.otherEntries)
+            strongSelf.importManager = importManager
+            strongSelf.progressDisposable.set((importManager.state
+            |> deliverOnMainQueue).start(next: { state in
+                guard let strongSelf = self else {
+                    return
                 }
-            }
-            
-            var totalDoneMediaBytes = 0
-            for (_, sizeAndProgress) in strongSelf.pendingEntries {
-                totalDoneMediaBytes += Int(Float(sizeAndProgress.0) * sizeAndProgress.1)
-            }
-            
-            let totalDoneBytes = strongSelf.mainEntrySize + totalDoneMediaBytes
-            
-            var totalProgress: CGFloat = 1.0
-            if !strongSelf.otherEntries.isEmpty {
-                totalProgress = CGFloat(totalDoneBytes) / CGFloat(strongSelf.totalBytes)
-            }
-            var totalMediaProgress: CGFloat = 1.0
-            if !strongSelf.otherEntries.isEmpty {
-                totalProgress = CGFloat(totalDoneBytes) / CGFloat(strongSelf.totalBytes)
-                totalMediaProgress = CGFloat(totalDoneMediaBytes) / CGFloat(strongSelf.totalMediaBytes)
-            }
-            strongSelf.controllerNode.updateState(state: .progress(totalProgress), animated: true)
-            strongSelf.totalMediaProgress = Float(totalMediaProgress)
+                strongSelf.controllerNode.updateState(state: state, animated: true)
+            }))
         }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.controllerNode.updateState(state: .error(error), animated: true)
-        }, completed: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.controllerNode.updateState(state: .done, animated: true)
-            
-            if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
-                application.isIdleTimerDisabled = false
-            }
         }))
     }
     
