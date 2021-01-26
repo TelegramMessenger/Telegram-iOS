@@ -608,7 +608,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 }
             case .privateChannel:
                 let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
-                entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_PermanentLink.uppercased()))
+                entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                 entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                 if isGroup {
                     entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
@@ -627,7 +627,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         switch mode {
             case .privateLink:
                 let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
-                entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_PermanentLink.uppercased()))
+                entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                 entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                 entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
 //                switch mode {
@@ -726,7 +726,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         }
                     case .privateChannel:
                         let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
-                        entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_PermanentLink.uppercased()))
+                        entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                         entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                         entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
 //                        switch mode {

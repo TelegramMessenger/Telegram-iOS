@@ -479,15 +479,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case .groupReference:
                     return nil
-                case let .peer(peer):
-                    guard let chatMainPeer = peer.peer.chatMainPeer else {
+                case let .peer(_, peer, combinedReadState, _, _, _, _, _, _, _, _, _):
+                    guard let chatMainPeer = peer.chatMainPeer else {
                         return nil
                     }
+                    var result = ""
                     if item.context.account.peerId == chatMainPeer.id {
-                        return item.presentationData.strings.DialogList_SavedMessages
+                        result += item.presentationData.strings.DialogList_SavedMessages
                     } else {
-                        return chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        result += chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
+                    if let combinedReadState = combinedReadState, combinedReadState.count > 0 {
+                        result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(combinedReadState.count))"
+                    }
+                    return result
             }
         } set(value) {
         }
@@ -501,19 +506,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case .groupReference:
                     return nil
-                case let .peer(peer):
-                    if let message = peer.messages.last {
+                case let .peer(messages, peer, combinedReadState, _, _, _, _, _, _, _, _, _):
+                    if let message = messages.last {
                         var result = ""
                         if message.flags.contains(.Incoming) {
                             result += item.presentationData.strings.VoiceOver_ChatList_Message
                         } else {
                             result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: peer.messages, chatPeer: peer.peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
+                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0)"
                         }
-                        if !message.flags.contains(.Incoming), let combinedReadState = peer.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
+                        if !message.flags.contains(.Incoming), let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageRead)"
                         }
                         result += "\n\(messageText)"

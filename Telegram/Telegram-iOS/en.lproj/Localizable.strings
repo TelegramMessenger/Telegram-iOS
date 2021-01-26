@@ -5961,7 +5961,7 @@ Sorry for the inconvenience.";
 "ChatImportActivity.ErrorGeneric" = "An error occurred.";
 "ChatImportActivity.Success" = "Chat imported\nsuccessfully.";
 
-"VoiceOver.Chat.GoToOriginalMessage" = "Go to original message";
+"VoiceOver.Chat.GoToOriginalMessage" = "Go to message";
 "VoiceOver.Chat.UnreadMessages_0" = "%@ unread messages";
 "VoiceOver.Chat.UnreadMessages_1" = "%@ unread message";
 "VoiceOver.Chat.UnreadMessages_2" = "%@ unread messages";
@@ -5974,3 +5974,7 @@ Sorry for the inconvenience.";
 "VoiceOver.ChatList.MessageFrom" = "From: %@";
 "VoiceOver.ChatList.MessageRead" = "Read";
 "VoiceOver.ChatList.MessageEmpty" = "Empty";
+
+"VoiceOver.Chat.Profile" = "Profile";
+"VoiceOver.Chat.GroupInfo" = "Group Info";
+"VoiceOver.Chat.ChannelInfo" = "Channel Info";
