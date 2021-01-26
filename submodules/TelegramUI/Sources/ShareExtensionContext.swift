@@ -401,81 +401,98 @@ public class ShareRootControllerImpl {
                                             return
                                         }
                                         let fileExtension = (fileName as NSString).pathExtension
-                                        guard fileExtension.lowercased() == "zip" else {
-                                            beginShare()
-                                            return
-                                        }
                                         
-                                        let archivePath = url.path
-                                        
-                                        guard let entries = SSZipArchive.getEntriesForFile(atPath: archivePath) else {
-                                            beginShare()
-                                            return
-                                        }
-                                        
-                                        let mainFileNames: [NSRegularExpression] = [
-                                            try! NSRegularExpression(pattern: "_chat\\.txt"),
-                                            try! NSRegularExpression(pattern: "KakaoTalkChats\\.txt"),
-                                            try! NSRegularExpression(pattern: "Talk_.*?\\.txt"),
-                                        ]
-                                        
-                                        var maybeMainFileName: String?
-                                        mainFileLoop: for entry in entries {
-                                            let entryFileName = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
-                                            let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
-                                            for expression in mainFileNames {
-                                                if expression.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                    maybeMainFileName = entryFileName
-                                                    break mainFileLoop
-                                                }
-                                            }
-                                        }
-                                        
-                                        guard let mainFileName = maybeMainFileName else {
-                                            beginShare()
-                                            return
-                                        }
-                                        
-                                        let photoRegex = try! NSRegularExpression(pattern: ".*?\\.jpg")
-                                        let videoRegex = try! NSRegularExpression(pattern: "[\\d]+-VIDEO-.*?\\.mp4")
-                                        let stickerRegex = try! NSRegularExpression(pattern: "[\\d]+-STICKER-.*?\\.webp")
-                                        let voiceRegex = try! NSRegularExpression(pattern: "[\\d]+-AUDIO-.*?\\.opus")
-                                        
+                                        var archivePathValue: String?
                                         var otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)] = []
-                                        
                                         var mainFile: TempBoxFile?
-                                        do {
-                                            for entry in entries {
-                                                let entryPath = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
-                                                if entryPath.isEmpty {
-                                                    continue
-                                                }
-                                                let tempFile = TempBox.shared.tempFile(fileName: entryPath)
-                                                if entryPath == mainFileName {
-                                                    if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.path, toPath: tempFile.path) {
-                                                        mainFile = tempFile
-                                                    }
-                                                } else {
-                                                    let entryFileName = (entryPath as NSString).lastPathComponent
-                                                    if !entryFileName.isEmpty {
-                                                        let mediaType: ChatHistoryImport.MediaType
-                                                        let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
-                                                        if photoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .photo
-                                                        } else if videoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .video
-                                                        } else if stickerRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .sticker
-                                                        } else if voiceRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .voice
-                                                        } else {
-                                                            mediaType = .file
-                                                        }
-                                                        otherEntries.append((entry, entryFileName, mediaType))
+                                        
+                                        if fileExtension.lowercased() == "zip" {
+                                            let archivePath = url.path
+                                            archivePathValue = archivePath
+                                            
+                                            guard let entries = SSZipArchive.getEntriesForFile(atPath: archivePath) else {
+                                                beginShare()
+                                                return
+                                            }
+                                            
+                                            let mainFileNames: [NSRegularExpression] = [
+                                                try! NSRegularExpression(pattern: "_chat\\.txt"),
+                                                try! NSRegularExpression(pattern: "KakaoTalkChats\\.txt"),
+                                                try! NSRegularExpression(pattern: "Talk_.*?\\.txt"),
+                                            ]
+                                            
+                                            var maybeMainFileName: String?
+                                            mainFileLoop: for entry in entries {
+                                                let entryFileName = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
+                                                let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
+                                                for expression in mainFileNames {
+                                                    if expression.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                        maybeMainFileName = entryFileName
+                                                        break mainFileLoop
                                                     }
                                                 }
                                             }
-                                        } catch {
+                                            
+                                            guard let mainFileName = maybeMainFileName else {
+                                                beginShare()
+                                                return
+                                            }
+                                            
+                                            let photoRegex = try! NSRegularExpression(pattern: ".*?\\.jpg")
+                                            let videoRegex = try! NSRegularExpression(pattern: "[\\d]+-VIDEO-.*?\\.mp4")
+                                            let stickerRegex = try! NSRegularExpression(pattern: "[\\d]+-STICKER-.*?\\.webp")
+                                            let voiceRegex = try! NSRegularExpression(pattern: "[\\d]+-AUDIO-.*?\\.opus")
+                                            
+                                            do {
+                                                for entry in entries {
+                                                    let entryPath = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
+                                                    if entryPath.isEmpty {
+                                                        continue
+                                                    }
+                                                    let tempFile = TempBox.shared.tempFile(fileName: entryPath)
+                                                    if entryPath == mainFileName {
+                                                        if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.path, toPath: tempFile.path) {
+                                                            mainFile = tempFile
+                                                        }
+                                                    } else {
+                                                        let entryFileName = (entryPath as NSString).lastPathComponent
+                                                        if !entryFileName.isEmpty {
+                                                            let mediaType: ChatHistoryImport.MediaType
+                                                            let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
+                                                            if photoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .photo
+                                                            } else if videoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .video
+                                                            } else if stickerRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .sticker
+                                                            } else if voiceRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .voice
+                                                            } else {
+                                                                mediaType = .file
+                                                            }
+                                                            otherEntries.append((entry, entryFileName, mediaType))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else if fileExtension.lowercased() == "txt" {
+                                            if let mainFileText = try? String(contentsOf: URL(fileURLWithPath: url.path)) {
+                                                if !mainFileText.hasPrefix("[LINE]") {
+                                                    beginShare()
+                                                    return
+                                                }
+                                            } else {
+                                                beginShare()
+                                                return
+                                            }
+                                            
+                                            let tempFile = TempBox.shared.tempFile(fileName: "History.txt")
+                                            if let _ = try? FileManager.default.copyItem(atPath: url.path, toPath: tempFile.path) {
+                                                mainFile = tempFile
+                                            } else {
+                                                beginShare()
+                                                return
+                                            }
                                         }
                                         
                                         if let mainFile = mainFile, let mainFileText = try? String(contentsOf: URL(fileURLWithPath: mainFile.path)) {
@@ -561,7 +578,7 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archivePath: archivePath, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { peer in
@@ -675,7 +692,7 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archivePath: archivePath, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
@@ -737,7 +754,7 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archivePath: archivePath, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in

@@ -65,7 +65,7 @@ private final class ImportManager {
     }
     
     private let account: Account
-    private let archivePath: String
+    private let archivePath: String?
     private let entries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]
     
     private var session: ChatHistoryImport.Session?
@@ -89,7 +89,7 @@ private final class ImportManager {
         return self.statePromise.get()
     }
     
-    init(account: Account, peerId: PeerId, mainFile: TempBoxFile, archivePath: String, entries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]) {
+    init(account: Account, peerId: PeerId, mainFile: TempBoxFile, archivePath: String?, entries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]) {
         self.account = account
         self.archivePath = archivePath
         self.entries = entries
@@ -187,70 +187,81 @@ private final class ImportManager {
         guard let session = self.session else {
             return
         }
-        if self.activeEntries.count >= 3 {
-            return
-        }
-        if self.pendingEntries.isEmpty {
+        if self.pendingEntries.isEmpty && self.activeEntries.isEmpty {
             self.complete()
             return
         }
         if case .error = self.stateValue {
             return
         }
+        guard let archivePath = self.archivePath else {
+            return
+        }
         
-        let entry = self.pendingEntries.removeFirst()
-        let archivePath = self.archivePath
-        let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
-            let tempFile = TempBox.shared.tempFile(fileName: entry.0.path)
-            print("Extracting \(entry.0.path) to \(tempFile.path)...")
-            let startTime = CACurrentMediaTime()
-            if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
-                print("[Done in \(CACurrentMediaTime() - startTime) s] Extract \(entry.0.path) to \(tempFile.path)")
-                subscriber.putNext(tempFile)
-                subscriber.putCompletion()
-            } else {
-                subscriber.putError(.generic)
+        while true {
+            if self.activeEntries.count >= 3 {
+                break
+            }
+            if self.pendingEntries.isEmpty {
+                break
             }
             
-            return EmptyDisposable
-        }
-        
-        let account = self.account
-        
-        let uploadedEntrySignal: Signal<Float, ImportError> = unpackedFile
-        |> mapToSignal { tempFile -> Signal<Float, ImportError> in
-            return ChatHistoryImport.uploadMedia(account: account, session: session, file: tempFile, fileName: entry.0.path, mimeType: entry.1, type: entry.2)
-            |> mapError { error -> ImportError in
-                switch error {
-                case .chatAdminRequired:
-                    return .chatAdminRequired
-                case .generic:
-                    return .generic
+            let entry = self.pendingEntries.removeFirst()
+            let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
+                let tempFile = TempBox.shared.tempFile(fileName: entry.0.path)
+                Logger.shared.log("ChatImportScreen", "Extracting \(entry.0.path) to \(tempFile.path)...")
+                let startTime = CACurrentMediaTime()
+                if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
+                    Logger.shared.log("ChatImportScreen", "[Done in \(CACurrentMediaTime() - startTime) s] Extract \(entry.0.path) to \(tempFile.path)")
+                    subscriber.putNext(tempFile)
+                    subscriber.putCompletion()
+                } else {
+                    subscriber.putError(.generic)
+                }
+                
+                return EmptyDisposable
+            }
+            
+            let account = self.account
+            
+            let uploadedEntrySignal: Signal<Float, ImportError> = unpackedFile
+            |> mapToSignal { tempFile -> Signal<Float, ImportError> in
+                return ChatHistoryImport.uploadMedia(account: account, session: session, file: tempFile, fileName: entry.0.path, mimeType: entry.1, type: entry.2)
+                |> mapError { error -> ImportError in
+                    switch error {
+                    case .chatAdminRequired:
+                        return .chatAdminRequired
+                    case .generic:
+                        return .generic
+                    }
                 }
             }
+            
+            let disposable = MetaDisposable()
+            self.activeEntries[entry.1] = disposable
+            
+            disposable.set((uploadedEntrySignal
+            |> deliverOnMainQueue).start(next: { [weak self] progress in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let (size, _) = strongSelf.entryProgress[entry.0.path] {
+                    strongSelf.entryProgress[entry.0.path] = (size, Int(progress * Float(entry.0.uncompressedSize)))
+                    strongSelf.updateProgress()
+                }
+            }, error: { [weak self] error in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.failWithError(error)
+            }, completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.activeEntries.removeValue(forKey: entry.0.path)
+                strongSelf.updateState()
+            }))
         }
-        
-        self.activeEntries[entry.1] = (uploadedEntrySignal
-        |> deliverOnMainQueue).start(next: { [weak self] progress in
-            guard let strongSelf = self else {
-                return
-            }
-            if let (size, _) = strongSelf.entryProgress[entry.0.path] {
-                strongSelf.entryProgress[entry.0.path] = (size, Int(progress * Float(entry.0.uncompressedSize)))
-                strongSelf.updateProgress()
-            }
-        }, error: { [weak self] error in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.failWithError(error)
-        }, completed: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.activeEntries.removeValue(forKey: entry.0.path)
-            strongSelf.updateState()
-        })
     }
 }
 
@@ -652,7 +663,7 @@ public final class ChatImportActivityScreen: ViewController {
     private var presentationData: PresentationData
     fileprivate let cancel: () -> Void
     fileprivate var peerId: PeerId
-    private let archivePath: String
+    private let archivePath: String?
     private let mainEntry: TempBoxFile
     private let totalBytes: Int
     private let totalMediaBytes: Int
@@ -673,7 +684,7 @@ public final class ChatImportActivityScreen: ViewController {
         }
     }
     
-    public init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archivePath: String, mainEntry: TempBoxFile, otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]) {
+    public init(context: AccountContext, cancel: @escaping () -> Void, peerId: PeerId, archivePath: String?, mainEntry: TempBoxFile, otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]) {
         self.context = context
         self.cancel = cancel
         self.peerId = peerId
@@ -769,10 +780,8 @@ public final class ChatImportActivityScreen: ViewController {
                 }
                 strongSelf.controllerNode.updateState(state: state, animated: true)
                 if case let .progress(_, _, totalMediaBytes, totalUploadedMediaBytes) = state {
-                    if let progressEstimator = strongSelf.progressEstimator {
-                        let progress = Float(totalUploadedMediaBytes) / Float(totalMediaBytes)
-                        strongSelf.totalMediaProgress = progress
-                    }
+                    let progress = Float(totalUploadedMediaBytes) / Float(totalMediaBytes)
+                    strongSelf.totalMediaProgress = progress
                 }
             }))
         }, error: { [weak self] error in

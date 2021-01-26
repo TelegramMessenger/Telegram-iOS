@@ -49,7 +49,7 @@ public enum ChatHistoryImport {
     }
     
     public static func initSession(account: Account, peerId: PeerId, file: TempBoxFile, mediaCount: Int32) -> Signal<Session, InitImportError> {
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false, useLargerParts: true, increaseParallelParts: true, useMultiplexedRequests: false, useCompression: true)
         |> mapError { _ -> InitImportError in
             return .generic
         }
