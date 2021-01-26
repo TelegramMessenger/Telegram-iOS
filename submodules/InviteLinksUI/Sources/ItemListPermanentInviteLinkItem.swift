@@ -289,7 +289,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             let rightInset = 16.0 + params.rightInset
             
             let titleColor: UIColor
-            titleColor = item.presentationData.theme.list.itemPrimaryTextColor
+            titleColor = item.presentationData.theme.list.itemInputField.primaryColor
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
@@ -352,8 +352,8 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                        strongSelf.fieldNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: item.presentationData.theme.list.freePlainInputField.backgroundColor)
-                        strongSelf.addressButtonIconNode.image = actionButtonImage(color: item.presentationData.theme.list.freePlainInputField.controlColor)
+                        strongSelf.fieldNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: item.presentationData.theme.list.itemInputField.backgroundColor)
+                        strongSelf.addressButtonIconNode.image = actionButtonImage(color: item.presentationData.theme.list.itemInputField.controlColor)
                     }
                     
                     let _ = addressApply()

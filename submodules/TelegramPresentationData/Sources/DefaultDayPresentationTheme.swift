@@ -447,7 +447,8 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3),
         pageIndicatorInactiveColor: UIColor(rgb: 0xe3e3e7),
         inputClearButtonColor: UIColor(rgb: 0xcccccc),
-        itemBarChart: PresentationThemeItemBarChart(color1: UIColor(rgb: 0x007ee5), color2: UIColor(rgb: 0xc8c7cc), color3: UIColor(rgb: 0xf2f1f7))
+        itemBarChart: PresentationThemeItemBarChart(color1: UIColor(rgb: 0x007ee5), color2: UIColor(rgb: 0xc8c7cc), color3: UIColor(rgb: 0xf2f1f7)),
+        itemInputField: PresentationInputFieldTheme(backgroundColor: UIColor(rgb: 0xf2f2f7), strokeColor: UIColor(rgb: 0xf2f2f7), placeholderColor: UIColor(rgb: 0xb6b6bb), primaryColor: UIColor(rgb: 0x000000), controlColor: UIColor(rgb: 0xb6b6bb))
     )
     
     let chatList = PresentationThemeChatList(

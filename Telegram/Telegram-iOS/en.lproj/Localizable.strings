@@ -5959,3 +5959,17 @@ Sorry for the inconvenience.";
 "ChatImportActivity.ErrorUserBlocked" = "You need to be an admin.";
 "ChatImportActivity.ErrorGeneric" = "An error occurred.";
 "ChatImportActivity.Success" = "Chat imported\nsuccessfully.";
+
+"VoiceOver.Chat.GoToOriginalMessage" = "Go to original message";
+"VoiceOver.Chat.UnreadMessages_0" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_1" = "%@ unread message";
+"VoiceOver.Chat.UnreadMessages_2" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_3_10" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_many" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_any" = "%@ unread messages";
+
+"VoiceOver.ChatList.Message" = "Message";
+"VoiceOver.ChatList.OutgoingMessage" = "Outgoing Message";
+"VoiceOver.ChatList.MessageFrom" = "From: %@";
+"VoiceOver.ChatList.MessageRead" = "Read";
+"VoiceOver.ChatList.MessageEmpty" = "Empty";

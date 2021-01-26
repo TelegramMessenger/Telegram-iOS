@@ -101,6 +101,12 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
     func updateText(_ title: String, isSelected: Bool, presentationData: PresentationData) {
         self.isSelected = isSelected
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
+        
+        self.buttonNode.accessibilityLabel = title
+        self.buttonNode.accessibilityTraits = [.button]
+        if isSelected {
+            self.buttonNode.accessibilityTraits.insert(.selected)
+        }
     }
     
     func updateLayout(height: CGFloat) -> CGFloat {

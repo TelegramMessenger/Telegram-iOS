@@ -483,7 +483,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     guard let chatMainPeer = peer.peer.chatMainPeer else {
                         return nil
                     }
-                    return chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    if item.context.account.peerId == chatMainPeer.id {
+                        return item.presentationData.strings.DialogList_SavedMessages
+                    } else {
+                        return chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    }
             }
         } set(value) {
         }
@@ -501,21 +505,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let message = peer.messages.last {
                         var result = ""
                         if message.flags.contains(.Incoming) {
-                            result += "Message"
+                            result += item.presentationData.strings.VoiceOver_ChatList_Message
                         } else {
-                            result += "Outgoing message"
+                            result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
                         let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: peer.messages, chatPeer: peer.peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
-                            result += "\nFrom: \(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0)"
                         }
                         if !message.flags.contains(.Incoming), let combinedReadState = peer.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
-                            result += "\nRead"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageRead)"
                         }
                         result += "\n\(messageText)"
                         return result
                     } else {
-                        return "Empty"
+                        return item.presentationData.strings.VoiceOver_ChatList_MessageEmpty
                     }
             }
         } set(value) {
