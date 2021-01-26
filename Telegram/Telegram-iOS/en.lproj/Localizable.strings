@@ -5957,7 +5957,7 @@ Sorry for the inconvenience.";
 "ChatImportActivity.InProgress" = "Please keep this window open\nduring the import.";
 "ChatImportActivity.ErrorNotAdmin" = "You need to be an admin.";
 "ChatImportActivity.ErrorInvalidChatType" = "You can't import this history in this type of chat.";
-"ChatImportActivity.ErrorUserBlocked" = "You need to be an admin.";
+"ChatImportActivity.ErrorUserBlocked" = "This user is blocked.";
 "ChatImportActivity.ErrorGeneric" = "An error occurred.";
 "ChatImportActivity.Success" = "Chat imported\nsuccessfully.";
 

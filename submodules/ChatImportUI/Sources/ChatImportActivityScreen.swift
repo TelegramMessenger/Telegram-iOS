@@ -56,6 +56,7 @@ private final class ImportManager {
         case generic
         case chatAdminRequired
         case invalidChatType
+        case userBlocked
     }
     
     enum State {
@@ -116,6 +117,8 @@ private final class ImportManager {
                 return .invalidChatType
             case .generic:
                 return .generic
+            case .userBlocked:
+                return .userBlocked
             }
         }
         |> deliverOnMainQueue).start(next: { [weak self] session in
@@ -449,12 +452,39 @@ public final class ChatImportActivityScreen: ViewController {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
             
-            let iconSize = CGSize(width: 190.0, height: 190.0)
-            let radialStatusSize = CGSize(width: 186.0, height: 186.0)
-            let maxIconStatusSpacing: CGFloat = 46.0
-            let maxProgressTextSpacing: CGFloat = 33.0
-            let progressStatusSpacing: CGFloat = 14.0
-            let statusButtonSpacing: CGFloat = 19.0
+            let availableHeight = layout.size.height - navigationHeight
+            
+            var iconSize = CGSize(width: 190.0, height: 190.0)
+            var radialStatusSize = CGSize(width: 186.0, height: 186.0)
+            var maxIconStatusSpacing: CGFloat = 46.0
+            var maxProgressTextSpacing: CGFloat = 33.0
+            var progressStatusSpacing: CGFloat = 14.0
+            var statusButtonSpacing: CGFloat = 19.0
+            
+            var maxK: CGFloat = availableHeight / (iconSize.height + maxIconStatusSpacing + 30.0 + maxProgressTextSpacing + 320.0)
+            maxK = max(0.5, min(1.0, maxK))
+            
+            iconSize.width = floor(iconSize.width * maxK)
+            iconSize.height = floor(iconSize.height * maxK)
+            radialStatusSize.width = floor(radialStatusSize.width * maxK)
+            radialStatusSize.height = floor(radialStatusSize.height * maxK)
+            maxIconStatusSpacing = floor(maxIconStatusSpacing * maxK)
+            maxProgressTextSpacing = floor(maxProgressTextSpacing * maxK)
+            progressStatusSpacing = floor(progressStatusSpacing * maxK)
+            statusButtonSpacing = floor(statusButtonSpacing * maxK)
+            
+            var updateRadialBackround = false
+            if let width = self.radialStatusBackground.image?.size.width {
+                if abs(width - radialStatusSize.width) > 0.01 {
+                    updateRadialBackround = true
+                }
+            } else {
+                updateRadialBackround = true
+            }
+            
+            if updateRadialBackround {
+                self.radialStatusBackground.image = generateCircleImage(diameter: radialStatusSize.width, lineWidth: 6.0, color: self.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.2))
+            }
             
             let effectiveProgress: CGFloat
             switch state {
@@ -470,7 +500,7 @@ public final class ChatImportActivityScreen: ViewController {
                 effectiveProgress = 1.0
             }
             
-            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: 36.0, design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
             
             self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(effectiveProgress * CGFloat(self.totalBytes)))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes))))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
@@ -496,6 +526,8 @@ public final class ChatImportActivityScreen: ViewController {
                     errorText = self.presentationData.strings.ChatImportActivity_ErrorInvalidChatType
                 case .generic:
                     errorText = self.presentationData.strings.ChatImportActivity_ErrorGeneric
+                case .userBlocked:
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorUserBlocked
                 }
                 self.statusText.attributedText = NSAttributedString(string: errorText, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
             case .done:
@@ -510,7 +542,7 @@ public final class ChatImportActivityScreen: ViewController {
                 hideIcon = true
                 contentHeight = progressTextSize.height + progressStatusSpacing + 160.0
             } else {
-                contentHeight = iconSize.height + maxIconStatusSpacing + radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 100.0
+                contentHeight = iconSize.height + maxIconStatusSpacing + radialStatusSize.height + maxProgressTextSpacing + progressTextSize.height + progressStatusSpacing + 140.0
             }
             
             transition.updateAlpha(node: self.radialStatus, alpha: hideIcon ? 0.0 : 1.0)

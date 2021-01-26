@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import SyncCore
-import TelegramCore
 import TelegramApi
 
 public enum ChatHistoryImport {
@@ -16,6 +15,7 @@ public enum ChatHistoryImport {
         case generic
         case chatAdminRequired
         case invalidChatType
+        case userBlocked
     }
     
     public enum ParsedInfo {
@@ -71,6 +71,8 @@ public enum ChatHistoryImport {
                             return .chatAdminRequired
                         case "IMPORT_PEER_TYPE_INVALID":
                             return .invalidChatType
+                        case "USER_IS_BLOCKED":
+                            return .userBlocked
                         default:
                             return .generic
                         }
