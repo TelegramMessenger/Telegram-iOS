@@ -117,6 +117,7 @@ private final class MultipartUploadManager {
     var defaultPartSize: Int
     var bigTotalParts: Int?
     var bigParts: Bool
+    private let forceNoBigParts: Bool
     private let useLargerParts: Bool
     
     let queue = Queue()
@@ -139,13 +140,14 @@ private final class MultipartUploadManager {
     
     let state: MultipartUploadState
     
-    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, hintFileIsLarge: Bool, useLargerParts: Bool, uploadPart: @escaping (UploadPart) -> Signal<Void, UploadPartError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult?) -> Void) {
+    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, hintFileIsLarge: Bool, forceNoBigParts: Bool, useLargerParts: Bool, uploadPart: @escaping (UploadPart) -> Signal<Void, UploadPartError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult?) -> Void) {
         self.dataSignal = data
         
         var fileId: Int64 = 0
         arc4random_buf(&fileId, 8)
         self.fileId = fileId
         
+        self.forceNoBigParts = forceNoBigParts
         self.useLargerParts = useLargerParts
         
         self.state = MultipartUploadState(encryptionKey: encryptionKey)
@@ -161,11 +163,11 @@ private final class MultipartUploadManager {
             self.headerPartState = .notStarted
         }
         
-        if let hintFileSize = hintFileSize, hintFileSize > 10 * 1024 * 1024 {
+        if let hintFileSize = hintFileSize, hintFileSize > 10 * 1024 * 1024, !forceNoBigParts {
             self.defaultPartSize = 512 * 1024
             self.bigTotalParts = (hintFileSize / self.defaultPartSize) + (hintFileSize % self.defaultPartSize == 0 ? 0 : 1)
             self.bigParts = true
-        } else if hintFileIsLarge {
+        } else if hintFileIsLarge, !forceNoBigParts {
             self.defaultPartSize = 512 * 1024
             self.bigTotalParts = nil
             self.bigParts = true
@@ -203,7 +205,7 @@ private final class MultipartUploadManager {
     func checkState() {
         if let resourceData = self.resourceData, resourceData.complete && resourceData.size != 0 {
             if self.committedOffset == 0 && self.uploadedParts.isEmpty && self.uploadingParts.isEmpty {
-                if resourceData.size > 10 * 1024 * 1024 {
+                if resourceData.size > 10 * 1024 * 1024, !self.forceNoBigParts {
                     self.defaultPartSize = 512 * 1024
                     self.bigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
                     self.bigParts = true
@@ -379,7 +381,7 @@ enum MultipartUploadError {
     case generic
 }
 
-func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool, useLargerParts: Bool = false, useMultiplexedRequests: Bool = false) -> Signal<MultipartUploadResult, MultipartUploadError> {
+func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool, forceNoBigParts: Bool, useLargerParts: Bool = false, useMultiplexedRequests: Bool = false) -> Signal<MultipartUploadResult, MultipartUploadError> {
     enum UploadInterface {
         case download(Download)
         case multiplexed(manager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64)
@@ -445,7 +447,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                     fetchedResource = .complete()
             }
             
-            let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, useLargerParts: useLargerParts, uploadPart: { part in
+            let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: forceNoBigParts, useLargerParts: useLargerParts, uploadPart: { part in
                 switch uploadInterface {
                 case let .download(download):
                     return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, asBigPart: part.bigPart, bigTotalParts: part.bigTotalParts)

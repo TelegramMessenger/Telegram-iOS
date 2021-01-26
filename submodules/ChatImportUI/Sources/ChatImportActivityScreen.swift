@@ -454,7 +454,7 @@ public final class ChatImportActivityScreen: ViewController {
     private let archivePath: String
     private let mainEntry: TempBoxFile
     private let mainEntrySize: Int
-    private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>)]
+    private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType, Signal<TempBoxFile?, NoError>)]
     private let totalBytes: Int
     private let totalMediaBytes: Int
     
@@ -480,11 +480,14 @@ public final class ChatImportActivityScreen: ViewController {
         self.archivePath = archivePath
         self.mainEntry = mainEntry
         
-        self.otherEntries = otherEntries.map { entry -> (SSZipEntry, String, ChatHistoryImport.MediaType, Promise<TempBoxFile?>) in
+        var isFirstFile = true
+        self.otherEntries = otherEntries.map { entry -> (SSZipEntry, String, ChatHistoryImport.MediaType, Signal<TempBoxFile?, NoError>) in
             let signal = Signal<TempBoxFile?, NoError> { subscriber in
                 let tempFile = TempBox.shared.tempFile(fileName: entry.1)
+                print("Extracting \(entry.0.path) to \(tempFile.path)...")
+                let startTime = CACurrentMediaTime()
                 if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.0.path, toPath: tempFile.path) {
-                    //print("Extract \(entry.0.path) to \(tempFile.path)")
+                    print("[Done in \(CACurrentMediaTime() - startTime) s] Extract \(entry.0.path) to \(tempFile.path)")
                     subscriber.putNext(tempFile)
                     subscriber.putCompletion()
                 } else {
@@ -494,10 +497,9 @@ public final class ChatImportActivityScreen: ViewController {
                 
                 return EmptyDisposable
             }
-            |> runOn(Queue.concurrentDefaultQueue())
-            let promise = Promise<TempBoxFile?>()
-            promise.set(signal)
-            return (entry.0, entry.1, entry.2, promise)
+            //let promise = Promise<TempBoxFile?>()
+            //promise.set(signal)
+            return (entry.0, entry.1, entry.2, signal)
         }
         
         if let size = fileSize(self.mainEntry.path) {
@@ -610,7 +612,7 @@ public final class ChatImportActivityScreen: ViewController {
             var mediaSignals: [Signal<(String, Float), ImportError>] = []
             
             for (_, fileName, mediaType, fileData) in otherEntries {
-                let unpackedFile: Signal<TempBoxFile, ImportError> = fileData.get()
+                let unpackedFile: Signal<TempBoxFile, ImportError> = fileData
                 |> take(1)
                 |> deliverOnMainQueue
                 |> castError(ImportError.self)

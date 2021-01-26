@@ -49,7 +49,7 @@ public enum ChatHistoryImport {
     }
     
     public static func initSession(account: Account, peerId: PeerId, file: TempBoxFile, mediaCount: Int32) -> Signal<Session, InitImportError> {
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false)
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
         |> mapError { _ -> InitImportError in
             return .generic
         }
@@ -104,7 +104,12 @@ public enum ChatHistoryImport {
     }
     
     public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, useLargerParts: true, useMultiplexedRequests: true)
+        var forceNoBigParts = true
+        if let size = fileSize(file.path), size >= 30 * 1024 * 1024 {
+            forceNoBigParts = false
+        }
+        
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: forceNoBigParts, useLargerParts: true, useMultiplexedRequests: true)
         |> mapError { _ -> UploadMediaError in
             return .generic
         }

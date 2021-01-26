@@ -37,7 +37,7 @@ private final class MessageMediaPreuploadManagerContext {
         let context = MessageMediaPreuploadManagerUploadContext()
         self.uploadContexts[id] = context
         let queue = self.queue
-        context.disposable.set(multipartUpload(network: network, postbox: postbox, source: .custom(source), encrypt: encrypt, tag: tag, hintFileSize: nil, hintFileIsLarge: false).start(next: { [weak self] next in
+        context.disposable.set(multipartUpload(network: network, postbox: postbox, source: .custom(source), encrypt: encrypt, tag: tag, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false).start(next: { [weak self] next in
             queue.async {
                 if let strongSelf = self, let context = strongSelf.uploadContexts[id] {
                     switch next {
@@ -86,7 +86,7 @@ private final class MessageMediaPreuploadManagerContext {
                         }
                     }
                 } else {
-                    return multipartUpload(network: network, postbox: postbox, source: source, encrypt: encrypt, tag: tag, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge).start(next: { next in
+                    return multipartUpload(network: network, postbox: postbox, source: source, encrypt: encrypt, tag: tag, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: false).start(next: { next in
                         subscriber.putNext(next)
                     }, error: { error in
                         subscriber.putError(error)
