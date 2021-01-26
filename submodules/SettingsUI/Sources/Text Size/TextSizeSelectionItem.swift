@@ -129,6 +129,8 @@ class BubbleSettingsRadiusItemNode: ListViewItemNode, ItemListItemNode {
     override func didLoad() {
         super.didLoad()
         
+        self.accessibilityTraits = [.adjustable]
+        
         let sliderView = TGPhotoEditorSliderView()
         sliderView.enablePanHandling = true
         sliderView.enablePanHandling = true
@@ -193,6 +195,12 @@ class BubbleSettingsRadiusItemNode: ListViewItemNode, ItemListItemNode {
                     let firstTime = strongSelf.item == nil || item.force
                     strongSelf.item = item
                     strongSelf.layoutParams = params
+                    
+                    if item.enabled {
+                        strongSelf.accessibilityTraits.remove(.notEnabled)
+                    } else {
+                        strongSelf.accessibilityTraits.insert(.notEnabled)
+                    }
                     
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor

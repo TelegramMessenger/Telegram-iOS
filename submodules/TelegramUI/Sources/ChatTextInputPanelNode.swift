@@ -1212,7 +1212,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         if let _ = interfaceState.inputTextPanelState.mediaRecordingState {
-            let text: String = "Send"
+            let text: String = interfaceState.strings.VoiceOver_MessageContextSend
             let mediaRecordingAccessibilityArea: AccessibilityAreaNode
             var added = false
             if let current = self.mediaRecordingAccessibilityArea {
