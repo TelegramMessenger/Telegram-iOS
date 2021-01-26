@@ -29,7 +29,7 @@ private final class ProgressEstimator {
         if let (lastTimestamp, lastProgress) = self.lastMeasurement {
             if abs(lastProgress - progress) >= 0.01 || abs(lastTimestamp - timestamp) > 1.0 {
                 let immediateProgressPerSecond = Double(progress - lastProgress) / (timestamp - lastTimestamp)
-                let alpha: Double = 0.05
+                let alpha: Double = 0.01
                 self.averageProgressPerSecond = alpha * immediateProgressPerSecond + (1.0 - alpha) * self.averageProgressPerSecond
                 self.lastMeasurement = (timestamp, progress)
             }
@@ -45,6 +45,7 @@ private final class ProgressEstimator {
         } else {
             let remainingProgress = Double(1.0 - progress)
             let remainingTime = remainingProgress / self.averageProgressPerSecond
+            //print("remainingTime \(remainingTime)")
             return remainingTime
         }
     }
@@ -58,7 +59,7 @@ private final class ImportManager {
     }
     
     enum State {
-        case progress(totalBytes: Int, totalUploadedBytes: Int)
+        case progress(totalBytes: Int, totalUploadedBytes: Int, totalMediaBytes: Int, totalUploadedMediaBytes: Int)
         case error(ImportError)
         case done
     }
@@ -72,6 +73,8 @@ private final class ImportManager {
     private let disposable = MetaDisposable()
     
     private let totalBytes: Int
+    private let totalMediaBytes: Int
+    private let mainFileSize: Int
     private var pendingEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]
     private var entryProgress: [String: (Int, Int)] = [:]
     private var activeEntries: [String: Disposable] = [:]
@@ -92,14 +95,17 @@ private final class ImportManager {
         self.entries = entries
         self.pendingEntries = entries
         
-        var totalBytes = 0
+        self.mainFileSize = fileSize(mainFile.path) ?? 0
+        
+        var totalMediaBytes = 0
         for entry in self.entries {
             self.entryProgress[entry.0.path] = (Int(entry.0.uncompressedSize), 0)
-            totalBytes += Int(entry.0.uncompressedSize)
+            totalMediaBytes += Int(entry.0.uncompressedSize)
         }
-        self.totalBytes = totalBytes
+        self.totalBytes = self.mainFileSize + totalMediaBytes
+        self.totalMediaBytes = totalMediaBytes
         
-        self.stateValue = .progress(totalBytes: totalBytes, totalUploadedBytes: 0)
+        self.stateValue = .progress(totalBytes: self.totalBytes, totalUploadedBytes: 0, totalMediaBytes: self.totalMediaBytes, totalUploadedMediaBytes: 0)
         
         self.disposable.set((ChatHistoryImport.initSession(account: self.account, peerId: peerId, file: mainFile, mediaCount: Int32(entries.count))
         |> mapError { error -> ImportError in
@@ -138,14 +144,17 @@ private final class ImportManager {
             return
         }
         
-        var totalSize = 0
-        var totalUploadedSize = 0
+        var totalUploadedMediaBytes = 0
         for (_, entrySizes) in self.entryProgress {
-            totalSize += entrySizes.0
-            totalUploadedSize += entrySizes.1
+            totalUploadedMediaBytes += entrySizes.1
         }
         
-        self.stateValue = .progress(totalBytes: self.totalBytes, totalUploadedBytes: totalUploadedSize)
+        var totalUploadedBytes = totalUploadedMediaBytes
+        if let _ = self.session {
+            totalUploadedBytes += self.mainFileSize
+        }
+        
+        self.stateValue = .progress(totalBytes: self.totalBytes, totalUploadedBytes: totalUploadedBytes, totalMediaBytes: self.totalMediaBytes, totalUploadedMediaBytes: totalUploadedMediaBytes)
     }
     
     private func failWithError(_ error: ImportError) {
@@ -158,6 +167,7 @@ private final class ImportManager {
     private func complete() {
         guard let session = self.session else {
             self.failWithError(.generic)
+            return
         }
         self.disposable.set((ChatHistoryImport.startImport(account: self.account, session: session)
         |> deliverOnMainQueue).start(error: { [weak self] _ in
@@ -177,7 +187,7 @@ private final class ImportManager {
         guard let session = self.session else {
             return
         }
-        if self.activeEntries.count >= 2 {
+        if self.activeEntries.count >= 3 {
             return
         }
         if self.pendingEntries.isEmpty {
@@ -274,11 +284,11 @@ public final class ChatImportActivityScreen: ViewController {
         
         fileprivate var remainingAnimationSeconds: Double?
         
-        init(controller: ChatImportActivityScreen, context: AccountContext, totalBytes: Int) {
+        init(controller: ChatImportActivityScreen, context: AccountContext, totalBytes: Int, totalMediaBytes: Int) {
             self.controller = controller
             self.context = context
             self.totalBytes = totalBytes
-            self.state = .progress(totalBytes: totalBytes, totalUploadedBytes: 0)
+            self.state = .progress(totalBytes: totalBytes, totalUploadedBytes: 0, totalMediaBytes: totalMediaBytes, totalUploadedMediaBytes: 0)
             
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
@@ -437,7 +447,7 @@ public final class ChatImportActivityScreen: ViewController {
             
             let effectiveProgress: CGFloat
             switch state {
-            case let .progress(totalBytes, totalUploadedBytes):
+            case let .progress(totalBytes, totalUploadedBytes, _, _):
                 if totalBytes == 0 {
                     effectiveProgress = 1.0
                 } else {
@@ -579,7 +589,7 @@ public final class ChatImportActivityScreen: ViewController {
                 
                 let effectiveProgress: CGFloat
                 switch state {
-                case let .progress(totalBytes, totalUploadedBytes):
+                case let .progress(totalBytes, totalUploadedBytes, _, _):
                     if totalBytes == 0 {
                         effectiveProgress = 1.0
                     } else {
@@ -644,15 +654,14 @@ public final class ChatImportActivityScreen: ViewController {
     fileprivate var peerId: PeerId
     private let archivePath: String
     private let mainEntry: TempBoxFile
-    private let mainEntrySize: Int
+    private let totalBytes: Int
+    private let totalMediaBytes: Int
     private let otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)]
     
     private var importManager: ImportManager?
     private var progressEstimator: ProgressEstimator?
     private var totalMediaProgress: Float = 0.0
     private var beganCompletion: Bool = false
-    
-    private var pendingEntries: [String: (Int, Float)] = [:]
     
     private let disposable = MetaDisposable()
     private let progressDisposable = MetaDisposable()
@@ -675,22 +684,14 @@ public final class ChatImportActivityScreen: ViewController {
             return (entry.0, entry.1, entry.2)
         }
         
-        if let size = fileSize(self.mainEntry.path) {
-            self.mainEntrySize = size
-        } else {
-            self.mainEntrySize = 0
-        }
-        
-        for (entry, fileName, _) in otherEntries {
-            self.pendingEntries[fileName] = (Int(entry.uncompressedSize), 0.0)
-        }
+        let mainEntrySize = fileSize(self.mainEntry.path) ?? 0
         
         var totalMediaBytes = 0
         for entry in self.otherEntries {
             totalMediaBytes += Int(entry.0.uncompressedSize)
         }
-        //self.totalBytes = self.mainEntrySize + totalMediaBytes
-        //self.totalMediaBytes = totalMediaBytes
+        self.totalBytes = mainEntrySize + totalMediaBytes
+        self.totalMediaBytes = totalMediaBytes
         
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -729,7 +730,7 @@ public final class ChatImportActivityScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context, totalBytes: self.totalBytes)
+        self.displayNode = Node(controller: self, context: self.context, totalBytes: self.totalBytes, totalMediaBytes: self.totalMediaBytes)
         
         self.displayNodeDidLoad()
     }
@@ -741,10 +742,6 @@ public final class ChatImportActivityScreen: ViewController {
     }
     
     private func beginImport() {
-        for (key, value) in self.pendingEntries {
-            self.pendingEntries[key] = (value.0, 0.0)
-        }
-        
         self.progressEstimator = ProgressEstimator()
         self.beganCompletion = false
         
@@ -771,6 +768,12 @@ public final class ChatImportActivityScreen: ViewController {
                     return
                 }
                 strongSelf.controllerNode.updateState(state: state, animated: true)
+                if case let .progress(_, _, totalMediaBytes, totalUploadedMediaBytes) = state {
+                    if let progressEstimator = strongSelf.progressEstimator {
+                        let progress = Float(totalUploadedMediaBytes) / Float(totalMediaBytes)
+                        strongSelf.totalMediaProgress = progress
+                    }
+                }
             }))
         }, error: { [weak self] error in
             guard let strongSelf = self else {
