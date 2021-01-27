@@ -818,6 +818,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             
                             if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                                 item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), forwardInfo.author == nil {
+                                item.controllerInteraction.displayImportedMessageTooltip(avatarNode)
                             } else {
                                 if !item.message.id.peerId.isReplies, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                     if case .member = channel.participationStatus {

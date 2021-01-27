@@ -5936,7 +5936,7 @@ Sorry for the inconvenience.";
 
 "ChatImport.Title" = "Select Chat";
 "ChatImport.SelectionErrorNotAdmin" = "You need to be an admin of the group to import messages into it.";
-"ChatImport.SelectionErrorGroupGeneric" = "You can't import history into this group.";
+"ChatImport.SelectionErrorGroupGeneric" = "You can't import history to this group.";
 "ChatImport.SelectionConfirmationGroupWithTitle" = "Are you sure you want to import messages from **%1$@** into **%2$@**?";
 "ChatImport.SelectionConfirmationGroupWithoutTitle" = "Are you sure you want to import messages into **%@**?";
 "ChatImport.SelectionConfirmationAlertTitle" = "Import Messages";
