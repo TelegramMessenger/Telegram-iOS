@@ -229,7 +229,12 @@ private final class ImportManager {
             
             let uploadedEntrySignal: Signal<Float, ImportError> = unpackedFile
             |> mapToSignal { tempFile -> Signal<Float, ImportError> in
-                return ChatHistoryImport.uploadMedia(account: account, session: session, file: tempFile, fileName: entry.0.path, mimeType: entry.1, type: entry.2)
+                let pathExtension = (entry.1 as NSString).pathExtension
+                var mimeType = "application/octet-stream"
+                if !pathExtension.isEmpty, let value = TGMimeTypeMap.mimeType(forExtension: pathExtension) {
+                    mimeType = value
+                }
+                return ChatHistoryImport.uploadMedia(account: account, session: session, file: tempFile, fileName: entry.0.path, mimeType: mimeType, type: entry.2)
                 |> mapError { error -> ImportError in
                     switch error {
                     case .chatAdminRequired:
