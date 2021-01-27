@@ -321,12 +321,20 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     availableGroupCall = .single(nil)
                 }
                 
+                let previousCurrentGroupCall = Atomic<PresentationGroupCall?>(value: nil)
                 self.currentGroupCallDisposable = combineLatest(queue: .mainQueue(), availableGroupCall, currentGroupCall).start(next: { [weak self] availableState, currentGroupCall in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    let panelData = currentGroupCall != nil || availableState?.participantCount == 0 ? nil : availableState
+                    let previousCurrentGroupCall = previousCurrentGroupCall.swap(currentGroupCall)
+                    
+                    let panelData: GroupCallPanelData?
+                    if previousCurrentGroupCall != nil && currentGroupCall == nil && availableState?.participantCount == 1 {
+                        panelData = nil
+                    } else {
+                        panelData = currentGroupCall != nil || availableState?.participantCount == 0 ? nil : availableState
+                    }
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
                     strongSelf.groupCallPanelData = panelData
