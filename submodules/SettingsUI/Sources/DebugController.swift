@@ -447,12 +447,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return
                     }
                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                    controller.peerSelected = { [weak controller] peerId in
+                    controller.peerSelected = { [weak controller] peer in
+                        let peerId = peer.id
+                        
                         if let strongController = controller {
                             strongController.dismiss()
                             
-                            
-                            let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
                             let messages = logs.map { (name, path) -> EnqueueMessage in
                                 let id = arc4random64()
                                 let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])

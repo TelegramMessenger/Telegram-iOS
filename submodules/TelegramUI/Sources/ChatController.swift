@@ -7572,7 +7572,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.navigationActionDisposable.set((peerView.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer, contentSettings: strongSelf.context.currentContentSettings.with { $0 })) && !strongSelf.presentationInterfaceState.isNotAccessible {
+                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId], (peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer, contentSettings: strongSelf.context.currentContentSettings.with { $0 })) && !strongSelf.presentationInterfaceState.isNotAccessible {
                             if peer.id == strongSelf.context.account.peerId {
                                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: true) {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
@@ -10031,7 +10031,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         // MessagesToCopy = convertMessagesForEnqueue(messages)
         MessagesToCopyDict = MessagesToCopyDict.merging(convertMessagesForEnqueueDict(messages)) { $1 }
         let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages], title: l("Chat.ForwardAsCopy", self.presentationData.strings.baseLanguageCode)))
-        controller.peerSelected = { [weak self, weak controller] peerId in
+        controller.peerSelected = { [weak self, weak controller] peer in
+            let peerId = peer.id
             guard let strongSelf = self, let strongController = controller else {
                 return
             }
