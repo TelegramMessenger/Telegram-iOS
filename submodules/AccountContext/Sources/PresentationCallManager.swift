@@ -302,6 +302,8 @@ public protocol PresentationGroupCall: class {
     func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
+    
+    func loadMoreMembers(token: String)
 }
 
 public protocol PresentationCallManager: class {

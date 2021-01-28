@@ -375,14 +375,14 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
+        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
             let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
             
             let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
             let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             
-            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count, animated: true)
+            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count, animated: animated)
         }
         
         private weak var controller: VoiceChatController?
@@ -424,7 +424,7 @@ public final class VoiceChatController: ViewController {
         
         private var currentTitle: String = ""
         private var currentSubtitle: String = ""
-        private var currentCallMembers: [GroupCallParticipantsContext.Participant]?
+        private var currentCallMembers: ([GroupCallParticipantsContext.Participant], String?)?
         private var currentInvitedPeers: [Peer]?
         private var currentSpeakingPeers: Set<PeerId>?
         private var currentContentOffset: CGFloat?
@@ -444,6 +444,8 @@ public final class VoiceChatController: ViewController {
         private let hapticFeedback = HapticFeedback()
         
         private var callState: PresentationGroupCallState?
+        
+        private var currentLoadToken: String?
         
         private var effectiveMuteState: GroupCallParticipantsContext.Participant.MuteState? {
             if self.pushingToTalk {
@@ -577,7 +579,7 @@ public final class VoiceChatController: ViewController {
                     }
                     
                     var filters: [ChannelMembersSearchFilter] = []
-                    if let currentCallMembers = strongSelf.currentCallMembers {
+                    if let (currentCallMembers, _) = strongSelf.currentCallMembers {
                         filters.append(.disable(Array(currentCallMembers.map { $0.peer.id })))
                     }
                     if let groupPeer = groupPeer as? TelegramChannel {
@@ -1030,7 +1032,7 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: callMembers?.participants ?? [], invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [])
+                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: (callMembers?.participants ?? [], callMembers?.loadMoreToken), invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [])
                 
                 let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers?.totalCount ?? 0)))
                 strongSelf.currentSubtitle = subtitle
@@ -1059,7 +1061,7 @@ public final class VoiceChatController: ViewController {
                 }
                 if !strongSelf.didSetDataReady {
                     strongSelf.accountPeer = accountPeer
-                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? [], invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
                                         
                     strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
@@ -1223,6 +1225,18 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
+            self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
+                guard let strongSelf = self else {
+                    return
+                }
+                if case let .known(value) = offset, value < 100.0 {
+                    if let loadMoreToken = strongSelf.currentCallMembers?.1 {
+                        strongSelf.currentLoadToken = loadMoreToken
+                        strongSelf.call.loadMoreMembers(token: loadMoreToken)
+                    }
+                }
+            }
+            
             self.memberEventsDisposable.set((self.call.memberEvents
             |> deliverOnMainQueue).start(next: { [weak self] event in
                 guard let strongSelf = self else {
@@ -1336,7 +1350,7 @@ public final class VoiceChatController: ViewController {
                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
             }
             
-            self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+            self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
         }
         
         @objc private func actionButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
@@ -1381,7 +1395,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
-                    self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? [], invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+                    self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
                 default:
                     break
             }
@@ -2030,7 +2044,12 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: [GroupCallParticipantsContext.Participant], invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
+            var disableAnimation = false
+            if self.currentCallMembers?.1 != callMembers.1 {
+                disableAnimation = true
+            }
+            
             self.currentCallMembers = callMembers
             self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers
@@ -2044,7 +2063,7 @@ public final class VoiceChatController: ViewController {
             
             entries.append(.invite(self.presentationData.theme, self.presentationData.strings, self.presentationData.strings.VoiceChat_InviteMember))
 
-            for member in callMembers {
+            for member in callMembers.0 {
                 if processedPeerIds.contains(member.peer.id) {
                     continue
                 }
@@ -2109,7 +2128,7 @@ public final class VoiceChatController: ViewController {
             self.currentEntries = entries
             
             let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
-            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, crossFade: false, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
+            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
             self.enqueueTransition(transition)
         }
         

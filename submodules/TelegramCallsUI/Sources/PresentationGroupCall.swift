@@ -57,7 +57,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
             groupCall: nil
         )))
         
-        self.disposable = (getGroupCallParticipants(account: account, callId: call.id, accessHash: call.accessHash, offset: "", limit: 100)
+        self.disposable = (getGroupCallParticipants(account: account, callId: call.id, accessHash: call.accessHash, offset: "", peerIds: [], limit: 100)
         |> map(Optional.init)
         |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
             return .single(nil)
@@ -1475,5 +1475,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public func updateDefaultParticipantsAreMuted(isMuted: Bool) {
         self.participantsContext?.updateDefaultParticipantsAreMuted(isMuted: isMuted)
+    }
+    
+    public func loadMoreMembers(token: String) {
+        self.participantsContext?.loadMore(token: token)
     }
 }
