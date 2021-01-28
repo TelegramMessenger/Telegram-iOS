@@ -44,14 +44,7 @@ import WatchBridge
 import LegacyDataImport
 import SettingsUI
 import AppBundle
-#if ENABLE_WALLET
-import WalletUI
-#endif
 import UrlHandling
-#if ENABLE_WALLET
-import WalletUrl
-import WalletCore
-#endif
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
@@ -1757,12 +1750,6 @@ final class SharedApplicationContext {
                 } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                     authContext.rootController.applyConfirmationCode(confirmationCode)
                 }
-                #if ENABLE_WALLET
-                if let _ = parseWalletUrl(url) {
-                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
-                }
-                #endif
             }
         })
     }

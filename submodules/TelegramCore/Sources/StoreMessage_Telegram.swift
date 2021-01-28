@@ -116,8 +116,12 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
         case let .message(message):
             let chatPeerId = message.peerId
             return chatPeerId.peerId
-        case .messageEmpty:
-            return nil
+        case let .messageEmpty(_, id, peerId):
+            if let peerId = peerId {
+                return peerId.peerId
+            } else {
+                return nil
+            }
         case let .messageService(flags, _, fromId, chatPeerId, _, _, _):
             return chatPeerId.peerId
     }
@@ -410,7 +414,13 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                        case let .messageFwdHeader(flags, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                            var forwardInfoFlags: MessageForwardInfo.Flags = []
+                            let isImported = (flags & (1 << 7)) != 0
+                            if isImported {
+                                forwardInfoFlags.insert(.isImported)
+                            }
+                            
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -444,11 +454,11 @@ extension StoreMessage {
                             }
                         
                             if let authorId = authorId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             } else if let sourceId = sourceId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             } else if let postAuthor = postAuthor ?? fromName {
-                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             }
                     }
                 }

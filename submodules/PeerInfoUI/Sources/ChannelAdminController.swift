@@ -368,17 +368,17 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelAdminControllerArguments
         switch self {
-            case let .info(theme, strings, dateTimeFormat, peer, presence):
+            case let .info(_, _, dateTimeFormat, peer, presence):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
-            case let .rankTitle(theme, text, count, limit):
+            case let .rankTitle(_, text, count, limit):
                 var accessoryText: ItemListSectionHeaderAccessoryText?
                 if let count = count {
                     accessoryText = ItemListSectionHeaderAccessoryText(value: "\(limit - count)", color: count > limit ? .destructive : .generic)
                 }
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: accessoryText, sectionId: self.section)
-            case let .rank(theme, strings, placeholder, text, enabled):
+            case let .rank(_, _, placeholder, text, enabled):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearType: enabled ? .always : .none, enabled: enabled, tag: ChannelAdminEntryTag.rank, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateRank(text, updatedText)
                 }, shouldUpdateText: { text in
@@ -392,23 +392,23 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }, action: {
                     arguments.dismissInput()
                 })
-            case let .rankInfo(theme, text):
+            case let .rankInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .rightsTitle(theme, text):
+            case let .rightsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .rightItem(theme, _, text, right, flags, value, enabled):
+            case let .rightItem(_, _, text, right, flags, value, enabled):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, type: .icon, enabled: enabled, sectionId: self.section, style: .blocks, updated: { _ in
                     arguments.toggleRight(right, flags)
                 }, activatedWhileDisabled: {
                     arguments.toggleRightWhileDisabled(right, flags)
                 })
-            case let .addAdminsInfo(theme, text):
+            case let .addAdminsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .transfer(theme, text):
+            case let .transfer(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.transferOwnership()
                 }, tag: nil)
-            case let .dismiss(theme, text):
+            case let .dismiss(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.dismissAdmin()
                 }, tag: nil)
@@ -691,7 +691,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     canTransfer = true
                 }
             
-                if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
+                if let initialParticipant = initialParticipant, case let .member(_, _, adminInfoValue, _, _) = initialParticipant, let adminInfo = adminInfoValue, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
                     if channel.flags.contains(.isCreator) {
                         canDismiss = true
                     } else {
@@ -772,6 +772,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canBanUsers,
                     .canInviteUsers,
                     .canPinMessages,
+                    .canManageCalls,
                     .canBeAnonymous,
                     .canAddAdmins
                 ]
@@ -782,9 +783,9 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             if let updatedFlags = state.updatedFlags {
                 currentRightsFlags = updatedFlags
             } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
-                currentRightsFlags = adminRights.rights.flags.subtracting(.canAddAdmins)
+                currentRightsFlags = adminRights.rights.flags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
             } else {
-                currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins)
+                currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
             }
         
             var index = 0
@@ -1003,12 +1004,12 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         var currentRank: String?
                         var currentFlags: TelegramChatAdminRightsFlags?
                         switch initialParticipant {
-                            case let .creator(creator):
-                                currentRank = creator.rank
-                                currentFlags = maskRightsFlags
-                            case let .member(member):
+                            case let .creator(_, adminInfo, rank):
+                                currentRank = rank
+                                currentFlags = adminInfo?.rights.flags ?? maskRightsFlags.subtracting(.canBeAnonymous)
+                            case let .member(_, _, adminInfo, _, rank):
                                 if updateFlags == nil {
-                                    if member.adminInfo?.rights == nil {
+                                    if adminInfo?.rights == nil {
                                         if channel.flags.contains(.isCreator) {
                                             updateFlags = maskRightsFlags.subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else if let adminRights = channel.adminRights {
@@ -1018,8 +1019,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         }
                                     }
                                 }
-                                currentRank = member.rank
-                                currentFlags = member.adminInfo?.rights.flags
+                                currentRank = rank
+                                currentFlags = adminInfo?.rights.flags
                         }
                         
                         let effectiveRank = updateRank ?? currentRank
@@ -1050,6 +1051,12 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         text = presentationData.strings.GroupInfo_AddUserLeftError
                                     default:
                                         break
+                                    }
+                                case .adminsTooMuch:
+                                    if case .broadcast = channel.info {
+                                        text = presentationData.strings.Channel_ErrorAdminsTooMuch
+                                    } else {
+                                        text = presentationData.strings.Group_ErrorAdminsTooMuch
                                     }
                                 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
@@ -1118,6 +1125,14 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         let text = presentationData.strings.Invite_ChannelsTooMuch
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
+                                } else if case .adminsTooMuch = error {
+                                    let text: String
+                                    if case .broadcast = channel.info {
+                                        text = presentationData.strings.Channel_ErrorAdminsTooMuch
+                                    } else {
+                                        text = presentationData.strings.Group_ErrorAdminsTooMuch
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 dismissImpl?()
                             }, completed: {
@@ -1126,7 +1141,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             }))
                         }
                     }
-                } else if let _ = channelView.peers[channelView.peerId] as? TelegramGroup {
+                } else if let group = channelView.peers[channelView.peerId] as? TelegramGroup {
                     var updateFlags: TelegramChatAdminRightsFlags?
                     var updateRank: String?
                     updateState { current in
@@ -1143,7 +1158,12 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                     }
                     
                     let maskRightsFlags: TelegramChatAdminRightsFlags = .groupSpecific
-                    let defaultFlags = maskRightsFlags.subtracting(.canAddAdmins)
+                    let defaultFlags: TelegramChatAdminRightsFlags
+                    if case .creator = group.role {
+                        defaultFlags = maskRightsFlags.subtracting(.canBeAnonymous)
+                    } else {
+                        defaultFlags = maskRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
+                    }
                     
                     if updateFlags == nil {
                         updateFlags = defaultFlags
@@ -1158,6 +1178,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             |> deliverOnMainQueue).start(error: { error in
                                 if case let .addMemberError(error) = error, case .privacy = error, let admin = adminView.peers[adminView.peerId] {
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                } else if case .adminsTooMuch = error {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 
                                 dismissImpl?()
@@ -1220,6 +1242,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                             text = presentationData.strings.Invite_ChannelsTooMuch
                                         }
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    } else if case .adminsTooMuch = error {
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
                                 case .conversionFailed, .conversionTooManyChannels:
                                     pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))

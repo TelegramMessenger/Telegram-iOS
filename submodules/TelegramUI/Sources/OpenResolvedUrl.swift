@@ -55,7 +55,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup))
-            controller.peerSelected = { [weak controller] peerId in
+            controller.peerSelected = { [weak controller] peer in
+                let peerId = peer.id
+                
                 if payload.isEmpty {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
                         let _ = (addGroupMember(account: context.account, peerId: peerId, memberId: botPeerId)
@@ -263,7 +265,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     context.sharedContext.applicationBindings.dismissNativeController()
                 } else {
                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                    controller.peerSelected = { [weak controller] peerId in
+                    controller.peerSelected = { [weak controller] peer in
+                        let peerId = peer.id
+                        
                         if let strongController = controller {
                             strongController.dismiss()
                             continueWithPeer(peerId)
@@ -296,7 +300,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 case let .color(color):
                     signal = .single(.color(color.argb))
                 case let .gradient(topColor, bottomColor, rotation):
-                    signal = .single(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings()))
+                    signal = .single(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings(rotation: rotation)))
             }
             
             let _ = (signal

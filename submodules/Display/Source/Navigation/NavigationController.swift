@@ -99,8 +99,11 @@ private final class NavigationControllerNode: ASDisplayNode {
     }
     
     override func accessibilityPerformEscape() -> Bool {
-        print("escape")
-        return true
+        if let controller = self.controller, controller.viewControllers.count > 1 {
+            let _ = self.controller?.popViewController(animated: true)
+            return true
+        }
+        return false
     }
 }
 
@@ -1348,6 +1351,9 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        if let presentingViewController = self.presentingViewController {
+            presentingViewController.dismiss(animated: false, completion: nil)
+        }
         if let controller = self.presentedViewController {
             if flag {
                 UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {

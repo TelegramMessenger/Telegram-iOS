@@ -66,6 +66,173 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
     }
 }
 
+private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+    private let account: Account
+    private let interaction: ChatPanelInterfaceInteraction?
+    
+    private let titleNode: ImmediateTextNode
+    private let textNode: ImmediateTextNode
+    
+    private var stickerItem: ChatMediaInputStickerGridItem?
+    private let stickerNode: ChatMediaInputStickerGridItemNode
+    
+    private var currentTheme: PresentationTheme?
+    private var currentStrings: PresentationStrings?
+    
+    private var didSetupSticker = false
+    private let disposable = MetaDisposable()
+    
+    var greetingStickerNode: ASDisplayNode? {
+        if let animationNode = self.stickerNode.animationNode, animationNode.supernode === stickerNode {
+            return animationNode
+        } else if self.stickerNode.imageNode.supernode === stickerNode {
+            return self.stickerNode.imageNode
+        } else {
+            return nil
+        }
+    }
+    
+    init(account: Account, interaction: ChatPanelInterfaceInteraction?) {
+        self.account = account
+        self.interaction = interaction
+        
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 0
+        self.titleNode.lineSpacing = 0.15
+        self.titleNode.textAlignment = .center
+        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 0
+        self.textNode.lineSpacing = 0.15
+        self.textNode.textAlignment = .center
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
+        
+        self.stickerNode = ChatMediaInputStickerGridItemNode()
+        
+        super.init()
+        
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.stickerNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.stickerTapGesture(_:)))
+        tapRecognizer.delegate = self
+        self.stickerNode.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
+    }
+    
+    @objc private func stickerTapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard let stickerItem = self.stickerItem else {
+            return
+        }
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), self.stickerNode, self.stickerNode.bounds)
+    }
+    
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
+            self.currentTheme = interfaceState.theme
+            self.currentStrings = interfaceState.strings
+            
+            let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            
+            self.titleNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EmptyPlaceholder, font: titleFont, textColor: serviceColor.primaryText)
+            
+            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_GreetingText, font: messageFont, textColor: serviceColor.primaryText)
+        }
+        
+        let stickerSize = CGSize(width: 160.0, height: 160.0)
+        if let item = self.stickerItem {
+            self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
+        } else if !self.didSetupSticker {
+            let sticker: Signal<TelegramMediaFile?, NoError>
+            if let preloadedSticker = interfaceState.greetingData?.sticker {
+                sticker = .single(preloadedSticker)
+            } else {
+                sticker = randomGreetingSticker(account: self.account)
+                |> map { item -> TelegramMediaFile? in
+                    return item?.file
+                }
+            }
+            
+            self.didSetupSticker = true
+            self.disposable.set((sticker
+            |> deliverOnMainQueue).start(next: { [weak self] sticker in
+                if let strongSelf = self, let sticker = sticker {
+                    let inputNodeInteraction = ChatMediaInputNodeInteraction(
+                        navigateToCollectionId: { _ in
+                        },
+                        navigateBackToStickers: {
+                        },
+                        setGifMode: { _ in
+                        },
+                        openSettings: {
+                        },
+                        toggleSearch: { _, _, _ in
+                        },
+                        openPeerSpecificSettings: {
+                        },
+                        dismissPeerSpecificSettings: {
+                        },
+                        clearRecentlyUsedStickers: {
+                        }
+                    )
+                    inputNodeInteraction.displayStickerPlaceholder = false
+                    
+                    let index = ItemCollectionItemIndex(index: 0, id: 0)
+                    let collectionId = ItemCollectionId(namespace: 0, id: 0)
+                    let stickerPackItem = StickerPackItem(index: index, file: sticker, indexKeys: [])
+                    let item = ChatMediaInputStickerGridItem(account: strongSelf.account, collectionId: collectionId, stickerPackInfo: nil, index: ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: collectionId, itemIndex: index), stickerItem: stickerPackItem, canManagePeerSpecificPack: nil, interfaceInteraction: nil, inputNodeInteraction: inputNodeInteraction, hasAccessory: false, theme: interfaceState.theme, large: true, selected: {})
+                    strongSelf.stickerItem = item
+                    strongSelf.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
+                    strongSelf.stickerNode.isVisibleInGrid = true
+                    strongSelf.stickerNode.updateIsPanelVisible(true)
+                }
+            }))
+        }
+        
+        let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
+        let titleSpacing: CGFloat = 5.0
+        let stickerSpacing: CGFloat = 5.0
+        
+        var contentWidth: CGFloat = 210.0
+        var contentHeight: CGFloat = 0.0
+                
+        let titleSize = self.titleNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
+        
+        contentWidth = max(contentWidth, max(titleSize.width, textSize.width))
+        
+        contentHeight += titleSize.height + titleSpacing + textSize.height + stickerSpacing + stickerSize.height
+        
+        let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: contentWidth, height: contentHeight))
+        
+        let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: contentRect.minY), size: titleSize)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+       
+        let textFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
+        transition.updateFrame(node: self.textNode, frame: textFrame)
+        
+        let stickerFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - stickerSize.width) / 2.0), y: textFrame.maxY + stickerSpacing), size: stickerSize)
+        transition.updateFrame(node: self.stickerNode, frame: stickerFrame)
+        
+        return contentRect.insetBy(dx: -insets.left, dy: -insets.top).size
+    }
+}
+
 private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
     private let account: Account
     private let interaction: ChatPanelInterfaceInteraction?
@@ -169,7 +336,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker {
             let sticker: Signal<TelegramMediaFile?, NoError>
-            if let preloadedSticker = interfaceState.peerNearbyData?.sticker {
+            if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = .single(preloadedSticker)
             } else {
                 sticker = randomGreetingSticker(account: self.account)
@@ -232,7 +399,8 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
         
         let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: contentRect.minY), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        let textFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: titleFrame.maxY + titleSpacing), size: textSize)
+      
+        let textFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
         transition.updateFrame(node: self.textNode, frame: textFrame)
         
         let stickerFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - stickerSize.width) / 2.0), y: textFrame.maxY + stickerSpacing), size: stickerSize)
@@ -611,6 +779,7 @@ private enum ChatEmptyNodeContentType {
     case group
     case cloud
     case peerNearby
+    case greeting
 }
 
 final class ChatEmptyNode: ASDisplayNode {
@@ -640,7 +809,7 @@ final class ChatEmptyNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, emptyType: ChatHistoryNodeLoadState.EmptyType, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
@@ -668,6 +837,12 @@ final class ChatEmptyNode: ASDisplayNode {
                 contentType = .group
             } else if let _ = interfaceState.peerNearbyData {
                 contentType = .peerNearby
+            } else if let _ = peer as? TelegramUser {
+                if case .joined = emptyType, !peer.isDeleted {
+                    contentType = .greeting
+                } else {
+                    contentType = .regular
+                }
             } else {
                 contentType = .regular
             }
@@ -692,12 +867,14 @@ final class ChatEmptyNode: ASDisplayNode {
                     node = ChatEmptyNodeCloudChatContent()
                 case .peerNearby:
                     node = ChatEmptyNodeNearbyChatContent(account: self.account, interaction: self.interaction)
+                case .greeting:
+                    node = ChatEmptyNodeGreetingChatContent(account: self.account, interaction: self.interaction)
             }
             self.content = (contentType, node)
             self.addSubnode(node)
             contentTransition = .immediate
         }
-        self.isUserInteractionEnabled = contentType == .peerNearby
+        self.isUserInteractionEnabled = [.peerNearby, .greeting].contains(contentType)
         
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         
@@ -716,7 +893,9 @@ final class ChatEmptyNode: ASDisplayNode {
     
     var greetingStickerNode: ASDisplayNode? {
         if let (_, node) = self.content {
-            if let node = node as? ChatEmptyNodeNearbyChatContent {
+            if let node = node as? ChatEmptyNodeGreetingChatContent {
+                return node.greetingStickerNode
+            } else if let node = node as? ChatEmptyNodeNearbyChatContent {
                 return node.greetingStickerNode
             }
         }

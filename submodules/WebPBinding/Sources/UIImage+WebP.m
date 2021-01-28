@@ -72,17 +72,24 @@
     
 + (NSData * _Nullable)convertToWebP:(UIImage * _Nonnull)image quality:(CGFloat)quality error:(NSError ** _Nullable)error {
     WebPPreset preset = WEBP_PRESET_DEFAULT;
-    CGImageRef webPImageRef = image.CGImage;
-    size_t webPBytesPerRow = CGImageGetBytesPerRow(webPImageRef);
-    
-    size_t webPImageWidth = CGImageGetWidth(webPImageRef);
-    size_t webPImageHeight = CGImageGetHeight(webPImageRef);
-    
-    CGDataProviderRef webPDataProviderRef = CGImageGetDataProvider(webPImageRef);
-    CFDataRef webPImageDatRef = CGDataProviderCopyData(webPDataProviderRef);
-    
-    uint8_t *webPImageData = (uint8_t *)CFDataGetBytePtr(webPImageDatRef);
-    
+    CGImageRef imageRef = [image CGImage];
+
+    NSUInteger width = CGImageGetWidth(imageRef);
+    NSUInteger height = CGImageGetHeight(imageRef);
+
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+
+    uint8_t *rawData = malloc(height * width * 4);
+
+    NSUInteger bytesPerPixel = 4;
+    NSUInteger bytesPerRow = bytesPerPixel * width;
+    NSUInteger bitsPerComponent = 8;
+    CGContextRef context = CGBitmapContextCreate(rawData, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    CGColorSpaceRelease(colorSpace);
+
+    CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
+    CGContextRelease(context);
+
     WebPConfig config;
     if (!WebPConfigPreset(&config, preset, quality)) {
         NSMutableDictionary *errorDetail = [NSMutableDictionary dictionary];
@@ -90,7 +97,7 @@
         if(error != NULL)
         *error = [NSError errorWithDomain:[NSString stringWithFormat:@"%@.errorDomain",  [[NSBundle mainBundle] bundleIdentifier]] code:-101 userInfo:errorDetail];
         
-        CFRelease(webPImageDatRef);
+        free(rawData);
         return nil;
     }
     
@@ -102,7 +109,7 @@
         if(error != NULL)
         *error = [NSError errorWithDomain:[NSString stringWithFormat:@"%@.errorDomain",  [[NSBundle mainBundle] bundleIdentifier]] code:-101 userInfo:errorDetail];
         
-        CFRelease(webPImageDatRef);
+        free(rawData);
         return nil;
     }
     
@@ -113,19 +120,19 @@
         if(error != NULL)
         *error = [NSError errorWithDomain:[NSString stringWithFormat:@"%@.errorDomain",  [[NSBundle mainBundle] bundleIdentifier]] code:-101 userInfo:errorDetail];
         
-        CFRelease(webPImageDatRef);
+        free(rawData);
         return nil;
     }
-    pic.width = (int)webPImageWidth;
-    pic.height = (int)webPImageHeight;
+    pic.width = (int)width;
+    pic.height = (int)height;
     pic.colorspace = WEBP_YUV420;
     
     
-    if ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){12, 0, 0}]) {
-        WebPPictureImportRGBA(&pic, webPImageData, (int)webPBytesPerRow);
-    } else {
-        WebPPictureImportBGRA(&pic, webPImageData, (int)webPBytesPerRow);
-    }
+//    if ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){12, 0, 0}]) {
+        WebPPictureImportRGBA(&pic, rawData, (int)bytesPerRow);
+//    } else {
+//        WebPPictureImportBGRA(&pic, webPImageData, (int)webPBytesPerRow);
+//    }
     
     WebPPictureARGBToYUVA(&pic, WEBP_YUV420);
     WebPCleanupTransparentArea(&pic);
@@ -140,7 +147,7 @@
     
     free(writer.mem);
     WebPPictureFree(&pic);
-    CFRelease(webPImageDatRef);
+    free(rawData);
     
     return webPFinalData;
 }

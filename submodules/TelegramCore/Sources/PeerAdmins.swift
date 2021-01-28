@@ -55,6 +55,7 @@ public func removeGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) 
 public enum AddGroupAdminError {
     case generic
     case addMemberError(AddGroupMemberError)
+    case adminsTooMuch
 }
 
 public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Void, AddGroupAdminError> {
@@ -79,6 +80,8 @@ public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> 
                         )
                     } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
                         return .fail(.addMemberError(.privacy))
+                    } else if error.errorDescription == "ADMINS_TOO_MUCH" {
+                        return .fail(.adminsTooMuch)
                     }
                     return .fail(.generic)
                 }
@@ -121,6 +124,7 @@ public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> 
 public enum UpdateChannelAdminRightsError {
     case generic
     case addMemberError(AddChannelMemberError)
+    case adminsTooMuch
 }
 
 public func fetchChannelParticipant(account: Account, peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
@@ -203,6 +207,8 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                             return .fail(.addMemberError(.restricted))
                         } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
                             return .fail(.addMemberError(.tooMuchJoined))
+                        } else if error.errorDescription == "ADMINS_TOO_MUCH" {
+                            return .fail(.adminsTooMuch)
                         }
                         return .fail(.generic)
                     }

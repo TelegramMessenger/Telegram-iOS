@@ -248,6 +248,42 @@ public struct PresentationResourcesChatList {
         })
     }
     
+    public static func fakeIcon(_ theme: PresentationTheme, type: ScamIconType) -> UIImage? {
+        let key: PresentationResourceKey
+        let color: UIColor
+        switch type {
+            case .regular:
+                key = PresentationResourceKey.chatListFakeRegularIcon
+                color = theme.chat.message.incoming.scamColor
+            case .outgoing:
+                key = PresentationResourceKey.chatListFakeOutgoingIcon
+                color = theme.chat.message.outgoing.scamColor
+            case .service:
+                key = PresentationResourceKey.chatListFakeServiceIcon
+                color = theme.chat.serviceMessage.components.withDefaultWallpaper.scam
+        }
+        return theme.image(key.rawValue, { theme in
+            return generateImage(CGSize(width: 37.0, height: 16.0), contextGenerator: { size, context in
+                let bounds = CGRect(origin: CGPoint(), size: size)
+                context.clear(bounds)
+                
+                context.setFillColor(color.cgColor)
+                context.setStrokeColor(color.cgColor)
+                context.setLineWidth(1.0)
+                
+                context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 2.0).cgPath)
+                context.strokePath()
+                
+                let titlePath = CGMutablePath()
+                titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
+                let titleString = NSAttributedString(string: "FAKE", font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
+                let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
+                let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
+                CTFrameDraw(titleFrame, context)
+            })
+        })
+    }
+    
     public static func secretIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListSecretIcon.rawValue, { theme in
             return generateImage(CGSize(width: 9.0, height: 12.0), rotatedContext: { size, context in

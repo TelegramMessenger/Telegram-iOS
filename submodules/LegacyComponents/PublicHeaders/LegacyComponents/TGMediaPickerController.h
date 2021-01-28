@@ -36,6 +36,8 @@
 @property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
+@property (nonatomic, assign) CGFloat topInset;
+
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;

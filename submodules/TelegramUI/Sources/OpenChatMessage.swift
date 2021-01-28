@@ -151,12 +151,14 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     playerType = .music
                 } else {
-                    if params.standalone {
+                    if let playlistLocation = params.playlistLocation {
+                        location = playlistLocation
+                    } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
                         location = .singleMessage(params.message.id)
                     }
-                    playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
+                    playerType = (file.isVoice || file.isInstantVideo) ? .voice : .file
                 }
                 params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(context: params.context, location: location, chatLocationContextHolder: params.chatLocationContextHolder)), type: playerType, control: control)
                 return true

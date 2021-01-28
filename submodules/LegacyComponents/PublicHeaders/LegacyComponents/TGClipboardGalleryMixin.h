@@ -16,12 +16,15 @@
 @property (nonatomic, copy) void (^didTransitionOut)();
 @property (nonatomic, copy) UIView *(^referenceViewForItem)(TGClipboardGalleryPhotoItem *);
 
-@property (nonatomic, copy) void (^completeWithItem)(TGClipboardGalleryPhotoItem *item);
+@property (nonatomic, copy) void (^completeWithItem)(TGClipboardGalleryPhotoItem *item, bool silentPosting, int32_t scheduleTime);
 
 @property (nonatomic, copy) void (^editorOpened)(void);
 @property (nonatomic, copy) void (^editorClosed)(void);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName;
+@property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
+@property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
+
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName;
 
 - (void)present;
 

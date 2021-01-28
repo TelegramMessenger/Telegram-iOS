@@ -5,6 +5,7 @@ import os
 import shlex
 import sys
 import tempfile
+import subprocess
 
 from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironment
 from ProjectGeneration import generate
@@ -125,6 +126,16 @@ class BazelCommandLine:
                 # Always build universal Watch binaries.
                 '--watchos_cpus=armv7k,arm64_32'
             ] + self.common_debug_args
+        elif configuration == 'debug_armv7':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                '--ios_multi_cpus=armv7',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32'
+            ] + self.common_debug_args
         elif configuration == 'release_arm64':
             self.configuration_args = [
                 # bazel optimized build configuration
@@ -134,7 +145,13 @@ class BazelCommandLine:
                 '--ios_multi_cpus=arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32'
+                '--watchos_cpus=armv7k,arm64_32',
+
+                # Generate DSYM files when building.
+                '--apple_generate_dsym',
+
+                # Require DSYM files as build output.
+                '--output_groups=+dsyms'
             ] + self.common_release_args
         elif configuration == 'release_universal':
             self.configuration_args = [
@@ -181,7 +198,7 @@ class BazelCommandLine:
         if self.remote_cache is not None:
             combined_arguments += [
                 '--remote_cache={}'.format(self.remote_cache),
-                '--experimental_remote_downloader="{}"'.format(self.remote_cache)
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
             ]
         elif self.cache_dir is not None:
             combined_arguments += [
@@ -211,7 +228,7 @@ class BazelCommandLine:
         if self.remote_cache is not None:
             combined_arguments += [
                 '--remote_cache={}'.format(self.remote_cache),
-                '--experimental_remote_downloader="{}"'.format(self.remote_cache)
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
             ]
         elif self.cache_dir is not None:
             combined_arguments += [
@@ -220,7 +237,8 @@ class BazelCommandLine:
 
         combined_arguments += self.configuration_args
 
-        print('TelegramBuild: running {}'.format(combined_arguments))
+        print('TelegramBuild: running')
+        print(subprocess.list2cmdline(combined_arguments))
         call_executable(combined_arguments)
 
 
@@ -280,7 +298,7 @@ def generate_project(arguments):
     if arguments.cacheDir is not None:
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
-        bazel_command_line.add_remote_cache(arguments.cacheDir)
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
 
     resolve_configuration(bazel_command_line, arguments)
 
@@ -314,7 +332,7 @@ def build(arguments):
     if arguments.cacheDir is not None:
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
-        bazel_command_line.add_remote_cache(arguments.cacheDir)
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
 
     resolve_configuration(bazel_command_line, arguments)
 
@@ -457,6 +475,7 @@ if __name__ == '__main__':
         '--configuration',
         choices=[
             'debug_arm64',
+            'debug_armv7',
             'release_arm64',
             'release_universal'
         ],

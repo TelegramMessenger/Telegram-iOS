@@ -18,6 +18,7 @@ public enum ItemListDisclosureStyle {
 public enum ItemListDisclosureLabelStyle {
     case text
     case detailText
+    case coloredText(UIColor)
     case multilineDetailText
     case badge(UIColor)
     case color(UIColor)
@@ -277,6 +278,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = detailFont
                 labelConstrain = params.width - params.rightInset - 40.0 - leftInset
+            case let .coloredText(color):
+                labelBadgeColor = color
+                labelFont = titleFont
             default:
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = titleFont

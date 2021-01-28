@@ -24,6 +24,7 @@ final class VoiceChatParticipantItem: ListViewItem {
             case generic
             case accent
             case constructive
+            case destructive
         }
         
         case presence
@@ -70,10 +71,10 @@ final class VoiceChatParticipantItem: ListViewItem {
     let revealOptions: [RevealOption]
     let revealed: Bool?
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
-    let action: (() -> Void)?
+    let action: ((ASDisplayNode) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -130,9 +131,8 @@ final class VoiceChatParticipantItem: ListViewItem {
         }
     }
     
-    public func selected(listView: ListView){
+    public func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
-        self.action?()
     }
 }
 
@@ -281,6 +281,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     deinit {
         self.audioLevelDisposable.dispose()
     }
+    
+    override func selected() {
+        super.selected()
+        self.layoutParams?.0.action?(self.contextSourceNode)
+    }
         
     func asyncLayout() -> (_ item: VoiceChatParticipantItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -363,6 +368,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     wavesColor = textColorValue
                 case .constructive:
                     textColorValue = UIColor(rgb: 0x34c759)
+                case .destructive:
+                    textColorValue = UIColor(rgb: 0xff3b30)
+                    wavesColor = textColorValue
                 }
                 statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
             case .none:

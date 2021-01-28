@@ -123,6 +123,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     
     var textUpdated: ((String) -> Void)?
     var deleteToken: ((AnyHashable) -> Void)?
+    var textReturned: (() -> Void)?
     
     init(theme: EditableTokenListNodeTheme, placeholder: String) {
         self.theme = theme
@@ -333,6 +334,11 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         if !text.isEmpty {
             self.scrollNode.view.scrollRectToVisible(textFieldScrollNode.frame.offsetBy(dx: 0.0, dy: 7.0), animated: true)
         }
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.textReturned?()
+        return false
     }
     
     func textFieldDidBeginEditing(_ textField: UITextField) {

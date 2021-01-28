@@ -27,11 +27,11 @@ private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, P
     return result
 }
 
-public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> String? {
-    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId)?.string
+public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> String? {
+    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: forChatList)?.string
 }
 
-public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
     let primaryTextColor: UIColor
@@ -57,7 +57,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if isChannel {
                     attributedString = NSAttributedString(string: strings.Notification_CreatedChannel, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_CreatedChatWithTitle(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    if forChatList {
+                        attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_CreatedChatWithTitle(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    }
                 }
             case let .addedMembers(peerIds):
                 if let peerId = peerIds.first, peerId == message.author?.id {

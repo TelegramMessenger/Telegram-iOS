@@ -225,7 +225,7 @@ public func generateAdjustedStretchableFilledCircleImage(diameter: CGFloat, colo
     })?.stretchableImage(withLeftCapWidth: Int(diameter / 2) + 1, topCapHeight: Int(diameter / 2) + 1)
 }
 
-public func generateCircleImage(diameter: CGFloat, lineWidth: CGFloat, color: UIColor?, strokeColor: UIColor? = nil, strokeWidth: CGFloat? = nil, backgroundColor: UIColor? = nil) -> UIImage? {
+public func generateCircleImage(diameter: CGFloat, lineWidth: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         if let backgroundColor = backgroundColor {

@@ -34,6 +34,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let immediateExternalShare: Bool
     private var immediatePeerId: PeerId?
     private let shares: Int?
+    private let fromForeignApp: Bool
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -81,7 +82,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, shares: Int?, forcedTheme: PresentationTheme?) {
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, shares: Int?, fromForeignApp: Bool, forcedTheme: PresentationTheme?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.forcedTheme = forcedTheme
@@ -89,6 +90,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
         self.shares = shares
+        self.fromForeignApp = fromForeignApp
         self.presentError = presentError
         
         self.presetText = presetText
@@ -124,7 +126,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.wrappingScrollNode.view.canCancelContentTouches = true
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        if self.fromForeignApp {
+            self.dimNode.backgroundColor = .clear
+        } else {
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        }
         
         self.cancelButtonNode = ASButtonNode()
         self.cancelButtonNode.displaysAsynchronously = false

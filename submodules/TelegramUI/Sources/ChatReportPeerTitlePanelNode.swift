@@ -17,6 +17,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     case reportUserSpam
     case reportIrrelevantGeoLocation
     case unarchive
+    case addMembers
     
     func title(strings: PresentationStrings) -> String {
         switch self {
@@ -38,6 +39,8 @@ private enum ChatReportPeerTitleButton: Equatable {
                 return strings.Conversation_ReportGroupLocation
             case .unarchive:
                 return strings.Conversation_Unarchive
+            case .addMembers:
+                return strings.Conversation_AddMembers
         }
     }
 }
@@ -85,7 +88,9 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
             }
         }
     } else if let _ = state.renderedPeer?.chatMainPeer {
-        if let contactStatus = state.contactStatus, contactStatus.canReportIrrelevantLocation, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+        if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.suggestAddMembers) {
+            buttons.append(.addMembers)
+        } else if let contactStatus = state.contactStatus, contactStatus.canReportIrrelevantLocation, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
             buttons.append(.reportIrrelevantGeoLocation)
         } else if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.autoArchived) {
             buttons.append(.reportUserSpam)
@@ -510,6 +515,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.reportPeer()
                     case .unarchive:
                         self.interfaceInteraction?.unarchivePeer()
+                    case .addMembers:
+                        self.interfaceInteraction?.presentInviteMembers()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()
                     case .reportIrrelevantGeoLocation:

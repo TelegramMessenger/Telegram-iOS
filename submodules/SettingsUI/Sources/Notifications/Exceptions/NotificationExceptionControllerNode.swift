@@ -891,7 +891,9 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     filter.insert(.onlyChannels)
             }
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
-            controller.peerSelected = { [weak controller] peerId in
+            controller.peerSelected = { [weak controller] peer in
+                let peerId = peer.id
+                
                 presentPeerSettings(peerId, {
                     controller?.dismiss()
                 })

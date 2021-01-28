@@ -171,7 +171,7 @@ private extension PresentationGroupCallState {
             networkState: .connecting,
             canManageCall: false,
             adminIds: Set(),
-            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
+            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
             defaultParticipantMuteState: nil
         )
     }
@@ -427,6 +427,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.inivitedPeersPromise.get()
     }
     
+    private let memberEventsPipe = ValuePipe<PresentationGroupCallMemberEvent>()
+    public var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> {
+        return self.memberEventsPipe.signal()
+    }
+    private let memberEventsPipeDisposable = MetaDisposable()
+    
     private let requestDisposable = MetaDisposable()
     private var groupCallParticipantUpdatesDisposable: Disposable?
     
@@ -663,7 +669,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 ssrc: 0,
                                 joinTimestamp: strongSelf.temporaryJoinTimestamp,
                                 activityTimestamp: nil,
-                                muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                                muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                                volume: nil
                             ))
                             participants.sort()
                         }
@@ -732,6 +739,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.audioLevelsDisposable.dispose()
         self.participantsContextStateDisposable.dispose()
         self.myAudioLevelDisposable.dispose()
+        self.memberEventsPipeDisposable.dispose()
         
         self.myAudioLevelTimer?.invalidate()
         self.typingDisposable.dispose()
@@ -1035,7 +1043,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.stateValue.muteState = muteState
                             } else if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
                                 strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
-                                strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                                strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                 strongSelf.callContext?.setIsMuted(true)
                             }
                         }
@@ -1067,6 +1075,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if didUpdateInvitedPeers {
                         strongSelf.invitedPeersValue = updatedInvitedPeers
                     }
+                }))
+                
+                let postbox = self.accountContext.account.postbox
+                self.memberEventsPipeDisposable.set((participantsContext.memberEvents
+                |> mapToSignal { event -> Signal<PresentationGroupCallMemberEvent, NoError> in
+                    return postbox.transaction { transaction -> Signal<PresentationGroupCallMemberEvent, NoError> in
+                        if let peer = transaction.getPeer(event.peerId) {
+                            return .single(PresentationGroupCallMemberEvent(peer: peer, joined: event.joined))
+                        } else {
+                            return .complete()
+                        }
+                    }
+                    |> switchToLatest
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] event in
+                    self?.memberEventsPipe.putNext(event)
                 }))
                 
                 if let isCurrentlyConnecting = self.isCurrentlyConnecting, isCurrentlyConnecting {
@@ -1206,9 +1230,21 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.callContext?.setIsMuted(isEffectivelyMuted)
         
         if isVisuallyMuted {
-            self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+            self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
         } else {
             self.stateValue.muteState = nil
+        }
+    }
+        
+    public func setVolume(peerId: PeerId, volume: Int32, sync: Bool) {
+        for (ssrc, id) in self.ssrcMapping {
+            if id == peerId {
+                self.callContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
+                if sync {
+                    self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: volume)
+                }
+                break
+            }
         }
     }
     
@@ -1280,9 +1316,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    public func updateMuteState(peerId: PeerId, isMuted: Bool) {
+    public func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState? {
         let canThenUnmute: Bool
         if isMuted {
+            var mutedByYou = false
             if peerId == self.accountContext.account.peerId {
                 canThenUnmute = true
             } else if self.stateValue.canManageCall {
@@ -1294,14 +1331,23 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             } else if self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
                 canThenUnmute = true
             } else {
+                mutedByYou = true
                 canThenUnmute = true
             }
-            self.participantsContext?.updateMuteState(peerId: peerId, muteState: isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute) : nil)
+            let muteState = isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute, mutedByYou: mutedByYou) : nil
+            self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil)
+            return muteState
         } else {
             if peerId == self.accountContext.account.peerId {
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
+                return nil
+            } else if self.stateValue.canManageCall || self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
+                let muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil)
+                return muteState
             } else {
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true))
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
+                return nil
             }
         }
     }

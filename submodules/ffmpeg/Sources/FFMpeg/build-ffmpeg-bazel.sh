@@ -1,21 +1,13 @@
 #!/bin/sh
 
+set -x
+
 RAW_ARCHS="$2"
 ARCHS=""
 
 for RAW_ARCH in $RAW_ARCHS; do
 	ARCH_NAME="$RAW_ARCH"
-	if [ "$ARCH_NAME" == "iphoneos-arm64" ]; then
-		ARCH_NAME="arm64"
-	elif [ "$ARCH_NAME" == "iphoneos-armv7" ]; then
-		ARCH_NAME="armv7"
-	elif [ "$ARCH_NAME" == "iphonesimulator-x86_64" ]; then
-		ARCH_NAME="x86_64"
-	elif [ "$ARCH_NAME" == "iphonesimulator-i386" ]; then
-		ARCH_NAME="i386"
-	fi
-
-	if [ "$ARCH_NAME" = "i386" -o "$ARCH_NAME" = "x86_64" -o "$ARCH_NAME" = "arm64" -o "$ARCH_NAME" = "armv7" ]
+	if [ "$ARCH_NAME" = "i386" -o "$ARCH_NAME" = "x86_64" -o "$ARCH_NAME" = "arm64" -o "$ARCH_NAME" = "armv7" -o "$ARCH_NAME" = "sim_arm64" ]
 	then
 		ARCHS="$ARCHS $ARCH_NAME"
 	else
@@ -78,7 +70,7 @@ fi
 
 COMPILE="y"
 
-DEPLOYMENT_TARGET="8.0"
+DEPLOYMENT_TARGET="9.0"
 
 LIBS_HASH=""
 for ARCH in $ARCHS
@@ -116,19 +108,27 @@ then
 		exit 1
 	fi
 
-	for ARCH in $ARCHS
+	for RAW_ARCH in $ARCHS
 	do
-		echo "building $ARCH..."
-		mkdir -p "$SCRATCH/$ARCH"
-		pushd "$SCRATCH/$ARCH"
+		ARCH="$RAW_ARCH"
+		if [ "$RAW_ARCH" == "sim_arm64" ]; then
+			ARCH="arm64"
+		fi
+
+		echo "building $RAW_ARCH..."
+		mkdir -p "$SCRATCH/$RAW_ARCH"
+		pushd "$SCRATCH/$RAW_ARCH"
 
 		LIBOPUS_PATH="$SOURCE_DIR/libopus"
 
 		CFLAGS="-arch $ARCH"
-		if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]
+		if [ "$RAW_ARCH" = "i386" -o "$RAW_ARCH" = "x86_64" ]
 		then
 		    PLATFORM="iPhoneSimulator"
 		    CFLAGS="$CFLAGS -mios-simulator-version-min=$DEPLOYMENT_TARGET"
+		elif [ "$RAW_ARCH" = "sim_arm64" ]; then
+			PLATFORM="iPhoneSimulator"
+		    CFLAGS="$CFLAGS -mios-simulator-version-min=$DEPLOYMENT_TARGET --target=arm64-apple-ios$DEPLOYMENT_TARGET-simulator"
 		else
 		    PLATFORM="iPhoneOS"
 		    CFLAGS="$CFLAGS -mios-version-min=$DEPLOYMENT_TARGET"
@@ -141,7 +141,7 @@ then
 		XCRUN_SDK=`echo $PLATFORM | tr '[:upper:]' '[:lower:]'`
 		CC="xcrun -sdk $XCRUN_SDK clang"
 
-		if [ "$ARCH" = "arm64" ]
+		if [ "$RAW_ARCH" = "arm64" ] || [ "$RAW_ARCH" = "sim_arm64" ]
 		then
 		    AS="$GAS_PREPROCESSOR_PATH -arch aarch64 -- $CC"
 		else
@@ -151,7 +151,7 @@ then
 		CXXFLAGS="$CFLAGS"
 		LDFLAGS="$CFLAGS"
 
-		CONFIGURED_MARKER="$THIN/$ARCH/configured_marker"
+		CONFIGURED_MARKER="$THIN/$RAW_ARCH/configured_marker"
 		CONFIGURED_MARKER_CONTENTS=""
 		if [ -r "$CONFIGURED_MARKER" ]
 		then
@@ -161,7 +161,7 @@ then
 		then
 			echo "1" >/dev/null
 		else
-			mkdir -p "$THIN/$ARCH"
+			mkdir -p "$THIN/$RAW_ARCH"
 			TMPDIR=${TMPDIR/%\/} "$SOURCE/configure" \
 			    --target-os=darwin \
 			    --arch=$ARCH \
@@ -170,7 +170,7 @@ then
 			    $CONFIGURE_FLAGS \
 			    --extra-cflags="$CFLAGS" \
 			    --extra-ldflags="$LDFLAGS" \
-			    --prefix="$THIN/$ARCH" \
+			    --prefix="$THIN/$RAW_ARCH" \
 			    --pkg-config="$PKG_CONFIG" \
 			    --pkg-config-flags="--libopus_path $LIBOPUS_PATH" \
 			|| exit 1

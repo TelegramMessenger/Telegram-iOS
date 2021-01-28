@@ -17,10 +17,6 @@ import PeersNearbyUI
 import PeerInfoUI
 import SettingsUI
 import UrlHandling
-#if ENABLE_WALLET
-import WalletUI
-import WalletCore
-#endif
 import LegacyMediaPickerUI
 import LocalMediaResources
 import OverlayStatusController
@@ -951,6 +947,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
+    public func openSearch(filter: ChatListSearchFilter, query: String?) {
+        if let rootController = self.mainWindow?.viewController as? TelegramRootController {
+            rootController.openChatsController(activateSearch: true, filter: filter, query: query)
+        }
+    }
+    
     public func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?) {
         self.navigateToChatImpl(accountId, peerId, messageId)
     }
@@ -1177,7 +1179,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeComposeController(context: AccountContext) -> ViewController {
-        return ComposeController(context: context)
+        return ComposeControllerImpl(context: context)
     }
     
     public func makeProxySettingsController(context: AccountContext) -> ViewController {
@@ -1244,6 +1246,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, performTextSelectionAction: { _, _, _ in
             }, updateMessageLike: { _, _ in
             }, openMessageReactions: { _ in
+            }, displayImportedMessageTooltip: { _ in
             }, displaySwipeToReplyHint: {
             }, dismissReplyMarkupMessage: { _ in
             }, openMessagePollResults: { _, _ in

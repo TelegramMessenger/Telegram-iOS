@@ -174,7 +174,11 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
                 if let index = strongSelf.searchResult.messages.firstIndex(where: { $0.index == message.index }) {
-                    strongSelf.resultSelected?(strongSelf.searchResult.messages.count - index - 1)
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        strongSelf.resultSelected?(index)
+                    } else {
+                        strongSelf.resultSelected?(strongSelf.searchResult.messages.count - index - 1)
+                    }
                 }
                 strongSelf.listNode.clearHighlightAnimated(true)
             }
@@ -323,7 +327,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             options.insert(.PreferSynchronousDrawing)
             options.insert(.PreferSynchronousResourceLoading)
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
             })
         }
     }
@@ -331,8 +335,6 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (layout, navigationBarHeight)
-        
-        let topInset = navigationBarHeight
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         

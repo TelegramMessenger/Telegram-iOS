@@ -169,6 +169,9 @@ private var declaredEncodables: Void = {
     declareEncodable(CountriesList.self, f: { CountriesList(decoder: $0) })
     declareEncodable(ValidationMessageAttribute.self, f: { ValidationMessageAttribute(decoder: $0) })
     declareEncodable(EmojiSearchQueryMessageAttribute.self, f: { EmojiSearchQueryMessageAttribute(decoder: $0) })
+    declareEncodable(CachedPeerInvitationImporters.self, f: { CachedPeerInvitationImporters(decoder: $0) })
+    declareEncodable(CachedPeerExportedInvitations.self, f: { CachedPeerExportedInvitations(decoder: $0) })
+    declareEncodable(ExportedInvitation.self, f: { ExportedInvitation(decoder: $0) })
     
     return
 }()
@@ -210,7 +213,7 @@ public func temporaryAccount(manager: AccountManager, rootPath: String, encrypti
     return manager.allocatedTemporaryAccountId()
     |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
         let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-        return openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970))
+        return openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: false)
         |> mapToSignal { result -> Signal<TemporaryAccount, NoError> in
             switch result {
                 case .upgrading:

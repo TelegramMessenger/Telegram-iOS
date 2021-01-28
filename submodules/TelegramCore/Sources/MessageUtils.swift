@@ -75,6 +75,21 @@ public extension Message {
         return false
     }
     
+    var isFake: Bool {
+        if let author = self.author, author.isFake {
+            return true
+        }
+        if let forwardAuthor = self.forwardInfo?.author, forwardAuthor.isFake {
+            return true
+        }
+        for attribute in self.attributes {
+            if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId, let bot = self.peers[peerId] as? TelegramUser, bot.isFake {
+               return true
+            }
+        }
+        return false
+    }
+    
     var sourceReference: SourceReferenceMessageAttribute? {
         for attribute in self.attributes {
             if let attribute = attribute as? SourceReferenceMessageAttribute {
@@ -89,6 +104,8 @@ public extension Message {
             if let peer = self.peers[sourceReference.messageId.peerId] {
                 return peer
             }
+        } else if let forwardInfo = self.forwardInfo, forwardInfo.flags.contains(.isImported), let author = forwardInfo.author {
+            return author
         }
         return self.author
     }
@@ -159,7 +176,7 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
     
     var forwardInfo: MessageForwardInfo?
     if let info = message.forwardInfo {
-        forwardInfo = MessageForwardInfo(author: info.authorId.flatMap({ peers[$0] }), source: info.sourceId.flatMap({ peers[$0] }), sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature, psaType: info.psaType)
+        forwardInfo = MessageForwardInfo(author: info.authorId.flatMap({ peers[$0] }), source: info.sourceId.flatMap({ peers[$0] }), sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature, psaType: info.psaType, flags: info.flags)
         if let author = forwardInfo?.author {
             messagePeers[author.id] = author
         }

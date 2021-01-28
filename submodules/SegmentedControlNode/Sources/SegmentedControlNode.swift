@@ -172,6 +172,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
             itemNode.titleNode.maximumNumberOfLines = 1
             itemNode.titleNode.truncationMode = .byTruncatingTail
+            itemNode.accessibilityLabel = item.title
+            itemNode.accessibilityTraits = [.button]
             itemNode.setTitle(item.title, with: textFont, with: theme.textColor, for: .normal)
             itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: .selected)
             itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: [.selected, .highlighted])

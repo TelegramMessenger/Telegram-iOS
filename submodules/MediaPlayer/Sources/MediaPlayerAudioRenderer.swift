@@ -230,6 +230,7 @@ private final class AudioPlayerRendererContext {
     
     var audioGraph: AUGraph?
     var timePitchAudioUnit: AudioComponentInstance?
+    var mixerAudioUnit: AudioComponentInstance?
     var outputAudioUnit: AudioComponentInstance?
     
     var bufferContextId: Int32!
@@ -311,6 +312,12 @@ private final class AudioPlayerRendererContext {
                     context.state = .playing(rate: baseRate, didSetRate: false)
                 }
             }
+        }
+    }
+    
+    fileprivate func setVolume(_ volume: Double) {
+        if let mixerAudioUnit = self.mixerAudioUnit {
+            AudioUnitSetParameter(mixerAudioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, Float32(volume), 0)
         }
     }
     
@@ -406,6 +413,15 @@ private final class AudioPlayerRendererContext {
                 return
             }
             
+            var mixerNode: AUNode = 0
+            var mixerDescription = AudioComponentDescription()
+            mixerDescription.componentType = kAudioUnitType_Mixer
+            mixerDescription.componentSubType = kAudioUnitSubType_MultiChannelMixer
+            mixerDescription.componentManufacturer = kAudioUnitManufacturer_Apple
+            guard AUGraphAddNode(audioGraph, &mixerDescription, &mixerNode) == noErr else {
+                return
+            }
+            
             var outputNode: AUNode = 0
             var outputDesc = AudioComponentDescription()
             outputDesc.componentType = kAudioUnitType_Output
@@ -429,7 +445,11 @@ private final class AudioPlayerRendererContext {
                 return
             }
             
-            guard AUGraphConnectNodeInput(audioGraph, timePitchNode, 0, outputNode, 0) == noErr else {
+            guard AUGraphConnectNodeInput(audioGraph, timePitchNode, 0, mixerNode, 0) == noErr else {
+                return
+            }
+            
+            guard AUGraphConnectNodeInput(audioGraph, mixerNode, 0, outputNode, 0) == noErr else {
                 return
             }
             
@@ -444,6 +464,11 @@ private final class AudioPlayerRendererContext {
             }
             AudioUnitSetParameter(timePitchAudioUnit, kTimePitchParam_Rate, kAudioUnitScope_Global, 0, Float32(self.baseRate), 0)
             
+            var maybeMixerAudioUnit: AudioComponentInstance?
+            guard AUGraphNodeInfo(audioGraph, mixerNode, &mixerDescription, &maybeMixerAudioUnit) == noErr, let mixerAudioUnit = maybeMixerAudioUnit else {
+                return
+            }
+            
             var maybeOutputAudioUnit: AudioComponentInstance?
             guard AUGraphNodeInfo(audioGraph, outputNode, &outputDesc, &maybeOutputAudioUnit) == noErr, let outputAudioUnit = maybeOutputAudioUnit else {
                 return
@@ -456,7 +481,7 @@ private final class AudioPlayerRendererContext {
             var streamFormat = AudioStreamBasicDescription()
             AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
             AudioUnitSetProperty(timePitchAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
-            AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
+            AudioUnitSetProperty(mixerAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
             
             var callbackStruct = AURenderCallbackStruct()
             callbackStruct.inputProc = rendererInputProc
@@ -474,8 +499,9 @@ private final class AudioPlayerRendererContext {
             var maximumFramesPerSlice: UInt32 = 4096
             AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
             AudioUnitSetProperty(timePitchAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
+            AudioUnitSetProperty(mixerAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
             AudioUnitSetProperty(outputAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
-            
+                        
             guard AUGraphInitialize(audioGraph) == noErr else {
                 return
             }
@@ -484,6 +510,7 @@ private final class AudioPlayerRendererContext {
             
             self.audioGraph = audioGraph
             self.timePitchAudioUnit = timePitchAudioUnit
+            self.mixerAudioUnit = mixerAudioUnit
             self.outputAudioUnit = outputAudioUnit
         }
         
@@ -816,6 +843,15 @@ public final class MediaPlayerAudioRenderer {
             if let contextRef = self.contextRef {
                 let context = contextRef.takeUnretainedValue()
                 context.setBaseRate(baseRate)
+            }
+        }
+    }
+    
+    public func setVolume(_ volume: Double) {
+        audioPlayerRendererQueue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                context.setVolume(volume)
             }
         }
     }

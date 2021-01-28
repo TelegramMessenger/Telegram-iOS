@@ -128,7 +128,7 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.addPeer()
                 })
-            case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
+            case let .peerItem(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
                 let revealOptions = ItemListPeerItemRevealOptions(options: [ItemListPeerItemRevealOption(type: .destructive, title: strings.BlockedUsers_Unblock, action: {
                     arguments.removePeer(peer.id)
                 })])
@@ -219,8 +219,6 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
     let removePeerDisposable = MetaDisposable()
     actionsDisposable.add(removePeerDisposable)
     
-    let peersPromise = Promise<[Peer]?>(nil)
-    
     let arguments = BlockedPeersControllerArguments(context: context, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
@@ -231,8 +229,10 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
         }
     }, addPeer: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent], title: presentationData.strings.BlockedUsers_SelectUserTitle))
-        controller.peerSelected = { [weak controller] peerId in
+        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent, .doNotSearchMessages], title: presentationData.strings.BlockedUsers_SelectUserTitle))
+        controller.peerSelected = { [weak controller] peer in
+            let peerId = peer.id
+            
             guard let strongController = controller else {
                 return
             }

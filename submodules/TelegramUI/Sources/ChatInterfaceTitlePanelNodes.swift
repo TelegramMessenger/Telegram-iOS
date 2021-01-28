@@ -58,6 +58,8 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                 displayActionsPanel = true
             } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                 displayActionsPanel = true
+            } else if peerStatusSettings.contains(.suggestAddMembers) {
+                displayActionsPanel = true
             }
         }
     }

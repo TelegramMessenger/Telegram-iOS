@@ -13,10 +13,56 @@ import AccountContext
 import AlertUI
 import AppBundle
 import LocalizedPeerData
+import ContextUI
 
 public enum CallListControllerMode {
     case tab
     case navigation
+}
+
+private final class DeleteAllButtonNode: ASDisplayNode {
+    private let pressed: () -> Void
+    
+    let contentNode: ContextExtractedContentContainingNode
+    private let buttonNode: HighlightableButtonNode
+    private let titleNode: ImmediateTextNode
+    
+    init(presentationData: PresentationData, pressed: @escaping () -> Void) {
+        self.pressed = pressed
+        
+        self.contentNode = ContextExtractedContentContainingNode()
+        self.buttonNode = HighlightableButtonNode()
+        self.titleNode = ImmediateTextNode()
+        
+        super.init()
+        
+        self.addSubnode(self.contentNode)
+        self.buttonNode.addSubnode(self.titleNode)
+        self.contentNode.contentNode.addSubnode(self.buttonNode)
+        
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.Notification_Exceptions_DeleteAll, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationBar.accentTextColor)
+        
+        //self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func buttonPressed() {
+        self.pressed()
+    }
+    
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        let titleSize = self.titleNode.updateLayout(constrainedSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(), size: titleSize)
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: titleSize)
+        return titleSize
+    }
+    
+    override public func layout() {
+        super.layout()
+        
+        let size = self.bounds.size
+        self.contentNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.contentNode.contentRect = CGRect(origin: CGPoint(), size: size)
+    }
 }
 
 public final class CallListController: ViewController {
@@ -43,6 +89,7 @@ public final class CallListController: ViewController {
     private var editingMode: Bool = false
     
     private let createActionDisposable = MetaDisposable()
+    private let clearDisposable = MetaDisposable()
     
     public init(context: AccountContext, mode: CallListControllerMode) {
         self.context = context
@@ -104,6 +151,7 @@ public final class CallListController: ViewController {
         self.createActionDisposable.dispose()
         self.presentationDataDisposable?.dispose()
         self.peerViewDisposable.dispose()
+        self.clearDisposable.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -144,7 +192,7 @@ public final class CallListController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallListControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId, isVideo in
+        self.displayNode = CallListControllerNode(controller: self, context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId, isVideo in
             if let strongSelf = self {
                 strongSelf.call(peerId, isVideo: isVideo)
             }
@@ -167,6 +215,7 @@ public final class CallListController: ViewController {
                         switch strongSelf.mode {
                             case .tab:
                                 strongSelf.navigationItem.setLeftBarButton(nil, animated: true)
+                                strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                             case .navigation:
                                 strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                         }
@@ -175,8 +224,25 @@ public final class CallListController: ViewController {
                             case .tab:
                                 if strongSelf.editingMode {
                                     strongSelf.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                                    var pressedImpl: (() -> Void)?
+                                    let buttonNode = DeleteAllButtonNode(presentationData: strongSelf.presentationData, pressed: {
+                                        pressedImpl?()
+                                    })
+                                    strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: buttonNode)
+                                    strongSelf.navigationItem.rightBarButtonItem?.setCustomAction({
+                                        pressedImpl?()
+                                    })
+                                    pressedImpl = { [weak self, weak buttonNode] in
+                                        guard let strongSelf = self, let buttonNode = buttonNode else {
+                                            return
+                                        }
+                                        strongSelf.deleteAllPressed(buttonNode: buttonNode)
+                                    }
+                                    
+                                    //strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: strongSelf, action: #selector(strongSelf.deleteAllPressed))
                                 } else {
                                     strongSelf.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+                                    strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.callPressed))
                                 }
                             case .navigation:
                                 if strongSelf.editingMode {
@@ -201,6 +267,89 @@ public final class CallListController: ViewController {
     
     @objc func callPressed() {
         self.beginCallImpl()
+    }
+    
+    @objc private func deleteAllPressed(buttonNode: DeleteAllButtonNode) {
+        var items: [ContextMenuItem] = []
+        
+        let beginClear: (Bool) -> Void = { [weak self] forEveryone in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            var signal = clearCallHistory(account: strongSelf.context.account, forEveryone: forEveryone)
+            
+            var cancelImpl: (() -> Void)?
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            signal = signal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            cancelImpl = {
+                self?.clearDisposable.set(nil)
+            }
+            strongSelf.clearDisposable.set((signal
+            |> deliverOnMainQueue).start(completed: {
+            }))
+        }
+        
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.CallList_DeleteAllForMe, textColor: .destructive, icon: { _ in
+            return nil
+        }, action: { _, f in
+            f(.default)
+            beginClear(false)
+        })))
+        
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.CallList_DeleteAllForEveryone, textColor: .destructive, icon: { _ in
+            return nil
+        }, action: { _, f in
+            f(.default)
+            beginClear(true)
+        })))
+        
+        final class ExtractedContentSourceImpl: ContextExtractedContentSource {
+            var keepInPlace: Bool
+            let ignoreContentTouches: Bool = true
+            let blurBackground: Bool
+            
+            private let controller: ViewController
+            private let sourceNode: ContextExtractedContentContainingNode
+            
+            init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
+                self.controller = controller
+                self.sourceNode = sourceNode
+                self.keepInPlace = keepInPlace
+                self.blurBackground = blurBackground
+            }
+            
+            func takeView() -> ContextControllerTakeViewInfo? {
+                return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+            }
+            
+            func putBack() -> ContextControllerPutBackViewInfo? {
+                return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+            }
+        }
+    
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(items), reactionItems: [], gesture: nil)
+        self.presentInGlobalOverlay(contextController)
     }
     
     private func beginCallImpl() {
@@ -234,9 +383,25 @@ public final class CallListController: ViewController {
     
     @objc func editPressed() {
         self.editingMode = true
+        
         switch self.mode {
             case .tab:
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+                var pressedImpl: (() -> Void)?
+                let buttonNode = DeleteAllButtonNode(presentationData: self.presentationData, pressed: {
+                    pressedImpl?()
+                })
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: buttonNode)
+                self.navigationItem.rightBarButtonItem?.setCustomAction({
+                    pressedImpl?()
+                })
+                pressedImpl = { [weak self, weak buttonNode] in
+                    guard let strongSelf = self, let buttonNode = buttonNode else {
+                        return
+                    }
+                    strongSelf.deleteAllPressed(buttonNode: buttonNode)
+                }
+                //self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: self, action: #selector(self.deleteAllPressed))
             case .navigation:
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         }
@@ -251,6 +416,7 @@ public final class CallListController: ViewController {
         switch self.mode {
             case .tab:
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
             case .navigation:
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         }

@@ -479,11 +479,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case .groupReference:
                     return nil
-                case let .peer(peer):
-                    guard let chatMainPeer = peer.peer.chatMainPeer else {
+                case let .peer(_, peer, combinedReadState, _, _, _, _, _, _, _, _, _):
+                    guard let chatMainPeer = peer.chatMainPeer else {
                         return nil
                     }
-                    return chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    var result = ""
+                    if item.context.account.peerId == chatMainPeer.id {
+                        result += item.presentationData.strings.DialogList_SavedMessages
+                    } else {
+                        result += chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    }
+                    if let combinedReadState = combinedReadState, combinedReadState.count > 0 {
+                        result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(combinedReadState.count))"
+                    }
+                    return result
             }
         } set(value) {
         }
@@ -497,25 +506,25 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case .groupReference:
                     return nil
-                case let .peer(peer):
-                    if let message = peer.messages.last {
+                case let .peer(messages, peer, combinedReadState, _, _, _, _, _, _, _, _, _):
+                    if let message = messages.last {
                         var result = ""
                         if message.flags.contains(.Incoming) {
-                            result += "Message"
+                            result += item.presentationData.strings.VoiceOver_ChatList_Message
                         } else {
-                            result += "Outgoing message"
+                            result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: peer.messages, chatPeer: peer.peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
+                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
-                            result += "\nFrom: \(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0)"
                         }
-                        if !message.flags.contains(.Incoming), let combinedReadState = peer.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
-                            result += "\nRead"
+                        if !message.flags.contains(.Incoming), let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageRead)"
                         }
                         result += "\n\(messageText)"
                         return result
                     } else {
-                        return "Empty"
+                        return item.presentationData.strings.VoiceOver_ChatList_MessageEmpty
                     }
             }
         } set(value) {
@@ -958,7 +967,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if let message = messages.last, let author = message.author as? TelegramUser, let peer = itemPeer.chatMainPeer, !(peer is TelegramUser) {
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                         } else if !displayAsMessage {
-                            peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
+                                peerText = authorSignature
+                            } else {
+                                peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            }
                         }
                     }
                     
@@ -1250,28 +1263,36 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             var credibilityIconOffset: CGFloat = 0.0
-            if displayAsMessage {
-                switch item.content {
-                case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _):
-                    if let peer = messages.last?.author {
-                        if peer.isScam {
-                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
-                            credibilityIconOffset = 2.0
-                        } else if peer.isVerified {
-                            currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                            credibilityIconOffset = 3.0
+            if !isPeerGroup {
+                if displayAsMessage {
+                    switch item.content {
+                    case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _):
+                        if let peer = messages.last?.author {
+                            if peer.isScam {
+                                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
+                                credibilityIconOffset = 2.0
+                            } else if peer.isFake {
+                                currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, type: .regular)
+                                credibilityIconOffset = 2.0
+                            } else if peer.isVerified {
+                                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                                credibilityIconOffset = 3.0
+                            }
                         }
+                    default:
+                        break
                     }
-                default:
-                    break
-                }
-            } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
-                if peer.isScam {
-                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
-                    credibilityIconOffset = 2.0
-                } else if peer.isVerified {
-                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                    credibilityIconOffset = 3.0
+                } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
+                    if peer.isScam {
+                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
+                        credibilityIconOffset = 2.0
+                    } else if peer.isFake {
+                        currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, type: .regular)
+                        credibilityIconOffset = 2.0
+                    } else if peer.isVerified {
+                        currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                        credibilityIconOffset = 3.0
+                    }
                 }
             }
             if let currentSecretIconImage = currentSecretIconImage {
@@ -1352,7 +1373,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _, displayAsMessage, _):
                     if !displayAsMessage {
-                        if let peer = renderedPeer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
+                        if let peer = renderedPeer.chatMainPeer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
                             let updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
                             let relativeStatus = relativeUserPresenceStatus(updatedPresence, relativeTo: timestamp)
                             if case .online = relativeStatus {

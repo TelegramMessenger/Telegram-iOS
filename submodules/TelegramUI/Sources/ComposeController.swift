@@ -15,7 +15,7 @@ import TelegramPermissionsUI
 import AppBundle
 import DeviceAccess
 
-public class ComposeController: ViewController {
+public class ComposeControllerImpl: ViewController, ComposeController {
     private let context: AccountContext
     
     private var contactsNode: ComposeControllerNode {

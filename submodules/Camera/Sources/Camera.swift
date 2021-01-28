@@ -93,6 +93,10 @@ private final class CameraContext {
         self.session.commitConfiguration()
     }
     
+    var hasTorch: Signal<Bool, NoError> {
+        return self.device.isFlashAvailable
+    }
+    
     func setTorchActive(_ active: Bool) {
         self.device.setTorchActive(active)
     }
@@ -189,6 +193,21 @@ public final class Camera {
         }
     }
     
+    public var hasTorch: Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.async {
+                if let context = self.contextRef?.takeUnretainedValue() {
+                    disposable.set(context.hasTorch.start(next: { hasTorch in
+                        subscriber.putNext(hasTorch)
+                        subscriber.putCompletion()
+                    }))
+                }
+            }
+            return disposable
+        }
+    }
+
     public func attachPreviewNode(_ node: CameraPreviewNode) {
         let nodeRef: Unmanaged<CameraPreviewNode> = Unmanaged.passRetained(node)
         self.queue.async {

@@ -261,6 +261,16 @@ public struct PresentationGroupCallMembers: Equatable {
     }
 }
 
+public final class PresentationGroupCallMemberEvent {
+    public let peer: Peer
+    public let joined: Bool
+    
+    public init(peer: Peer, joined: Bool) {
+        self.peer = peer
+        self.joined = joined
+    }
+}
+
 public protocol PresentationGroupCall: class {
     var account: Account { get }
     var accountContext: AccountContext { get }
@@ -277,14 +287,17 @@ public protocol PresentationGroupCall: class {
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
     
+    var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
+    
     func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>
     
     func toggleIsMuted()
     func setIsMuted(action: PresentationGroupCallMuteAction)
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
+    func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
-    func updateMuteState(peerId: PeerId, isMuted: Bool)
+    func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
     
     func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)

@@ -164,6 +164,10 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.addSubnode(self.foregroundNode)
     }
     
+    public var isEmpty: Bool {
+        return self.currentData == nil
+    }
+    
     public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.effectNode.updateAbsoluteRect(rect, within: containerSize)
     }

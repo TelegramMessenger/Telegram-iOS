@@ -882,6 +882,8 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
     public func updateThemeAndStrings(theme: SearchBarNodeTheme, strings: PresentationStrings) {
         if self.theme != theme || self.strings !== strings {
+            self.clearButton.accessibilityLabel = strings.WebSearch_RecentSectionClear
+            self.cancelButton.accessibilityLabel = self.cancelText ?? strings.Common_Cancel
             self.cancelButton.setAttributedTitle(NSAttributedString(string: self.cancelText ?? strings.Common_Cancel, font: self.cancelText != nil ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.accent), for: [])
         }
         if self.theme != theme {

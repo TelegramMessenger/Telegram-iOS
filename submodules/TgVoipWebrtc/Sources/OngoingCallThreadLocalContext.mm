@@ -835,12 +835,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
                 }];
             },
-            .audioLevelsUpdated = [audioLevelsUpdated](std::vector<std::pair<uint32_t, std::pair<float, bool>>> const &levels) {
+            .audioLevelsUpdated = [audioLevelsUpdated](tgcalls::GroupLevelsUpdate const &levels) {
                 NSMutableArray *result = [[NSMutableArray alloc] init];
-                for (auto &it : levels) {
-                    [result addObject:@(it.first)];
-                    [result addObject:@(it.second.first)];
-                    [result addObject:@(it.second.second)];
+                for (auto &it : levels.updates) {
+                    [result addObject:@(it.ssrc)];
+                    [result addObject:@(it.value.level)];
+                    [result addObject:@(it.value.voice)];
                 }
                 audioLevelsUpdated(result);
             },
@@ -1049,6 +1049,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
+    }
+}
+
+- (void)setVolumeForSsrc:(uint32_t)ssrc volume:(double)volume {
+    if (_instance) {
+        _instance->setVolume(ssrc, volume);
     }
 }
 

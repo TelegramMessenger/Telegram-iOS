@@ -131,6 +131,7 @@ private func synchronizeEmojiKeywords(postbox: Postbox, transaction: Transaction
                         for apiEmojiKeyword in keywords {
                             switch apiEmojiKeyword {
                                 case let .emojiKeyword(keyword, emoticons):
+                                    let keyword = keyword.replacingOccurrences(of: " ", with: "")
                                     let indexKeys = stringIndexTokens(keyword, transliteration: .none).map { $0.toMemoryBuffer() }
                                     let item = EmojiKeywordItem(index: ItemCollectionItemIndex(index: 0, id: 0), collectionId: collectionId.id, keyword: keyword, emoticons: emoticons, indexKeys: indexKeys)
                                     itemsToAppend[keyword] = item
@@ -200,6 +201,7 @@ private func synchronizeEmojiKeywords(postbox: Postbox, transaction: Transaction
                     var index: Int32 = 0
                     for apiEmojiKeyword in keywords {
                         if case let .emojiKeyword(keyword, emoticons) = apiEmojiKeyword, !emoticons.isEmpty {
+                            let keyword = keyword.replacingOccurrences(of: " ", with: "")
                             let indexKeys = stringIndexTokens(keyword, transliteration: .none).map { $0.toMemoryBuffer() }
                             let item = EmojiKeywordItem(index: ItemCollectionItemIndex(index: index, id: keywordCollectionItemId(keyword, inputLanguageCode: operation.inputLanguageCode)), collectionId: collectionId.id, keyword: keyword, emoticons: emoticons, indexKeys: indexKeys)
                             items.append(item)

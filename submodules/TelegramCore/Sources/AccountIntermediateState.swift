@@ -599,6 +599,7 @@ struct AccountFinalState {
     var state: AccountMutableState
     var shouldPoll: Bool
     var incomplete: Bool
+    var missingUpdatesFromChannels: Set<PeerId>
     var discard: Bool
 }
 

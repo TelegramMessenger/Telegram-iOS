@@ -7,31 +7,14 @@ if [ -z "BUILD_NUMBER" ]; then
 	exit 1
 fi
 
-if [ -z "COMMIT_ID" ]; then
-	echo "COMMIT_ID is not set"
-	exit 1
-fi
-
 if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "testinghockeyapp" ]; then
-	CERTS_PATH="$HOME/codesigning_data/certs"
-	PROFILES_PATH="$HOME/codesigning_data/profiles"
+	CERTS_PATH="$HOME/codesigning_data/certs/enterprise"
 elif [ "$1" == "testinghockeyapp-local" ]; then
-	CERTS_PATH="$HOME/codesigning_data/certs"
-	PROFILES_PATH="$HOME/codesigning_data/profiles"
+	CERTS_PATH="$HOME/codesigning_data/certs/enterprise"
 elif [ "$1" == "appstore" ]; then
-	if [ -z "$TELEGRAM_BUILD_APPSTORE_PASSWORD" ]; then
-		echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
-		exit 1
-	fi
-	if [ -z "$TELEGRAM_BUILD_APPSTORE_TEAM_NAME" ]; then
-		echo "TELEGRAM_BUILD_APPSTORE_TEAM_NAME is not set"
-		exit 1
-	fi
-	CERTS_PATH="$HOME/codesigning_data/certs"
-	PROFILES_PATH="$HOME/codesigning_data/profiles"
+	CERTS_PATH="$HOME/codesigning_data/certs/distribution"
 elif [ "$1" == "verify" ]; then
-	CERTS_PATH="build-system/fake-codesigning/certs/distribution"
-	PROFILES_PATH="build-system/fake-codesigning/profiles"
+	CERTS_PATH="$HOME/codesigning_data/certs/distribution"
 else
 	echo "Unknown configuration $1"
 	exit 1
@@ -79,7 +62,7 @@ echo "Unpacking files..."
 
 mkdir -p "$SOURCE_PATH/buildbox"
 mkdir -p "$SOURCE_PATH/buildbox/transient-data"
-cp -r "$HOME/codesigning_teams" "$SOURCE_PATH/buildbox/transient-data/teams"
+#cp -r "$HOME/codesigning_teams" "$SOURCE_PATH/buildbox/transient-data/teams"
 
 BASE_DIR=$(pwd)
 cd "$SOURCE_PATH"
@@ -95,38 +78,24 @@ done
 
 security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
-mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-
-for f in $(ls "$PROFILES_PATH"); do
-	PROFILE_PATH="$PROFILES_PATH/$f"
-	uuid=`grep UUID -A1 -a "$PROFILE_PATH" | grep -io "[-A-F0-9]\{36\}"`
-	cp -f "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
-done
-
 if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ]; then
-	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/internal.sh"
-	APP_TARGET="bazel_app_arm64"
+	APP_CONFIGURATION="release_arm64"
 elif [ "$1" == "appstore" ]; then
-	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/appstore.sh"
-	APP_TARGET="bazel_app"
+	APP_CONFIGURATION="release_universal"
 elif [ "$1" == "verify" ]; then
-	BUILD_ENV_SCRIPT="build-system/verify.sh"
-	APP_TARGET="bazel_app"
-	export CODESIGNING_DATA_PATH="build-system/fake-codesigning"
-	export CODESIGNING_CERTS_VARIANT="distribution"
-	export CODESIGNING_PROFILES_VARIANT="appstore"
+	APP_CONFIGURATION="release_universal"
 else
 	echo "Unsupported configuration $1"
 	exit 1
 fi
 
-if [ "$1" == "appcenter-experimental" ]; then
-	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_ID"
-elif [ "$1" == "appcenter-experimental-2" ]; then
-	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_2_ID"
-fi
-
-PATH="$PATH:$(pwd)/tools" BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
+python3 build-system/Make/Make.py \
+    --bazel="$(pwd)/tools/bazel" \
+    --cacheHost="$BAZEL_HTTP_CACHE_URL" \
+    build \
+    --configurationPath="$HOME/telegram-configuration" \
+    --buildNumber="$BUILD_NUMBER" \
+    --configuration="$APP_CONFIGURATION"
 
 OUTPUT_PATH="build/artifacts"
 rm -rf "$OUTPUT_PATH"

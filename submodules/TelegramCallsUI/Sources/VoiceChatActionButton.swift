@@ -15,6 +15,8 @@ private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
+private let purple = UIColor(rgb: 0x6b81f0)
+private let pink = UIColor(rgb: 0xd75a76)
 
 private let areaSize = CGSize(width: 440.0, height: 440.0)
 private let blobSize = CGSize(width: 244.0, height: 244.0)
@@ -481,7 +483,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.growingForegroundCircleLayer.isHidden = true
         
         self.foregroundGradientLayer.type = .radial
-        self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor]
+        self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+        self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
@@ -653,16 +656,16 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let targetScale: CGFloat
         if let active = active {
             if active {
-                targetColors = [activeBlue.cgColor, green.cgColor]
+                targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
                 targetScale = 0.89
                 outerColor = UIColor(rgb: 0x21674f)
             } else {
-                targetColors = [lightBlue.cgColor, blue.cgColor]
+                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.85
                 outerColor = UIColor(rgb: 0x1d588d)
             }
         } else {
-            targetColors = [lightBlue.cgColor, blue.cgColor]
+            targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
             targetScale = 0.3
             outerColor = nil
         }
@@ -734,9 +737,15 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.maskBlobView.startAnimating()
         self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
-            self?.maskBlobView.isHidden = true
-            self?.maskBlobView.stopAnimating()
-            self?.maskBlobView.layer.removeAllAnimations()
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.state != .connecting && strongSelf.state != .disabled {
+                return
+            }
+            strongSelf.maskBlobView.isHidden = true
+            strongSelf.maskBlobView.stopAnimating()
+            strongSelf.maskBlobView.layer.removeAllAnimations()
         })
         
         CATransaction.begin()
@@ -748,6 +757,10 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         growthAnimation.isRemovedOnCompletion = false
         
         CATransaction.setCompletionBlock {
+            self.animatingDisappearance = false
+            if self.state != .connecting && self.state != .disabled {
+                return
+            }
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.disableGlowAnimations = false
@@ -755,7 +768,6 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             self.maskCircleLayer.isHidden = true
             self.growingForegroundCircleLayer.isHidden = true
             self.growingForegroundCircleLayer.removeAllAnimations()
-            self.animatingDisappearance = false
             CATransaction.commit()
         }
         
@@ -788,11 +800,13 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
         
         CATransaction.setCompletionBlock {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            self.disableGlowAnimations = false
-            self.foregroundCircleLayer.isHidden = true
-            CATransaction.commit()
+            if case .blob = self.state {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                self.disableGlowAnimations = false
+                self.foregroundCircleLayer.isHidden = true
+                CATransaction.commit()
+            }
         }
         
         self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
@@ -827,40 +841,44 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         groupAnimation.duration = duration
         
         CATransaction.setCompletionBlock {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            self.foregroundCircleLayer.isHidden = false
-            self.maskCircleLayer.isHidden = false
-            self.maskProgressLayer.isHidden = true
-            self.maskGradientLayer.isHidden = false
-            CATransaction.commit()
-            
-            completion()
-            
-            self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
-            
-            self.maskBlobView.isHidden = false
-            self.maskBlobView.startAnimating()
-            self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
-            
-            self.updatedActive?(true)
-            
-            CATransaction.begin()
-            let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
-            shrinkAnimation.fromValue = 1.0
-            shrinkAnimation.toValue = 0.0
-            shrinkAnimation.duration = 0.15
-            shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
-            
-            CATransaction.setCompletionBlock {
+            if case .blob = self.state {
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
-                self.foregroundCircleLayer.isHidden = true
+                self.foregroundCircleLayer.isHidden = false
+                self.maskCircleLayer.isHidden = false
+                self.maskProgressLayer.isHidden = true
+                self.maskGradientLayer.isHidden = false
+                CATransaction.commit()
+                
+                completion()
+                
+                self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
+                
+                self.maskBlobView.isHidden = false
+                self.maskBlobView.startAnimating()
+                self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                
+                self.updatedActive?(true)
+                
+                CATransaction.begin()
+                let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
+                shrinkAnimation.fromValue = 1.0
+                shrinkAnimation.toValue = 0.0
+                shrinkAnimation.duration = 0.15
+                shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+                
+                CATransaction.setCompletionBlock {
+                    if case .blob = self.state {
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        self.foregroundCircleLayer.isHidden = true
+                        CATransaction.commit()
+                    }
+                }
+                
+                self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
                 CATransaction.commit()
             }
-            
-            self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
-            CATransaction.commit()
         }
 
         self.maskProgressLayer.add(groupAnimation, forKey: "progressCompletion")

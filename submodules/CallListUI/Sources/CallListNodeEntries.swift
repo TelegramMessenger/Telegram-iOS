@@ -27,7 +27,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     enum SortIndex: Comparable {
         case displayTab
         case displayTabInfo
-        case groupCall(ChatListIndex)
+        case groupCall(PeerId, String)
         case message(MessageIndex)
         case hole(MessageIndex)
         
@@ -42,12 +42,16 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 default:
                     return false
                 }
-            case let .groupCall(lhsIndex):
+            case let .groupCall(lhsPeerId, lhsTitle):
                 switch rhs {
                 case .displayTab, .displayTabInfo:
                     return false
-                case let .groupCall(rhsIndex):
-                    return lhsIndex > rhsIndex
+                case let .groupCall(rhsPeerId, rhsTitle):
+                    if lhsTitle == rhsTitle {
+                        return lhsPeerId < rhsPeerId
+                    } else {
+                        return lhsTitle < rhsTitle
+                    }
                 case .message, .hole:
                     return true
                 }
@@ -68,8 +72,6 @@ enum CallListNodeEntry: Comparable, Identifiable {
                     return lhsIndex < rhsIndex
                 case let .message(rhsIndex):
                     return lhsIndex < rhsIndex
-                default:
-                    return true
                 }
                 
             }
@@ -78,8 +80,8 @@ enum CallListNodeEntry: Comparable, Identifiable {
     
     case displayTab(PresentationTheme, String, Bool)
     case displayTabInfo(PresentationTheme, String)
-    case groupCall(index: ChatListIndex, peer: Peer)
-    case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool)
+    case groupCall(peer: Peer, editing: Bool, isActive: Bool)
+    case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool, displayHeader: Bool)
     case holeEntry(index: MessageIndex, theme: PresentationTheme)
     
     var sortIndex: SortIndex {
@@ -88,9 +90,9 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .displayTab
         case .displayTabInfo:
             return .displayTabInfo
-        case let .groupCall(index, _):
-            return .groupCall(index)
-        case let .messageEntry(message, _, _, _, _, _, _):
+        case let .groupCall(peer, _, _):
+            return .groupCall(peer.id, peer.compactDisplayTitle)
+        case let .messageEntry(message, _, _, _, _, _, _, _):
             return .message(message.index)
         case let .holeEntry(index, _):
             return .hole(index)
@@ -103,9 +105,9 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .setting(0)
         case .displayTabInfo:
             return .setting(1)
-        case let .groupCall(_, peer):
+        case let .groupCall(peer, _, _):
             return .groupCall(peer.id)
-        case let .messageEntry(message, _, _, _, _, _, _):
+        case let .messageEntry(message, _, _, _, _, _, _, _):
             return .message(message.index)
         case let .holeEntry(index, _):
             return .hole(index)
@@ -130,20 +132,23 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .groupCall(lhsIndex, lhsPeer):
-                if case let .groupCall(rhsIndex, rhsPeer) = rhs {
-                    if lhsIndex != rhsIndex {
+            case let .groupCall(lhsPeer, lhsEditing, lhsIsActive):
+                if case let .groupCall(rhsPeer, rhsEditing, rhsIsActive) = rhs {
+                    if !lhsPeer.isEqual(rhsPeer) {
                         return false
                     }
-                    if !lhsPeer.isEqual(rhsPeer) {
+                    if lhsEditing != rhsEditing {
+                        return false
+                    }
+                    if lhsIsActive != rhsIsActive {
                         return false
                     }
                     return true
                 } else {
                     return false
                 }
-            case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsEditing, lhsHasRevealControls):
-                if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsEditing, rhsHasRevealControls) = rhs {
+            case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsEditing, lhsHasRevealControls, lhsDisplayHeader):
+                if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsEditing, rhsHasRevealControls, rhsDisplayHeader) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -157,6 +162,9 @@ enum CallListNodeEntry: Comparable, Identifiable {
                         return false
                     }
                     if lhsHasRevealControls != rhsHasRevealControls {
+                        return false
+                    }
+                    if lhsDisplayHeader != rhsDisplayHeader {
                         return false
                     }
                     if !areMessagesEqual(lhsMessage, rhsMessage) {
@@ -184,16 +192,30 @@ enum CallListNodeEntry: Comparable, Identifiable {
     }
 }
 
-func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState, showSettings: Bool, showCallsTab: Bool) -> [CallListNodeEntry] {
+func callListNodeEntriesForView(view: CallListView, groupCalls: [Peer], state: CallListNodeState, showSettings: Bool, showCallsTab: Bool, isRecentCalls: Bool, currentGroupCallPeerId: PeerId?) -> [CallListNodeEntry] {
     var result: [CallListNodeEntry] = []
     for entry in view.entries {
         switch entry {
             case let .message(topMessage, messages):
-                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.presentationData.theme, strings: state.presentationData.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id))
+                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.presentationData.theme, strings: state.presentationData.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id, displayHeader: !showSettings && isRecentCalls))
             case let .hole(index):
                 result.append(.holeEntry(index: index, theme: state.presentationData.theme))
         }
     }
+    
+    if !showSettings && isRecentCalls {
+        for peer in groupCalls.sorted(by: { lhs, rhs in
+            let lhsTitle = lhs.compactDisplayTitle
+            let rhsTitle = rhs.compactDisplayTitle
+            if lhsTitle != rhsTitle {
+                return lhsTitle < rhsTitle
+            }
+            return lhs.id < rhs.id
+        }).reversed() {
+            result.append(.groupCall(peer: peer, editing: state.editing, isActive: currentGroupCallPeerId == peer.id))
+        }
+    }
+    
     if showSettings {
         result.append(.displayTabInfo(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIconDescription))
         result.append(.displayTab(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIcon, showCallsTab))
@@ -204,7 +226,10 @@ func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState, 
 func countMeaningfulCallListEntries(_ entries: [CallListNodeEntry]) -> Int {
     var count: Int = 0
     for entry in entries {
-        if case .setting = entry.stableId {} else {
+        switch entry.stableId {
+        case .setting, .groupCall:
+            break
+        default:
             count += 1
         }
     }

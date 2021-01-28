@@ -73,8 +73,18 @@ public final class ContextMenuActionItem {
     }
 }
 
+public protocol ContextMenuCustomNode: ASDisplayNode {
+    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void)
+    func updateTheme(presentationData: PresentationData)
+}
+
+public protocol ContextMenuCustomItem {
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
+}
+
 public enum ContextMenuItem {
     case action(ContextMenuActionItem)
+    case custom(ContextMenuCustomItem, Bool)
     case separator
 }
 
@@ -174,6 +184,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.withoutBlurDimNode.alpha = 0.0
         
         self.dismissNode = ASDisplayNode()
+        self.dismissNode.isAccessibilityElement = true
+        self.dismissNode.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
+        self.dismissNode.accessibilityTraits = .button
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -1364,15 +1377,28 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
+    
         if let previousActionsContainerNode = previousActionsContainerNode {
             if transition.isAnimated {
-                transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
-                previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
-                    previousActionsContainerNode?.removeFromSupernode()
-                })
-                
-                transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
-                if transition.isAnimated {
+                if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions {
+                    var initialFrame = self.actionsContainerNode.frame
+                    let delta = (previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height)
+                    initialFrame.origin.y = self.actionsContainerNode.frame.minY + previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height
+                    transition.animateFrame(node: self.actionsContainerNode, from: initialFrame)
+                    transition.animatePosition(node: previousActionsContainerNode, to: CGPoint(x: 0.0, y: -delta), removeOnCompletion: false, additive: true)
+                    previousActionsContainerNode.animateOut(offset: delta, transition: transition)
+                    
+                    previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                        previousActionsContainerNode?.removeFromSupernode()
+                    })
+                    self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                } else {
+                    transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
+                    previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                        previousActionsContainerNode?.removeFromSupernode()
+                    })
+                    
+                    transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
                     self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             } else {

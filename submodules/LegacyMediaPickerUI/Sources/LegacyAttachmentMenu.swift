@@ -383,7 +383,7 @@ public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuShee
     return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
 }
 
-public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, saveEditedPhotos: Bool, allowGrouping: Bool, presentationData: PresentationData, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
+public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, presentationData: PresentationData, images: [UIImage], presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
@@ -420,10 +420,18 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
             completion?(coder.makeData(), animated, view, rect)
         })
     }
-    
-    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, suggestionContext: suggestionContext, stickersContext: paintStickersContext, completed: { selectionContext, editingContext, currentItem in
+
+    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, suggestionContext: suggestionContext, stickersContext: paintStickersContext, presentScheduleController: { done in
+        presentSchedulePicker { time in
+            done?(time)
+        }
+    }, presentTimerController: { done in
+        presentTimerPicker { time in
+            done?(time)
+        }
+    }, completed: { selectionContext, editingContext, currentItem, silentPosting, scheduleTime in
         let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: legacyAssetPickerItemGenerator())
-        sendMessagesWithSignals(signals)
+        sendMessagesWithSignals(signals, silentPosting, scheduleTime)
     }, dismissed: { [weak legacyController] in
         legacyController?.dismiss()
     }, sourceView: emptyController.view, sourceRect: nil)!

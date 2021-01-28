@@ -295,6 +295,12 @@ official_unrestricted_voip_fragment = """
 """
 unrestricted_voip_fragment = official_unrestricted_voip_fragment if telegram_bundle_id in official_bundle_ids else ""
 
+official_carplay_fragment = """
+<key>com.apple.developer.carplay-messaging</key>
+<true/>
+"""
+carplay_fragment = official_carplay_fragment if telegram_bundle_id in official_bundle_ids else ""
+
 telegram_entitlements_template = """
     <key>com.apple.developer.icloud-services</key>
     <array>
@@ -322,7 +328,7 @@ telegram_entitlements_template = """
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
     <key>com.apple.developer.icloud-container-environment</key>
     <string>{telegram_icloud_environment}</string>
-""" + apple_pay_merchants_fragment + unrestricted_voip_fragment
+""" + apple_pay_merchants_fragment + unrestricted_voip_fragment + carplay_fragment
 
 plist_fragment(
     name = "TelegramEntitlements",
@@ -1157,15 +1163,34 @@ plist_fragment(
 )
 
 swift_library(
+    name = "GeneratedSources",
+    module_name = "GeneratedSources",
+    srcs = glob([
+        "Generated/**/*.swift",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+swift_library(
     name = "WidgetExtensionLib",
     module_name = "WidgetExtensionLib",
     srcs = glob([
         "WidgetKitWidget/**/*.swift",
     ]),
+    data = [
+        "SiriIntents/Intents.intentdefinition",
+    ],
     deps = [
         "//submodules/BuildConfig:BuildConfig",
-        "//submodules/WidgetItems:WidgetItems",
+        "//submodules/WidgetItems:WidgetItems_iOS14",
+        "//submodules/WidgetItemsUtils:WidgetItemsUtils",
         "//submodules/AppLockState:AppLockState",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/SyncCore:SyncCore",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        ":GeneratedSources",
     ],
 )
 
@@ -1191,7 +1216,12 @@ ios_extension(
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
     }),
     deps = [":WidgetExtensionLib"],
-    frameworks = [],
+    frameworks = [
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+        ":SyncCoreFramework",
+        ":TelegramCoreFramework",
+    ],
 )
 
 plist_fragment(
@@ -1222,6 +1252,7 @@ plist_fragment(
                 <string>INSearchForMessagesIntent</string>
                 <string>INSetMessageAttributeIntent</string>
                 <string>INSearchCallHistoryIntent</string>
+                <string>SelectFriendsIntent</string>
             </array>
         </dict>
         <key>NSExtensionPointIdentifier</key>
@@ -1240,6 +1271,9 @@ swift_library(
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
+    data = [
+        "SiriIntents/Intents.intentdefinition",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
@@ -1249,6 +1283,7 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/AppLockState:AppLockState",
+        ":GeneratedSources",
     ],
 )
 
@@ -1548,7 +1583,7 @@ ios_application(
             ":NotificationContentExtension",
             ":NotificationServiceExtension",
             ":IntentsExtension",
-            ":WidgetExtension",
+#            ":WidgetExtension",
         ],
     }),
     watch_application = select({
