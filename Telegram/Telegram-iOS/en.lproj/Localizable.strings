@@ -5931,22 +5931,22 @@ Sorry for the inconvenience.";
 "CallList.DeleteAllForEveryone" = "Delete for me and Others";
 "Conversation.ImportProgress" = "Importing Messages... %@%";
 
-"Conversation.AudioRateTooltipSpeedUp" = "The audio will now play 2 times faster.";
-"Conversation.AudioRateTooltipNormal" = "The audio will now play at normal speed.";
+"Conversation.AudioRateTooltipSpeedUp" = "Audio will play two times faster.";
+"Conversation.AudioRateTooltipNormal" = "Audio will play at normal speed.";
 
 "ChatImport.Title" = "Select Chat";
-"ChatImport.SelectionErrorNotAdmin" = "You need to be an admin of the group to import messages into it.";
-"ChatImport.SelectionErrorGroupGeneric" = "You can't import history into this group.";
-"ChatImport.SelectionConfirmationGroupWithTitle" = "Are you sure you want to import messages from **%1$@** into **%2$@**?";
-"ChatImport.SelectionConfirmationGroupWithoutTitle" = "Are you sure you want to import messages into **%@**?";
+"ChatImport.SelectionErrorNotAdmin" = "You must to be an admin in the group to import messages to it.";
+"ChatImport.SelectionErrorGroupGeneric" = "Sorry, you can't import history to this group.";
+"ChatImport.SelectionConfirmationGroupWithTitle" = "Do you want to import messages from **%1$@** into **%2$@**?";
+"ChatImport.SelectionConfirmationGroupWithoutTitle" = "Do you want to import messages into **%@**?";
 "ChatImport.SelectionConfirmationAlertTitle" = "Import Messages";
 "ChatImport.SelectionConfirmationAlertImportAction" = "Import";
 "ChatImport.CreateGroupAlertTitle" = "Create Group and Import Messages";
-"ChatImport.CreateGroupAlertText" = "Are you sure you want to create the group **%@** and import messages from another messaging app?";
+"ChatImport.CreateGroupAlertText" = "Do you want to create the group **%@** and import messages from another messaging app?";
 "ChatImport.CreateGroupAlertImportAction" = "Create and Import";
-"ChatImport.UserErrorNotMutual" = "You can only import messages into private chats with users who added you as a contact.";
-"ChatImport.SelectionConfirmationUserWithTitle" = "Import messages from **%1$@** into the chat with **%2$@**?";
-"ChatImport.SelectionConfirmationUserWithoutTitle" = "Import messages into the chat with **%@?**";
+"ChatImport.UserErrorNotMutual" = "You can only import messages into private chats with users who are mutual contacts.";
+"ChatImport.SelectionConfirmationUserWithTitle" = "Do you want to import messages from **%1$@** into the chat with **%2$@**?";
+"ChatImport.SelectionConfirmationUserWithoutTitle" = "Do you want to import messages into the chat with **%@?**";
 
 "PeerSelection.ImportIntoNewGroup" = "Import to a New Group";
 "Message.ImportedDateFormat" = "%1$@, %2$@ Imported %3$@";
@@ -5954,10 +5954,10 @@ Sorry for the inconvenience.";
 "ChatImportActivity.Title" = "Importing Chat";
 "ChatImportActivity.OpenApp" = "Open Telegram";
 "ChatImportActivity.Retry" = "Retry";
-"ChatImportActivity.InProgress" = "Please keep this window open\nduring the import.";
-"ChatImportActivity.ErrorNotAdmin" = "You need to be an admin.";
-"ChatImportActivity.ErrorInvalidChatType" = "You can't import this history in this type of chat.";
-"ChatImportActivity.ErrorUserBlocked" = "This user is blocked.";
+"ChatImportActivity.InProgress" = "Please keep this window open\nuntil the import is completed.";
+"ChatImportActivity.ErrorNotAdmin" = "You need to be an admin in the group to import messages.";
+"ChatImportActivity.ErrorInvalidChatType" = "Wrong type of chat for the messages you are trying to import.";
+"ChatImportActivity.ErrorUserBlocked" = "Unable to import messages due to privacy settings.";
 "ChatImportActivity.ErrorGeneric" = "An error occurred.";
 "ChatImportActivity.Success" = "Chat imported\nsuccessfully.";
 
