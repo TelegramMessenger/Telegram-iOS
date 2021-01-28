@@ -73,6 +73,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 accessHash: call.accessHash,
                 state: state
             )
+                        
             strongSelf.participantsContext = context
             strongSelf.panelDataPromise.set(combineLatest(queue: .mainQueue(),
                 context.state,
@@ -1046,6 +1047,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                 strongSelf.callContext?.setIsMuted(true)
                             }
+                        } else {
+                            if let volume = participant.volume {
+                                strongSelf.callContext?.setVolume(ssrc: participant.ssrc, volume: Double(volume) / 10000.0)
+                            } else if participant.muteState?.mutedByYou == true {
+                                strongSelf.callContext?.setVolume(ssrc: participant.ssrc, volume: 0.0)
+                            }
                         }
                         
                         if let index = updatedInvitedPeers.firstIndex(of: participant.peer.id) {
@@ -1221,11 +1228,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         case let .muted(isPushToTalkActive):
             isEffectivelyMuted = !isPushToTalkActive
             isVisuallyMuted = true
-            self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: true)
+            let _ = self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: true)
         case .unmuted:
             isEffectivelyMuted = false
             isVisuallyMuted = false
-            self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: false)
+            let _ = self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: false)
         }
         self.callContext?.setIsMuted(isEffectivelyMuted)
         
@@ -1331,6 +1338,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             } else if self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
                 canThenUnmute = true
             } else {
+                self.setVolume(peerId: peerId, volume: 0, sync: false)
                 mutedByYou = true
                 canThenUnmute = true
             }
@@ -1346,6 +1354,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil)
                 return muteState
             } else {
+                self.setVolume(peerId: peerId, volume: 10000, sync: true)
                 self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
                 return nil
             }
