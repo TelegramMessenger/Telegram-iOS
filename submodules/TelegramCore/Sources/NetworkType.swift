@@ -34,12 +34,6 @@ extension CellularNetworkType {
 
 #endif
 
-enum InternalNetworkType: Equatable {
-    case none
-    case wifi
-    case cellular
-}
-
 public enum NetworkType: Equatable {
     case none
     case wifi
@@ -50,7 +44,7 @@ public enum NetworkType: Equatable {
 
 extension NetworkType {
 #if os(iOS)
-    init(internalType: InternalNetworkType, cellularType: CellularNetworkType) {
+    init(internalType: Reachability.NetworkType, cellularType: CellularNetworkType) {
         switch internalType {
             case .none:
                 self = .none
@@ -61,7 +55,7 @@ extension NetworkType {
         }
     }
 #else
-    init(internalType: InternalNetworkType) {
+    init(internalType: Reachability.NetworkType) {
         switch internalType {
             case .none:
                 self = .none
@@ -72,91 +66,11 @@ extension NetworkType {
 #endif
 }
 
-private final class WrappedReachability: NSObject {
-    @objc private static func threadImpl() {
-        while true {
-            RunLoop.current.run(until: .distantFuture)
-        }
-    }
-    
-    static let thread: Thread = {
-        let thread = Thread(target: WrappedReachability.self, selector: #selector(WrappedReachability.threadImpl), object: nil)
-        thread.start()
-        return thread
-    }()
-    
-    @objc private static func dispatchOnThreadImpl(_ f: @escaping () -> Void) {
-        f()
-    }
-    
-    private static func dispatchOnThread(_ f: @escaping @convention(block) () -> Void) {
-        WrappedReachability.perform(#selector(WrappedReachability.dispatchOnThreadImpl(_:)), on: WrappedReachability.thread, with: f, waitUntilDone: false)
-    }
-    
-    private let reachability: Reachability
-    
-    let value: ValuePromise<InternalNetworkType>
-    
-    override init() {
-        assert(Thread.current === WrappedReachability.thread)
-        self.reachability = Reachability.forInternetConnection()
-        let type: InternalNetworkType
-        switch self.reachability.currentReachabilityStatus() {
-            case NotReachable:
-                type = .none
-            case ReachableViaWiFi:
-                type = .wifi
-            case ReachableViaWWAN:
-                type = .cellular
-            default:
-                type = .none
-        }
-        self.value = ValuePromise<InternalNetworkType>(type)
-        
-        super.init()
-        
-        self.reachability.reachabilityChanged = { [weak self] status in
-            WrappedReachability.dispatchOnThread {
-                guard let strongSelf = self else {
-                    return
-                }
-                let internalNetworkType: InternalNetworkType
-                switch status {
-                    case NotReachable:
-                        internalNetworkType = .none
-                    case ReachableViaWiFi:
-                        internalNetworkType = .wifi
-                    case ReachableViaWWAN:
-                        internalNetworkType = .cellular
-                    default:
-                        internalNetworkType = .none
-                }
-                strongSelf.value.set(internalNetworkType)
-            }
-        }
-        self.reachability.startNotifier()
-    }
-    
-    static var valueRef: Unmanaged<WrappedReachability>?
-    
-    static func withInstance(_ f: @escaping (WrappedReachability) -> Void) {
-        WrappedReachability.dispatchOnThread {
-            if self.valueRef == nil {
-                self.valueRef = Unmanaged.passRetained(WrappedReachability())
-            }
-            if let valueRef = self.valueRef {
-                let value = valueRef.takeUnretainedValue()
-                f(value)
-            }
-        }
-    }
-}
-
 private final class NetworkTypeManagerImpl {
     let queue: Queue
     let updated: (NetworkType) -> Void
     var networkTypeDisposable: Disposable?
-    var currentNetworkType: InternalNetworkType?
+    var currentNetworkType: Reachability.NetworkType?
     var networkType: NetworkType?
     #if os(iOS)
     var currentCellularType: CellularNetworkType
@@ -196,29 +110,27 @@ private final class NetworkTypeManagerImpl {
         
         let networkTypeDisposable = MetaDisposable()
         self.networkTypeDisposable = networkTypeDisposable
-            
-        WrappedReachability.withInstance({ [weak self] impl in
-            networkTypeDisposable.set((impl.value.get()
-            |> deliverOn(queue)).start(next: { networkStatus in
-                guard let strongSelf = self else {
-                    return
+        
+        networkTypeDisposable.set((Reachability.networkType
+        |> deliverOn(queue)).start(next: { [weak self] networkStatus in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.currentNetworkType != networkStatus {
+                strongSelf.currentNetworkType = networkStatus
+                
+                let networkType: NetworkType
+                #if os(iOS)
+                networkType = NetworkType(internalType: networkStatus, cellularType: strongSelf.currentCellularType)
+                #else
+                networkType = NetworkType(internalType:  networkStatus)
+                #endif
+                if strongSelf.networkType != networkType {
+                    strongSelf.networkType = networkType
+                    updated(networkType)
                 }
-                if strongSelf.currentNetworkType != networkStatus {
-                    strongSelf.currentNetworkType = networkStatus
-                    
-                    let networkType: NetworkType
-                    #if os(iOS)
-                    networkType = NetworkType(internalType: networkStatus, cellularType: strongSelf.currentCellularType)
-                    #else
-                    networkType = NetworkType(internalType:  networkStatus)
-                    #endif
-                    if strongSelf.networkType != networkType {
-                        strongSelf.networkType = networkType
-                        updated(networkType)
-                    }
-                }
-            }))
-        })
+            }
+        }))
     }
     
     func stop() {
