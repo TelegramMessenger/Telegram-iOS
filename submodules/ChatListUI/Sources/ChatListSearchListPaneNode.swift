@@ -26,6 +26,7 @@ import GalleryData
 import AppBundle
 import ShimmerEffect
 import ChatListSearchRecentPeersNode
+import UndoUI
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -429,7 +430,13 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     case .collapse:
                         actionTitle = strings.ChatList_Search_ShowLess
                     }
-                    header = ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
+                    let headerType: ChatListSearchItemHeaderType
+                    if filter.contains(.onlyGroups) {
+                        headerType = .chats
+                    } else {
+                        headerType = .localPeers
+                    }
+                    header = ChatListSearchItemHeader(type: headerType, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
                         toggleExpandLocalResults()
                     })
                 }
@@ -1744,6 +1751,35 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             return
                         }
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
+                        
+                        if let controller = strongSelf.navigationController?.topViewController as? ViewController {
+                            var hasTooltip = false
+                            controller.forEachController({ controller in
+                                if let controller = controller as? UndoOverlayController {
+                                    hasTooltip = true
+                                    controller.dismissWithCommitAction()
+                                }
+                                return true
+                            })
+                            
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            let slowdown = baseRate == .x1
+                            controller.present(
+                                UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .audioRate(
+                                        slowdown: slowdown,
+                                        text: slowdown ? presentationData.strings.Conversation_AudioRateTooltipNormal : presentationData.strings.Conversation_AudioRateTooltipSpeedUp
+                                    ),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: hasTooltip,
+                                    action: { action in
+                                        return true
+                                    }
+                                ),
+                                in: .current
+                            )
+                        }
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in

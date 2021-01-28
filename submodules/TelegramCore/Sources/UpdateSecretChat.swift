@@ -12,7 +12,7 @@ struct SecretChatRequestData {
     let a: MemoryBuffer
 }
 
-func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: PeerId, transaction: Transaction, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
+func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: PeerId, transaction: Transaction, mediaBox: MediaBox, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
     let currentPeer = transaction.getPeer(chat.peerId) as? TelegramSecretChat
     let currentState = transaction.getPeerChatState(chat.peerId) as? SecretChatState
     let settings = transaction.getPreferencesEntry(key: PreferencesKeys.secretChatSettings) as? SecretChatSettings ?? SecretChatSettings.defaultSettings
@@ -66,13 +66,22 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
             } else {
                 Logger.shared.log("State", "got encryptedChat, but peer or state don't exist or account is not creator")
             }
-        case .encryptedChatDiscarded(_):
+        case let .encryptedChatDiscarded(flags, _):
             if let currentPeer = currentPeer, let currentState = currentState {
+                let isRemoved = (flags & (1 << 0)) != 0
+                
                 let state = currentState.withUpdatedEmbeddedState(.terminated)
                 let peer = currentPeer.withUpdatedEmbeddedState(state.embeddedState.peerState)
                 updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
                 transaction.setPeerChatState(peer.id, state: state)
                 transaction.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
+                
+                if isRemoved {
+                    let peerId = currentPeer.id
+                    clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
+                    transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
+                    transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
+                }
             } else {
                 Logger.shared.log("State", "got encryptedChatDiscarded, but peer doesn't exist")
             }

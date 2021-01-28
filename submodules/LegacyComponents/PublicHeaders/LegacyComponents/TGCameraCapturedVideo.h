@@ -12,6 +12,7 @@
 @property (nonatomic, readonly) NSTimeInterval videoDuration;
 @property (nonatomic, readonly) bool isAnimation;
 @property (nonatomic, readonly) TGMediaAsset *originalAsset;
+@property (nonatomic, readonly) CGSize dimensions;
 
 
 - (instancetype)initWithURL:(NSURL *)url;

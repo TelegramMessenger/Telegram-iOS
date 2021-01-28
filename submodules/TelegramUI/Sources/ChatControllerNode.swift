@@ -15,6 +15,7 @@ import ReactionSelectionNode
 import TelegramUniversalVideoContent
 import ChatInterfaceState
 import FastBlur
+import ConfettiEffect
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -305,6 +306,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
     private var emptyNode: ChatEmptyNode?
+    private var emptyType: ChatHistoryNodeLoadState.EmptyType?
+    private var didDisplayEmptyGreeting = false
     private var validEmptyNodeLayout: (CGSize, UIEdgeInsets)?
     var restrictedNode: ChatRecentActionsEmptyNode?
     
@@ -317,6 +320,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let inputPanelBackgroundSeparatorNode: ASDisplayNode
     private var plainInputSeparatorAlpha: CGFloat?
     private var usePlainInputSeparator: Bool
+    
+    private var chatImportStatusPanel: ChatImportStatusPanel?
     
     private let titleAccessoryPanelContainer: ChatControllerTitlePanelNodeContainer
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
@@ -532,11 +537,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     strongSelf.updateIsLoading(isLoading: false, animated: animated)
                 }
                 
-                var isEmpty = false
-                if case .empty = loadState {
-                    isEmpty = true
+                var emptyType: ChatHistoryNodeLoadState.EmptyType?
+                if case let .empty(type) = loadState {
+                    emptyType = type
+                    if case .joined = type {
+                        if strongSelf.didDisplayEmptyGreeting {
+                            emptyType = .generic
+                        } else {
+                            strongSelf.didDisplayEmptyGreeting = true
+                        }
+                    }
+                } else if case .messages = loadState {
+                    strongSelf.didDisplayEmptyGreeting = true
                 }
-                strongSelf.updateIsEmpty(isEmpty, animated: animated)
+                strongSelf.updateIsEmpty(emptyType, animated: animated)
             }
         }
         
@@ -704,11 +718,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
     }
     
-    private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
-        if isEmpty && self.emptyNode == nil {
+    private func updateIsEmpty(_ emptyType: ChatHistoryNodeLoadState.EmptyType?, animated: Bool) {
+        self.emptyType = emptyType
+        if let emptyType = emptyType, self.emptyNode == nil {
             let emptyNode = ChatEmptyNode(account: self.context.account, interaction: self.interfaceInteraction)
             if let (size, insets) = self.validEmptyNodeLayout {
-                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: size, insets: insets, transition: .immediate)
+                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, size: size, insets: insets, transition: .immediate)
             }
             emptyNode.isHidden = self.restrictedNode != nil
             self.emptyNode = emptyNode
@@ -728,14 +743,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)? {
+    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)? {
         if let greetingStickerNode = self.emptyNode?.greetingStickerNode {
-            self.historyNode.itemHeaderNodesAlpha = 0.0
-            return (greetingStickerNode, self, self.historyNode, { [weak self] in
-                self?.historyNode.forEachItemHeaderNode { node in
-                    node.alpha = 1.0
-                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                }
+            let historyNode = self.historyNode
+            historyNode.alpha = 0.0
+            return (greetingStickerNode, self, self.historyNode, { completion in
+                historyNode.alpha = 1.0
+                historyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { _ in
+                    completion()
+                })
             })
         } else {
             return nil
@@ -903,6 +919,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
             dismissedTitleAccessoryPanelNode = titleAccessoryPanelNode
             self.titleAccessoryPanelNode = nil
+        }
+        
+        var dismissedImportStatusPanelNode: ChatImportStatusPanel?
+        var importStatusPanelHeight: CGFloat?
+        if let importState = self.chatPresentationInterfaceState.importState {
+            let importStatusPanelNode: ChatImportStatusPanel
+            if let current = self.chatImportStatusPanel {
+                importStatusPanelNode = current
+            } else {
+                importStatusPanelNode = ChatImportStatusPanel()
+            }
+            
+            if self.chatImportStatusPanel != importStatusPanelNode {
+                 dismissedImportStatusPanelNode = self.chatImportStatusPanel
+                self.chatImportStatusPanel = importStatusPanelNode
+                self.addSubnode(importStatusPanelNode)
+            }
+            
+            importStatusPanelHeight = importStatusPanelNode.update(context: self.context, progress: CGFloat(importState.progress), presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: self.chatPresentationInterfaceState.theme, wallpaper: self.chatPresentationInterfaceState.chatWallpaper), fontSize: self.chatPresentationInterfaceState.fontSize, strings: self.chatPresentationInterfaceState.strings, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), width: layout.size.width)
+        } else if let importStatusPanelNode = self.chatImportStatusPanel {
+            dismissedImportStatusPanelNode = importStatusPanelNode
+            self.chatImportStatusPanel = nil
         }
         
         var inputPanelNodeBaseHeight: CGFloat = 0.0
@@ -1193,6 +1231,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             insets.top += panelHeight
         }
         
+        var importStatusPanelFrame: CGRect?
+        if let _ = self.chatImportStatusPanel, let panelHeight = importStatusPanelHeight {
+            importStatusPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: panelHeight))
+            insets.top += panelHeight
+        }
+        
         let contentBounds = CGRect(x: 0.0, y: -bottomOverflowOffset, width: layout.size.width - wrappingInsets.left - wrappingInsets.right, height: layout.size.height - wrappingInsets.top - wrappingInsets.bottom)
         
         if let backgroundEffectNode = self.backgroundEffectNode {
@@ -1343,8 +1387,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var emptyNodeInsets = insets
         emptyNodeInsets.bottom += inputPanelsHeight
         self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets)
-        if let emptyNode = self.emptyNode {
-            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
+        if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
+            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
             transition.updateFrame(node: emptyNode, frame: contentBounds)
         }
         
@@ -1504,6 +1548,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
         }
         
+        if let chatImportStatusPanel = self.chatImportStatusPanel, let importStatusPanelFrame = importStatusPanelFrame, !chatImportStatusPanel.frame.equalTo(importStatusPanelFrame) {
+            chatImportStatusPanel.frame = importStatusPanelFrame
+            //transition.animatePositionAdditive(node: chatImportStatusPanel, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
+        }
+        
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
             if immediatelyLayoutSecondaryInputPanelAndAnimateAppearance {
                 secondaryInputPanelNode.frame = apparentSecondaryInputPanelFrame.offsetBy(dx: 0.0, dy: apparentSecondaryInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentSecondaryInputPanelFrame.maxY)
@@ -1585,6 +1634,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
             transition.updateFrame(node: dismissedTitleAccessoryPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTitleAccessoryPanelNode] _ in
                 dismissedTitleAccessoryPanelNode?.removeFromSupernode()
+            })
+        }
+        
+        if let dismissedImportStatusPanelNode = dismissedImportStatusPanelNode {
+            var dismissedPanelFrame = dismissedImportStatusPanelNode.frame
+            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
+            transition.updateFrame(node: dismissedImportStatusPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedImportStatusPanelNode] _ in
+                dismissedImportStatusPanelNode?.removeFromSupernode()
             })
         }
         

@@ -57,6 +57,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private var titleLeftIcon: ChatTitleIcon = .none
     private var titleRightIcon: ChatTitleIcon = .none
+    private var titleFakeIcon = false
     private var titleScamIcon = false
     
     //private var networkStatusNode: ChatTitleNetworkStatusNode?
@@ -104,6 +105,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleLeftIcon: ChatTitleIcon = .none
                 var titleRightIcon: ChatTitleIcon = .none
                 var titleScamIcon = false
+                var titleFakeIcon = false
                 var isEnabled = true
                 switch titleContent {
                     case let .peer(peerView, _, isScheduledMessages):
@@ -129,7 +131,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         segments = [.text(0, NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     }
                                 }
-                                titleScamIcon = peer.isScam
+                                if peer.isFake {
+                                    titleFakeIcon = true
+                                } else if peer.isScam {
+                                    titleScamIcon = true
+                                }
                             }
                             if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
                                 titleLeftIcon = .lock
@@ -228,6 +234,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         default:
                             self.titleLeftIconNode.image = nil
                     }
+                    updated = true
+                }
+                
+                if titleFakeIcon != self.titleFakeIcon {
+                    self.titleFakeIcon = titleFakeIcon
+                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, type: .regular) : nil
                     updated = true
                 }
                 

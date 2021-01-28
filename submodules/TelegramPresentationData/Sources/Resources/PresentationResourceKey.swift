@@ -38,8 +38,10 @@ public enum PresentationResourceKey: Int32 {
     case itemListCheckIcon
     case itemListSecondaryCheckIcon
     case itemListPlusIcon
+    case itemListDeleteIcon
     case itemListDeleteIndicatorIcon
     case itemListReorderIndicatorIcon
+    case itemListLinkIcon
     case itemListAddPersonIcon
     case itemListCreateGroupIcon
     case itemListAddExceptionIcon
@@ -75,6 +77,9 @@ public enum PresentationResourceKey: Int32 {
     case chatListScamRegularIcon
     case chatListScamOutgoingIcon
     case chatListScamServiceIcon
+    case chatListFakeRegularIcon
+    case chatListFakeOutgoingIcon
+    case chatListFakeServiceIcon
     case chatListSecretIcon
     case chatListRecentStatusOnlineIcon
     case chatListRecentStatusOnlineHighlightedIcon

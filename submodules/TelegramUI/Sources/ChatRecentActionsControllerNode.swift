@@ -157,6 +157,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     }
                 }
+                let gallerySource = GalleryControllerItemSource.standaloneMessage(message)
                 return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
@@ -204,7 +205,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             }
                         }))
                     }
-                }))
+                }, gallerySource: gallerySource))
             }
             return false
         }, openPeer: { [weak self] peerId, _, message in
@@ -441,6 +442,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in

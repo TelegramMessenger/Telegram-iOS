@@ -143,9 +143,11 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                 let rawSegments: [AnimatedCountLabelNode.Segment]
                 let rawAlternativeSegments: [AnimatedCountLabelNode.Segment]
                 
+                var accessibilityLabel = ""
                 if item.message.id.peerId.isReplies {
                     rawSegments = [.text(100, NSAttributedString(string: item.presentationData.strings.Conversation_ViewReply, font: textFont, textColor: messageTheme.accentTextColor))]
                     rawAlternativeSegments = rawSegments
+                    accessibilityLabel = item.presentationData.strings.Conversation_ViewReply
                 } else if dateReplies > 0 {
                     var commentsPart = item.presentationData.strings.Conversation_MessageViewComments(Int32(dateReplies))
                     if commentsPart.contains("[") && commentsPart.contains("]") {
@@ -190,9 +192,11 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     
                     rawSegments = segments
                     rawAlternativeSegments = rawSegments
+                    accessibilityLabel = rawText
                 } else {
                     rawSegments = [.text(100, NSAttributedString(string: item.presentationData.strings.Conversation_MessageLeaveComment, font: textFont, textColor: messageTheme.accentTextColor))]
                     rawAlternativeSegments = [.text(100, NSAttributedString(string: item.presentationData.strings.Conversation_MessageLeaveCommentShort, font: textFont, textColor: messageTheme.accentTextColor))]
+                    accessibilityLabel = item.presentationData.strings.Conversation_MessageLeaveComment
                 }
                 
                 let imageSize: CGFloat = 30.0
@@ -255,6 +259,8 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.countNode.isHidden = countLayout.isTruncated
                             strongSelf.alternativeCountNode.isHidden = !strongSelf.countNode.isHidden
+                            
+                            strongSelf.buttonNode.accessibilityLabel = accessibilityLabel
                             
                             let _ = countApply(animation.isAnimated)
                             let _ = alternativeCountApply(animation.isAnimated)
@@ -335,7 +341,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                                     transition.updateFrameAdditive(node: statusNode, frame: statusFrame)
                                 }
                                 
-                                statusNode.transitionToState(.progress(color: messageTheme.accentTextColor, lineWidth: 1.5, value: nil, cancelEnabled: false), animated: false, synchronous: false, completion: {})
+                                statusNode.transitionToState(.progress(color: messageTheme.accentTextColor, lineWidth: 1.5, value: nil, cancelEnabled: false, animateRotation: true), animated: false, synchronous: false, completion: {})
                             } else {
                                 strongSelf.arrowNode.isHidden = false
                                 if let statusNode = strongSelf.statusNode {

@@ -38,7 +38,7 @@ enum UploadedPeerPhotoDataContent {
 }
 
 public func uploadedPeerPhoto(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> map { result -> UploadedPeerPhotoData in
         return UploadedPeerPhotoData(resource: resource, content: .result(result))
     }
@@ -57,7 +57,7 @@ public func uploadedPeerVideo(postbox: Postbox, network: Network, messageMediaPr
             return .single(UploadedPeerPhotoData(resource: resource, content: .error))
         }
     } else {
-        return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false)
+        return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
        |> map { result -> UploadedPeerPhotoData in
            return UploadedPeerPhotoData(resource: resource, content: .result(result))
        }

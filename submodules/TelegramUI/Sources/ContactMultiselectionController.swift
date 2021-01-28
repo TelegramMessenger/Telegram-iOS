@@ -484,6 +484,11 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
             }
         }
+        self.contactsNode.complete = { [weak self] in
+            if let strongSelf = self, let rightBarButtonItem = strongSelf.navigationItem.rightBarButtonItem, rightBarButtonItem.isEnabled {
+                strongSelf.rightNavigationButtonPressed()
+            }
+        }
         
         self.displayNodeDidLoad()
     }

@@ -84,6 +84,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var toggleSelection: (Bool) -> Void = { _ in }
     var activateLocalContent: () -> Void = { }
     var requestUpdateLayout: (Bool) -> Void = { _ in }
+    var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
     
     private var context: AccountContext?
     private var message: Message?
@@ -533,9 +534,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         let addedWidth = intersection.width + 20
                         fittedLayoutSize.width += addedWidth
                     }
-                    if let statusFrameValue = statusFrame, let iconFrame = iconFrame, iconFrame.intersects(statusFrameValue) {
-                        fittedLayoutSize.height += 15.0
-                        statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
+                    if let statusFrameValue = statusFrame, let iconFrame = iconFrame {
+                        if iconFrame.intersects(statusFrameValue) {
+                            fittedLayoutSize.height += 15.0
+                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
+                        }
+                    } else if let statusFrameValue = statusFrame {
+                        if progressFrame.intersects(statusFrameValue) {
+                            fittedLayoutSize.height += 10.0
+                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 10.0)
+                        }
                     }
                     
                     if (isAudio && !isVoice) || file.previewRepresentations.isEmpty {
@@ -729,6 +737,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                             
                             strongSelf.updateStatus(animated: isAnimated)
+                            
+                            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                                strongSelf.dateAndStatusNode.pressed = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.displayImportedTooltip(strongSelf.dateAndStatusNode)
+                                }
+                            } else {
+                                strongSelf.dateAndStatusNode.pressed = nil
+                            }
                         }
                     })
                 })

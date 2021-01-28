@@ -203,11 +203,14 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 if entries.count <= 3 {
                     loop: for entry in view.entries {
                         var isEmptyMedia = false
+                        var isPeerJoined = false
                         for media in entry.message.media {
                             if let action = media as? TelegramMediaAction {
                                 switch action.action {
                                     case .groupCreated, .photoUpdated, .channelMigratedFromGroup, .groupMigratedToChannel:
                                         isEmptyMedia = true
+                                    case .peerJoined:
+                                        isPeerJoined = true
                                     default:
                                         break
                                 }
@@ -219,7 +222,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                         } else if let peer = entry.message.peers[entry.message.id.peerId] as? TelegramChannel, case .group = peer.info, peer.flags.contains(.isCreator) {
                             isCreator = true
                         }
-                        if isEmptyMedia && isCreator {
+                        if isPeerJoined || (isEmptyMedia && isCreator) {
                         } else {
                             isEmpty = false
                             break loop

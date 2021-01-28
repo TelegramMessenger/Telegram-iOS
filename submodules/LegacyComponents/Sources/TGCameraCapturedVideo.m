@@ -157,6 +157,11 @@
     return _cachedSize;
 }
 
+- (CGSize)dimensions
+{
+    return [self originalSize];
+}
+
 - (NSTimeInterval)videoDuration
 {
     return [self originalDuration];

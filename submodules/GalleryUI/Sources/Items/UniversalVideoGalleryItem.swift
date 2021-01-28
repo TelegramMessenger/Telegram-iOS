@@ -723,7 +723,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     var fetching = false
                     if initialBuffering {
                         if displayProgress {
-                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true), animated: false, completion: {})
                         } else {
                             strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
                         }
@@ -740,7 +740,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                             fetching = true
                                             isPaused = true
                                         }
-                                        state = .progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: true)
+                                        state = .progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: true, animateRotation: true)
                                     default:
                                         break
                                 }

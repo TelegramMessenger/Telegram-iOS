@@ -432,7 +432,7 @@ class CallListGroupCallItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrameAdditive(node: strongSelf.joinBackgroundNode, frame: CGRect(origin: CGPoint(), size: joinButtonFrame.size))
                             
                             let _ = joinTitleApply()
-                            transition.updateFrameAdditive(node: strongSelf.joinTitleNode, frame: CGRect(origin: CGPoint(x: floor((joinButtonSize.width - joinTitleLayout.size.width) / 2.0), y: floor((joinButtonSize.height - joinTitleLayout.size.height) / 2.0) + 1.0), size: titleLayout.size))
+                            transition.updateFrameAdditive(node: strongSelf.joinTitleNode, frame: CGRect(origin: CGPoint(x: floor((joinButtonSize.width - joinTitleLayout.size.width) / 2.0), y: floor((joinButtonSize.height - joinTitleLayout.size.height) / 2.0) + 1.0), size: joinTitleLayout.size))
                             
                             let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))

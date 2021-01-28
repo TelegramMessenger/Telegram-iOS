@@ -17,10 +17,6 @@ import PeersNearbyUI
 import PeerInfoUI
 import SettingsUI
 import UrlHandling
-#if ENABLE_WALLET
-import WalletUI
-import WalletCore
-#endif
 import LegacyMediaPickerUI
 import LocalMediaResources
 import OverlayStatusController
@@ -1249,6 +1245,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, performTextSelectionAction: { _, _, _ in
             }, updateMessageLike: { _, _ in
             }, openMessageReactions: { _ in
+            }, displayImportedMessageTooltip: { _ in
             }, displaySwipeToReplyHint: {
             }, dismissReplyMarkupMessage: { _ in
             }, openMessagePollResults: { _, _ in

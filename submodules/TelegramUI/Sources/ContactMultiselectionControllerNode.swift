@@ -57,6 +57,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var removeSelectedPeer: ((ContactListPeerId) -> Void)?
     var removeSelectedCategory: ((Int) -> Void)?
     var additionalCategorySelected: ((Int) -> Void)?
+    var complete: (() -> Void)?
     
     var editableTokens: [EditableTokenListToken] = []
     
@@ -123,7 +124,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 self?.openPeer?(peer)
             }
         case let .chats(chatsNode):
-            chatsNode.peerSelected = { [weak self] peer, _, _ in
+            chatsNode.peerSelected = { [weak self] peer, _, _, _ in
                 self?.openPeer?(.peer(peer: peer, isGlobal: false, participantCount: nil))
             }
             chatsNode.additionalCategorySelected = { [weak self] id in
@@ -213,6 +214,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     }
                 }
             }
+        }
+        self.tokenListNode.textReturned = { [weak self] in
+            self?.complete?()
         }
         
         self.presentationDataDisposable = (context.sharedContext.presentationData

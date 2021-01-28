@@ -248,12 +248,13 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
         
         strongSelf->_galleryMixin = nil;
     };
+
     
-    mixin.completeWithItem = ^(TGClipboardGalleryPhotoItem *item)
+    mixin.completeWithItem = ^(TGClipboardGalleryPhotoItem *item, bool silentPosting, int32_t scheduleTime)
     {
         __strong TGClipboardPreviewItemView *strongSelf = weakSelf;
         if (strongSelf != nil && strongSelf.sendPressed != nil)
-            strongSelf.sendPressed(item.image);
+            strongSelf.sendPressed(item.image, silentPosting, scheduleTime);
     };
 }
 
@@ -266,7 +267,9 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
     if ([cell isKindOfClass:[TGClipboardPreviewCell class]])
         thumbnailImage = cell.imageView.image;
     
-    TGClipboardGalleryMixin *mixin = [[TGClipboardGalleryMixin alloc] initWithContext:_context image:image images:_images parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext stickersContext:self.stickersContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer recipientName:self.recipientName];
+    TGClipboardGalleryMixin *mixin = [[TGClipboardGalleryMixin alloc] initWithContext:_context image:image images:_images parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext stickersContext:self.stickersContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder recipientName:self.recipientName];
+    mixin.presentScheduleController = self.presentScheduleController;
+    mixin.presentTimerController = self.presentTimerController;
     
     [self _setupGalleryMixin:mixin];
     

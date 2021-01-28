@@ -454,7 +454,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 f(.dismissWithoutContent)
                                 
                                 let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                                controller.peerSelected = { [weak controller] peerId in
+                                controller.peerSelected = { [weak controller] peer in
+                                    let peerId = peer.id
+                                    
                                     if let strongController = controller {
                                         strongController.dismiss()
                                         
@@ -579,7 +581,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             if resourceAvailable, !message.containsSecretMedia {
                 var mediaReference: AnyMediaReference?
                 for media in message.media {
-                    if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+                    if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
                         mediaReference = ImageMediaReference.standalone(media: image).abstract
                         break
                     } else if let file = media as? TelegramMediaFile, file.isVideo {
@@ -641,8 +643,15 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 })
             })))
         }
+        
+        let isMigrated: Bool
+        if chatPresentationInterfaceState.renderedPeer?.peer is TelegramChannel && message.id.peerId.namespace == Namespaces.Peer.CloudGroup {
+            isMigrated = true
+        } else {
+            isMigrated = false
+        }
                 
-        if data.canEdit && !isPinnedMessages {
+        if data.canEdit && !isPinnedMessages && !isMigrated {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, f in
@@ -678,7 +687,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
+        if data.canPin && !isMigrated, case .peer = chatPresentationInterfaceState.chatLocation {
             var pinnedSelectedMessageId: MessageId?
             for message in messages {
                 if message.tags.contains(.pinned) {
@@ -744,7 +753,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction), !isReplyThreadHead {
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction), !isReplyThreadHead, !isMigrated {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -850,7 +859,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         var clearCacheAsDelete = false
-        if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+        if message.id.peerId.namespace == Namespaces.Peer.CloudChannel && !isMigrated {
             var views: Int = 0
             for attribute in message.attributes {
                 if let attribute = attribute as? ViewCountMessageAttribute {

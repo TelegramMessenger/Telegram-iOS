@@ -652,7 +652,15 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     } else {
         aboutTitle = presentationData.strings.Profile_About
     }
-    if user.isScam {
+    if user.isFake {
+        let aboutValue: String
+        if let _ = user.botInfo {
+            aboutValue = presentationData.strings.UserInfo_FakeBotWarning
+        } else {
+            aboutValue = presentationData.strings.UserInfo_FakeUserWarning
+        }
+        entries.append(UserInfoEntry.about(presentationData.theme, peer, aboutTitle, aboutValue))
+    } else if user.isScam {
         let aboutValue: String
         if let _ = user.botInfo {
             aboutValue = presentationData.strings.UserInfo_ScamBotWarning

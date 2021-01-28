@@ -85,6 +85,9 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         self.view.addGestureRecognizer(panGestureRecognizer)
+        
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.view.addGestureRecognizer(tapGestureRecognizer)
     }
     
     func updateTheme(presentationData: PresentationData) {
@@ -135,8 +138,8 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
             
             let iconSize = CGSize(width: 36.0, height: 36.0)
             let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSize.width - 10.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
-            transition.updateFrameAdditive(node: self.backgroundIconNode, frame: iconFrame)
-            transition.updateFrameAdditive(node: self.foregroundIconNode, frame: iconFrame)
+            self.backgroundIconNode.frame = iconFrame
+            self.foregroundIconNode.frame = iconFrame
             
             self.updateValue(transition: transition)
         })
@@ -175,9 +178,14 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
                 let delta = translation / self.bounds.width * 2.0
                 self.value = max(0.0, min(2.0, self.value + delta))
                 self.valueChanged(self.value, true)
-                break
             default:
                 break
         }
+    }
+    
+    @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        let location = gestureRecognizer.location(in: gestureRecognizer.view)
+        self.value = max(0.0, min(2.0, location.x / self.bounds.width * 2.0))
+        self.valueChanged(self.value, true)
     }
 }

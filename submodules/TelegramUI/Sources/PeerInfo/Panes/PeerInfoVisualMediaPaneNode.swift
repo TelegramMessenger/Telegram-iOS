@@ -345,7 +345,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                             switch status {
                             case let .Fetching(_, progress):
                                 let adjustedProgress = max(progress, 0.027)
-                                statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                                statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                             case .Local:
                                 statusState = .none
                             case .Remote:
@@ -763,6 +763,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private let peerId: PeerId
     private let chatControllerInteraction: ChatControllerInteraction
     private let contentType: ContentType
+    
+    weak var parentController: ViewController?
     
     private let scrollNode: ASScrollNode
     private let floatingHeaderNode: FloatingHeaderNode

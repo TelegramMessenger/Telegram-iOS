@@ -483,7 +483,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.growingForegroundCircleLayer.isHidden = true
         
         self.foregroundGradientLayer.type = .radial
-        self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor]
+        self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+        self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
@@ -655,16 +656,16 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let targetScale: CGFloat
         if let active = active {
             if active {
-                targetColors = [activeBlue.cgColor, green.cgColor]
+                targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
                 targetScale = 0.89
                 outerColor = UIColor(rgb: 0x21674f)
             } else {
-                targetColors = [lightBlue.cgColor, blue.cgColor]
+                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.85
                 outerColor = UIColor(rgb: 0x1d588d)
             }
         } else {
-            targetColors = [lightBlue.cgColor, blue.cgColor]
+            targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
             targetScale = 0.3
             outerColor = nil
         }

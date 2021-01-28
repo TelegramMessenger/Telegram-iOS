@@ -285,10 +285,10 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
     let order: [([AdminLogEventsFlags], String)]
     if isGroup {
         order = [
-            ([.ban, .unban], presentationData.strings.Channel_AdminLogFilter_EventsRestrictions),
+            ([.ban, .unban, .kick, .unkick], presentationData.strings.Channel_AdminLogFilter_EventsRestrictions),
             ([.promote, .demote], presentationData.strings.Channel_AdminLogFilter_EventsAdmins),
             ([.invite, .join], presentationData.strings.Channel_AdminLogFilter_EventsNewMembers),
-            ([.info], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
+            ([.info, .settings], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
             ([.deleteMessages], presentationData.strings.Channel_AdminLogFilter_EventsDeletedMessages),
             ([.editMessages], presentationData.strings.Channel_AdminLogFilter_EventsEditedMessages),
             ([.pinnedMessages], presentationData.strings.Channel_AdminLogFilter_EventsPinned),
@@ -299,9 +299,10 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
         order = [
             ([.promote, .demote], presentationData.strings.Channel_AdminLogFilter_EventsAdmins),
             ([.invite, .join], presentationData.strings.Channel_AdminLogFilter_EventsNewMembers),
-            ([.info], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
+            ([.info, .settings], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
             ([.deleteMessages], presentationData.strings.Channel_AdminLogFilter_EventsDeletedMessages),
             ([.editMessages], presentationData.strings.Channel_AdminLogFilter_EventsEditedMessages),
+            ([.pinnedMessages], presentationData.strings.Channel_AdminLogFilter_EventsPinned),
             ([.leave], presentationData.strings.Channel_AdminLogFilter_EventsLeaving),
         ]
     }

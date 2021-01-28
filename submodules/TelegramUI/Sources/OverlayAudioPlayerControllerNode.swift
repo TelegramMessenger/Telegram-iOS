@@ -15,6 +15,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     let ready = Promise<Bool>()
     
     private let context: AccountContext
+    
     private let peerId: PeerId
     private var presentationData: PresentationData
     private let type: MediaManagerPlayerType
@@ -126,6 +127,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in

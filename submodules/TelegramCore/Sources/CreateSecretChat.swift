@@ -35,7 +35,7 @@ public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId,
                         }
                         |> mapToSignal { result -> Signal<PeerId, CreateSecretChatError> in
                             return account.postbox.transaction { transaction -> PeerId in
-                                updateSecretChat(encryptionProvider: account.network.encryptionProvider, accountPeerId: account.peerId, transaction: transaction, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
+                                updateSecretChat(encryptionProvider: account.network.encryptionProvider, accountPeerId: account.peerId, transaction: transaction, mediaBox: account.postbox.mediaBox, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
                                 
                                 return result.peerId
                             } |> mapError { _ -> CreateSecretChatError in return .generic }

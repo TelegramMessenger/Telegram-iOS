@@ -684,7 +684,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let items = context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
         |> map { actions -> [ContextMenuItem] in
             var items: [ContextMenuItem] = []
-        
             
             if let linkForCopying = linkForCopying {
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
@@ -896,7 +895,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }).start()
             
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled]))
-            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peerId in
+            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in
+                let peerId = peer.id
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
@@ -948,17 +948,25 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             })
                         }) |> deliverOnMainQueue).start(completed: {
                             if let strongSelf = self {
-//                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-
                                 let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
                                 controller.purposefulAction = { [weak self] in
                                     self?.cancel?()
                                 }
-                                strongSelf.navigationController?.pushViewController(controller, animated: false, completion: {
-                                    if let peerSelectionController = peerSelectionController {
-                                        peerSelectionController.dismiss()
+                                
+                                if let navigationController = strongSelf.navigationController, let peerSelectionControllerIndex = navigationController.viewControllers.firstIndex(where: { $0 is PeerSelectionController }) {
+                                    var viewControllers = navigationController.viewControllers
+                                    viewControllers.insert(controller, at: peerSelectionControllerIndex)
+                                    navigationController.setViewControllers(viewControllers, animated: false)
+                                    Queue.mainQueue().after(0.2) {
+                                        peerSelectionController?.dismiss()
                                     }
-                                })
+                                } else {
+                                    strongSelf.navigationController?.pushViewController(controller, animated: false, completion: {
+                                        if let peerSelectionController = peerSelectionController {
+                                            peerSelectionController.dismiss()
+                                        }
+                                    })
+                                }
 
                                 strongSelf.updateState { state in
                                     return state.withUpdatedSelectedMessageIds(nil)
