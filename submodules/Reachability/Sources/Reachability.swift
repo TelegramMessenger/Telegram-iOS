@@ -12,7 +12,7 @@ private final class WrappedLegacyReachability: NSObject {
     }
     
     private static let thread: Thread = {
-        let thread = Thread(target: Reachability.self, selector: #selector(WrappedLegacyReachability.threadImpl), object: nil)
+        let thread = Thread(target: WrappedLegacyReachability.self, selector: #selector(WrappedLegacyReachability.threadImpl), object: nil)
         thread.start()
         return thread
     }()
@@ -152,13 +152,13 @@ public enum Reachability {
         if #available(iOSApplicationExtension 12.0, iOS 12.0, OSX 10.14, *) {
             return Signal { subscriber in
                 let disposable = MetaDisposable()
-                
+
                 SharedPathMonitor.impl.with { impl in
                     disposable.set(impl.networkType.get().start(next: { value in
                         subscriber.putNext(value)
                     }))
                 }
-                
+
                 return disposable
             }
             |> distinctUntilChanged
