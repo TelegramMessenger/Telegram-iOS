@@ -71,6 +71,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             var infoFlags = TelegramChannelGroupFlags()
             if (flags & Int32(1 << 22)) != 0 {
                 infoFlags.insert(.slowModeEnabled)
+            } else if id == 1061639060 {
+                var bp:Int = 0
+                bp += 1
             }
             info = .group(TelegramChannelGroupInfo(flags: infoFlags))
         } else {
@@ -165,7 +168,10 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                 case .broadcast:
                     break
                 case .group:
-                    let infoFlags = TelegramChannelGroupFlags()
+                    var infoFlags = TelegramChannelGroupFlags()
+                    if (flags & Int32(1 << 22)) != 0 {
+                        infoFlags.insert(.slowModeEnabled)
+                    }
                     info = .group(TelegramChannelGroupInfo(flags: infoFlags))
                 }
                 
