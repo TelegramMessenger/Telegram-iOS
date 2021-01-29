@@ -10041,6 +10041,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.searchResultsController = nil
                     strongController.dismiss()
                 } else if peerId == strongSelf.context.account.peerId {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    
                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
                         return .forward(source: message.id, grouping: .auto, attributes: [])
                     })
@@ -11262,7 +11265,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             ]
-        } else {
+        } else if UIResponder.currentFirst() == nil {
             inputShortcuts = [
                 KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
                     if let strongSelf = self {
@@ -11316,6 +11319,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             ]
+        } else {
+            inputShortcuts = []
         }
         
         var canEdit = false

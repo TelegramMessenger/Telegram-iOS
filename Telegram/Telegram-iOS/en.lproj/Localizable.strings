@@ -5978,3 +5978,9 @@ Sorry for the inconvenience.";
 "VoiceOver.Chat.Profile" = "Profile";
 "VoiceOver.Chat.GroupInfo" = "Group Info";
 "VoiceOver.Chat.ChannelInfo" = "Channel Info";
+
+"Conversation.ForwardTooltip.Chat.One" = "Message forwarded to **%@**";
+"Conversation.ForwardTooltip.Chat.Many" = "Messages forwarded to **%@**";
+
+"Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
+"Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";
