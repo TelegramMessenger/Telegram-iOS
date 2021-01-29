@@ -109,6 +109,11 @@ private final class ImportManager {
         
         self.stateValue = .progress(totalBytes: self.totalBytes, totalUploadedBytes: 0, totalMediaBytes: self.totalMediaBytes, totalUploadedMediaBytes: 0)
         
+        Logger.shared.log("ChatImportScreen", "Requesting import session for \(peerId), media count: \(entries.count) with pending entries:")
+        for entry in entries {
+            Logger.shared.log("ChatImportScreen", "    \(entry.1)")
+        }
+        
         self.disposable.set((ChatHistoryImport.initSession(account: self.account, peerId: peerId, file: mainFile, mediaCount: Int32(entries.count))
         |> mapError { error -> ImportError in
             switch error {
@@ -191,28 +196,37 @@ private final class ImportManager {
     
     private func updateState() {
         guard let session = self.session else {
+            Logger.shared.log("ChatImportScreen", "updateState called with no session, ignoring")
             return
         }
         if self.pendingEntries.isEmpty && self.activeEntries.isEmpty {
+            Logger.shared.log("ChatImportScreen", "updateState called with no pending and no active entries, completing")
             self.complete()
             return
         }
         if case .error = self.stateValue {
+            Logger.shared.log("ChatImportScreen", "updateState called after error, ignoring")
             return
         }
         guard let archivePath = self.archivePath else {
+            Logger.shared.log("ChatImportScreen", "updateState called with empty arhivePath, ignoring")
             return
         }
         
         while true {
             if self.activeEntries.count >= 3 {
+                Logger.shared.log("ChatImportScreen", "updateState concurrent processing limit reached, stop searching")
                 break
             }
             if self.pendingEntries.isEmpty {
+                Logger.shared.log("ChatImportScreen", "updateState no more pending entries, stop searching")
                 break
             }
             
             let entry = self.pendingEntries.removeFirst()
+            
+            Logger.shared.log("ChatImportScreen", "updateState take pending entry \(entry.1)")
+            
             let unpackedFile = Signal<TempBoxFile, ImportError> { subscriber in
                 let tempFile = TempBox.shared.tempFile(fileName: entry.0.path)
                 Logger.shared.log("ChatImportScreen", "Extracting \(entry.0.path) to \(tempFile.path)...")
@@ -269,6 +283,7 @@ private final class ImportManager {
                 guard let strongSelf = self else {
                     return
                 }
+                Logger.shared.log("ChatImportScreen", "updateState entry \(entry.1) has completed upload")
                 strongSelf.activeEntries.removeValue(forKey: entry.0.path)
                 strongSelf.updateState()
             }))
