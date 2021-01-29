@@ -16,6 +16,7 @@ public enum ChatHistoryImport {
         case chatAdminRequired
         case invalidChatType
         case userBlocked
+        case limitExceeded
     }
     
     public enum ParsedInfo {
@@ -64,16 +65,17 @@ public enum ChatHistoryImport {
                     guard let inputPeer = inputPeer else {
                         return .fail(.generic)
                     }
-                    return account.network.request(Api.functions.messages.initHistoryImport(peer: inputPeer, file: inputFile, mediaCount: mediaCount))
+                    return account.network.request(Api.functions.messages.initHistoryImport(peer: inputPeer, file: inputFile, mediaCount: mediaCount), automaticFloodWait: false)
                     |> mapError { error -> InitImportError in
-                        switch error.errorDescription {
-                        case "CHAT_ADMIN_REQUIRED":
+                        if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
                             return .chatAdminRequired
-                        case "IMPORT_PEER_TYPE_INVALID":
+                        } else if error.errorDescription == "IMPORT_PEER_TYPE_INVALID" {
                             return .invalidChatType
-                        case "USER_IS_BLOCKED":
+                        } else if error.errorDescription == "USER_IS_BLOCKED" {
                             return .userBlocked
-                        default:
+                        } else if error.errorDescription == "FLOOD_WAIT" {
+                            return .limitExceeded
+                        } else {
                             return .generic
                         }
                     }

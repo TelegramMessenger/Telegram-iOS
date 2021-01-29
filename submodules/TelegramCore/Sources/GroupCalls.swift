@@ -949,7 +949,7 @@ public final class GroupCallParticipantsContext {
         self.ensureHaveParticipants(ssrcs: Set(ids.map { $0.1 }))
     }
     
-    private func ensureHaveParticipants(ssrcs: Set<UInt32>) {
+    public func ensureHaveParticipants(ssrcs: Set<UInt32>) {
         var missingSsrcs = Set<UInt32>()
         
         var existingSsrcs = Set<UInt32>()

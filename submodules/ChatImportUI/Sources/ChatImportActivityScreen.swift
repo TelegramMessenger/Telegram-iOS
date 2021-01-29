@@ -57,6 +57,7 @@ private final class ImportManager {
         case chatAdminRequired
         case invalidChatType
         case userBlocked
+        case limitExceeded
     }
     
     enum State {
@@ -119,6 +120,8 @@ private final class ImportManager {
                 return .generic
             case .userBlocked:
                 return .userBlocked
+            case .limitExceeded:
+                return .limitExceeded
             }
         }
         |> deliverOnMainQueue).start(next: { [weak self] session in
@@ -533,6 +536,8 @@ public final class ChatImportActivityScreen: ViewController {
                     errorText = self.presentationData.strings.ChatImportActivity_ErrorGeneric
                 case .userBlocked:
                     errorText = self.presentationData.strings.ChatImportActivity_ErrorUserBlocked
+                case .limitExceeded:
+                    errorText = self.presentationData.strings.ChatImportActivity_ErrorLimitExceeded
                 }
                 self.statusText.attributedText = NSAttributedString(string: errorText, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
             case .done:
