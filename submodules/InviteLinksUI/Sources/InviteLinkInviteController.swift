@@ -218,20 +218,7 @@ public final class InviteLinkInviteController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = Node(context: self.context, peerId: self.peerId, controller: self)
     }
-    
-    override public func loadView() {
-        super.loadView()
         
-        let context = self.context
-        let peerId = self.peerId
-        let _ = (self.context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<String?, NoError> in
-            return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
-            |> mapToSignal { _ -> Signal<String?, NoError> in
-                return .complete()
-            }
-        }).start()
-    }
-    
     private var didAppearOnce: Bool = false
     private var isDismissed: Bool = false
     public override func viewDidAppear(_ animated: Bool) {
