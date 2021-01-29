@@ -107,7 +107,10 @@ public enum ChatHistoryImport {
     
     public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
         var forceNoBigParts = true
-        if let size = fileSize(file.path), size >= 30 * 1024 * 1024 {
+        guard let size = fileSize(file.path), size != 0 else {
+            return .single(1.0)
+        }
+        if size >= 30 * 1024 * 1024 {
             forceNoBigParts = false
         }
         
