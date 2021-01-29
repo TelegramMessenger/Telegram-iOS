@@ -1229,7 +1229,7 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                if case let .known(value) = offset, value < 100.0 {
+                if case let .known(value) = offset, value < 200.0 {
                     if let loadMoreToken = strongSelf.currentCallMembers?.1 {
                         strongSelf.currentLoadToken = loadMoreToken
                         strongSelf.call.loadMoreMembers(token: loadMoreToken)

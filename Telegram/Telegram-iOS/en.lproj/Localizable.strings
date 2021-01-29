@@ -5959,6 +5959,7 @@ Sorry for the inconvenience.";
 "ChatImportActivity.ErrorInvalidChatType" = "Wrong type of chat for the messages you are trying to import.";
 "ChatImportActivity.ErrorUserBlocked" = "Unable to import messages due to privacy settings.";
 "ChatImportActivity.ErrorGeneric" = "An error occurred.";
+"ChatImportActivity.ErrorLimitExceeded" = "Daily maximum reached,\nplease come back tomorrow.";
 "ChatImportActivity.Success" = "Chat imported\nsuccessfully.";
 
 "VoiceOver.Chat.GoToOriginalMessage" = "Go to message";

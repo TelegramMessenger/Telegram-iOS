@@ -187,8 +187,8 @@ public enum GetGroupCallParticipantsError {
     case generic
 }
 
-public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, peerIds: [PeerId], limit: Int32) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
-    return account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), ids: peerIds.map { $0.id }, sources: [], offset: offset, limit: limit))
+public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
+    return account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), ids: [], sources: ssrcs.map { Int32(bitPattern: $0) }, offset: offset, limit: limit))
     |> mapError { _ -> GetGroupCallParticipantsError in
         return .generic
     }
@@ -368,7 +368,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
             |> mapError { _ -> JoinGroupCallError in
                 return .generic
             },
-            getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", peerIds: [], limit: 100)
+            getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", ssrcs: [], limit: 100)
             |> mapError { _ -> JoinGroupCallError in
                 return .generic
             },
@@ -772,7 +772,7 @@ public final class GroupCallParticipantsContext {
     
     private var isLoadingMore: Bool = false
     private var shouldResetStateFromServer: Bool = false
-    private var missingPeerIds = Set<PeerId>()
+    private var missingSsrcs = Set<UInt32>()
     
     private let updateDefaultMuteDisposable = MetaDisposable()
     
@@ -810,8 +810,6 @@ public final class GroupCallParticipantsContext {
                 item.0
             })
             strongSelf.activeSpeakersValue = peerIds
-            
-            strongSelf.ensureHaveParticipants(peerIds: peerIds)
             
             if !strongSelf.hasReceivedSpeakingParticipantsReport {
                 var updatedParticipants = strongSelf.stateValue.state.participants
@@ -890,7 +888,7 @@ public final class GroupCallParticipantsContext {
         }
     }
     
-    public func reportSpeakingParticipants(ids: [PeerId]) {
+    public func reportSpeakingParticipants(ids: [PeerId: UInt32]) {
         if !ids.isEmpty {
             self.hasReceivedSpeakingParticipantsReport = true
         }
@@ -906,7 +904,7 @@ public final class GroupCallParticipantsContext {
         
         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
         
-        for activityPeerId in ids {
+        for (activityPeerId, _) in ids {
             if let index = indexMap[activityPeerId] {
                 var updateTimestamp = false
                 if let activityTimestamp = updatedParticipants[index].activityTimestamp {
@@ -947,30 +945,32 @@ public final class GroupCallParticipantsContext {
                 overlayState: strongSelf.stateValue.overlayState
             )
         }
+        
+        self.ensureHaveParticipants(ssrcs: Set(ids.map { $0.1 }))
     }
     
-    private func ensureHaveParticipants(peerIds: Set<PeerId>) {
-        var missingPeerIds = Set<PeerId>()
+    public func ensureHaveParticipants(ssrcs: Set<UInt32>) {
+        var missingSsrcs = Set<UInt32>()
         
-        var existingParticipantIds = Set<PeerId>()
+        var existingSsrcs = Set<UInt32>()
         for participant in self.stateValue.state.participants {
-            existingParticipantIds.insert(participant.peer.id)
+            existingSsrcs.insert(participant.ssrc)
         }
         
-        for peerId in peerIds {
-            if !existingParticipantIds.contains(peerId) {
-                missingPeerIds.insert(peerId)
+        for ssrc in ssrcs {
+            if !existingSsrcs.contains(ssrc) {
+                missingSsrcs.insert(ssrc)
             }
         }
         
-        if !missingPeerIds.isEmpty {
-            self.missingPeerIds.formUnion(missingPeerIds)
-            self.loadMissingPeers()
+        if !missingSsrcs.isEmpty {
+            self.missingSsrcs.formUnion(missingSsrcs)
+            self.loadMissingSsrcs()
         }
     }
     
-    private func loadMissingPeers() {
-        if self.missingPeerIds.isEmpty {
+    private func loadMissingSsrcs() {
+        if self.missingSsrcs.isEmpty {
             return
         }
         if self.isLoadingMore {
@@ -978,16 +978,16 @@ public final class GroupCallParticipantsContext {
         }
         self.isLoadingMore = true
         
-        let peerIds = self.missingPeerIds
+        let ssrcs = self.missingSsrcs
         
-        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", peerIds: Array(peerIds), limit: 100)
+        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", ssrcs: Array(ssrcs), limit: 100)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.isLoadingMore = false
             
-            strongSelf.missingPeerIds.subtract(peerIds)
+            strongSelf.missingSsrcs.subtract(ssrcs)
             
             var updatedState = strongSelf.stateValue.state
             
@@ -1013,7 +1013,7 @@ public final class GroupCallParticipantsContext {
             if strongSelf.shouldResetStateFromServer {
                 strongSelf.resetStateFromServer()
             } else {
-                strongSelf.loadMissingPeers()
+                strongSelf.loadMissingSsrcs()
             }
         }))
     }
@@ -1165,7 +1165,7 @@ public final class GroupCallParticipantsContext {
         
         self.updateQueue.removeAll()
         
-        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", peerIds: [], limit: 100)
+        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", ssrcs: [], limit: 100)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             guard let strongSelf = self else {
                 return
@@ -1285,7 +1285,7 @@ public final class GroupCallParticipantsContext {
         }
         self.isLoadingMore = true
         
-        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: token, peerIds: [], limit: 100)
+        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: token, ssrcs: [], limit: 100)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             guard let strongSelf = self else {
                 return
