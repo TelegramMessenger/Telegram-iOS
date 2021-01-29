@@ -12,7 +12,7 @@ from ProjectGeneration import generate
 
 
 class BazelCommandLine:
-    def __init__(self, bazel_path, bazel_x86_64_path, override_bazel_version, override_xcode_version):
+    def __init__(self, bazel_path, bazel_x86_64_path, override_bazel_version, override_xcode_version, bazel_user_root):
         self.build_environment = BuildEnvironment(
             base_path=os.getcwd(),
             bazel_path=bazel_path,
@@ -20,6 +20,7 @@ class BazelCommandLine:
             override_bazel_version=override_bazel_version,
             override_xcode_version=override_xcode_version
         )
+        self.bazel_user_root = bazel_user_root
         self.remote_cache = None
         self.cache_dir = None
         self.additional_args = None
@@ -173,9 +174,18 @@ class BazelCommandLine:
         else:
             raise Exception('Unknown configuration {}'.format(configuration))
 
+    def get_startup_bazel_arguments(self):
+        combined_arguments = []
+        if self.bazel_user_root is not None:
+            combined_arguments += ['--output_user_root={}'.format(self.bazel_user_root)]
+        return combined_arguments
+
     def invoke_clean(self):
         combined_arguments = [
-            self.build_environment.bazel_path,
+            self.build_environment.bazel_path
+        ]
+        combined_arguments += self.get_startup_bazel_arguments()
+        combined_arguments += [
             'clean',
             '--expunge'
         ]
@@ -209,7 +219,10 @@ class BazelCommandLine:
 
     def invoke_build(self):
         combined_arguments = [
-            self.build_environment.bazel_path,
+            self.build_environment.bazel_path
+        ]
+        combined_arguments += self.get_startup_bazel_arguments()
+        combined_arguments += [
             'build',
             'Telegram/Telegram'
         ]
@@ -247,7 +260,8 @@ def clean(arguments):
         bazel_path=arguments.bazel,
         bazel_x86_64_path=None,
         override_bazel_version=arguments.overrideBazelVersion,
-        override_xcode_version=arguments.overrideXcodeVersion
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
     )
 
     bazel_command_line.invoke_clean()
@@ -292,7 +306,8 @@ def generate_project(arguments):
         bazel_path=arguments.bazel,
         bazel_x86_64_path=bazel_x86_64_path,
         override_bazel_version=arguments.overrideBazelVersion,
-        override_xcode_version=arguments.overrideXcodeVersion
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
     )
 
     if arguments.cacheDir is not None:
@@ -326,7 +341,8 @@ def build(arguments):
         bazel_path=arguments.bazel,
         bazel_x86_64_path=None,
         override_bazel_version=arguments.overrideBazelVersion,
-        override_xcode_version=arguments.overrideXcodeVersion
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
     )
 
     if arguments.cacheDir is not None:
@@ -380,6 +396,13 @@ if __name__ == '__main__':
         '--bazel',
         required=True,
         help='Use custom bazel binary',
+        metavar='path'
+    )
+
+    parser.add_argument(
+        '--bazelUserRoot',
+        required=False,
+        help='Use custom bazel user root (useful when reproducing a build)',
         metavar='path'
     )
 
