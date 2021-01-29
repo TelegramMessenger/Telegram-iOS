@@ -5982,6 +5982,10 @@ Sorry for the inconvenience.";
 
 "Conversation.ForwardTooltip.Chat.One" = "Message forwarded to **%@**";
 "Conversation.ForwardTooltip.Chat.Many" = "Messages forwarded to **%@**";
+"Conversation.ForwardTooltip.TwoChats.One" = "Message forwarded to **%@** and **%@**";
+"Conversation.ForwardTooltip.TwoChats.Many" = "Messages forwarded to **%@** and **%@**";
+"Conversation.ForwardTooltip.ManyChats.One" = "Message forwarded to **%@** and %@ others";
+"Conversation.ForwardTooltip.ManyChats.Many" = "Messages forwarded to **%@** and %@ others";
 
 "Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
 "Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";
