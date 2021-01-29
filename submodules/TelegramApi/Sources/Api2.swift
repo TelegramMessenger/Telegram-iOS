@@ -1076,42 +1076,6 @@ public struct auth {
         }
     
     }
-    public enum CheckedPhone: TypeConstructorDescription {
-        case checkedPhone(phoneRegistered: Api.Bool)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .checkedPhone(let phoneRegistered):
-                    if boxed {
-                        buffer.appendInt32(-2128698738)
-                    }
-                    phoneRegistered.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .checkedPhone(let phoneRegistered):
-                return ("checkedPhone", [("phoneRegistered", phoneRegistered)])
-    }
-    }
-    
-        public static func parse_checkedPhone(_ reader: BufferReader) -> CheckedPhone? {
-            var _1: Api.Bool?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Bool
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.CheckedPhone.checkedPhone(phoneRegistered: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum SentCode: TypeConstructorDescription {
         case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?)
     

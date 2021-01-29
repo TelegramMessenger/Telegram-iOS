@@ -300,6 +300,7 @@ public final class VoiceChatController: ViewController {
         
         private final class Interaction {
             let updateIsMuted: (PeerId, Bool) -> Void
+            let openPeer: (PeerId) -> Void
             let openInvite: () -> Void
             let peerContextAction: (PeerEntry, ASDisplayNode, ContextGesture?) -> Void
             let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
@@ -309,12 +310,14 @@ public final class VoiceChatController: ViewController {
             
             init(
                 updateIsMuted: @escaping (PeerId, Bool) -> Void,
+                openPeer: @escaping (PeerId) -> Void,
                 openInvite: @escaping () -> Void,
                 peerContextAction: @escaping (PeerEntry, ASDisplayNode, ContextGesture?) -> Void,
                 setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void,
                 getPeerVideo: @escaping (UInt32) -> GroupVideoNode?
             ) {
                 self.updateIsMuted = updateIsMuted
+                self.openPeer = openPeer
                 self.openInvite = openInvite
                 self.peerContextAction = peerContextAction
                 self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -1026,6 +1029,17 @@ public final class VoiceChatController: ViewController {
                         }), true))
                     }
                     
+                    items.append(.action(ContextMenuActionItem(text: "Toggle Full Screen", icon: { theme in
+                        return nil
+                    }, action: { _, f in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.itemInteraction?.openPeer(peer.id)
+                        f(.default)
+                    })))
+                    
                     if peer.id != strongSelf.context.account.peerId {
                         if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
                             if callState.adminIds.contains(peer.id) {
@@ -1357,6 +1371,8 @@ public final class VoiceChatController: ViewController {
             self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
             
             self.audioOutputNode.addTarget(self, action: #selector(self.audioOutputPressed), forControlEvents: .touchUpInside)
+            
+            self.cameraButtonNode.addTarget(self, action: #selector(self.cameraPressed), forControlEvents: .touchUpInside)
             
             self.optionsButton.contextAction = { [weak self] sourceNode, gesture in
                 guard let strongSelf = self, let controller = strongSelf.controller else {

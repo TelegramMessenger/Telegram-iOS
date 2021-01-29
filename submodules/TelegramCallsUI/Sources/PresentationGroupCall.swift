@@ -1233,7 +1233,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.isRequestingMissingSsrcs = true
             
             let requestedSsrcs = self.missingSsrcs
-            self.missingSsrcsDisposable.set((getGroupCallParticipants(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, ssrcs: Array(requestedSsrcs), offset: "", limit: 100)
+            self.missingSsrcsDisposable.set((getGroupCallParticipants(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, offset: "", ssrcs: Array(requestedSsrcs), limit: 100)
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 guard let strongSelf = self else {
                     return

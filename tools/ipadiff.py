@@ -237,6 +237,8 @@ def ipadiff(self_base_path, ipa1, ipa2):
     ipa1_dir = tempdir + '/ipa1'
     ipa2_dir = tempdir + '/ipa2'
 
+    print('ipa1_dir = {}'.format(ipa1_dir))
+
     ZipFile(ipa1, 'r').extractall(path=ipa1_dir)
     ZipFile(ipa2, 'r').extractall(path=ipa2_dir)
     (ipa1_dirs, ipa1_files) = get_file_list(base_app_dir(ipa1_dir))
@@ -307,4 +309,8 @@ if len(sys.argv) != 3:
     print('Usage: ipadiff ipa1 ipa2')
     sys.exit(1)
 
-ipadiff(os.path.dirname(sys.argv[0]), sys.argv[1], sys.argv[2])
+my_path = os.path.abspath(os.path.expanduser(sys.argv[0]))
+print('path={}'.format(os.path.dirname(my_path)))
+
+
+ipadiff(os.path.dirname(my_path), sys.argv[1], sys.argv[2])
