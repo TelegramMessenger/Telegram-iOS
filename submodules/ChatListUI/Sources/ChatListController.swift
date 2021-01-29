@@ -1982,7 +1982,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
                             for peerId in peerIds {
-                                removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
+                                removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: peerId.namespace == Namespaces.Peer.SecretChat)
                             }
                         }
                         |> afterDisposed {

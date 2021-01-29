@@ -24,7 +24,7 @@ typedef enum : NSInteger {
 extern NSString *kReachabilityChangedNotification;
 
 
-@interface Reachability : NSObject
+@interface LegacyReachability : NSObject
 
 @property (nonatomic, copy) void (^reachabilityChanged)(NetworkStatus status);
 

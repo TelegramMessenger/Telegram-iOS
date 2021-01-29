@@ -314,6 +314,8 @@ public protocol PresentationGroupCall: class {
     var incomingVideoSources: Signal<[PeerId: UInt32], NoError> { get }
     
     func makeIncomingVideoView(source: UInt32, completion: @escaping (PresentationCallVideoView?) -> Void)
+    
+    func loadMoreMembers(token: String)
 }
 
 public protocol PresentationCallManager: class {

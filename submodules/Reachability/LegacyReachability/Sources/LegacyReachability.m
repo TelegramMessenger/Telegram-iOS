@@ -14,7 +14,7 @@
 
 #import <CoreFoundation/CoreFoundation.h>
 
-#import <Reachability/Reachability.h>
+#import <LegacyReachability/LegacyReachability.h>
 
 #import <pthread.h>
 #import <libkern/OSAtomic.h>
@@ -126,14 +126,14 @@ static ReachabilityAtomic *contexts() {
     return instance;
 }
 
-static void withContext(int32_t key, void (^f)(Reachability *)) {
-    Reachability *reachability = [contexts() with:^id(NSDictionary *dict) {
+static void withContext(int32_t key, void (^f)(LegacyReachability *)) {
+    LegacyReachability *reachability = [contexts() with:^id(NSDictionary *dict) {
         return dict[@(key)];
     }];
     f(reachability);
 }
 
-static int32_t addContext(Reachability *context) {
+static int32_t addContext(LegacyReachability *context) {
     int32_t key = OSAtomicIncrement32(&nextKey);
     [contexts() modify:^id(NSMutableDictionary *dict) {
         NSMutableDictionary *updatedDict = [[NSMutableDictionary alloc] initWithDictionary:dict];
@@ -155,19 +155,19 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 {
 #pragma unused (target, flags)
 	//NSCAssert(info != NULL, @"info was NULL in ReachabilityCallback");
-	//NSCAssert([(__bridge NSObject*) info isKindOfClass: [Reachability class]], @"info was wrong class in ReachabilityCallback");
+	//NSCAssert([(__bridge NSObject*) info isKindOfClass: [LegacyReachability class]], @"info was wrong class in ReachabilityCallback");
 
     int32_t key = (int32_t)((intptr_t)info);
-    withContext(key, ^(Reachability *context) {
-        if ([context isKindOfClass:[Reachability class]] && context.reachabilityChanged != nil)
+    withContext(key, ^(LegacyReachability *context) {
+        if ([context isKindOfClass:[LegacyReachability class]] && context.reachabilityChanged != nil)
             context.reachabilityChanged(context.currentReachabilityStatus);
     });
 }
 
 
-#pragma mark - Reachability implementation
+#pragma mark - LegacyReachability implementation
 
-@implementation Reachability
+@implementation LegacyReachability
 {
     int32_t _key;
 	SCNetworkReachabilityRef _reachabilityRef;
@@ -175,7 +175,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 
 + (instancetype)reachabilityWithHostName:(NSString *)hostName
 {
-	Reachability* returnValue = NULL;
+    LegacyReachability* returnValue = NULL;
 	SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(NULL, [hostName UTF8String]);
 	if (reachability != NULL)
 	{
@@ -199,7 +199,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 {
 	SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, hostAddress);
 
-	Reachability* returnValue = NULL;
+    LegacyReachability* returnValue = NULL;
 
 	if (reachability != NULL)
 	{
