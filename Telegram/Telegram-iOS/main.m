@@ -14,4 +14,4 @@ int main(int argc, char *argv[]) {
     @autoreleasepool {
         return UIApplicationMain(argc, argv, @"Application", @"AppDelegate");
     }
-}
+}Jom main
