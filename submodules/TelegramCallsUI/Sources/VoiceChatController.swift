@@ -1299,7 +1299,7 @@ public final class VoiceChatController: ViewController {
                 if !strongSelf.didSetDataReady {
                     strongSelf.accountPeer = accountPeer
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
-                                        
+                    
                     strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
                 }
@@ -1490,7 +1490,7 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                if case let .known(value) = offset, value < 100.0 {
+                if case let .known(value) = offset, value < 200.0 {
                     if let loadMoreToken = strongSelf.currentCallMembers?.1 {
                         strongSelf.currentLoadToken = loadMoreToken
                         strongSelf.call.loadMoreMembers(token: loadMoreToken)

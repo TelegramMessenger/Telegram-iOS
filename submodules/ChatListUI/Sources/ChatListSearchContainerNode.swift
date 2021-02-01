@@ -29,6 +29,7 @@ import GalleryData
 import InstantPageUI
 import ChatInterfaceState
 import ShareController
+import UndoUI
 
 private enum ChatListTokenId: Int32 {
     case filter
@@ -899,6 +900,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 let peerId = peer.id
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        (strongSelf.navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
                             return .forward(source: id, grouping: .auto, attributes: [])
                         })

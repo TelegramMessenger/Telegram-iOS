@@ -12,7 +12,7 @@ private final class WrappedLegacyReachability: NSObject {
     }
     
     private static let thread: Thread = {
-        let thread = Thread(target: Reachability.self, selector: #selector(WrappedLegacyReachability.threadImpl), object: nil)
+        let thread = Thread(target: WrappedLegacyReachability.self, selector: #selector(WrappedLegacyReachability.threadImpl), object: nil)
         thread.start()
         return thread
     }()
@@ -84,7 +84,7 @@ private final class WrappedLegacyReachability: NSObject {
     }
 }
 
-@available(iOSApplicationExtension 12.0, iOS 12.0, *)
+@available(iOSApplicationExtension 12.0, iOS 12.0, OSX 10.14, *)
 private final class PathMonitor {
     private let queue: Queue
     private let monitor: NWPathMonitor
@@ -133,7 +133,7 @@ private final class PathMonitor {
     }
 }
 
-@available(iOSApplicationExtension 12.0, iOS 12.0, *)
+@available(iOSApplicationExtension 12.0, iOS 12.0, OSX 10.14, *)
 private final class SharedPathMonitor {
     static let queue = Queue()
     static let impl = QueueLocalObject<PathMonitor>(queue: queue, generate: {
@@ -149,16 +149,16 @@ public enum Reachability {
     }
     
     public static var networkType: Signal<NetworkType, NoError> {
-        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, OSX 10.14, *) {
             return Signal { subscriber in
                 let disposable = MetaDisposable()
-                
+
                 SharedPathMonitor.impl.with { impl in
                     disposable.set(impl.networkType.get().start(next: { value in
                         subscriber.putNext(value)
                     }))
                 }
-                
+
                 return disposable
             }
             |> distinctUntilChanged

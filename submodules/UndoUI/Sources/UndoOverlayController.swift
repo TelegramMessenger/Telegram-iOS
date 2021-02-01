@@ -28,6 +28,7 @@ public enum UndoOverlayContent {
     case banned(text: String)
     case importedMessage(text: String)
     case audioRate(slowdown: Bool, text: String)
+    case forward(savedMessages: Bool, text: String)
 }
 
 public enum UndoOverlayAction {

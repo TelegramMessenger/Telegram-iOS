@@ -5959,6 +5959,7 @@ Sorry for the inconvenience.";
 "ChatImportActivity.ErrorInvalidChatType" = "Wrong type of chat for the messages you are trying to import.";
 "ChatImportActivity.ErrorUserBlocked" = "Unable to import messages due to privacy settings.";
 "ChatImportActivity.ErrorGeneric" = "An error occurred.";
+"ChatImportActivity.ErrorLimitExceeded" = "Daily maximum reached,\nplease come back tomorrow.";
 "ChatImportActivity.Success" = "Chat imported\nsuccessfully.";
 
 "VoiceOver.Chat.GoToOriginalMessage" = "Go to message";
@@ -5978,3 +5979,13 @@ Sorry for the inconvenience.";
 "VoiceOver.Chat.Profile" = "Profile";
 "VoiceOver.Chat.GroupInfo" = "Group Info";
 "VoiceOver.Chat.ChannelInfo" = "Channel Info";
+
+"Conversation.ForwardTooltip.Chat.One" = "Message forwarded to **%@**";
+"Conversation.ForwardTooltip.Chat.Many" = "Messages forwarded to **%@**";
+"Conversation.ForwardTooltip.TwoChats.One" = "Message forwarded to **%@** and **%@**";
+"Conversation.ForwardTooltip.TwoChats.Many" = "Messages forwarded to **%@** and **%@**";
+"Conversation.ForwardTooltip.ManyChats.One" = "Message forwarded to **%@** and %@ others";
+"Conversation.ForwardTooltip.ManyChats.Many" = "Messages forwarded to **%@** and %@ others";
+
+"Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
+"Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";

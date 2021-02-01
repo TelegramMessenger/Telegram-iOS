@@ -1413,9 +1413,49 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, openMessageShareMenu: { [weak self] id in
             if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let _ = messages.first {
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages))
-                shareController.dismissed = { shared in
+                shareController.dismissed = { [weak self] shared in
                     if shared {
                         self?.commitPurposefulAction()
+                    }
+                }
+                shareController.completed = { [weak self] peerIds in
+                    if let strongSelf = self {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                            var peers: [Peer] = []
+                            for peerId in peerIds {
+                                if let peer = transaction.getPeer(peerId) {
+                                    peers.append(peer)
+                                }
+                            }
+                            return peers
+                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                            if let strongSelf = self {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                
+                                let text: String
+                                var savedMessages = false
+                                if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                    text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
+                                    savedMessages = true
+                                } else {
+                                    if peers.count == 1, let peer = peers.first {
+                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
+                                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
+                                    } else if let peer = peers.first {
+                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
+                                    } else {
+                                        text = ""
+                                    }
+                                }
+                                
+                                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            }
+                        })
                     }
                 }
                 strongSelf.chatDisplayNode.dismissInput()
@@ -10041,6 +10081,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.searchResultsController = nil
                     strongController.dismiss()
                 } else if peerId == strongSelf.context.account.peerId {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    
                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
                         return .forward(source: message.id, grouping: .auto, attributes: [])
                     })
@@ -11262,7 +11305,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             ]
-        } else {
+        } else if UIResponder.currentFirst() == nil {
             inputShortcuts = [
                 KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
                     if let strongSelf = self {
@@ -11316,6 +11359,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             ]
+        } else {
+            inputShortcuts = []
         }
         
         var canEdit = false
