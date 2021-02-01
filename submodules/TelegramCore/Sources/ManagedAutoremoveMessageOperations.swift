@@ -39,11 +39,29 @@ private final class ManagedAutoremoveMessageOperationsHelper {
     }
 }
 
-func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoError> {
+func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic(value: ManagedAutoremoveMessageOperationsHelper())
         
-        let disposable = postbox.timestampBasedMessageAttributesView(tag: 0).start(next: { view in
+        let timeOffsetOnce = Signal<Double, NoError> { subscriber in
+            subscriber.putNext(network.globalTimeDifference)
+            return EmptyDisposable
+        }
+        
+        let timeOffset = (
+            timeOffsetOnce
+            |> then(
+                Signal<Double, NoError>.complete()
+                |> delay(1.0, queue: .mainQueue())
+            )
+        )
+        |> restart
+        |> map { value -> Double in
+            round(value)
+        }
+        |> distinctUntilChanged
+        
+        let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: 0)).start(next: { timeOffset, view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)]) in
                 return helper.update(view.head)
             }
@@ -53,7 +71,7 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
             }
             
             for (entry, disposable) in beginOperations {
-                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + timeOffset
                 let signal = Signal<Void, NoError>.complete()
                 |> suspendAwareDelay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in

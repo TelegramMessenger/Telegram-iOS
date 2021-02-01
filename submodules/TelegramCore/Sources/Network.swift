@@ -865,6 +865,10 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return self.context.globalTime()
     }
     
+    public var globalTimeDifference: TimeInterval {
+        return self.context.globalTimeDifference()
+    }
+    
     public var currentGlobalTime: Signal<Double, NoError> {
         return Signal { subscriber in
             self.context.performBatchUpdates({
