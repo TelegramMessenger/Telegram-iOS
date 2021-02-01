@@ -84,7 +84,7 @@ public extension TelegramChannel {
                     if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banAddMembers) {
                         return false
                     }
-                    return false
+                    return true
                 }
             case .editAllMessages:
                 if let adminRights = self.adminRights, adminRights.flags.contains(.canEditMessages) {
