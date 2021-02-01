@@ -1225,7 +1225,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
             
-            if let (media, _) = mediaForMessage(message: message) {
+            if let _ = mediaForMessage(message: message) {
                 centralItemNode.activateAsInitial()
             }
         }

@@ -205,4 +205,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         return nil
     }
+    
+    func getStatusNode() -> ASDisplayNode? {
+        return nil
+    }
 }

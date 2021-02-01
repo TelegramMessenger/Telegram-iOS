@@ -73,10 +73,10 @@ final class VoiceChatParticipantItem: ListViewItem {
     let revealOptions: [RevealOption]
     let revealed: Bool?
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
-    let action: (() -> Void)?
+    let action: ((ASDisplayNode) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -135,9 +135,8 @@ final class VoiceChatParticipantItem: ListViewItem {
         }
     }
     
-    public func selected(listView: ListView){
+    public func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
-        self.action?()
     }
 }
 
@@ -290,6 +289,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     
     deinit {
         self.audioLevelDisposable.dispose()
+    }
+    
+    override func selected() {
+        super.selected()
+        self.layoutParams?.0.action?(self.contextSourceNode)
     }
         
     func asyncLayout() -> (_ item: VoiceChatParticipantItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {

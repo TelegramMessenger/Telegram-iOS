@@ -426,6 +426,17 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.pinNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.size.width - pinSize.width) / 2.0), y: imageFrame.minY + floor(imageFrame.size.height * 0.5 - 10.0 - pinSize.height / 2.0)), size: pinSize)
                             
                             pinApply()
+                            
+                            if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                                strongSelf.dateAndStatusNode.pressed = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                                }
+                            } else {
+                                strongSelf.dateAndStatusNode.pressed = nil
+                            }
                         }
                     })
                 })

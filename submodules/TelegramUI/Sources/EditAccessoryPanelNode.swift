@@ -50,7 +50,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                                 strongSelf.statusNode.transitionToState(.none, completion: {})
                             } else {
                                 strongSelf.activityIndicator.isHidden = true
-                            strongSelf.statusNode.transitionToState(.progress(color: strongSelf.theme.chat.inputPanel.panelControlAccentColor, lineWidth: nil, value: CGFloat(value), cancelEnabled: false), completion: {})
+                            strongSelf.statusNode.transitionToState(.progress(color: strongSelf.theme.chat.inputPanel.panelControlAccentColor, lineWidth: nil, value: CGFloat(value), cancelEnabled: false, animateRotation: true), completion: {})
                             }
                         } else {
                             strongSelf.activityIndicator.isHidden = true

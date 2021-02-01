@@ -206,12 +206,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 #pragma mark -
 #pragma mark Movie processing
 
-//- (void)enableSynchronizedEncodingUsingMovieWriter:(GPUImageMovieWriter *)movieWriter;
-//{
-//    synchronizedMovieWriter = movieWriter;
-//    movieWriter.encodingLiveVideo = NO;
-//}
-
 - (void)startProcessing {
     dispatch_sync(dispatch_get_main_queue(), ^{
         displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];

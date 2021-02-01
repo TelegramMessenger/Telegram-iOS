@@ -105,7 +105,10 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 24)) != 0 {
             channelFlags.insert(.hasActiveVoiceChat)
         }
-        
+        if (flags & Int32(1 << 25)) != 0 {
+            channelFlags.insert(.isFake)
+        }
+
         let restrictionInfo: PeerAccessRestrictionInfo?
         if let restrictionReason = restrictionReason {
             restrictionInfo = PeerAccessRestrictionInfo(apiReasons: restrictionReason)
@@ -164,7 +167,10 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                 case .broadcast:
                     break
                 case .group:
-                    let infoFlags = TelegramChannelGroupFlags()
+                    var infoFlags = TelegramChannelGroupFlags()
+                    if (flags & Int32(1 << 22)) != 0 {
+                        infoFlags.insert(.slowModeEnabled)
+                    }
                     info = .group(TelegramChannelGroupInfo(flags: infoFlags))
                 }
                 

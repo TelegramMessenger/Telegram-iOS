@@ -22,6 +22,20 @@ enum UploadPartError {
     case invalidMedia
 }
 
+private func wrapMethodBody(_ body: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>), useCompression: Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+    if useCompression {
+        if let compressed = MTGzip.compress(body.1.makeData()) {
+            if compressed.count < body.1.size {
+                let os = MTOutputStream()
+                os.write(0x3072cfa1 as Int32)
+                os.writeBytes(compressed)
+                return (body.0, Buffer(data: os.currentBytes()), body.2)
+            }
+        }
+    }
+    
+    return body
+}
 
 class Download: NSObject, MTRequestMessageServiceDelegate {
     let datacenterId: Int
@@ -82,11 +96,38 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         self.context.authTokenForDatacenter(withIdRequired: self.datacenterId, authToken:self.mtProto.requiredAuthToken, masterDatacenterId: self.mtProto.authTokenMasterDatacenterId)
     }
     
-    func uploadPart(fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil) -> Signal<Void, UploadPartError> {
+    static func uploadPart(multiplexedManager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64, tag: MediaResourceFetchTag?, fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false) -> Signal<Void, UploadPartError> {
+        let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
+        if asBigPart {
+            let totalParts: Int32
+            if let bigTotalParts = bigTotalParts {
+                totalParts = Int32(bigTotalParts)
+            } else {
+                totalParts = -1
+            }
+            saveFilePart = Api.functions.upload.saveBigFilePart(fileId: fileId, filePart: Int32(index), fileTotalParts: totalParts, bytes: Buffer(data: data))
+        } else {
+            saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
+        }
+        
+        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true)
+        |> mapError { error -> UploadPartError in
+            if error.errorCode == 400 {
+                return .invalidMedia
+            } else {
+               return .generic
+            }
+        }
+        |> mapToSignal { _ -> Signal<Void, UploadPartError> in
+            return .complete()
+        }
+    }
+    
+    func uploadPart(fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false) -> Signal<Void, UploadPartError> {
         return Signal<Void, MTRpcError> { subscriber in
             let request = MTRequest()
             
-            let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
+            var saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
             if asBigPart {
                 let totalParts: Int32
                 if let bigTotalParts = bigTotalParts {
@@ -98,6 +139,8 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             } else {
                 saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
             }
+            
+            saveFilePart = wrapMethodBody(saveFilePart, useCompression: useCompression)
             
             request.setPayload(saveFilePart.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(saveFilePart.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(saveFilePart.0)), responseParser: { response in
                 if let result = saveFilePart.2.parse(Buffer(data: response)) {

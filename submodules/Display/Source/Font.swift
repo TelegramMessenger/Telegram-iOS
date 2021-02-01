@@ -33,7 +33,7 @@ public struct Font {
         case bold
     }
     
-    public static func with(size: CGFloat, design: Design = .regular, traits: Traits = []) -> UIFont {
+    public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, traits: Traits = []) -> UIFont {
         if #available(iOS 13.0, *) {
             let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
             var symbolicTraits = descriptor.symbolicTraits
@@ -62,6 +62,15 @@ public struct Font {
                     updatedDescriptor = updatedDescriptor?.withDesign(.rounded)
                 default:
                     updatedDescriptor = updatedDescriptor?.withDesign(.default)
+            }
+            switch weight {
+            case .semibold:
+                let fontTraits = [UIFontDescriptor.TraitKey.weight: UIFont.Weight.semibold]
+                updatedDescriptor = updatedDescriptor?.addingAttributes([
+                    UIFontDescriptor.AttributeName.traits: fontTraits
+                ])
+            default:
+                break
             }
             if let updatedDescriptor = updatedDescriptor {
                 return UIFont(descriptor: updatedDescriptor, size: size)

@@ -51,7 +51,7 @@ public final class ContextMenuContainerNode: ASDisplayNode {
         let maskParams = CachedMaskParams(size: self.bounds.size, relativeArrowPosition: self.relativeArrowPosition?.0 ?? self.bounds.size.width / 2.0, arrowOnBottom: self.relativeArrowPosition?.1 ?? true)
         if self.cachedMaskParams != maskParams {
             let path = UIBezierPath()
-            let cornerRadius: CGFloat = 6.0
+            let cornerRadius: CGFloat = 10.0
             let verticalInset: CGFloat = 9.0
             let arrowWidth: CGFloat = 18.0
             let requestedArrowPosition = maskParams.relativeArrowPosition

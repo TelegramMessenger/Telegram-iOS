@@ -51,6 +51,12 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
             }
         }
+        
+        self.interactiveFileNode.displayImportedTooltip = { [weak self] sourceNode in
+            if let strongSelf = self, let item = strongSelf.item {
+                let _ = item.controllerInteraction.displayImportedMessageTooltip(sourceNode)
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {

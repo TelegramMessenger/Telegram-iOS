@@ -777,6 +777,7 @@ extension PresentationThemeList: Codable {
         case pageIndicatorInactive
         case inputClearButton
         case itemBarChart
+        case itemInputField
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -819,7 +820,8 @@ extension PresentationThemeList: Codable {
             scrollIndicatorColor: try decodeColor(values, .scrollIndicator),
             pageIndicatorInactiveColor: try decodeColor(values, .pageIndicatorInactive),
             inputClearButtonColor: try decodeColor(values, .inputClearButton),
-            itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart)
+            itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart),
+            itemInputField: try values.decode(PresentationInputFieldTheme.self, forKey: .itemInputField)
         )
     }
     
@@ -854,6 +856,7 @@ extension PresentationThemeList: Codable {
         try encodeColor(&values, self.pageIndicatorInactiveColor, .pageIndicatorInactive)
         try encodeColor(&values, self.inputClearButtonColor, .inputClearButton)
         try values.encode(self.itemBarChart, forKey: .itemBarChart)
+        try values.encode(self.itemInputField, forKey: .itemInputField)
     }
 }
 

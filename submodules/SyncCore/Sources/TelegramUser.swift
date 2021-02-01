@@ -14,6 +14,7 @@ public struct UserInfoFlags: OptionSet {
     public static let isVerified = UserInfoFlags(rawValue: (1 << 0))
     public static let isSupport = UserInfoFlags(rawValue: (1 << 1))
     public static let isScam = UserInfoFlags(rawValue: (1 << 2))
+    public static let isFake = UserInfoFlags(rawValue: (1 << 3))
 }
 
 public struct BotUserInfoFlags: OptionSet {

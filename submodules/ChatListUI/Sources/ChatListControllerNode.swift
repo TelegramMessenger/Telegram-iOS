@@ -475,8 +475,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.deletePeerChat = { [weak self] peerId, joined in
             self?.deletePeerChat?(peerId, joined)
         }
-        itemNode.listNode.peerSelected = { [weak self] peerId, a, b in
-            self?.peerSelected?(peerId, a, b)
+        itemNode.listNode.peerSelected = { [weak self] peerId, animated, activateInput, promoInfo in
+            self?.peerSelected?(peerId, animated, activateInput, promoInfo)
         }
         itemNode.listNode.groupSelected = { [weak self] groupId in
             self?.groupSelected?(groupId)
@@ -522,7 +522,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     var hidePsa: ((PeerId) -> Void)?
     var deletePeerChat: ((PeerId, Bool) -> Void)?
-    var peerSelected: ((Peer, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
+    var peerSelected: ((Peer, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
     var groupSelected: ((PeerGroupId) -> Void)?
     var updatePeerGrouping: ((PeerId, Bool) -> Void)?
     var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?

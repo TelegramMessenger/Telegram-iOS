@@ -13,6 +13,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import ItemListPeerItem
+import InviteLinksUI
 
 private final class ChannelMembersControllerArguments {
     let context: AccountContext
@@ -181,17 +182,17 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelMembersControllerArguments
         switch self {
-            case let .addMember(theme, text):
+            case let .addMember(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.addMember()
                 })
-            case let .inviteLink(theme, text):
+            case let .inviteLink(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.inviteViaLink()
                 })
-            case let .addMemberInfo(theme, text):
+            case let .addMemberInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, participant, editing, enabled):
+            case let .peerItem(_, _, strings, dateTimeFormat, nameDisplayOrder, participant, editing, enabled):
                 let text: ItemListPeerItemText
                 if let user = participant.peer as? TelegramUser, let _ = user.botInfo {
                     text = .text(strings.Bot_GenericBotStatus, .secondary)
@@ -341,6 +342,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissInputImpl: (() -> Void)?
     
+    var getControllerImpl: (() -> ViewController?)?
+    
     let actionsDisposable = DisposableSet()
     
     let addMembersDisposable = MetaDisposable()
@@ -461,7 +464,10 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
-        presentControllerImpl?(channelVisibilityController(context: context, peerId: peerId, mode: .privateLink, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        if let controller = getControllerImpl?() {
+            dismissInputImpl?()
+            presentControllerImpl?(InviteLinkInviteController(context: context, peerId: peerId, parentNavigationController: controller.navigationController as? NavigationController), nil)
+        }
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -549,6 +555,9 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    getControllerImpl =  { [weak controller] in
+        return controller
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if let loadMoreControl = loadMoreControl, case let .known(value) = offset, value < 40.0 {

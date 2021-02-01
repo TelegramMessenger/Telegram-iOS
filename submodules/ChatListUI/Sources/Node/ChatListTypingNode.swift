@@ -127,7 +127,12 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                     let string: NSAttributedString
                     if activities.count > 1 {
                         let peerTitle = activities[0].0.compactDisplayTitle
-                        string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
+                        if activities.count == 2 {
+                            let secondPeerTitle = activities[1].0.compactDisplayTitle
+                            string = NSAttributedString(string: strings.DialogList_MultipleTypingPair(peerTitle, secondPeerTitle).0, font: textFont, textColor: color)
+                        } else {
+                            string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
+                        }
                     } else {
                         string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
                     }

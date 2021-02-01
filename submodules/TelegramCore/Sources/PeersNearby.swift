@@ -34,7 +34,7 @@ public func updatePeersNearbyVisibility(account: Account, update: PeerNearbyVisi
         case let .visible(latitude, longitude):
             flags |= (1 << 0)
             geoPoint = .inputGeoPoint(flags: 0, lat: latitude, long: longitude, accuracyRadius: nil)
-            selfExpires = 0x7fffffff
+            selfExpires = 10800
         case let .location(latitude, longitude):
             geoPoint = .inputGeoPoint(flags: 0, lat: latitude, long: longitude, accuracyRadius: nil)
         case .invisible:
@@ -63,6 +63,15 @@ public func updatePeersNearbyVisibility(account: Account, update: PeerNearbyVisi
     |> map(Optional.init)
     |> `catch` { error -> Signal<Api.Updates?, NoError> in
         if error.errorCode == 406 {
+            if error.errorDescription == "USERPIC_PRIVACY_REQUIRED" {
+                let _ = (account.postbox.transaction { transaction in
+                    transaction.updatePreferencesEntry(key: PreferencesKeys.peersNearby, { entry in
+                        var settings = entry as? PeersNearbyState ?? PeersNearbyState.default
+                        settings.visibilityExpires = nil
+                        return settings
+                    })
+                }).start()
+            }
             return .single(nil)
         } else {
             return .single(nil)

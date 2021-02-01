@@ -317,7 +317,7 @@ private final class AudioPlayerRendererContext {
     
     fileprivate func setVolume(_ volume: Double) {
         if let mixerAudioUnit = self.mixerAudioUnit {
-            AudioUnitSetParameter(mixerAudioUnit,kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, Float32(volume), 0)
+            AudioUnitSetParameter(mixerAudioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, Float32(volume), 0)
         }
     }
     

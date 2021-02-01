@@ -522,6 +522,7 @@
 "Notification.Kicked" = "%@ removed %@";
 "Notification.CreatedChat" = "%@ created a group";
 "Notification.CreatedChannel" = "Channel created";
+"Notification.CreatedGroup" = "Group created";
 "Notification.CreatedChatWithTitle" = "%@ created the group \"%@\" ";
 "Notification.Joined" = "%@ joined Telegram";
 "Notification.ChangedGroupName" = "%@ changed group name to \"%@\" ";
@@ -568,6 +569,7 @@
 
 "ConversationProfile.LeaveDeleteAndExit" = "Delete and Exit";
 "Group.LeaveGroup" = "Leave Group";
+"Group.DeleteGroup" = "Delete Group";
 
 "Conversation.Megabytes" = "%.1f MB";
 "Conversation.Kilobytes" = "%d KB";
@@ -1129,6 +1131,7 @@
 "ShareFileTip.CloseTip" = "Close Tip";
 
 "DialogList.SearchSectionDialogs" = "Chats and Contacts";
+"DialogList.SearchSectionChats" = "Chats";
 "DialogList.SearchSectionGlobal" = "Global Search";
 "DialogList.SearchSectionMessages" = "Messages";
 
@@ -3995,6 +3998,7 @@ Unused sets are archived when you add more.";
 "ChatList.DeleteChatConfirmation" = "Are you sure you want to delete chat\nwith %@?";
 "ChatList.DeleteSecretChatConfirmation" = "Are you sure you want to delete secret chat\nwith %@?";
 "ChatList.LeaveGroupConfirmation" = "Are you sure you want to leave %@?";
+"ChatList.DeleteAndLeaveGroupConfirmation" = "Are you sure you want to leave and delete %@?";
 "ChatList.DeleteSavedMessagesConfirmation" = "Are you sure you want to delete\nSaved Messages?";
 
 "Undo.Undo" = "Undo";
@@ -4272,6 +4276,10 @@ Unused sets are archived when you add more.";
 "ChatList.DeleteForEveryoneConfirmationTitle" = "Warning!";
 "ChatList.DeleteForEveryoneConfirmationText" = "This will **delete all messages** in this chat for **both participants**.";
 "ChatList.DeleteForEveryoneConfirmationAction" = "Delete All";
+"ChatList.DeleteForAllMembers" = "Delete for all members";
+"ChatList.DeleteForAllSubscribers" = "Delete for all subscribers";
+"ChatList.DeleteForAllMembersConfirmationText" = "This will **delete all messages** in this chat for **all participants**.";
+"ChatList.DeleteForAllSubscribersConfirmationText" = "This will **delete all messages** in this channel for **all subscribers**.";
 
 "ChatList.DeleteSavedMessagesConfirmationTitle" = "Warning!";
 "ChatList.DeleteSavedMessagesConfirmationText" = "This will **delete all messages** in this chat.";
@@ -5816,3 +5824,168 @@ Sorry for the inconvenience.";
 
 "PeerInfo.ButtonVoiceChat" = "Voice Chat";
 "VoiceChat.OpenChat" = "Open Chat";
+
+"GroupInfo.InviteLinks" = "Invite Links";
+
+"InviteLink.Title" = "Invite Links";
+"InviteLink.PermanentLink" = "Permanent Link";
+"InviteLink.PublicLink" = "Public Link";
+"InviteLink.Share" = "Share Link";
+"InviteLink.PeopleJoinedNone" = "no one joined yet";
+"InviteLink.PeopleJoined_1" = "%@ people joined";
+"InviteLink.PeopleJoined_2" = "%@ people joined";
+"InviteLink.PeopleJoined_3_10" = "%@ people joined";
+"InviteLink.PeopleJoined_many" = "%@ people joined";
+"InviteLink.PeopleJoined_any" = "%@ people joined";
+"InviteLink.CreatePrivateLinkHelp" = "Anyone who has Telegram installed will be able to join your group by following this link.";
+"InviteLink.Manage" = "Manage Invite Links";
+
+"InviteLink.PeopleJoinedShortNoneExpired" = "no one joined";
+"InviteLink.PeopleJoinedShortNone" = "no one joined yet";
+"InviteLink.PeopleJoinedShort_1" = "%@ joined";
+"InviteLink.PeopleJoinedShort_2" = "%@ joined";
+"InviteLink.PeopleJoinedShort_3_10" = "%@ joined";
+"InviteLink.PeopleJoinedShort_many" = "%@ joined";
+"InviteLink.PeopleJoinedShort_any" = "%@ joined";
+
+"InviteLink.Expired" = "expired";
+"InviteLink.UsageLimitReached" = "limit reached";
+"InviteLink.Revoked" = "revoked";
+"InviteLink.TapToCopy" = "tap to copy";
+
+"InviteLink.AdditionalLinks" = "Additional Links";
+"InviteLink.Create" = "Create a New Link";
+"InviteLink.CreateInfo" = "You can create additional invite links that have limited time or number of usages.";
+
+"InviteLink.RevokedLinks" = "Revoked Links";
+"InviteLink.DeleteAllRevokedLinks" = "Delete All Revoked Links";
+
+"InviteLink.ContextCopy" = "Copy";
+"InviteLink.ContextEdit" = "Edit";
+"InviteLink.ContextGetQRCode" = "Get QR Code";
+"InviteLink.ContextShare" = "Share";
+"InviteLink.ContextRevoke" = "Revoke";
+"InviteLink.ContextDelete" = "Delete";
+
+"InviteLink.Create.Title" = "New Link";
+"InviteLink.Create.EditTitle" = "Edit Link";
+
+"InviteLink.Create.TimeLimit" = "Limit By Time Period";
+"InviteLink.Create.TimeLimitExpiryDate" = "Expiry Date";
+"InviteLink.Create.TimeLimitExpiryDateNever" = "Never";
+"InviteLink.Create.TimeLimitExpiryTime" = "Time";
+"InviteLink.Create.TimeLimitInfo" = "You can make the link expire after a certain time.";
+"InviteLink.Create.TimeLimitNoLimit" = "No Limit";
+
+"InviteLink.Create.UsersLimit" = "Limit By Number Of Users";
+"InviteLink.Create.UsersLimitNumberOfUsers" = "Number of Uses";
+"InviteLink.Create.UsersLimitNumberOfUsersUnlimited" = "Unlimited";
+"InviteLink.Create.UsersLimitInfo" = "You can make the link expire after it has been used for a certain number of times.";
+"InviteLink.Create.UsersLimitNoLimit" = "No Limit";
+
+"InviteLink.Create.Revoke" = "Revoke Link";
+
+"InviteLink.QRCode.Title" = "Invite by QR Code";
+"InviteLink.QRCode.Info" = "Everyone on Telegram can scan this code to join your group.";
+"InviteLink.QRCode.Share" = "Share QR Code";
+
+"InviteLink.InviteLink" = "Invite Link";
+"InviteLink.CreatedBy" = "Link Created By";
+
+"InviteLink.DeleteLinkAlert.Text" = "Are you sure you want to delete this link? It will be completely gone.";
+"InviteLink.DeleteLinkAlert.Action" = "Delete";
+
+"InviteLink.DeleteAllRevokedLinksAlert.Text" = "This will delete all revoked links.";
+"InviteLink.DeleteAllRevokedLinksAlert.Action" = "Delete All";
+
+"InviteLink.ExpiresIn" = "expires in %@";
+
+"InviteLink.InviteLinkCopiedText" = "Invite link copied to clipboard";
+
+"Conversation.ChecksTooltip.Delivered" = "Delivered";
+"Conversation.ChecksTooltip.Read" = "Read";
+
+"DialogList.MultipleTypingPair" = "%@ and %@ are typing";
+
+"Common.Save" = "Save";
+
+"UserInfo.FakeUserWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+"UserInfo.FakeBotWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+"GroupInfo.FakeGroupWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+"ChannelInfo.FakeChannelWarning" = "⚠️ Warning: Many users reported that this account impersonates a famous person or organization.";
+
+"ReportPeer.ReasonFake" = "Fake Account";
+
+"ChatList.HeaderImportIntoAnExistingGroup" = "SELECT A CHAT TO IMPORT MESSAGES TO";
+
+"Group.ErrorAdminsTooMuch" = "Sorry, too many administrators in this group.";
+"Channel.ErrorAdminsTooMuch" = "Sorry, too many administrators in this channel.";
+
+"Conversation.AddMembers" = "Add Members";
+
+"Conversation.ImportedMessageHint" = "This message was imported from another app. We can't guarantee it's real.";
+
+"Conversation.GreetingText" = "Send a message or tap on the greeting below.";
+
+"CallList.DeleteAllForMe" = "Delete for me";
+"CallList.DeleteAllForEveryone" = "Delete for me and Others";
+"Conversation.ImportProgress" = "Importing Messages... %@%";
+
+"Conversation.AudioRateTooltipSpeedUp" = "Audio will play two times faster.";
+"Conversation.AudioRateTooltipNormal" = "Audio will play at normal speed.";
+
+"ChatImport.Title" = "Select Chat";
+"ChatImport.SelectionErrorNotAdmin" = "You must to be an admin in the group to import messages to it.";
+"ChatImport.SelectionErrorGroupGeneric" = "Sorry, you can't import history to this group.";
+"ChatImport.SelectionConfirmationGroupWithTitle" = "Do you want to import messages from **%1$@** into **%2$@**?";
+"ChatImport.SelectionConfirmationGroupWithoutTitle" = "Do you want to import messages into **%@**?";
+"ChatImport.SelectionConfirmationAlertTitle" = "Import Messages";
+"ChatImport.SelectionConfirmationAlertImportAction" = "Import";
+"ChatImport.CreateGroupAlertTitle" = "Create Group and Import Messages";
+"ChatImport.CreateGroupAlertText" = "Do you want to create the group **%@** and import messages from another messaging app?";
+"ChatImport.CreateGroupAlertImportAction" = "Create and Import";
+"ChatImport.UserErrorNotMutual" = "You can only import messages into private chats with users who are mutual contacts.";
+"ChatImport.SelectionConfirmationUserWithTitle" = "Do you want to import messages from **%1$@** into the chat with **%2$@**?";
+"ChatImport.SelectionConfirmationUserWithoutTitle" = "Do you want to import messages into the chat with **%@?**";
+
+"PeerSelection.ImportIntoNewGroup" = "Import to a New Group";
+"Message.ImportedDateFormat" = "%1$@, %2$@ Imported %3$@";
+
+"ChatImportActivity.Title" = "Importing Chat";
+"ChatImportActivity.OpenApp" = "Open Telegram";
+"ChatImportActivity.Retry" = "Retry";
+"ChatImportActivity.InProgress" = "Please keep this window open\nuntil the import is completed.";
+"ChatImportActivity.ErrorNotAdmin" = "You need to be an admin in the group to import messages.";
+"ChatImportActivity.ErrorInvalidChatType" = "Wrong type of chat for the messages you are trying to import.";
+"ChatImportActivity.ErrorUserBlocked" = "Unable to import messages due to privacy settings.";
+"ChatImportActivity.ErrorGeneric" = "An error occurred.";
+"ChatImportActivity.ErrorLimitExceeded" = "Daily maximum reached,\nplease come back tomorrow.";
+"ChatImportActivity.Success" = "Chat imported\nsuccessfully.";
+
+"VoiceOver.Chat.GoToOriginalMessage" = "Go to message";
+"VoiceOver.Chat.UnreadMessages_0" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_1" = "%@ unread message";
+"VoiceOver.Chat.UnreadMessages_2" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_3_10" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_many" = "%@ unread messages";
+"VoiceOver.Chat.UnreadMessages_any" = "%@ unread messages";
+
+"VoiceOver.ChatList.Message" = "Message";
+"VoiceOver.ChatList.OutgoingMessage" = "Outgoing Message";
+"VoiceOver.ChatList.MessageFrom" = "From: %@";
+"VoiceOver.ChatList.MessageRead" = "Read";
+"VoiceOver.ChatList.MessageEmpty" = "Empty";
+
+"VoiceOver.Chat.Profile" = "Profile";
+"VoiceOver.Chat.GroupInfo" = "Group Info";
+"VoiceOver.Chat.ChannelInfo" = "Channel Info";
+
+"Conversation.ForwardTooltip.Chat.One" = "Message forwarded to **%@**";
+"Conversation.ForwardTooltip.Chat.Many" = "Messages forwarded to **%@**";
+"Conversation.ForwardTooltip.TwoChats.One" = "Message forwarded to **%@** and **%@**";
+"Conversation.ForwardTooltip.TwoChats.Many" = "Messages forwarded to **%@** and **%@**";
+"Conversation.ForwardTooltip.ManyChats.One" = "Message forwarded to **%@** and %@ others";
+"Conversation.ForwardTooltip.ManyChats.Many" = "Messages forwarded to **%@** and %@ others";
+
+"Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
+"Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";

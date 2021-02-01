@@ -1,20 +1,14 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
-objc_library(
+swift_library(
     name = "Reachability",
-    enable_modules = True,
     module_name = "Reachability",
     srcs = glob([
-        "Sources/*.m",
+        "Sources/**/*.swift",
     ]),
-    hdrs = glob([
-        "PublicHeaders/**/*.h",
-    ]),
-    includes = [
-        "PublicHeaders",
-    ],
-    sdk_frameworks = [
-      "Foundation",
-      "SystemConfiguration",
+    deps = [
+        "//submodules/Reachability/LegacyReachability:LegacyReachability",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     ],
     visibility = [
         "//visibility:public",

@@ -67,6 +67,7 @@ swift_library(
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
         "//submodules/StatisticsUI:StatisticsUI",
         "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
+        "//submodules/InviteLinksUI:InviteLinksUI",
     ],
     visibility = [
         "//visibility:public",

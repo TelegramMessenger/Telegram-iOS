@@ -417,18 +417,10 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 
-func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
-    guard let text = inputText else {
-        if currentQuery != nil {
-            return (nil, .single({ _ in return nil }))
-        } else {
-            return nil
-        }
-    }
-    if let dataDetector = dataDetector {
+func detectUrl(_ inputText: NSAttributedString?) -> String? {
+    var detectedUrl: String?
+    if let text = inputText, let dataDetector = dataDetector {
         let utf16 = text.string.utf16
-        
-        var detectedUrl: String?
         
         let nsRange = NSRange(location: 0, length: utf16.count)
         let matches = dataDetector.matches(in: text.string, options: [], range: nsRange)
@@ -444,7 +436,20 @@ func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: Acco
                 }
             })
         }
-        
+    }
+    return detectedUrl
+}
+
+func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+    guard let _ = inputText else {
+        if currentQuery != nil {
+            return (nil, .single({ _ in return nil }))
+        } else {
+            return nil
+        }
+    }
+    if let _ = dataDetector {
+        let detectedUrl = detectUrl(inputText)
         if detectedUrl != currentQuery {
             if let detectedUrl = detectedUrl {
                 return (detectedUrl, webpagePreview(account: context.account, url: detectedUrl) |> map { value in

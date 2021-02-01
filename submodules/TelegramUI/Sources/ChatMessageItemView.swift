@@ -143,7 +143,7 @@ enum ChatMessagePeekPreviewContent {
 private let voiceMessageDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
-    formatter.allowedUnits = [.second]
+    formatter.allowedUnits = [.minute, .second]
     formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
@@ -151,7 +151,7 @@ private let voiceMessageDurationFormatter: DateComponentsFormatter = {
 private let musicDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
-    formatter.allowedUnits = [.minute, .second]
+    formatter.allowedUnits = [.hour, .minute, .second]
     formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
@@ -833,6 +833,10 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        return nil
+    }
+    
+    func getStatusNode() -> ASDisplayNode? {
         return nil
     }
 }

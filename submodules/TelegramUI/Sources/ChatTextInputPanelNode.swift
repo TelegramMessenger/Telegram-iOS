@@ -191,6 +191,7 @@ private func textInputBackgroundImage(backgroundColor: UIColor, strokeColor: UIC
 
 enum ChatTextInputPanelPasteData {
     case images([UIImage])
+    case video(Data)
     case gif(Data)
     case sticker(UIImage, Bool)
 }
@@ -1211,7 +1212,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         if let _ = interfaceState.inputTextPanelState.mediaRecordingState {
-            let text: String = "Send"
+            let text: String = interfaceState.strings.VoiceOver_MessageContextSend
             let mediaRecordingAccessibilityArea: AccessibilityAreaNode
             var added = false
             if let current = self.mediaRecordingAccessibilityArea {
@@ -1910,6 +1911,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var images: [UIImage] = []
         if let data = pasteboard.data(forPasteboardType: "com.compuserve.gif") {
             self.paste(.gif(data))
+            return false
+        } else if let data = pasteboard.data(forPasteboardType: "public.mpeg-4") {
+            self.paste(.video(data))
             return false
         } else {
             var isPNG = false

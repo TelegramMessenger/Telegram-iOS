@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-
+import TelegramApi
 import SyncCore
 
 func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [WrappedMediaResourceId]) {
@@ -90,4 +90,54 @@ public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: P
     }
     transaction.clearHistory(peerId, namespaces: namespaces, forEachMedia: { _ in
     })
+}
+
+public enum ClearCallHistoryError {
+    case generic
+}
+
+public func clearCallHistory(account: Account, forEveryone: Bool) -> Signal<Never, ClearCallHistoryError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        var flags: Int32 = 0
+        if forEveryone {
+            flags |= 1 << 0
+        }
+        
+        let signal = account.network.request(Api.functions.messages.deletePhoneCallHistory(flags: flags))
+        |> map { result -> Api.messages.AffectedFoundMessages? in
+            return result
+        }
+        |> `catch` { _ -> Signal<Api.messages.AffectedFoundMessages?, Bool> in
+            return .fail(false)
+        }
+        |> mapToSignal { result -> Signal<Void, Bool> in
+            if let result = result {
+                switch result {
+                case let .affectedFoundMessages(pts, ptsCount, offset, _):
+                    account.stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                    if offset == 0 {
+                        return .fail(true)
+                    } else {
+                        return .complete()
+                    }
+                }
+            } else {
+                return .fail(true)
+            }
+        }
+        return (signal
+        |> restart)
+        |> `catch` { success -> Signal<Void, NoError> in
+            if success {
+                return account.postbox.transaction { transaction -> Void in
+                    transaction.removeAllMessagesWithGlobalTag(tag: GlobalMessageTags.Calls)
+                }
+            } else {
+                return .complete()
+            }
+        }
+    }
+    |> switchToLatest
+    |> ignoreValues
+    |> castError(ClearCallHistoryError.self)
 }

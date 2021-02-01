@@ -413,36 +413,50 @@ public struct StoreMessageForwardInfo {
     public let date: Int32
     public let authorSignature: String?
     public let psaType: String?
+    public let flags: MessageForwardInfo.Flags
     
-    public init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?) {
+    public init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?, flags: MessageForwardInfo.Flags) {
         self.authorId = authorId
         self.sourceId = sourceId
         self.sourceMessageId = sourceMessageId
         self.date = date
         self.authorSignature = authorSignature
         self.psaType = psaType
+        self.flags = flags
     }
     
     public init(_ info: MessageForwardInfo) {
-        self.init(authorId: info.author?.id, sourceId: info.source?.id, sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature, psaType: info.psaType)
+        self.init(authorId: info.author?.id, sourceId: info.source?.id, sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature, psaType: info.psaType, flags: info.flags)
     }
 }
 
 public struct MessageForwardInfo: Equatable {
+    public struct Flags: OptionSet {
+        public var rawValue: Int32
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public static let isImported = Flags(rawValue: 1 << 0)
+    }
+    
     public let author: Peer?
     public let source: Peer?
     public let sourceMessageId: MessageId?
     public let date: Int32
     public let authorSignature: String?
     public let psaType: String?
+    public let flags: MessageForwardInfo.Flags
     
-    public init(author: Peer?, source: Peer?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?) {
+    public init(author: Peer?, source: Peer?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?, flags: MessageForwardInfo.Flags) {
         self.author = author
         self.source = source
         self.sourceMessageId = sourceMessageId
         self.date = date
         self.authorSignature = authorSignature
         self.psaType = psaType
+        self.flags = flags
     }
 
     public static func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
@@ -466,6 +480,9 @@ public struct MessageForwardInfo: Equatable {
             return false
         }
         if lhs.psaType != rhs.psaType {
+            return false
+        }
+        if lhs.flags != rhs.flags {
             return false
         }
         

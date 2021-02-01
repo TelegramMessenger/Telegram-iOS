@@ -106,6 +106,373 @@ static void generate_public_key(unsigned char key[32], id<EncryptionProvider> pr
     }
 }
 
+typedef enum {
+    HelloGenerationCommandInvalid = 0,
+    HelloGenerationCommandString = 1,
+    HelloGenerationCommandZero = 2,
+    HelloGenerationCommandRandom = 3,
+    HelloGenerationCommandDomain = 4,
+    HelloGenerationCommandGrease = 5,
+    HelloGenerationCommandKey = 6,
+    HelloGenerationCommandPushLengthPosition = 7,
+    HelloGenerationCommandPopLengthPosition = 8
+} HelloGenerationCommand;
+
+typedef struct {
+    int position;
+} HelloParseState;
+
+static HelloGenerationCommand parseCommand(NSString *string, HelloParseState *state) {
+    if (state->position + 1 >= string.length) {
+        return HelloGenerationCommandInvalid;
+    }
+    unichar c = [string characterAtIndex:state->position];
+    state->position += 1;
+    
+    if (c == 'S') {
+        return HelloGenerationCommandString;
+    } else if (c == 'Z') {
+        return HelloGenerationCommandZero;
+    } else if (c == 'R') {
+        return HelloGenerationCommandRandom;
+    } else if (c == 'D') {
+        return HelloGenerationCommandDomain;
+    } else if (c == 'G') {
+        return HelloGenerationCommandGrease;
+    } else if (c == 'K') {
+        return HelloGenerationCommandKey;
+    } else if (c == '[') {
+        return HelloGenerationCommandPushLengthPosition;
+    } else if (c == ']') {
+        return HelloGenerationCommandPopLengthPosition;
+    } else {
+        return HelloGenerationCommandInvalid;
+    }
+}
+
+static bool parseSpace(NSString *string, HelloParseState *state) {
+    if (state->position + 1 >= string.length) {
+        return false;
+    }
+    bool hadSpace = false;
+    while (true) {
+        unichar c = [string characterAtIndex:state->position];
+        state->position += 1;
+        if (c == ' ') {
+            hadSpace = true;
+        } else {
+            if (hadSpace) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool parseEndlineOrEnd(NSString *string, HelloParseState *state) {
+    if (state->position == string.length) {
+        return true;
+    } else if (state->position + 1 >= string.length) {
+        return false;
+    } else {
+        unichar c = [string characterAtIndex:state->position];
+        state->position += 1;
+        return c == '\n';
+    }
+}
+
+static bool parseHexByte(unichar c, uint8_t *output) {
+    if (c >= '0' && c <= '9') {
+        *output = (uint8_t)(c - '0');
+    } else if (c >= 'a' && c <= 'f') {
+        *output = (uint8_t)(c - 'a');
+    } else if (c >= 'A' && c <= 'F') {
+        *output = (uint8_t)(c - 'A');
+    } else {
+        return false;
+    }
+    return true;
+}
+
+static NSData *parseHexStringArgument(NSString *string, HelloParseState *state) {
+    if (state->position >= string.length) {
+        return nil;
+    }
+    
+    NSMutableData *data = [[NSMutableData alloc] init];
+    
+    while (true) {
+        if (state->position == string.length) {
+            return data;
+        }
+        
+        unichar c = [string characterAtIndex:state->position];
+        state->position += 1;
+        if (c == '\\') {
+            if (state->position >= string.length) {
+                return nil;
+            }
+            c = [string characterAtIndex:state->position];
+            state->position += 1;
+            if (c == 'x') {
+                if (state->position >= string.length) {
+                    return nil;
+                }
+                unichar d1 = [string characterAtIndex:state->position];
+                state->position += 1;
+                if (state->position >= string.length) {
+                    return nil;
+                }
+                unichar d0 = [string characterAtIndex:state->position];
+                state->position += 1;
+                
+                uint8_t c1 = 0;
+                if (!parseHexByte(d1, &c1)) {
+                    return nil;
+                }
+                uint8_t c0 = 0;
+                if (!parseHexByte(d0, &c0)) {
+                    return nil;
+                }
+                uint8_t byteValue = (c1 << 4) | c0;
+                [data appendBytes:&byteValue length:1];
+            } else {
+                return nil;
+            }
+        } else if (c == '\n') {
+            return data;
+        } else {
+            return nil;
+        }
+    }
+    
+    return nil;
+}
+
+static bool parseIntArgument(NSString *string, HelloParseState *state, int *output) {
+    if (state->position >= string.length) {
+        return false;
+    }
+    int value = 0;
+    while (true) {
+        if (state->position == string.length) {
+            *output = value;
+            return true;
+        }
+        
+        unichar c = [string characterAtIndex:state->position];
+        state->position += 1;
+        
+        if (c == '\n') {
+            *output = value;
+            return true;
+        } else if (c >= '0' && c <= '9') {
+            value *= 10;
+            value += c;
+        } else {
+            return false;
+        }
+    }
+    return false;
+}
+
+static NSData *executeGenerationCode(id<EncryptionProvider> provider, NSData *domain) {
+    NSString *code = @"S \"\\x16\\x03\\x01\\x02\\x00\\x01\\x00\\x01\\xfc\\x03\\x03\\n"
+    "Z 32"
+    "S \"\\x20\"\n"
+    "R 32\n"
+    "S \"\\x00\\x36\"\n"
+    "G 0\n"
+    "S \"\\x13\\x01\\x13\\x02\\x13\\x03\\xc0\\x2c\\xc0\\x2b\\xcc\\xa9\\xc0\\x30\\xc0\\x2f\\xcc\\xa8\\xc0\\x24\\xc0\\x23\\xc0\\x0a\\xc0\\x09\\xc0\\x28\\xc0\\x27\\xc0\\x14\\xc0\\x13\\x00\\x9d\\x00\\x9c\\x00\\x3d\\x00\\x3c\\x00\\x35\\x00\\x2f\\xc0\\x08\\xc0\\x12\\x00\\x0a\\x01\\x00\\x01\\x7d\"\n"
+    "G 2\n"
+    "S \"\\x00\\x00\\x00\\x00\"\n"
+    "[\n"
+    "[\n"
+    "S \"\\x00\"\n"
+    "[\n"
+    "D\n"
+    "]\n"
+    "]\n"
+    "]\n"
+    "S \"\\x00\\x17\\x00\\x00\\xff\\x01\\x00\\x01\\x00\\x00\\x0a\\x00\\x0c\\x00\\x0a\"\n"
+    "G 4\n"
+    "S \"\\x00\\x1d\\x00\\x17\\x00\\x18\\x00\\x19\\x00\\x0b\\x00\\x02\\x01\\x00\\x00\\x10\\x00\\x0e\\x00\\x0c\\x02\\x68\\x32\\x08\\x68\\x74\\x74\\x70\\x2f\\x31\\x2e\\x31\\x00\\x05\\x00\\x05\\x01\\x00\\x00\\x00\\x00\\x00\\x0d\\x00\\x18\\x00\\x16\\x04\\x03\\x08\\x04\\x04\\x01\\x05\\x03\\x02\\x03\\x08\\x05\\x08\\x05\\x05\\x01\\x08\\x06\\x06\\x01\\x02\\x01\\x00\\x12\\x00\\x00\\x00\\x33\\x00\\x2b\\x00\\x29\"\n"
+    "G 4\n"
+    "S \"\\x00\\x01\\x00\\x00\\x1d\\x00\\x20\"\n"
+    "K\n"
+    "S \"\\x00\\x2d\\x00\\x02\\x01\\x01\\x00\\x2b\\x00\\x0b\\x0a\"\n"
+    "G 6\n"
+    "S \"\\x03\\x04\\x03\\x03\\x03\\x02\\x03\\x01\"\n"
+    "G 3\n"
+    "S \"\\x00\\x01\\x00\\x00\\x15\"";
+    
+    int greaseCount = 8;
+    NSMutableData *greaseData = [[NSMutableData alloc] initWithLength:greaseCount];
+    uint8_t *greaseBytes = (uint8_t *)greaseData.mutableBytes;
+    int result;
+    result = SecRandomCopyBytes(nil, greaseData.length, greaseData.mutableBytes);
+    
+    for (int i = 0; i < greaseData.length; i++) {
+        uint8_t c = greaseBytes[i];
+        c = (c & 0xf0) | 0x0a;
+        greaseBytes[i] = c;
+    }
+    for (int i = 1; i < greaseData.length; i += 2) {
+        if (greaseBytes[i] == greaseBytes[i - 1]) {
+            greaseBytes[i] &= 0x10;
+        }
+    }
+    
+    NSMutableData *resultData = [[NSMutableData alloc] init];
+    NSMutableArray<NSNumber *> *lengthStack = [[NSMutableArray alloc] init];
+    
+    HelloParseState state;
+    state.position = 0;
+    
+    while (true) {
+        if (state.position >= code.length) {
+            break;
+        } else {
+            HelloGenerationCommand command = parseCommand(code, &state);
+            switch (command) {
+                case HelloGenerationCommandString: {
+                    if (!parseSpace(code, &state)) {
+                        return nil;
+                    }
+                    NSData *data = parseHexStringArgument(code, &state);
+                    if (data == nil) {
+                        return nil;
+                    }
+                    
+                    [resultData appendData:data];
+                    
+                    break;
+                }
+                case HelloGenerationCommandZero: {
+                    if (!parseSpace(code, &state)) {
+                        return false;
+                    }
+                    int zeroLength = 0;
+                    if (!parseIntArgument(code, &state, &zeroLength)) {
+                        return nil;
+                    }
+                    
+                    NSMutableData *zeroData = [[NSMutableData alloc] initWithLength:zeroLength];
+                    [resultData appendData:zeroData];
+                    
+                    break;
+                }
+                case HelloGenerationCommandRandom: {
+                    if (!parseSpace(code, &state)) {
+                        return nil;
+                    }
+                    int randomLength = 0;
+                    if (!parseIntArgument(code, &state, &randomLength)) {
+                        return nil;
+                    }
+                    
+                    NSMutableData *randomData = [[NSMutableData alloc] initWithLength:randomLength];
+                    int randomResult = SecRandomCopyBytes(kSecRandomDefault, randomLength, randomData.mutableBytes);
+                    if (randomResult != errSecSuccess) {
+                        return nil;
+                    }
+                    [resultData appendData:randomData];
+                    
+                    break;
+                }
+                case HelloGenerationCommandDomain: {
+                    [resultData appendData:domain];
+                    if (!parseEndlineOrEnd(code, &state)) {
+                        return nil;
+                    }
+                    break;
+                }
+                case HelloGenerationCommandGrease: {
+                    if (!parseSpace(code, &state)) {
+                        return nil;
+                    }
+                    int greaseIndex = 0;
+                    if (!parseIntArgument(code, &state, &greaseIndex)) {
+                        return nil;
+                    }
+                    
+                    if (greaseIndex < 0 || greaseIndex >= greaseCount) {
+                        return nil;
+                    }
+                    
+                    [resultData appendBytes:&greaseBytes[greaseIndex] length:1];
+                    [resultData appendBytes:&greaseBytes[greaseIndex] length:1];
+                    
+                    break;
+                }
+                case HelloGenerationCommandKey: {
+                    if (!parseEndlineOrEnd(code, &state)) {
+                        return nil;
+                    }
+                    
+                    NSMutableData *key = [[NSMutableData alloc] initWithLength:32];
+                    generate_public_key(key.mutableBytes, provider);
+                    [resultData appendData:key];
+                    
+                    break;
+                }
+                case HelloGenerationCommandPushLengthPosition: {
+                    if (!parseEndlineOrEnd(code, &state)) {
+                        return nil;
+                    }
+                    
+                    [lengthStack addObject:@(resultData.length)];
+                    NSMutableData *zeroData = [[NSMutableData alloc] initWithLength:2];
+                    [resultData appendData:zeroData];
+                    
+                    break;
+                }
+                case HelloGenerationCommandPopLengthPosition: {
+                    if (!parseEndlineOrEnd(code, &state)) {
+                        return nil;
+                    }
+                    
+                    if (lengthStack.count == 0) {
+                        return nil;
+                    }
+                    
+                    int position = [lengthStack[lengthStack.count - 1] intValue];
+                    uint16_t calculatedLength = resultData.length - 2 - position;
+                    ((uint8_t *)resultData.mutableBytes)[position] = ((uint8_t *)&calculatedLength)[1];
+                    ((uint8_t *)resultData.mutableBytes)[position + 1] = ((uint8_t *)&calculatedLength)[0];
+                    [lengthStack removeLastObject];
+                    
+                    break;
+                }
+                case HelloGenerationCommandInvalid: {
+                    return nil;
+                }
+                default: {
+                    return nil;
+                }
+            }
+        }
+    }
+    
+    int paddingLengthPosition = (int)resultData.length;
+    [lengthStack addObject:@(resultData.length)];
+    NSMutableData *zeroData = [[NSMutableData alloc] initWithLength:2];
+    [resultData appendData:zeroData];
+    
+    while (resultData.length < 517) {
+        uint8_t zero = 0;
+        [resultData appendBytes:&zero length:1];
+    }
+    
+    uint16_t calculatedLength = resultData.length - 2 - paddingLengthPosition;
+    ((uint8_t *)resultData.mutableBytes)[paddingLengthPosition] = ((uint8_t *)&calculatedLength)[1];
+    ((uint8_t *)resultData.mutableBytes)[paddingLengthPosition + 1] = ((uint8_t *)&calculatedLength)[0];
+    
+    return resultData;
+}
+
 @interface MTTcpConnectionData : NSObject
 
 @property (nonatomic, strong, readonly) NSString *ip;

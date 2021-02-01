@@ -469,6 +469,17 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let telegramFile = updatedFile, previousAutomaticDownload != automaticDownload, automaticDownload {
                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: telegramFile, userInitiated: false).start())
                     }
+                    
+                    if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                        strongSelf.dateAndStatusNode.pressed = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                        }
+                    } else {
+                        strongSelf.dateAndStatusNode.pressed = nil
+                    }
                 }
             })
         }
@@ -582,13 +593,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case let .Fetching(_, progress):
                         if let isBuffering = isBuffering {
                             if isBuffering {
-                                state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
+                                state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: nil, cancelEnabled: true, animateRotation: true)
                             } else {
                                 state = .none
                             }
                         } else {
                             let adjustedProgress = max(progress, 0.027)
-                            state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                            state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                         }
                     case .Local:
                         if isSecretMedia && self.secretProgressIcon != nil {
@@ -609,7 +620,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     isLocal = true
                 }
                 if (isBuffering ?? false) && !isLocal {
-                    state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
+                    state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: nil, cancelEnabled: true, animateRotation: true)
                 } else {
                     state = .none
                 }

@@ -19,4 +19,6 @@ typedef void (^UIBarButtonItemSetEnabledListener)(BOOL);
 - (NSInteger)addSetEnabledListener:(UIBarButtonItemSetEnabledListener)listener;
 - (void)removeSetEnabledListener:(NSInteger)key;
 
+- (void)setCustomAction:(void (^)())customAction;
+
 @end

@@ -31,11 +31,11 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
                 case let .progress(value):
                     self.activityIndicator.isHidden = true
                     self.statusNode.isHidden = false
-                    self.statusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: max(0.12, CGFloat(value)), cancelEnabled: false), completion: {})
+                    self.statusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: max(0.12, CGFloat(value)), cancelEnabled: false, animateRotation: true), completion: {})
                 case .done:
                     self.activityIndicator.isHidden = true
                     self.statusNode.isHidden = false
-                    self.statusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: 1.0, cancelEnabled: false), completion: {})
+                    self.statusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: 1.0, cancelEnabled: false, animateRotation: true), completion: {})
                     self.doneStatusNode.transitionToState(.check(self.theme.actionSheet.controlAccentColor), completion: {})
             }
         }
@@ -52,7 +52,7 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.doneStatusNode)
-        self.doneStatusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: 0.0, cancelEnabled: false), completion: {})
+        self.doneStatusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: 0.0, cancelEnabled: false, animateRotation: true), completion: {})
     }
     
     public func activate() {

@@ -9,7 +9,7 @@
 
 @implementation TGClipboardMenu
 
-+ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
++ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext presentScheduleController:(void (^)(void(^)(int32_t)))presentScheduleController presentTimerController:(void (^)(void(^)(int32_t)))presentTimerController completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, bool silentPosting, int32_t scheduleTime))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
 {
     bool centered = false;
     if (sourceRect == nil)
@@ -46,11 +46,16 @@
     previewItem.parentController = parentController;
     previewItem.allowCaptions = hasCaption;
     previewItem.hasTimer = hasTimer;
+    previewItem.hasSilentPosting = hasSilentPosting;
+    previewItem.hasSchedule = hasSchedule;
+    previewItem.reminder = reminder;
     previewItem.recipientName = recipientName;
-    previewItem.sendPressed = ^(UIImage *currentItem)
+    previewItem.presentScheduleController = presentScheduleController;
+    previewItem.presentTimerController = presentTimerController;
+    previewItem.sendPressed = ^(UIImage *currentItem, bool silentPosting, int32_t scheduleTime)
     {
         __strong TGClipboardPreviewItemView *strongPreviewItem = weakPreviewItem;
-        completed(strongPreviewItem.selectionContext, strongPreviewItem.editingContext, currentItem);
+        completed(strongPreviewItem.selectionContext, strongPreviewItem.editingContext, currentItem, silentPosting, scheduleTime);
         
         __strong TGMenuSheetController *strongController = weakController;
         [strongController dismissAnimated:true];
@@ -68,7 +73,7 @@
     TGMenuSheetButtonItemView *sendItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:sendTitle type:TGMenuSheetButtonTypeSend fontSize:20.0 action:^
     {
         __strong TGClipboardPreviewItemView *strongPreviewItem = weakPreviewItem;
-        completed(strongPreviewItem.selectionContext, strongPreviewItem.editingContext, nil);
+        completed(strongPreviewItem.selectionContext, strongPreviewItem.editingContext, nil, false, 0);
         
         __strong TGMenuSheetController *strongController = weakController;
         [strongController dismissAnimated:true];
