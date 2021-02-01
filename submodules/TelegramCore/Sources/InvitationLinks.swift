@@ -14,7 +14,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, cachedData.exportedInvitation != nil && !revokeExisted {
                     return .single(cachedData.exportedInvitation)
                 } else {
-                    return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
+                    return account.network.request(Api.functions.messages.exportChatInvite(flags: 0, peer: inputPeer, expireDate: nil, usageLimit: nil))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                         return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -37,7 +37,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedGroupData, cachedData.exportedInvitation != nil && !revokeExisted {
                     return .single(cachedData.exportedInvitation)
                 } else {
-                    return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
+                    return account.network.request(Api.functions.messages.exportChatInvite(flags: 0, peer: inputPeer, expireDate: nil, usageLimit: nil))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                         return account.postbox.transaction { transaction -> ExportedInvitation? in
