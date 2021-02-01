@@ -763,6 +763,10 @@ public final class VoiceChatController: ViewController {
                                     strongSelf.currentDominantSpeakerWithVideo = (peerId, source)
                                     strongSelf.call.setFullSizeVideo(peerId: peerId)
                                     strongSelf.mainVideoContainer.updatePeer(peer: (peerId: peerId, source: source))
+                                } else {
+                                    strongSelf.currentDominantSpeakerWithVideo = nil
+                                    strongSelf.call.setFullSizeVideo(peerId: nil)
+                                    strongSelf.mainVideoContainer.updatePeer(peer: nil)
                                 }
                             }
                         default:
