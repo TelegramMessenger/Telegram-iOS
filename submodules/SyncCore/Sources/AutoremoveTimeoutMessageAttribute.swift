@@ -84,4 +84,13 @@ public extension Message {
         
         return false
     }
+    
+    var isSelfExpiring: Bool {
+        for attribute in self.attributes {
+            if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
+                return true
+            }
+        }
+        return false
+    }
 }

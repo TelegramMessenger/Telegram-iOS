@@ -331,7 +331,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
                     
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }

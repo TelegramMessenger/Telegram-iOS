@@ -5989,3 +5989,10 @@ Sorry for the inconvenience.";
 
 "Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
 "Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";
+
+"Conversation.AutoremoveRemainingTime" = "auto-delete in %@";
+"Conversation.AutoremoveRemainingDays_1" = "auto-delete in %@ day";
+"Conversation.AutoremoveRemainingDays_any" = "auto-delete in %@ days";
+
+"PeerInfo.AutoremoveMessages" = "Auto-Delete Messages";
+"PeerInfo.AutoremoveMessagesDisabled" = "Never";
