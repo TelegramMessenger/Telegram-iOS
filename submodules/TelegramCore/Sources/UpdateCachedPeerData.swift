@@ -206,8 +206,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     let peerStatusSettings = PeerStatusSettings(apiSettings: userFull.settings)
                                     
                                     let hasScheduledMessages = (userFull.flags & 1 << 12) != 0
+                                    
+                                    let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(userFull.ttlPeriod)
                                 
                                     return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                        .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                             }
                         })
                         return true
@@ -297,6 +300,8 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                 }
                                 
+                                let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(chatFull.ttlPeriod)
+                                
                                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                     let previous: CachedGroupData
                                     if let current = current as? CachedGroupData {
@@ -312,6 +317,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         .withUpdatedAbout(chatFull.about)
                                         .withUpdatedFlags(flags)
                                         .withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                        .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                         .withUpdatedInvitedBy(invitedBy)
                                         .withUpdatedPhoto(photo)
                                         .withUpdatedActiveCall(updatedActiveCall)
@@ -507,6 +513,8 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 
                                                 minAvailableMessageIdUpdated = previous.minAvailableMessageId != minAvailableMessageId
                                                 
+                                                let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(ttlPeriod)
+                                                
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
@@ -521,6 +529,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedSlowModeTimeout(slowmodeSeconds)
                                                     .withUpdatedSlowModeValidUntilTimestamp(slowmodeNextSendDate)
                                                     .withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                                    .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                                     .withUpdatedStatsDatacenterId(statsDc ?? 0)
                                                     .withUpdatedInvitedBy(invitedBy)
                                                     .withUpdatedPhoto(photo)

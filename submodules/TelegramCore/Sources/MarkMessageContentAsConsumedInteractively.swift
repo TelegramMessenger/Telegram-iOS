@@ -60,8 +60,6 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                         updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: timeout, countdownBeginTime: timestamp)
                         updateMessage = true
                         
-                        transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + timeout, messageId: messageId)
-                        
                         if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
                             var layer: SecretChatLayer?
                             let state = transaction.getPeerChatState(message.id.peerId) as? SecretChatState
@@ -132,7 +130,6 @@ func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: M
                     updateMessage = true
                     
                     if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-                        transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
                     } else {
                         for i in 0 ..< updatedMedia.count {
                             if let _ = updatedMedia[i] as? TelegramMediaImage {

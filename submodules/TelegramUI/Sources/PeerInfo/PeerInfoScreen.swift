@@ -544,6 +544,7 @@ private final class PeerInfoInteraction {
     let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let editingOpenPreHistorySetup: () -> Void
+    let editingOpenAutoremoveMesages: () -> Void
     let openPermissions: () -> Void
     let editingOpenStickerPackSetup: () -> Void
     let openLocation: () -> Void
@@ -580,6 +581,7 @@ private final class PeerInfoInteraction {
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
+        editingOpenAutoremoveMesages: @escaping () -> Void,
         openPermissions: @escaping () -> Void,
         editingOpenStickerPackSetup: @escaping () -> Void,
         openLocation: @escaping () -> Void,
@@ -615,6 +617,7 @@ private final class PeerInfoInteraction {
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
         self.openParticipantsSection = openParticipantsSection
         self.editingOpenPreHistorySetup = editingOpenPreHistorySetup
+        self.editingOpenAutoremoveMesages = editingOpenAutoremoveMesages
         self.openPermissions = openPermissions
         self.editingOpenStickerPackSetup = editingOpenStickerPackSetup
         self.openLocation = openLocation
@@ -1182,6 +1185,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             let ItemDiscussionGroup = 3
             let ItemSignMessages = 4
             let ItemSignMessagesHelp = 5
+            let ItemAutoremove = 6
             
             switch channel.info {
             case .broadcast:
@@ -1228,6 +1232,23 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
                     
+                    if channel.hasPermission(.changeInfo) {
+                        let timeoutString: String
+                        if case let .known(value) = (data.cachedData as? CachedChannelData)?.autoremoveTimeout {
+                            if let value = value {
+                                timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
+                            } else {
+                                timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
+                            }
+                        } else {
+                            timeoutString = ""
+                        }
+                        
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
+                            interaction.editingOpenAutoremoveMesages()
+                        }))
+                    }
+                    
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
                     case let .broadcast(info):
@@ -1250,6 +1271,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemLocationHeader = 7
                 let ItemLocation = 8
                 let ItemLocationSetup = 9
+                let ItemAutoremove = 10
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.username != nil
@@ -1327,6 +1349,23 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     interaction.editingOpenPreHistorySetup()
                                 }))
                             }
+                            
+                            if channel.hasPermission(.changeInfo) {
+                                let timeoutString: String
+                                if case let .known(value) = cachedData.autoremoveTimeout {
+                                    if let value = value {
+                                        timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
+                                    } else {
+                                        timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
+                                    }
+                                } else {
+                                    timeoutString = ""
+                                }
+                                
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
+                                    interaction.editingOpenAutoremoveMesages()
+                                }))
+                            }
                         }
                     }
                     
@@ -1371,6 +1410,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             let ItemPreHistory = 3
             let ItemPermissions = 4
             let ItemAdmins = 5
+            let ItemAutoremove = 6
             
             if case .creator = group.role {
                 if let cachedData = data.cachedData as? CachedGroupData {
@@ -1395,6 +1435,25 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
                     interaction.editingOpenPreHistorySetup()
                 }))
+                
+                let canChangeInfo = true
+                if canChangeInfo {
+                    let timeoutString: String
+                    if case let .known(value) = (data.cachedData as? CachedGroupData)?.autoremoveTimeout {
+                        if let value = value {
+                            timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
+                        } else {
+                            timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
+                        }
+                    } else {
+                        timeoutString = ""
+                    }
+                    
+                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
+                        interaction.editingOpenAutoremoveMesages()
+                    }))
+                }
+                
                 var activePermissionCount: Int?
                 if let defaultBannedRights = group.defaultBannedRights {
                     var count = 0
@@ -1590,6 +1649,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             },
             editingOpenPreHistorySetup: { [weak self] in
                 self?.editingOpenPreHistorySetup()
+            },
+            editingOpenAutoremoveMesages: { [weak self] in
+                self?.editingOpenAutoremoveMesages()
             },
             openPermissions: { [weak self] in
                 self?.openPermissions()
@@ -3794,6 +3856,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
             }
         }
+    }
+    
+    private func editingOpenAutoremoveMesages() {
+        
     }
     
     private func openPermissions() {

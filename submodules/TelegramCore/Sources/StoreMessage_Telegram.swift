@@ -468,13 +468,21 @@ extension StoreMessage {
                 
                 var consumableContent: (Bool, Bool)? = nil
                 
+                var addedAutoremoveAttribute = false
+                if let ttlPeriod = ttlPeriod {
+                    addedAutoremoveAttribute = true
+                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttlPeriod, countdownBeginTime: date))
+                }
+                
                 if let media = media {
                     let (mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                     if let mediaValue = mediaValue {
                         medias.append(mediaValue)
                     
                         if let expirationTimer = expirationTimer, expirationTimer > 0 {
-                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                            if !addedAutoremoveAttribute {
+                                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                            }
                             
                             consumableContent = (true, false)
                         }
