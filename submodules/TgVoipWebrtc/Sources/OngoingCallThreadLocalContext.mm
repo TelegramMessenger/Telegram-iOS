@@ -196,7 +196,8 @@
             completion(remoteRenderer);
         } else {
             GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
-            
+            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
             std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
             interface->setOutput(sink);
             
