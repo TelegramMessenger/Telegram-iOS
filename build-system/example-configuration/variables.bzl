@@ -9,3 +9,4 @@ telegram_is_appstore_build = "true"
 telegram_appstore_id = "686449807"
 telegram_app_specific_url_scheme = "tg"
 telegram_aps_environment = "production"
+telegram_enable_icloud = true

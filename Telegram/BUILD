@@ -26,6 +26,7 @@ load(
     "telegram_bundle_id",
     "telegram_aps_environment",
     "telegram_team_id",
+    "telegram_enable_icloud",
 )
 
 config_setting(
@@ -279,7 +280,7 @@ apple_pay_merchants_fragment = "" if apple_pay_merchants == [] else """
 <key>com.apple.developer.in-app-payments</key>
 <array>
 """ + "\n".join([
-"    <string>{}</string>".format(merchant_id) for merchant_id in apple_pay_merchants
+"    <string>{merchant_id}</string>".format(merchant_id=merchant_id) for merchant_id in apple_pay_merchants
 ]) + "\n" + """
 </array>
 """
@@ -296,44 +297,62 @@ official_carplay_fragment = """
 """
 carplay_fragment = official_carplay_fragment if telegram_bundle_id in official_bundle_ids else ""
 
-telegram_entitlements_template = """
-    <key>com.apple.developer.icloud-services</key>
-    <array>
-        <string>CloudKit</string>
-        <string>CloudDocuments</string>
-    </array>
-    <key>com.apple.developer.icloud-container-identifiers</key>
-    <array>
-        <string>iCloud.{telegram_bundle_id}</string>
-    </array>
-    <key>aps-environment</key>
-    <string>{telegram_aps_environment}</string>
-    <key>com.apple.developer.associated-domains</key>
-    <array>
-        <string>applinks:telegram.me</string>
-        <string>applinks:t.me</string>
-    </array>
-    <key>com.apple.developer.siri</key>
-    <true/>
+icloud_fragment = "" if not telegram_enable_icloud else """
+<key>com.apple.developer.icloud-services</key>
+<array>
+    <string>CloudKit</string>
+    <string>CloudDocuments</string>
+</array>
+<key>com.apple.developer.icloud-container-identifiers</key>
+<array>
+    <string>iCloud.{telegram_bundle_id}</string>
+</array>
+<key>com.apple.developer.icloud-container-environment</key>
+<string>{telegram_icloud_environment}</string>
+""".format(
+    telegram_bundle_id=telegram_bundle_id,
+    telegram_icloud_environment="Production" if telegram_aps_environment == "production" else "Development"
+)
+
+associated_domains_fragment = "" if telegram_bundle_id not in official_bundle_ids else """
+<key>com.apple.developer.associated-domains</key>
+<array>
+    <string>applinks:telegram.me</string>
+    <string>applinks:t.me</string>
+</array>
+"""
+
+siri_fragment = "" if not telegram_enable_siri else """
+<key>com.apple.developer.siri</key>
+<true/>
+"""
+
+aps_fragment = "" if telegram_aps_environment == "" else """
+<key>aps-environment</key>
+<string>{telegram_aps_environment}</string>
+""".format(telegram_aps_environment=telegram_aps_environment)
+
+app_groups_fragment = """
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.{telegram_bundle_id}</string>
     </array>
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
-    <key>com.apple.developer.icloud-container-environment</key>
-    <string>{telegram_icloud_environment}</string>
-""" + apple_pay_merchants_fragment + unrestricted_voip_fragment + carplay_fragment
+"""
 
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
-    template = telegram_entitlements_template.format(
-        telegram_bundle_id = telegram_bundle_id,
-        telegram_team_id = telegram_team_id,
-        telegram_aps_environment = telegram_aps_environment,
-        telegram_icloud_environment = "Production" if telegram_aps_environment == "production" else "Development",
-    )
+    template = "".join([
+        app_groups_fragment,
+        siri_fragment,
+        associated_domains_fragment,
+        icloud_fragment,
+        apple_pay_merchants_fragment,
+        unrestricted_voip_fragment,
+        carplay_fragment
+    ])
 )
 
 filegroup(
