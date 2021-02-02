@@ -76,7 +76,14 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> S
                 |> suspendAwareDelay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in
                     if let message = transaction.getMessage(entry.messageId) {
-                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        var action: AutoremoveTimeoutMessageAttribute.Action = .remove
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                                action = attribute.action
+                            }
+                        }
+                        
+                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat || action == .remove {
                             deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
                         } else {
                             transaction.updateMessage(message.id, update: { currentMessage in
@@ -92,11 +99,17 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> S
                                         updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
                                     }
                                 }
-                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                                var updatedAttributes = currentMessage.attributes
+                                for i in 0 ..< updatedAttributes.count {
+                                    if let _ = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
+                                        updatedAttributes.remove(at: i)
+                                        break
+                                    }
+                                }
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: updatedMedia))
                             })
                         }
                     }
-                    transaction.removeTimestampBasedMessageAttribute(tag: 0, messageId: entry.messageId)
                 })
                 disposable.set(signal.start())
             }

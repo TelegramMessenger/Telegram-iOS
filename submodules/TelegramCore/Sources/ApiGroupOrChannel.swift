@@ -37,6 +37,8 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 migrationReference = TelegramGroupToChannelMigrationReference(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), accessHash: accessHash)
             case .inputChannelEmpty:
                 break
+            case .inputChannelFromMessage:
+                break
             }
         }
         var groupFlags = TelegramGroupFlags()
