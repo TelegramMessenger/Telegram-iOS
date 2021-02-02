@@ -490,36 +490,73 @@ public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
     return nil
 }
 
+private struct UrlHandlingConfiguration {
+    static var defaultValue: UrlHandlingConfiguration {
+        return UrlHandlingConfiguration(token: nil, domains: [])
+    }
+    
+    public let token: String?
+    public let domains: [String]
+    
+    fileprivate init(token: String?, domains: [String]) {
+        self.token = token
+        self.domains = domains
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> UrlHandlingConfiguration {
+        if let data = appConfiguration.data, let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
+            return UrlHandlingConfiguration(token: token, domains: domains)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
-    for basePath in baseTelegramMePaths {
-        for scheme in schemes {
-            let basePrefix = scheme + basePath + "/"
-            if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
-                    return resolveInternalUrl(account: account, url: internalUrl)
-                    |> map { resolved -> ResolvedUrl in
-                        if let resolved = resolved {
-                            return resolved
-                        } else {
-                            return .externalUrl(url)
+    
+    return account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
+        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+        let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
+        
+        var url = url
+        if let urlValue = URL(string: url), let host = urlValue.host, urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
+            components.scheme = "https"
+            var queryItems = components.queryItems ?? []
+            queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
+            components.queryItems = queryItems
+            url = components.url?.absoluteString ?? url
+        }
+        
+        for basePath in baseTelegramMePaths {
+            for scheme in schemes {
+                let basePrefix = scheme + basePath + "/"
+                if url.lowercased().hasPrefix(basePrefix) {
+                    if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
+                        return resolveInternalUrl(account: account, url: internalUrl)
+                        |> map { resolved -> ResolvedUrl in
+                            if let resolved = resolved {
+                                return resolved
+                            } else {
+                                return .externalUrl(url)
+                            }
                         }
+                    } else {
+                        return .single(.externalUrl(url))
                     }
-                } else {
-                    return .single(.externalUrl(url))
                 }
             }
         }
-    }
-    for basePath in baseTelegraPhPaths {
-        for scheme in schemes {
-            let basePrefix = scheme + basePath
-            if url.lowercased().hasPrefix(basePrefix) {
-                return resolveInstantViewUrl(account: account, url: url)
+        for basePath in baseTelegraPhPaths {
+            for scheme in schemes {
+                let basePrefix = scheme + basePath
+                if url.lowercased().hasPrefix(basePrefix) {
+                    return resolveInstantViewUrl(account: account, url: url)
+                }
             }
         }
-    }
-    return .single(.externalUrl(url))
+        return .single(.externalUrl(url))
+    } |> switchToLatest
 }
 
 public func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
