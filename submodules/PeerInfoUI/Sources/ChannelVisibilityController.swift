@@ -293,7 +293,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite, displayImporters):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: 0, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: 0, peers: [], displayButton: true, displayImporters: displayImporters, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                     if let invite = invite {
                         arguments.copyLink(invite)
                     }
@@ -598,13 +598,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     } else {
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePublicLinkHelp))
                     }
-//                    switch mode {
-//                        case .initialSetup:
-//                            break
-//                        case .generic, .privateLink:
-//                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                    }
+                    switch mode {
+                        case .initialSetup:
+                            break
+                        case .generic, .privateLink:
+                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                    }
                 }
             case .privateChannel:
                 let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
@@ -615,13 +615,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 } else {
                     entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePrivateLinkHelp))
                 }
-//                switch mode {
-//                    case .initialSetup:
-//                        break
-//                    case .generic, .privateLink:
-//                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                }
+                switch mode {
+                    case .initialSetup:
+                        break
+                    case .generic, .privateLink:
+                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                }
         }
     } else if let _ = view.peers[view.peerId] as? TelegramGroup {
         switch mode {
@@ -630,13 +630,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                 entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                 entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
-//                switch mode {
-//                    case .initialSetup:
-//                        break
-//                    case .generic, .privateLink:
-//                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                }
+                switch mode {
+                    case .initialSetup:
+                        break
+                    case .generic, .privateLink:
+                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                }
             case .generic, .initialSetup:                
                 let selectedType: CurrentChannelType
                 if let current = state.selectedType {
@@ -729,13 +729,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                         entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                         entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
-//                        switch mode {
-//                            case .initialSetup:
-//                                break
-//                            case .generic, .privateLink:
-//                                entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                                entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                        }
+                        switch mode {
+                            case .initialSetup:
+                                break
+                            case .generic, .privateLink:
+                                entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                                entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                        }
             }
         }
     }
@@ -943,27 +943,27 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             })
         })))
         
-//        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-//            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
-//        }, action: { _, f in
-//            f(.dismissWithoutContent)
-//            
-//            let _ = (context.account.postbox.transaction { transaction -> ExportedInvitation? in
-//                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-//                    if let cachedData = cachedData as? CachedChannelData {
-//                        return cachedData.exportedInvitation
-//                    } else if let cachedData = cachedData as? CachedGroupData {
-//                        return cachedData.exportedInvitation
-//                    }
-//                }
-//                return nil
-//            } |> deliverOnMainQueue).start(next: { invite in
-//                if let invite = invite {
-//                    let controller = InviteLinkQRCodeController(context: context, invite: invite)
-//                    presentControllerImpl?(controller, nil)
-//                }
-//            })
-//        })))
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+        }, action: { _, f in
+            f(.dismissWithoutContent)
+            
+            let _ = (context.account.postbox.transaction { transaction -> ExportedInvitation? in
+                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.exportedInvitation
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        return cachedData.exportedInvitation
+                    }
+                }
+                return nil
+            } |> deliverOnMainQueue).start(next: { invite in
+                if let invite = invite {
+                    let controller = InviteLinkQRCodeController(context: context, invite: invite)
+                    presentControllerImpl?(controller, nil)
+                }
+            })
+        })))
         
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
@@ -1006,7 +1006,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: nil)
         presentInGlobalOverlayImpl?(contextController)
     }, manageInviteLinks: {
-        let controller = inviteLinkListController(context: context, peerId: peerId)
+        let controller = inviteLinkListController(context: context, peerId: peerId, admin: nil)
         pushControllerImpl?(controller)
     })
     

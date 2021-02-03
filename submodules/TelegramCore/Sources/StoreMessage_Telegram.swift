@@ -129,7 +129,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
@@ -192,7 +192,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall:
+                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -225,7 +225,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(_, _, _, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, _, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if let replyTo = replyTo {
                 let peerId: PeerId = chatPeerId.peerId
                 
@@ -371,7 +371,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason, _):
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
                 
                 let peerId: PeerId

@@ -10,6 +10,7 @@ import TelegramPresentationData
 import ItemListUI
 import SolidRoundedButtonNode
 import AnimatedAvatarSetNode
+import ShimmerEffect
 
 private func actionButtonImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 24.0, height: 24.0), contextGenerator: { size, context in
@@ -132,6 +133,8 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private var avatarsContent: AnimatedAvatarSetContext.Content?
     private let avatarsNode: AnimatedAvatarSetNode
     private let invitedPeersNode: TextNode
+    private var peersPlaceholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
     
     private let activateArea: AccessibilityAreaNode
     
@@ -180,7 +183,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
         self.invitedPeersNode = TextNode()
-        
+                
         self.activateArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -355,7 +358,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         strongSelf.fieldNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: item.presentationData.theme.list.itemInputField.backgroundColor)
                         strongSelf.addressButtonIconNode.image = actionButtonImage(color: item.presentationData.theme.list.itemInputField.controlColor)
                     }
-                    
+                                        
                     let _ = addressApply()
                     let _ = invitedPeersApply()
                     
@@ -470,12 +473,45 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     strongSelf.invitedPeersNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: fieldFrame.maxY + 92.0), size: invitedPeersLayout.size)
                     
                     strongSelf.avatarsButtonNode.frame = CGRect(x: floorToScreenPixels((params.width - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0, width: totalWidth, height: 32.0)
-                    strongSelf.avatarsButtonNode.isUserInteractionEnabled = !item.peers.isEmpty
+                    strongSelf.avatarsButtonNode.isUserInteractionEnabled = !item.peers.isEmpty && item.invite != nil
                     
+                    strongSelf.addressButtonNode.isUserInteractionEnabled = item.invite != nil
+                    strongSelf.fieldButtonNode.isUserInteractionEnabled = item.invite != nil
+                    strongSelf.addressButtonIconNode.alpha = item.invite != nil ? 1.0 : 0.0
+                    
+                    strongSelf.shareButtonNode?.isUserInteractionEnabled = item.invite != nil
+                    strongSelf.shareButtonNode?.alpha = item.invite != nil ? 1.0 : 0.4
                     strongSelf.shareButtonNode?.isHidden = !item.displayButton
                     strongSelf.avatarsButtonNode.isHidden = !item.displayImporters
-                    strongSelf.avatarsNode.isHidden = !item.displayImporters
-                    strongSelf.invitedPeersNode.isHidden = !item.displayImporters
+                    strongSelf.avatarsNode.isHidden = !item.displayImporters || item.invite == nil
+                    strongSelf.invitedPeersNode.isHidden = !item.displayImporters || item.invite == nil
+                    
+                    if item.invite == nil {
+                        let shimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.peersPlaceholderNode {
+                            shimmerNode = current
+                        } else {
+                            shimmerNode = ShimmerEffectNode()
+                            strongSelf.peersPlaceholderNode = shimmerNode
+                            strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.fieldNode)
+                        }
+                        shimmerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            shimmerNode.updateAbsoluteRect(rect, within: size)
+                        }
+                        
+                        var shapes: [ShimmerEffectNode.Shape] = []
+                        
+                        let lineWidth: CGFloat = 180.0
+                        let lineDiameter: CGFloat = 10.0
+                        
+                        let titleFrame = strongSelf.invitedPeersNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: floor(titleFrame.center.x - lineWidth / 2.0), y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: lineWidth, diameter: lineDiameter))
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
+                    } else if let shimmerNode = strongSelf.peersPlaceholderNode {
+                        strongSelf.peersPlaceholderNode = nil
+                        shimmerNode.removeFromSupernode()
+                    }
                 }
             })
         }
@@ -491,5 +527,14 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.peersPlaceholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
     }
 }

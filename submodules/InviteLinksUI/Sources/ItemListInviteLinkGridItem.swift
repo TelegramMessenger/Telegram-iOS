@@ -10,6 +10,7 @@ import ItemListUI
 public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let invites: [ExportedInvitation]?
+    let count: Int
     let share: Bool
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
@@ -20,6 +21,7 @@ public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     public init(
         presentationData: ItemListPresentationData,
         invites: [ExportedInvitation]?,
+        count: Int,
         share: Bool,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
@@ -29,6 +31,7 @@ public class ItemListInviteLinkGridItem: ListViewItem, ItemListItem {
     ) {
         self.presentationData = presentationData
         self.invites = invites
+        self.count = count
         self.share = share
         self.sectionId = sectionId
         self.style = style
@@ -133,13 +136,14 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
             let topInset: CGFloat
             if case .plain = item.style, case .otherSection = neighbors.top {
                 topInset = 16.0
+            } else if case .blocks = item.style, case .sameSection(true) = neighbors.top {
+                topInset = 16.0
             } else {
                 topInset = 4.0
             }
             
-            
             var height: CGFloat
-            let count = item.invites?.count ?? 0
+            let count = item.invites?.count ?? item.count
             if count > 0 {
                 if count % 2 == 0 {
                     height = topInset + 122.0 + 6.0
@@ -176,7 +180,7 @@ public class ItemListInviteLinkGridItemNode: ListViewItemNode, ItemListItemNode 
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                     }
                     
-                    let gridSize = strongSelf.gridNode.update(size: contentSize, safeInset: params.leftInset, items: item.invites ?? [], share: item.share, presentationData: item.presentationData, transition: .immediate)
+                    let gridSize = strongSelf.gridNode.update(size: contentSize, safeInset: params.leftInset, items: item.invites, count: item.count, share: item.share, presentationData: item.presentationData, transition: .immediate)
                     strongSelf.gridNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset - 4.0), size: gridSize)
                     strongSelf.gridNode.action = { invite in
                         item.tapAction?(invite)

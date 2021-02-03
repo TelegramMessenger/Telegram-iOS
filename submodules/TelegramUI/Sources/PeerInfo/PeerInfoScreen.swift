@@ -1220,9 +1220,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         invitesText = ""
                     }
                     
-//                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                        interaction.editingOpenInviteLinksSetup()
-//                    }))
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
                     
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, action: {
                         interaction.editingOpenDiscussionGroupSetup()
@@ -1304,9 +1304,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     invitesText = ""
                                 }
                                 
-//                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                                    interaction.editingOpenInviteLinksSetup()
-//                                }))
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                                    interaction.editingOpenInviteLinksSetup()
+                                }))
                             }
                             
                             if cachedData.flags.contains(.canChangeUsername) {
@@ -1388,9 +1388,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     invitesText = ""
                 }
                 
-//                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                    interaction.editingOpenInviteLinksSetup()
-//                }))
+                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                    interaction.editingOpenInviteLinksSetup()
+                }))
                 
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
                     interaction.editingOpenPreHistorySetup()
@@ -3746,7 +3746,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func editingOpenInviteLinksSetup() {
-        self.controller?.push(inviteLinkListController(context: self.context, peerId: self.peerId))
+        self.controller?.push(inviteLinkListController(context: self.context, peerId: self.peerId, admin: nil))
     }
     
     private func editingOpenDiscussionGroupSetup() {
