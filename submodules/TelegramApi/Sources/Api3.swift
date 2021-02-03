@@ -4120,6 +4120,19 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                    }
+                    return result
+                })
+
+                public static func getAdminsWithInvites(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatAdminsWithInvites>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(958457583)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.getAdminsWithInvites", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ChatAdminsWithInvites? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.ChatAdminsWithInvites?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.ChatAdminsWithInvites
                         }
                         return result
                     })

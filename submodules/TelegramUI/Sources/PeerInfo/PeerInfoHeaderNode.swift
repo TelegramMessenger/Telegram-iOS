@@ -931,8 +931,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             var directionIsToRight: Bool?
             if abs(velocity.x) > 10.0 {
                 directionIsToRight = velocity.x < 0.0
-            } else if abs(transitionFraction) > 0.5 {
-                directionIsToRight = transitionFraction < 0.0
+            } else if abs(self.transitionFraction) > 0.5 {
+                directionIsToRight = self.transitionFraction < 0.0
             }
             var updatedIndex = self.currentIndex
             if let directionIsToRight = directionIsToRight {

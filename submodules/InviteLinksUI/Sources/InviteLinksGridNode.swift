@@ -112,7 +112,7 @@ private class ItemNode: ASDisplayNode {
     
     private var updateTimer: SwiftSignalKit.Timer?
     
-    private var params: (size: CGSize, wide: Bool, invite: ExportedInvitation, color: ItemBackgroundColor, presentationData: ItemListPresentationData)?
+    private var params: (size: CGSize, wide: Bool, invite: ExportedInvitation?, color: ItemBackgroundColor, presentationData: ItemListPresentationData)?
     
     var action: (() -> Void)?
     var contextAction: ((ASDisplayNode) -> Void)?
@@ -214,44 +214,50 @@ private class ItemNode: ASDisplayNode {
         self.contextAction?(self.extractedContainerNode)
     }
     
-    func update(size: CGSize, wide: Bool, share: Bool, invite: ExportedInvitation, presentationData: ItemListPresentationData, transition: ContainedViewLayoutTransition) -> CGSize {
+    func update(size: CGSize, wide: Bool, share: Bool, invite: ExportedInvitation?, presentationData: ItemListPresentationData, transition: ContainedViewLayoutTransition) -> CGSize {
         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         
-        let availability = invitationAvailability(invite)
+        let availability = invite.flatMap { invitationAvailability($0) } ?? 0.0
         let transitionFraction: CGFloat
         let color: ItemBackgroundColor
         let nextColor: ItemBackgroundColor
-        if invite.isRevoked {
+        if let invite = invite {
+            if invite.isRevoked {
+                color = .gray
+                nextColor = .gray
+                transitionFraction = 0.0
+            } else if invite.expireDate == nil && invite.usageLimit == nil {
+                color = .blue
+                nextColor = .blue
+                transitionFraction = 0.0
+            } else if availability >= 0.5 {
+                color = .green
+                nextColor = .yellow
+                transitionFraction = (availability - 0.5) / 0.5
+            } else if availability > 0.0 {
+                color = .yellow
+                nextColor = .red
+                transitionFraction = availability / 0.5
+            } else {
+                color = .red
+                nextColor = .red
+                transitionFraction = 0.0
+            }
+        } else {
             color = .gray
             nextColor = .gray
             transitionFraction = 0.0
-        } else if invite.expireDate == nil && invite.usageLimit == nil {
-            color = .blue
-            nextColor = .blue
-            transitionFraction = 0.0
-        } else if availability >= 0.5 {
-            color = .green
-            nextColor = .yellow
-            transitionFraction = (availability - 0.5) / 0.5
-        } else if availability > 0.0 {
-            color = .yellow
-            nextColor = .red
-            transitionFraction = availability / 0.5
-        } else {
-            color = .red
-            nextColor = .red
-            transitionFraction = 0.0
         }
-        
+       
         let previousParams = self.params
         self.params = (size, wide, invite, color, presentationData)
         
-        let previousExpireDate = previousParams?.invite.expireDate
-        if previousExpireDate != invite.expireDate {
+        let previousExpireDate = previousParams?.invite?.expireDate
+        if previousExpireDate != invite?.expireDate {
             self.updateTimer?.invalidate()
             self.updateTimer = nil
             
-            if let expireDate = invite.expireDate, availability > 0.0 {
+            if let expireDate = invite?.expireDate, availability > 0.0 {
                 let timeout = min(2.0, max(0.001, Double(expireDate - currentTime)))
                 let updateTimer = SwiftSignalKit.Timer(timeout: timeout, repeat: true, completion: { [weak self] in
                     if let strongSelf = self {
@@ -272,8 +278,13 @@ private class ItemNode: ASDisplayNode {
         let bottomColor = color.colors.bottom
         let nextTopColor = nextColor.colors.top
         let nextBottomColor = nextColor.colors.bottom
-        let colors: NSArray = [nextTopColor.mixedWith(topColor, alpha: transitionFraction).cgColor, nextBottomColor.mixedWith(bottomColor, alpha: transitionFraction).cgColor]
-                
+        let colors: NSArray
+        if let invite = invite {
+            colors = [nextTopColor.mixedWith(topColor, alpha: transitionFraction).cgColor, nextBottomColor.mixedWith(bottomColor, alpha: transitionFraction).cgColor]
+        } else {
+            colors = [UIColor(rgb: 0xf2f2f7).cgColor, UIColor(rgb: 0xf2f2f7).cgColor]
+        }
+        
         if let (_, _, previousInvite, previousColor, _) = previousParams, previousInvite == invite {
             if previousColor != color && color == .red {
                 if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
@@ -298,7 +309,7 @@ private class ItemNode: ASDisplayNode {
         let secondaryTextColor = nextColor.colors.text.mixedWith(color.colors.text, alpha: transitionFraction)
 
         let itemWidth = wide ? size.width : floor((size.width - itemSpacing) / 2.0)
-        var inviteLink = invite.link.replacingOccurrences(of: "https://", with: "")
+        var inviteLink = invite?.link.replacingOccurrences(of: "https://", with: "") ?? ""
         if !wide {
             inviteLink = inviteLink.replacingOccurrences(of: "joinchat/", with: "joinchat/\n")
             inviteLink = inviteLink.replacingOccurrences(of: "join/", with: "join/\n")
@@ -314,65 +325,72 @@ private class ItemNode: ASDisplayNode {
         self.buttonIconNode.image = share ? shareIcon : moreIcon
         
         var subtitleText: String = ""
-        if let count = invite.count {
-            subtitleText = presentationData.strings.InviteLink_PeopleJoinedShort(count)
+        if let invite = invite {
+            if let count = invite.count {
+                subtitleText = presentationData.strings.InviteLink_PeopleJoinedShort(count)
+            } else {
+                subtitleText = [.red, .gray].contains(color) ? presentationData.strings.InviteLink_PeopleJoinedShortNoneExpired : presentationData.strings.InviteLink_PeopleJoinedShortNone
+            }
+            if invite.isRevoked {
+                if !subtitleText.isEmpty {
+                    subtitleText += " • "
+                }
+                subtitleText += presentationData.strings.InviteLink_Revoked
+                self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
+                self.timerNode?.removeFromSupernode()
+                self.timerNode = nil
+            } else if let expireDate = invite.expireDate, currentTime >= expireDate {
+                if !subtitleText.isEmpty {
+                    subtitleText += " • "
+                }
+                if share {
+                    subtitleText = presentationData.strings.InviteLink_Expired
+                } else {
+                    subtitleText += presentationData.strings.InviteLink_Expired
+                }
+                self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
+                self.timerNode?.removeFromSupernode()
+                self.timerNode = nil
+            } else if let usageLimit = invite.usageLimit, let count = invite.count, count >= usageLimit {
+                if !subtitleText.isEmpty {
+                    subtitleText += " • "
+                }
+                if share {
+                    subtitleText = presentationData.strings.InviteLink_UsageLimitReached
+                } else {
+                    subtitleText += presentationData.strings.InviteLink_UsageLimitReached
+                }
+                self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
+                self.timerNode?.removeFromSupernode()
+                self.timerNode = nil
+            } else if let expireDate = invite.expireDate {
+                self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Flame"), color: .white)
+                let timerNode: TimerNode
+                if let current = self.timerNode {
+                    timerNode = current
+                } else {
+                    timerNode = TimerNode()
+                    timerNode.isUserInteractionEnabled = false
+                    self.timerNode = timerNode
+                    self.addSubnode(timerNode)
+                }
+                timerNode.update(color: UIColor.white, creationTimestamp: invite.startDate ?? invite.date, deadlineTimestamp: expireDate)
+                if share {
+                    subtitleText = presentationData.strings.InviteLink_TapToCopy
+                }
+            } else {
+                self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Link"), color: .white)
+                self.timerNode?.removeFromSupernode()
+                self.timerNode = nil
+                if share {
+                    subtitleText = presentationData.strings.InviteLink_TapToCopy
+                }
+            }
+            self.iconNode.isHidden = false
+            self.buttonIconNode.isHidden = false
         } else {
-            subtitleText = [.red, .gray].contains(color) ? presentationData.strings.InviteLink_PeopleJoinedShortNoneExpired : presentationData.strings.InviteLink_PeopleJoinedShortNone
-        }
-        if invite.isRevoked {
-            if !subtitleText.isEmpty {
-                subtitleText += " • "
-            }
-            subtitleText += presentationData.strings.InviteLink_Revoked
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
-            self.timerNode?.removeFromSupernode()
-            self.timerNode = nil
-        } else if let expireDate = invite.expireDate, currentTime >= expireDate {
-            if !subtitleText.isEmpty {
-                subtitleText += " • "
-            }
-            if share {
-                subtitleText = presentationData.strings.InviteLink_Expired
-            } else {
-                subtitleText += presentationData.strings.InviteLink_Expired
-            }
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
-            self.timerNode?.removeFromSupernode()
-            self.timerNode = nil
-        } else if let usageLimit = invite.usageLimit, let count = invite.count, count >= usageLimit {
-            if !subtitleText.isEmpty {
-                subtitleText += " • "
-            }
-            if share {
-                subtitleText = presentationData.strings.InviteLink_UsageLimitReached
-            } else {
-                subtitleText += presentationData.strings.InviteLink_UsageLimitReached
-            }
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Expired"), color: .white)
-            self.timerNode?.removeFromSupernode()
-            self.timerNode = nil
-        } else if let expireDate = invite.expireDate {
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Flame"), color: .white)
-            let timerNode: TimerNode
-            if let current = self.timerNode {
-                timerNode = current
-            } else {
-                timerNode = TimerNode()
-                timerNode.isUserInteractionEnabled = false
-                self.timerNode = timerNode
-                self.addSubnode(timerNode)
-            }
-            timerNode.update(color: UIColor.white, creationTimestamp: invite.startDate ?? invite.date, deadlineTimestamp: expireDate)
-            if share {
-                subtitleText = presentationData.strings.InviteLink_TapToCopy
-            }
-        } else {
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Link"), color: .white)
-            self.timerNode?.removeFromSupernode()
-            self.timerNode = nil
-            if share {
-                subtitleText = presentationData.strings.InviteLink_TapToCopy
-            }
+            self.iconNode.isHidden = true
+            self.buttonIconNode.isHidden = true
         }
         
         self.iconNode.frame = CGRect(x: 10.0, y: 10.0, width: 30.0, height: 30.0)
@@ -407,7 +425,7 @@ private class ItemNode: ASDisplayNode {
 }
 
 class InviteLinksGridNode: ASDisplayNode {
-    private var items: [ExportedInvitation] = []
+    private var items: [ExportedInvitation]?
     private var itemNodes: [String: ItemNode] = [:]
     
     var action: ((ExportedInvitation) -> Void)?
@@ -418,7 +436,7 @@ class InviteLinksGridNode: ASDisplayNode {
         return result
     }
     
-    func update(size: CGSize, safeInset: CGFloat, items: [ExportedInvitation], share: Bool, presentationData: ItemListPresentationData, transition: ContainedViewLayoutTransition) -> CGSize {
+    func update(size: CGSize, safeInset: CGFloat, items: [ExportedInvitation]?, count: Int, share: Bool, presentationData: ItemListPresentationData, transition: ContainedViewLayoutTransition) -> CGSize {
         self.items = items
         
         var contentSize: CGSize = size
@@ -428,24 +446,37 @@ class InviteLinksGridNode: ASDisplayNode {
         
         var validIds = Set<String>()
         
-        for i in 0 ..< self.items.count {
-            let invite = self.items[i]
-            validIds.insert(invite.link)
+        let count = items?.count ?? count
+        
+        for i in 0 ..< count {
+            let invite: ExportedInvitation?
+            let id: String
+            if let items = items, i < items.count {
+                invite = items[i]
+                id = invite!.link
+            } else {
+                invite = nil
+                id = "placeholder_\(i)"
+            }
+            
+            validIds.insert(id)
+            
             var itemNode: ItemNode?
             var wasAdded = false
-            if let current = self.itemNodes[invite.link] {
+                        
+            if let current = self.itemNodes[id] {
                 itemNode = current
             } else {
                 wasAdded = true
                 let addedItemNode = ItemNode()
                 itemNode = addedItemNode
-                self.itemNodes[invite.link] = addedItemNode
+                self.itemNodes[id] = addedItemNode
                 self.addSubnode(addedItemNode)
             }
             if let itemNode = itemNode {
                 let col = CGFloat(i % 2)
                 let row = floor(CGFloat(i) / 2.0)
-                let wide = (i == self.items.count - 1 && (self.items.count % 2) != 0)
+                let wide = (i == count - 1 && (count % 2) != 0)
                 let itemSize = itemNode.update(size: CGSize(width: size.width - sideInset * 2.0, height: size.height), wide: wide, share: share, invite: invite, presentationData: presentationData, transition: transition)
                 var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: 4.0 + row * (122.0 + itemSpacing)), size: itemSize)
                 if !wide && col > 0 {
@@ -460,10 +491,14 @@ class InviteLinksGridNode: ASDisplayNode {
                     transition.updateFrame(node: itemNode, frame: itemFrame)
                 }
                 itemNode.action = { [weak self] in
-                    self?.action?(invite)
+                    if let invite = invite {
+                        self?.action?(invite)
+                    }
                 }
                 itemNode.contextAction = { [weak self] node in
-                    self?.contextAction?(node, invite)
+                    if let invite = invite {
+                        self?.contextAction?(node, invite)
+                    }
                 }
             }
         }
