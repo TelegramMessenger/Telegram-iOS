@@ -171,7 +171,7 @@ struct Provider: IntentTimelineProvider {
                         }, badge: badge, message: mappedMessage))
                     }
                 }
-                return WidgetDataPeers(accountPeerId: widgetPeers.accountPeerId, peers: peers)
+                return WidgetDataPeers(accountPeerId: widgetPeers.accountPeerId, peers: peers, updateTimestamp: Int32(Date().timeIntervalSince1970))
             })
             |> deliverOnMainQueue).start(next: { peers in
                 completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(peers))], policy: .atEnd))
@@ -442,7 +442,7 @@ struct WidgetView: View {
         })
     }
     
-    func chatContentView(_ index: Int) -> AnyView {
+    func chatContentView(_ index: Int, size: CGSize) -> AnyView {
         let peers: WidgetDataPeers
         switch data {
         case let .peers(peersValue):
@@ -454,14 +454,55 @@ struct WidgetView: View {
             return AnyView(Spacer())
         }
         
+        let itemHeight = (size.height - 22.0) / 2.0
+        
         return AnyView(
             Link(destination: URL(string: linkForPeer(id: peers.peers[index].id))!, label: {
                 HStack(alignment: .center, spacing: 0.0, content: {
-                AvatarItemView(accountPeerId: peers.accountPeerId, peer: peers.peers[index], itemSize: 60.0, displayBadge: false).frame(width: 60.0, height: 60.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                AvatarItemView(accountPeerId: peers.accountPeerId, peer: peers.peers[index], itemSize: 54.0, displayBadge: false).frame(width: 54.0, height: 54.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
                 chatContent(peers.peers[index]).frame(maxWidth: .infinity).padding(EdgeInsets(top: 10.0, leading: 0.0, bottom: 10.0, trailing: 10.0))
                 })
-            })
+            }).position(x: size.width / 2.0, y: (itemHeight * 2.0) / 4.0 + CGFloat(index) * itemHeight).frame(width: size.width, height: itemHeight, alignment: .leading)
         )
+    }
+    
+    func chatSeparatorView(size: CGSize) -> some View {
+        let separatorWidth = size.width - 54.0 - 20.0
+        let itemHeight = (size.height - 22.0) / 2.0
+        return Rectangle().foregroundColor(getSeparatorColor()).position(x: (54.0 + 20.0 + separatorWidth) / 2.0, y: itemHeight / 2.0).frame(width: separatorWidth, height: 0.33, alignment: .leading)
+    }
+    
+    func chatsUpdateBackgroundView(size: CGSize) -> some View {
+        return Rectangle().foregroundColor(getUpdatedBackgroundColor()).position(x: size.width / 2.0, y: size.height - 22.0 - 11.0).frame(width: size.width, height: 22.0, alignment: .leading)
+    }
+    
+    func chatsUpdateTimestampView(size: CGSize) -> some View {
+        let text: String
+        switch data {
+        case let .peers(peersValue):
+            let date = Date(timeIntervalSince1970: Double(peersValue.updateTimestamp))
+            let calendar = Calendar.current
+            //TODO:localize
+            if !calendar.isDate(Date(), inSameDayAs: date) {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .short
+                formatter.timeStyle = .none
+                text = "updated on \(formatter.string(from: date))"
+            } else {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .none
+                formatter.timeStyle = .short
+                text = "updated at \(formatter.string(from: date))"
+            }
+        default:
+            text = ""
+        }
+        
+        return HStack(alignment: .center, spacing: 0.0, content: {
+            Text(text)
+                .font(Font.system(size: 12.0))
+                .foregroundColor(getUpdatedTextColor())
+        }).position(x: size.width / 2.0, y: size.height - 22.0 - 11.0).frame(width: size.width, height: 22.0, alignment: .leading)
     }
     
     func getSeparatorColor() -> Color {
@@ -475,12 +516,36 @@ struct WidgetView: View {
         }
     }
     
+    func getUpdatedBackgroundColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 242.0 / 255.0, green: 242.0 / 255.0, blue: 247.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 21.0 / 255.0, green: 21.0 / 255.0, blue: 21.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    func getUpdatedTextColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 146.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 146.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
     var body: some View {
         GeometryReader(content: { geometry in
-            ZStack {
-                chatContentView(0).position(x: geometry.size.width / 2.0, y: geometry.size.height / 4.0).frame(width: geometry.size.width, height: geometry.size.height / 2.0, alignment: .leading)
-                chatContentView(1).position(x: geometry.size.width / 2.0, y: geometry.size.height / 2.0 + geometry.size.height / 4.0).frame(width: geometry.size.width, height: geometry.size.height / 2.0, alignment: .leading)
-                Rectangle().foregroundColor(getSeparatorColor()).position(x: geometry.size.width / 2.0, y: geometry.size.height / 4.0).frame(width: geometry.size.width, height: 0.33, alignment: .leading)
+            return ZStack {
+                chatContentView(0, size: geometry.size)
+                chatContentView(1, size: geometry.size)
+                chatSeparatorView(size: geometry.size)
+                chatsUpdateBackgroundView(size: geometry.size)
+                chatsUpdateTimestampView(size: geometry.size)
             }
         })
         .padding(0.0)

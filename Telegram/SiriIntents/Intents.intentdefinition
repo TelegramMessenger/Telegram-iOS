@@ -146,7 +146,7 @@
 						</dict>
 						<dict>
 							<key>INIntentParameterArraySizeSize</key>
-							<integer>8</integer>
+							<integer>2</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Medium</string>
 						</dict>

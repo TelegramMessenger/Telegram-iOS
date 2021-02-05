@@ -131,15 +131,7 @@ public final class CachedGroupData: CachedPeerData {
         self.about = decoder.decodeOptionalStringForKey("ab")
         self.flags = CachedGroupFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
         self.hasScheduledMessages = decoder.decodeBoolForKey("hsm", orElse: false)
-        if let value = decoder.decodeOptionalInt32ForKey("art") {
-            if value == -1 {
-                self.autoremoveTimeout = .known(nil)
-            } else {
-                self.autoremoveTimeout = .known(value)
-            }
-        } else {
-            self.autoremoveTimeout = .unknown
-        }
+        self.autoremoveTimeout = decoder.decodeObjectForKey("artv", decoder: CachedPeerAutoremoveTimeout.init(decoder:)) as? CachedPeerAutoremoveTimeout ?? .unknown
         
         self.invitedBy = decoder.decodeOptionalInt64ForKey("invBy").flatMap(PeerId.init)
         
@@ -207,16 +199,7 @@ public final class CachedGroupData: CachedPeerData {
         }
         encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
         encoder.encodeBool(self.hasScheduledMessages, forKey: "hsm")
-        switch self.autoremoveTimeout {
-        case let .known(value):
-            if let value = value {
-                encoder.encodeInt32(value, forKey: "art")
-            } else {
-                encoder.encodeInt32(-1, forKey: "art")
-            }
-        case .unknown:
-            encoder.encodeNil(forKey: "art")
-        }
+        encoder.encodeObject(self.autoremoveTimeout, forKey: "artv")
         
         if let invitedBy = self.invitedBy {
             encoder.encodeInt64(invitedBy.toInt64(), forKey: "invBy")

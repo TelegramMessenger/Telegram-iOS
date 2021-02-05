@@ -701,7 +701,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
 
     @available(iOSApplicationExtension 14.0, iOS 14.0, *)
-    func provideFriendsOptionsCollection(for intent: SelectFriendsIntent, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+    func provideFriendsOptionsCollection(for intent: SelectFriendsIntent, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {        
         let _ = (self.accountPromise.get()
         |> take(1)
         |> mapToSignal { account -> Signal<[Friend], NoError> in

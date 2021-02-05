@@ -1,9 +1,56 @@
 import Foundation
 import Postbox
 
-public enum CachedPeerAutoremoveTimeout: Equatable {
+public enum CachedPeerAutoremoveTimeout: Equatable, PostboxCoding {
+    public struct Value: Equatable, PostboxCoding {
+        public var myValue: Int32
+        public var peerValue: Int32
+        public var isGlobal: Bool
+        
+        public init(myValue: Int32, peerValue: Int32, isGlobal: Bool) {
+            self.myValue = myValue
+            self.peerValue = peerValue
+            self.isGlobal = isGlobal
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.myValue = decoder.decodeInt32ForKey("myValue", orElse: 7 * 60 * 60)
+            self.peerValue = decoder.decodeInt32ForKey("peerValue", orElse: 7 * 60 * 60)
+            self.isGlobal = decoder.decodeInt32ForKey("isGlobal", orElse: 1) != 0
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt32(self.myValue, forKey: "myValue")
+            encoder.encodeInt32(self.peerValue, forKey: "peerValue")
+            encoder.encodeInt32(self.isGlobal ? 1 : 0, forKey: "isGlobal")
+        }
+    }
+    
     case unknown
-    case known(Int32?)
+    case known(Value?)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("_v", orElse: 0) {
+        case 1:
+            self = .known(decoder.decodeObjectForKey("v", decoder: Value.init(decoder:)) as? Value)
+        default:
+            self = .unknown
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+        case .unknown:
+            encoder.encodeInt32(0, forKey: "_v")
+        case let .known(value):
+            encoder.encodeInt32(1, forKey: "_v")
+            if let value = value {
+                encoder.encodeObject(value, forKey: "v")
+            } else {
+                encoder.encodeNil(forKey: "v")
+            }
+        }
+    }
 }
 
 public final class CachedUserData: CachedPeerData {
@@ -82,15 +129,7 @@ public final class CachedUserData: CachedPeerData {
         self.callsPrivate = decoder.decodeInt32ForKey("cp", orElse: 0) != 0
         self.canPinMessages = decoder.decodeInt32ForKey("cpm", orElse: 0) != 0
         self.hasScheduledMessages = decoder.decodeBoolForKey("hsm", orElse: false)
-        if let value = decoder.decodeOptionalInt32ForKey("art") {
-            if value == -1 {
-                self.autoremoveTimeout = .known(nil)
-            } else {
-                self.autoremoveTimeout = .known(value)
-            }
-        } else {
-            self.autoremoveTimeout = .unknown
-        }
+        self.autoremoveTimeout = decoder.decodeObjectForKey("artv", decoder: CachedPeerAutoremoveTimeout.init(decoder:)) as? CachedPeerAutoremoveTimeout ?? .unknown
         
         var messageIds = Set<MessageId>()
         if let pinnedMessageId = self.pinnedMessageId {
@@ -131,16 +170,7 @@ public final class CachedUserData: CachedPeerData {
         encoder.encodeInt32(self.callsPrivate ? 1 : 0, forKey: "cp")
         encoder.encodeInt32(self.canPinMessages ? 1 : 0, forKey: "cpm")
         encoder.encodeBool(self.hasScheduledMessages, forKey: "hsm")
-        switch self.autoremoveTimeout {
-        case let .known(value):
-            if let value = value {
-                encoder.encodeInt32(value, forKey: "art")
-            } else {
-                encoder.encodeInt32(-1, forKey: "art")
-            }
-        case .unknown:
-            encoder.encodeNil(forKey: "art")
-        }
+        encoder.encodeObject(self.autoremoveTimeout, forKey: "artv")
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {

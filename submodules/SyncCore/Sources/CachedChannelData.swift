@@ -429,15 +429,7 @@ public final class CachedChannelData: CachedPeerData {
         self.slowModeTimeout = decoder.decodeOptionalInt32ForKey("smt")
         self.slowModeValidUntilTimestamp = decoder.decodeOptionalInt32ForKey("smv")
         self.hasScheduledMessages = decoder.decodeBoolForKey("hsm", orElse: false)
-        if let value = decoder.decodeOptionalInt32ForKey("art") {
-            if value == -1 {
-                self.autoremoveTimeout = .known(nil)
-            } else {
-                self.autoremoveTimeout = .known(value)
-            }
-        } else {
-            self.autoremoveTimeout = .unknown
-        }
+        self.autoremoveTimeout = decoder.decodeObjectForKey("artv", decoder: CachedPeerAutoremoveTimeout.init(decoder:)) as? CachedPeerAutoremoveTimeout ?? .unknown
         self.statsDatacenterId = decoder.decodeInt32ForKey("sdi", orElse: 0)
         
         self.invitedBy = decoder.decodeOptionalInt64ForKey("invBy").flatMap(PeerId.init)
@@ -545,16 +537,7 @@ public final class CachedChannelData: CachedPeerData {
             encoder.encodeNil(forKey: "smv")
         }
         encoder.encodeBool(self.hasScheduledMessages, forKey: "hsm")
-        switch self.autoremoveTimeout {
-        case let .known(value):
-            if let value = value {
-                encoder.encodeInt32(value, forKey: "art")
-            } else {
-                encoder.encodeInt32(-1, forKey: "art")
-            }
-        case .unknown:
-            encoder.encodeNil(forKey: "art")
-        }
+        encoder.encodeObject(self.autoremoveTimeout, forKey: "artv")
         encoder.encodeInt32(self.statsDatacenterId, forKey: "sdi")
         
         if let invitedBy = self.invitedBy {

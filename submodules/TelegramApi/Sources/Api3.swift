@@ -3995,6 +3995,22 @@ public extension Api {
                     })
                 }
             
+                public static func setHistoryTTL(flags: Int32, peer: Api.InputPeer, period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-859093215)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(period, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.setHistoryTTL", parameters: [("flags", flags), ("peer", peer), ("period", period)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
                 public static func exportChatInvite(flags: Int32, peer: Api.InputPeer, expireDate: Int32?, usageLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedChatInvite>) {
                     let buffer = Buffer()
                     buffer.appendInt32(347716823)
@@ -4105,21 +4121,6 @@ public extension Api {
                         var result: Api.messages.ChatInviteImporters?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.ChatInviteImporters
-                        }
-                        return result
-                    })
-                }
-            
-                public static func setPeerMessagesTTL(peer: Api.InputPeer, period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-56903344)
-                    peer.serialize(buffer, true)
-                    serializeInt32(period, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.setPeerMessagesTTL", parameters: [("peer", peer), ("period", period)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

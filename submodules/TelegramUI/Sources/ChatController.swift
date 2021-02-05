@@ -2876,7 +2876,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     hasBots = true
                                 }
                                 if case let .known(value) = cachedGroupData.autoremoveTimeout {
-                                    autoremoveTimeout = value
+                                    autoremoveTimeout = value?.peerValue
                                 }
                             } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                                 if let channel = peer as? TelegramChannel, case .group = channel.info {
@@ -2885,11 +2885,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 if case let .known(value) = cachedChannelData.autoremoveTimeout {
-                                    autoremoveTimeout = value
+                                    autoremoveTimeout = value?.peerValue
                                 }
                             } else if let cachedUserData = peerView.cachedData as? CachedUserData {
                                 if case let .known(value) = cachedUserData.autoremoveTimeout {
-                                    autoremoveTimeout = value
+                                    autoremoveTimeout = value?.peerValue
                                 }
                             }
                         }
@@ -5436,10 +5436,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
                 return
             }
+            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                return
+            }
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 strongSelf.chatDisplayNode.dismissInput()
                 
-                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                if let peer = peer as? TelegramSecretChat {
                     let controller = ChatSecretAutoremoveTimerActionSheetController(context: strongSelf.context, currentValue: peer.messageAutoremoveTimeout == nil ? 0 : peer.messageAutoremoveTimeout!, applyValue: { value in
                         if let strongSelf = self {
                             let _ = setSecretChatMessageAutoremoveTimeoutInteractively(account: strongSelf.context.account, peerId: peer.id, timeout: value == 0 ? nil : value).start()
@@ -5448,24 +5451,60 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.present(controller, in: .window(.root))
                 }
             } else {
-                strongSelf.chatDisplayNode.dismissInput()
+                var currentAutoremoveTimeout: Int32? = strongSelf.presentationInterfaceState.autoremoveTimeout
+                var canSetupAutoremoveTimeout = false
                 
-                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                    var availableValues: [Int32] = [
-                        60,
-                        300,
-                        86400,
-                        604800
-                    ]
-                    #if DEBUG
-                    availableValues.insert(5, at: 0)
-                    #endif
-                    let controller = ChatSecretAutoremoveTimerActionSheetController(context: strongSelf.context, currentValue: strongSelf.presentationInterfaceState.autoremoveTimeout ?? 0, availableValues: availableValues, applyValue: { value in
-                        if let strongSelf = self {
-                            let _ = setChatMessageAutoremoveTimeoutInteractively(account: strongSelf.context.account, peerId: peer.id, timeout: value == 0 ? nil : value).start()
+                if let secretChat = peer as? TelegramSecretChat {
+                    currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
+                    canSetupAutoremoveTimeout = true
+                } else if let group = peer as? TelegramGroup {
+                    if case .creator = group.role {
+                        canSetupAutoremoveTimeout = true
+                    } else if case let .admin(rights, _) = group.role {
+                        if rights.flags.contains(.canChangeInfo) {
+                            canSetupAutoremoveTimeout = true
                         }
-                    })
-                    strongSelf.present(controller, in: .window(.root))
+                    } else if let defaultBannedRights = group.defaultBannedRights {
+                        if !defaultBannedRights.flags.contains(.banChangeInfo) {
+                            canSetupAutoremoveTimeout = true
+                        }
+                    }
+                } else if let _ = peer as? TelegramUser {
+                    canSetupAutoremoveTimeout = true
+                } else if let channel = peer as? TelegramChannel {
+                    if channel.hasPermission(.changeInfo) {
+                        canSetupAutoremoveTimeout = true
+                    }
+                }
+                
+                if canSetupAutoremoveTimeout {
+                    strongSelf.chatDisplayNode.dismissInput()
+                    
+                    let controller = peerAutoremoveSetupScreen(context: strongSelf.context, peerId: peerId)
+                    strongSelf.push(controller)
+                } else if let currentAutoremoveTimeout = currentAutoremoveTimeout, let rect = strongSelf.chatDisplayNode.frameForInputPanelAccessoryButton(.messageAutoremoveTimeout(currentAutoremoveTimeout)) {
+                    
+                    //TODO:localize
+                    let intervalText = timeIntervalString(strings: strongSelf.presentationData.strings, value: currentAutoremoveTimeout)
+                    let text: String = "Messages in this chat are automatically\ndeleted \(intervalText) after they have been sent."
+                    
+                    if let tooltipController = strongSelf.silentPostTooltipController {
+                        tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
+                    } else {
+                        let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                        strongSelf.silentPostTooltipController = tooltipController
+                        tooltipController.dismissed = { [weak tooltipController] _ in
+                            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.silentPostTooltipController === tooltipController {
+                                strongSelf.silentPostTooltipController = nil
+                            }
+                        }
+                        strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                            if let strongSelf = self {
+                                return (strongSelf.chatDisplayNode, rect)
+                            }
+                            return nil
+                        }))
+                    }
                 }
             }
         }, sendSticker: { [weak self] file, sourceNode, sourceRect in
@@ -7544,6 +7583,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }))
                 } else if canRemoveGlobally {
                     items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
+                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        beginClear(.forLocalPeer)
+                    }))
                     items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         
@@ -7558,10 +7601,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 beginClear(.forEveryone)
                             })
                         ], parseMarkdown: true), in: .window(.root))
-                    }))
-                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        beginClear(.forLocalPeer)
                     }))
                 } else {
                     items.append(ActionSheetTextItem(title: text))
@@ -7580,6 +7619,58 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                         ], parseMarkdown: true), in: .window(.root))
                     }))
+                }
+                
+                if let peer = self.presentationInterfaceState.renderedPeer?.peer {
+                    var currentAutoremoveTimeout: Int32? = self.presentationInterfaceState.autoremoveTimeout
+                    var canSetupAutoremoveTimeout = false
+                    
+                    if let secretChat = peer as? TelegramSecretChat {
+                        currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
+                        canSetupAutoremoveTimeout = true
+                    } else if let group = peer as? TelegramGroup {
+                        if case .creator = group.role {
+                            canSetupAutoremoveTimeout = true
+                        } else if case let .admin(rights, _) = group.role {
+                            if rights.flags.contains(.canChangeInfo) {
+                                canSetupAutoremoveTimeout = true
+                            }
+                        } else if let defaultBannedRights = group.defaultBannedRights {
+                            if !defaultBannedRights.flags.contains(.banChangeInfo) {
+                                canSetupAutoremoveTimeout = true
+                            }
+                        }
+                    } else if let _ = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+                        canSetupAutoremoveTimeout = true
+                    } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                        if channel.hasPermission(.changeInfo) {
+                            canSetupAutoremoveTimeout = true
+                        }
+                    }
+                    
+                    if canSetupAutoremoveTimeout {
+                        //TODO:localize
+                        items.append(ActionSheetButtonItem(title: currentAutoremoveTimeout == nil ? "Enable Auto-Delete" : "Edit Auto-Delete Settings", color: .accent, action: { [weak self, weak actionSheet] in
+                            guard let actionSheet = actionSheet else {
+                                return
+                            }
+                            actionSheet.dismissAnimated()
+                            
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            let controller = peerAutoremoveSetupScreen(context: strongSelf.context, peerId: peer.id, completion: { updatedValue in
+                                if case .updated = updatedValue {
+                                    if currentAutoremoveTimeout == nil {
+                                        self?.navigationButtonAction(.clearHistory)
+                                    }
+                                }
+                            })
+                            strongSelf.chatDisplayNode.dismissInput()
+                            strongSelf.push(controller)
+                        }))
+                    }
                 }
 
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
