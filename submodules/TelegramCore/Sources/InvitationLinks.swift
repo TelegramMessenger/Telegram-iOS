@@ -239,7 +239,7 @@ public func deletePeerExportedInvitation(account: Account, peerId: PeerId, link:
 public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.deleteRevokedExportedChatInvites(peer: inputPeer))
+            return account.network.request(Api.functions.messages.deleteRevokedExportedChatInvites(peer: inputPeer, adminId: .inputUserEmpty))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }
