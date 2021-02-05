@@ -230,6 +230,16 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         action = .groupCallUpdateParticipantMuteStatus(peerId: parsedParticipant.peerId, isMuted: false)
                                     case let .channelAdminLogEventActionToggleGroupCallSetting(joinMuted):
                                         action = .updateGroupCallSettings(joinMuted: joinMuted == .boolTrue)
+                                    case .channelAdminLogEventActionParticipantJoinByInvite:
+                                        break
+                                    case .channelAdminLogEventActionExportedInviteDelete:
+                                        break
+                                    case .channelAdminLogEventActionExportedInviteRevoke:
+                                        break
+                                    case .channelAdminLogEventActionExportedInviteEdit:
+                                        break
+                                    case .channelAdminLogEventActionParticipantVolume:
+                                        break
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

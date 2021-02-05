@@ -5902,6 +5902,9 @@ Sorry for the inconvenience.";
 
 "InviteLink.InviteLinkCopiedText" = "Invite link copied to clipboard";
 
+"InviteLink.OtherAdminsLinks" = "Invite Links Created By Other Admins";
+"InviteLink.OtherPermanentLinkInfo" = "**%1$@** can see this link and use it to invite new members to **%2$@**.";
+
 "Conversation.ChecksTooltip.Delivered" = "Delivered";
 "Conversation.ChecksTooltip.Read" = "Read";
 
