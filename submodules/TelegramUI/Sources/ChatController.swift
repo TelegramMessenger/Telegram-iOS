@@ -7654,17 +7654,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let actionSheet = actionSheet else {
                                 return
                             }
-                            actionSheet.dismissAnimated()
-                            
                             guard let strongSelf = self else {
                                 return
                             }
                             
+                            strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                            
+                            actionSheet.dismissAnimated()
+                            
                             let controller = peerAutoremoveSetupScreen(context: strongSelf.context, peerId: peer.id, completion: { updatedValue in
-                                if case .updated = updatedValue {
-                                    if currentAutoremoveTimeout == nil {
-                                        self?.navigationButtonAction(.clearHistory)
-                                    }
+                                if case let .updated(value) = updatedValue {
                                 }
                             })
                             strongSelf.chatDisplayNode.dismissInput()

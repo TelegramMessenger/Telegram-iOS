@@ -571,11 +571,19 @@ extension CachedPeerAutoremoveTimeout.Value {
         if let apiValue = apiValue {
             switch apiValue {
             case let .peerHistoryTTLPM(flags, ttlPeriodMy, ttlPeriodPeer):
-                guard let ttlPeriodPeer = ttlPeriodPeer else {
+                var anyTtl: Int32?
+                if let ttlPeriodMy = ttlPeriodMy {
+                    anyTtl = ttlPeriodMy
+                }
+                if let ttlPeriodPeer = ttlPeriodPeer {
+                    anyTtl = ttlPeriodPeer
+                }
+                if let anyTtl = anyTtl {
+                    let pmOneSide = flags & (1 << 0) != 0
+                    self.init(myValue: ttlPeriodMy ?? anyTtl, peerValue: ttlPeriodPeer ?? anyTtl, isGlobal: !pmOneSide)
+                } else {
                     return nil
                 }
-                let pmOneSide = flags & (1 << 0) != 0
-                self.init(myValue: ttlPeriodMy ?? ttlPeriodPeer, peerValue: ttlPeriodPeer, isGlobal: !pmOneSide)
             case let .peerHistoryTTL(ttlPeriodPeer):
                 self.init(myValue: ttlPeriodPeer, peerValue: ttlPeriodPeer, isGlobal: true)
             }
