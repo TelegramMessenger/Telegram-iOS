@@ -238,10 +238,12 @@ public struct WidgetDataPeer: Codable, Equatable {
 public struct WidgetDataPeers: Codable, Equatable {
     public var accountPeerId: Int64
     public var peers: [WidgetDataPeer]
+    public var updateTimestamp: Int32
     
-    public init(accountPeerId: Int64, peers: [WidgetDataPeer]) {
+    public init(accountPeerId: Int64, peers: [WidgetDataPeer], updateTimestamp: Int32) {
         self.accountPeerId = accountPeerId
         self.peers = peers
+        self.updateTimestamp = updateTimestamp
     }
 }
 

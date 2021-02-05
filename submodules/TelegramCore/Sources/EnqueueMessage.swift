@@ -332,6 +332,25 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
                             attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
                         }
+                    } else if let cachedData = transaction.getPeerCachedData(peerId: peer.id) {
+                        var messageAutoremoveTimeout: Int32?
+                        if let cachedData = cachedData as? CachedUserData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                messageAutoremoveTimeout = value?.peerValue
+                            }
+                        } else if let cachedData = cachedData as? CachedGroupData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                messageAutoremoveTimeout = value?.peerValue
+                            }
+                        } else if let cachedData = cachedData as? CachedChannelData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                messageAutoremoveTimeout = value?.peerValue
+                            }
+                        }
+                        
+                        if let messageAutoremoveTimeout = messageAutoremoveTimeout {
+                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
+                        }
                     }
                     
                     attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(requestedAttributes))

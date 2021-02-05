@@ -174,13 +174,59 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         CGContextSetBlendMode(context, kCGBlendModeCopy);
     }
     
-    CGContextSetFillColorWithColor(context, _backColor.CGColor);
-    [self drawRectangle:backFrame cornerRadius:self.trackCornerRadius context:context];
+    if (_minimumUndottedValue > 0 && self.positionsCount > 1) {
+        CGContextSetLineWidth(context, backFrame.size.height);
+        CGContextSetLineCap(context, kCGLineCapRound);
+        
+        for (NSInteger i = 1; i < self.positionsCount; i++)
+        {
+            CGFloat previousX = margin + totalLength / (self.positionsCount - 1) * (i - 1);
+            CGFloat currentX = margin + totalLength / (self.positionsCount - 1) * i;
+            
+            if (_minimumUndottedValue < i) {
+                CGFloat normalDashWidth = 16.0f;
+                CGFloat dashFraction = 0.6f;
+                CGFloat totalLineWidth = currentX - previousX;
+                int numberOfDashes = (int)floor((double)(totalLineWidth / normalDashWidth));
+                CGFloat dashWidth = (totalLineWidth / (CGFloat)numberOfDashes);
+                
+                CGFloat innerWidth = dashWidth * dashFraction - 2.0f;
+                CGFloat innerOffset = (dashWidth - innerWidth) / 2.0f;
+                
+                CGFloat dottedX = previousX;
+                
+                while (dottedX + innerWidth < currentX) {
+                    bool highlighted = dottedX + dashWidth / 2.0f < CGRectGetMaxX(trackFrame);
+                    
+                    CGContextSetStrokeColorWithColor(context, highlighted ? _trackColor.CGColor : _backColor.CGColor);
+                    
+                    CGContextMoveToPoint(context, dottedX + innerOffset, CGRectGetMidY(backFrame));
+                    CGContextAddLineToPoint(context, dottedX + innerOffset + innerWidth, CGRectGetMidY(backFrame));
+                    CGContextStrokePath(context);
+                    
+                    dottedX += dashWidth;
+                }
+            } else {
+                bool highlighted = (previousX + (currentX - previousX) / 2.0f) < CGRectGetMaxX(trackFrame);
+                CGContextSetStrokeColorWithColor(context, highlighted ? _trackColor.CGColor : _backColor.CGColor);
+                
+                CGContextMoveToPoint(context, previousX, CGRectGetMidY(backFrame));
+                CGContextAddLineToPoint(context, currentX, CGRectGetMidY(backFrame));
+                CGContextStrokePath(context);
+            }
+        }
+    } else {
+        CGContextSetFillColorWithColor(context, _backColor.CGColor);
+        [self drawRectangle:backFrame cornerRadius:self.trackCornerRadius context:context];
+    }
 
     CGContextSetBlendMode(context, kCGBlendModeNormal);
     
-    CGContextSetFillColorWithColor(context, _trackColor.CGColor);
-    [self drawRectangle:trackFrame cornerRadius:self.trackCornerRadius context:context];
+    if (_minimumUndottedValue > 0) {
+    } else {
+        CGContextSetFillColorWithColor(context, _trackColor.CGColor);
+        [self drawRectangle:trackFrame cornerRadius:self.trackCornerRadius context:context];
+    }
     
     if (!_startHidden || self.displayEdges)
     {

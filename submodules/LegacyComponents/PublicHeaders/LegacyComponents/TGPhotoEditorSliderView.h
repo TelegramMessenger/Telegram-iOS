@@ -13,6 +13,7 @@
 
 @property (nonatomic, assign) CGFloat startValue;
 @property (nonatomic, assign) CGFloat value;
+@property (nonatomic, assign) int minimumUndottedValue;
 
 @property (nonatomic, assign) CGFloat markValue;
 

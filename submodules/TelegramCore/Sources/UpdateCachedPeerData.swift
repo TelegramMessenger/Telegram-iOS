@@ -207,7 +207,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     
                                     let hasScheduledMessages = (userFull.flags & 1 << 12) != 0
                                     
-                                    let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(userFull.ttlPeriod)
+                                    let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(userFull.ttl))
                                 
                                     return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                                         .withUpdatedAutoremoveTimeout(autoremoveTimeout)
@@ -300,7 +300,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                 }
                                 
-                                let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(chatFull.ttlPeriod)
+                                let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(chatFull.ttl))
                                 
                                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                     let previous: CachedGroupData
@@ -513,7 +513,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 
                                                 minAvailableMessageIdUpdated = previous.minAvailableMessageId != minAvailableMessageId
                                                 
-                                                let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(ttlPeriod)
+                                                let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(ttlPeriod))
                                                 
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
@@ -562,6 +562,25 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
             } else {
                 return .single(false)
             }
+        }
+    }
+}
+
+extension CachedPeerAutoremoveTimeout.Value {
+    init?(_ apiValue: Api.PeerHistoryTTL?) {
+        if let apiValue = apiValue {
+            switch apiValue {
+            case let .peerHistoryTTLPM(flags, ttlPeriodMy, ttlPeriodPeer):
+                guard let ttlPeriodPeer = ttlPeriodPeer else {
+                    return nil
+                }
+                let pmOneSide = flags & (1 << 0) != 0
+                self.init(myValue: ttlPeriodMy ?? ttlPeriodPeer, peerValue: ttlPeriodPeer, isGlobal: !pmOneSide)
+            case let .peerHistoryTTL(ttlPeriodPeer):
+                self.init(myValue: ttlPeriodPeer, peerValue: ttlPeriodPeer, isGlobal: true)
+            }
+        } else {
+            return nil
         }
     }
 }

@@ -192,7 +192,7 @@ final class WidgetDataContext {
                         return WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return account.postbox.mediaBox.resourcePath(representation.resource)
                         }, badge: badge, message: message)
-                    })))
+                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))))
                 }
             }
             |> distinctUntilChanged
@@ -282,7 +282,7 @@ final class WidgetDataContext {
                         return WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return account.postbox.mediaBox.resourcePath(representation.resource)
                         }, badge: badge, message: message)
-                    })))
+                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))))
                 }
             }
             |> distinctUntilChanged
