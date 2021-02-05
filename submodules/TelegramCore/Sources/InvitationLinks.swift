@@ -170,9 +170,9 @@ public struct ExportedInvitations : Equatable {
     public let totalCount: Int32
 }
 
-public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
+public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, adminId: PeerId? = nil, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let accountPeer = transaction.getPeer(account.peerId), let adminId = apiInputUser(accountPeer) {
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let adminPeer = transaction.getPeer(adminId ?? account.peerId), let adminId = apiInputUser(adminPeer) {
             var flags: Int32 = 0
             if let _ = offsetLink {
                 flags |= (1 << 2)
