@@ -253,6 +253,8 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
         }
         
         entries.append(.soundClassicHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_ClassicTones))
+        index += 1
+        
         for i in 0 ..< 8 {
             let sound: PeerMessageSound = .bundledClassic(id: Int32(i))
             entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
@@ -314,7 +316,7 @@ private struct NotificationExceptionPeerState : Equatable {
 }
 
 
-func notificationPeerExceptionController(context: AccountContext, peer: Peer, mode: NotificationExceptionMode, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
+public func notificationPeerExceptionController(context: AccountContext, peer: Peer, mode: NotificationExceptionMode, edit: Bool = false, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState(canRemove: false)
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
@@ -370,7 +372,7 @@ func notificationPeerExceptionController(context: AccountContext, peer: Peer, mo
             arguments.cancel()
         })
         
-        let rightNavigationButton = ItemListNavigationButton(content: .text(state.canRemove ? presentationData.strings.Common_Done : presentationData.strings.Notification_Exceptions_Add), style: .bold, enabled: true, action: {
+        let rightNavigationButton = ItemListNavigationButton(content: .text(state.canRemove || edit ? presentationData.strings.Common_Done : presentationData.strings.Notification_Exceptions_Add), style: .bold, enabled: true, action: {
             arguments.complete()
         })
         

@@ -21,6 +21,7 @@ import ItemListPeerActionItem
 import AccountContext
 import InviteLinksUI
 import ContextUI
+import UndoUI
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext
@@ -837,6 +838,8 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
     var getControllerImpl: (() -> ViewController?)?
     
+    var dismissTooltipsImpl: (() -> Void)?
+    
     let actionsDisposable = DisposableSet()
     
     let checkAddressNameDisposable = MetaDisposable()
@@ -908,8 +911,11 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         }))
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
+       
+        dismissTooltipsImpl?()
+        
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, shareLink: { invite in
         let shareController = ShareController(context: context, subject: .url(invite.link))
         presentControllerImpl?(shareController, nil)
@@ -937,8 +943,11 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             } |> deliverOnMainQueue).start(next: { link in
                 if let link = link {
                     UIPasteboard.general.string = link
+                    
+                    dismissTooltipsImpl?()
+                    
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }
             })
         })))
@@ -990,11 +999,11 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                             }
                         }
                         if revoke {
-                            revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-                                updateState {
-                                    $0.withUpdatedRevokingPrivateLink(false)
-                                }
-                            }))
+//                            revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
+//                                updateState {
+//                                    $0.withUpdatedRevokingPrivateLink(false)
+//                                }
+//                            }))
                         }
                     })
                 ]),
@@ -1260,6 +1269,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.willDisappear = { _ in
+        dismissTooltipsImpl?()
+    }
     dismissImpl = { [weak controller, weak onDismissRemoveController] in
         guard let controller = controller else {
             return
@@ -1390,6 +1402,19 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     getControllerImpl = { [weak controller] in
         return controller
+    }
+    dismissTooltipsImpl = { [weak controller] in
+        controller?.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        controller?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
     }
     return controller
 }

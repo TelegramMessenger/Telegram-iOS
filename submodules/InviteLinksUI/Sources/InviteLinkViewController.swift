@@ -193,7 +193,7 @@ private func preparedTransition(from fromEntries: [InviteLinkViewEntry], to toEn
 private let titleFont = Font.bold(17.0)
 private let subtitleFont = Font.with(size: 13, design: .regular, weight: .regular, traits: .monospacedNumbers)
 
-private func textForTimeout(value: Int32) -> String {
+func textForTimeout(value: Int32) -> String {
     if value < 3600 {
         let minutes = value / 60
         let seconds = value % 60
@@ -283,11 +283,27 @@ public final class InviteLinkViewController: ViewController {
             self.isDismissed = true
             self.didAppearOnce = false
             
+            self.dismissAllTooltips()
+            
             self.controllerNode.animateOut(completion: { [weak self] in
                 completion?()
                 self?.dismiss(animated: false)
             })
         }
+    }
+    
+    private func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -398,6 +414,8 @@ public final class InviteLinkViewController: ViewController {
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
                 
+                self?.controller?.dismissAllTooltips()
+                
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
@@ -418,6 +436,8 @@ public final class InviteLinkViewController: ViewController {
                     
                     UIPasteboard.general.string = invite.link
   
+                    self?.controller?.dismissAllTooltips()
+                    
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                 })))
@@ -458,10 +478,8 @@ public final class InviteLinkViewController: ViewController {
                         self?.controller?.present(controller, in: .window(.root))
                     })))
                 }
-                
-                
-                                
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+                           
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground:  false)), items: .single(items), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             })
             

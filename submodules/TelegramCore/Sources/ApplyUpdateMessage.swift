@@ -74,7 +74,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         } else {
             switch result {
-                case let .updateShortSentMessage(_, _, _, _, date, _, _):
+                case let .updateShortSentMessage(_, _, _, _, date, _, _, _):
                     updatedTimestamp = date
                 default:
                     break
@@ -117,7 +117,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
                 forwardInfo = updatedMessage.forwardInfo
-            } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities) = result {
+            } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities, _) = result {
                 let (mediaValue, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                 if let mediaValue = mediaValue {
                     media = [mediaValue]

@@ -2222,6 +2222,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
                     window.rootViewController?.present(controller, animated: true)
                 }
+            case .speak:
+                strongSelf.speakText(text.string)
             }
         }, updateMessageLike: { [weak self] messageId, isLiked in
             guard let strongSelf = self else {
@@ -2330,7 +2332,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, greetingStickerNode: { [weak self] in
             return self?.chatDisplayNode.greetingStickerNode
-        }, openPeerContextMenu: { [weak self] peer, node, rect, gesture in
+        }, openPeerContextMenu: { [weak self] peer, messageId, node, rect, gesture in
             guard let strongSelf = self else {
                 return
             }
@@ -2342,10 +2344,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.dismissAllTooltips()
             
             let context = strongSelf.context
-            let _ = (context.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(peer.id)
+            let _ = (context.account.postbox.transaction { transaction -> (Peer?, Message?) in
+                return (transaction.getPeer(peer.id), messageId.flatMap { transaction.getMessage($0) })
             }
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
+            |> deliverOnMainQueue).start(next: { [weak self] peer, message in
                 guard let strongSelf = self, let peer = peer, peer.smallProfileImage != nil else {
                     return
                 }
@@ -2355,7 +2357,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
                 
                 let items: Signal<[ContextMenuItem], NoError> = context.account.postbox.transaction { transaction -> [ContextMenuItem] in
-                    let isChannel = peer.id.namespace == Namespaces.Peer.CloudChannel
+                    var isChannel = false
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        isChannel = true
+                    }
                     var items: [ContextMenuItem] = [
                         .action(ContextMenuActionItem(text: isChannel ? strongSelf.presentationData.strings.Conversation_ContextMenuOpenChannelProfile : strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
@@ -11725,6 +11730,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             return false
         }
+    }
+    
+    private func speakText(_ text: String) {
+        let speechSynthesizer = AVSpeechSynthesizer()
+        let utterance = AVSpeechUtterance(string: text)
+        if #available(iOS 11.0, *), let language = NSLinguisticTagger.dominantLanguage(for: text) {
+            utterance.voice = AVSpeechSynthesisVoice(language: language)
+        }
+        speechSynthesizer.speak(utterance)
     }
 }
 

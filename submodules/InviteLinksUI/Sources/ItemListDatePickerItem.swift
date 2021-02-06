@@ -6,6 +6,7 @@ import SwiftSignalKit
 import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import DatePickerNode
 
 public class ItemListDatePickerItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
@@ -73,7 +74,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private var datePicker: UIDatePicker?
+    private var datePickerNode: DatePickerNode?
     
     private var item: ItemListDatePickerItem?
     
@@ -101,29 +102,13 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
         super.init(layerBacked: false, dynamicBounce: false)
         
     }
-    
-    public override func didLoad() {
-        super.didLoad()
         
-        let datePicker = UIDatePicker()
-        datePicker.minimumDate = Date()
-        datePicker.datePickerMode = .dateAndTime
-        if #available(iOS 14.0, *) {
-            datePicker.preferredDatePickerStyle = .inline
-        }
-        
-        datePicker.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
-        
-        self.view.addSubview(datePicker)
-        self.datePicker = datePicker
-    }
-    
-    @objc private func datePickerUpdated() {
-        guard let datePicker = self.datePicker else {
-            return
-        }
-        self.item?.updated?(Int32(datePicker.date.timeIntervalSince1970))
-    }
+//    @objc private func datePickerUpdated() {
+//        guard let datePicker = self.datePicker else {
+//            return
+//        }
+//        self.item?.updated?(Int32(datePicker.date.timeIntervalSince1970))
+//    }
     
     public func asyncLayout() -> (_ item: ItemListDatePickerItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
@@ -166,10 +151,28 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                        
+                        strongSelf.datePickerNode?.updateTheme(DatePickerTheme(theme: item.presentationData.theme))
+                    }
+                    
+                    let datePickerNode: DatePickerNode
+                    if let current = strongSelf.datePickerNode {
+                        datePickerNode = current
+                    } else {
+                        datePickerNode = DatePickerNode(theme: DatePickerTheme(theme: item.presentationData.theme), strings: item.presentationData.strings)
+                        strongSelf.addSubnode(datePickerNode)
+                        strongSelf.datePickerNode = datePickerNode
+                    }
+                    datePickerNode.valueUpdated = { date in
+                        strongSelf.item?.updated?(Int32(date.timeIntervalSince1970))
                     }
                 
-                    strongSelf.datePicker?.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date()
-                    strongSelf.datePicker?.frame = CGRect(origin: CGPoint(x: 16.0, y: 3.0), size: CGSize(width: contentSize.width - 32.0, height: contentSize.height))
+                    datePickerNode.minimumDate = Date()
+                    datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date()
+                   
+                    let datePickerSize = CGSize(width: contentSize.width - params.leftInset - params.rightInset, height: contentSize.height)
+                    datePickerNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: datePickerSize)
+                    datePickerNode.updateLayout(size: datePickerSize, transition: .immediate)
                     
                     switch item.style {
                     case .plain:

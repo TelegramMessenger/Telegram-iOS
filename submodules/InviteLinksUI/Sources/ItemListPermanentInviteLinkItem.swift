@@ -442,8 +442,8 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         }
                         shareButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: 50.0, cornerRadius: 10.0)
                         shareButtonNode.title = item.presentationData.strings.InviteLink_Share
-                        shareButtonNode.pressed = {
-                            item.shareAction?()
+                        shareButtonNode.pressed = { [weak self] in
+                            self?.item?.shareAction?()
                         }
                         strongSelf.addSubnode(shareButtonNode)
                         strongSelf.shareButtonNode = shareButtonNode

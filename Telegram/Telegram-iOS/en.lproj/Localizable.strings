@@ -5848,6 +5848,18 @@ Sorry for the inconvenience.";
 "InviteLink.PeopleJoinedShort_many" = "%@ joined";
 "InviteLink.PeopleJoinedShort_any" = "%@ joined";
 
+"InviteLink.PeopleCanJoin_1" = "%@ can join";
+"InviteLink.PeopleCanJoin_2" = "%@ can join";
+"InviteLink.PeopleCanJoin_3_10" = "%@ can join";
+"InviteLink.PeopleCanJoin_many" = "%@ can join";
+"InviteLink.PeopleCanJoin_any" = "%@ can join";
+
+"InviteLink.PeopleRemaining_1" = "%@ remaining";
+"InviteLink.PeopleRemaining_2" = "%@ remaining";
+"InviteLink.PeopleRemaining_3_10" = "%@ remaining";
+"InviteLink.PeopleRemaining_many" = "%@ remaining";
+"InviteLink.PeopleRemaining_any" = "%@ remaining";
+
 "InviteLink.Expired" = "expired";
 "InviteLink.UsageLimitReached" = "limit reached";
 "InviteLink.Revoked" = "revoked";
@@ -5904,6 +5916,13 @@ Sorry for the inconvenience.";
 
 "InviteLink.OtherAdminsLinks" = "Invite Links Created By Other Admins";
 "InviteLink.OtherPermanentLinkInfo" = "**%1$@** can see this link and use it to invite new members to **%2$@**.";
+
+"InviteLink.InviteLinks_0" = "%@ invite links";
+"InviteLink.InviteLinks_1" = "%@ invite link";
+"InviteLink.InviteLinks_2" = "%@ invite links";
+"InviteLink.InviteLinks_3_10" = "%@ invite links";
+"InviteLink.InviteLinks_many" = "%@ invite links";
+"InviteLink.InviteLinks_any" = "%@ invite links";
 
 "Conversation.ChecksTooltip.Delivered" = "Delivered";
 "Conversation.ChecksTooltip.Read" = "Read";
@@ -5992,3 +6011,35 @@ Sorry for the inconvenience.";
 
 "Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
 "Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";
+
+"Channel.AdminLog.UpdatedParticipantVolume" = "%1$@ changed %2$@ volume to %3$@";
+
+"Channel.AdminLog.DeletedInviteLink" = "%1$@ deleted invite link %2$@";
+"Channel.AdminLog.RevokedInviteLink" = "%1$@ revoked invite link %2$@";
+"Channel.AdminLog.EditedInviteLink" = "%1$@ edited invite link %2$@";
+
+"GroupInfo.Permissions.BroadcastTitle" = "Broadcast Channel";
+"GroupInfo.Permissions.BroadcastConvert" = "Convert Group to Channel";
+"GroupInfo.Permissions.BroadcastConvertInfo" = "You can permanently turn your group to a one to many channel ([like this]()) where only admins can post.";
+
+"ChannelIntro.ChannelsTitle" = "Telegram Channels";
+"ChannelIntro.ChannelsText" = "• No limit on the number of members.\n\n• Only admins can post.\n\n• Only admins see members list\n\n• You can enable comments for posts.";
+"ChannelIntro.ConvertToChannel" = "Convert to Channel";
+"ChannelIntro.ConvertCancel" = "Cancel";
+
+"ConvertToChannel.ConfirmationAlert.Title" = "Convert to Channel";
+"ConvertToChannel.ConfirmationAlert.Text" = "Do you want to convert your group to a channel? This action cannot be undone.";
+"ConvertToChannel.ConfirmationAlert.Proceed" = "Proceed";
+
+"ConvertToChannel.CommentsAlert.Title" = "Comments for Posts";
+"ConvertToChannel.CommentsAlert.Text" = "Do you want to allow subscribers of your channel to comment on posts of the channel?";
+
+"ConvertToChannel.LimitAlert.Title" = "Limit Reached";
+"ConvertToChannel.LimitAlert.Text" = "Your group has reached a limit of %@ members. You can increase this limit by converting the group to a broadcast channel where only admins can post, but users can comment (if you allow them). Interested?";
+"ConvertToChannel.LimitAlert.LearnMore" = "Learn More";
+
+"GroupInfo.GroupHistoryShort" = "Chat History";
+
+"PeerInfo.CustomizeNotifications" = "Customize";
+
+"Conversation.ContextMenuSpeak" = "Speak";

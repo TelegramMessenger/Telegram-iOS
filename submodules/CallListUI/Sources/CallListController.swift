@@ -141,6 +141,9 @@ public final class CallListController: ViewController {
         }
         
         self.navigationItem.titleView = self.segmentedTitleView
+        if case .navigation = self.mode {
+            self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

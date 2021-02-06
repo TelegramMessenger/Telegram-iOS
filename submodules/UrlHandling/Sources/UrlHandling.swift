@@ -141,6 +141,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     }
                 } else if pathComponents[0].hasPrefix(phonebookUsernamePathPrefix), let idValue = Int32(String(pathComponents[0][pathComponents[0].index(pathComponents[0].startIndex, offsetBy: phonebookUsernamePathPrefix.count)...])) {
                     return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
+                } else if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
+                    return .join(String(pathComponents[0].dropFirst()))
                 }
                 return .peerName(peerName, nil)
             } else if pathComponents.count == 2 || pathComponents.count == 3 {

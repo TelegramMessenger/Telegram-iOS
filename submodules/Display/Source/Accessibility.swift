@@ -28,7 +28,7 @@ public func smartInvertColorsEnabled() -> Bool {
     }
 }
 
-public func reduceMotionEnabled() -> Signal<Bool, NoError> {
+public func isReduceMotionEnabled() -> Signal<Bool, NoError> {
     return Signal { subscriber in
         subscriber.putNext(UIAccessibility.isReduceMotionEnabled)
         
@@ -41,10 +41,30 @@ public func reduceMotionEnabled() -> Signal<Bool, NoError> {
                 NotificationCenter.default.removeObserver(observer)
             }
         }
-        } |> runOn(Queue.mainQueue())
+    } |> runOn(Queue.mainQueue())
 }
 
-func boldTextEnabled() -> Signal<Bool, NoError> {
+public func isSpeakSelectionEnabled() -> Bool {
+    return UIAccessibility.isSpeakSelectionEnabled
+}
+
+public func isSpeakSelectionEnabledSignal() -> Signal<Bool, NoError> {
+    return Signal { subscriber in
+        subscriber.putNext(UIAccessibility.isSpeakSelectionEnabled)
+        
+        let observer = NotificationCenter.default.addObserver(forName: UIAccessibility.speakSelectionStatusDidChangeNotification, object: nil, queue: .main, using: { _ in
+            subscriber.putNext(UIAccessibility.isSpeakSelectionEnabled)
+        })
+        
+        return ActionDisposable {
+            Queue.mainQueue().async {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
+    } |> runOn(Queue.mainQueue())
+}
+
+public func isBoldTextEnabled() -> Signal<Bool, NoError> {
     return Signal { subscriber in
         subscriber.putNext(UIAccessibility.isBoldTextEnabled)
         

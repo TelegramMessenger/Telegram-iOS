@@ -120,6 +120,7 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
 final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
     var controllerInteraction: ChatControllerInteraction?
     var peer: Peer?
+    var messageId: MessageId?
     
     let containerNode: ContextControllerSourceNode
     let avatarNode: AvatarNode
@@ -152,7 +153,7 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
             guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction, let peer = strongSelf.peer else {
                 return
             }
-            controllerInteraction.openPeerContextMenu(peer, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
+            controllerInteraction.openPeerContextMenu(peer, strongSelf.messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
         }
     }
     
@@ -168,6 +169,9 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
     func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor, controllerInteraction: ChatControllerInteraction) {
         self.controllerInteraction = controllerInteraction
         self.peer = peer
+        if let messageReference = authorOfMessage, case let .message(m) = messageReference.content {
+            self.messageId = m.id
+        }
         
         self.contextActionIsEnabled = peer.smallProfileImage != nil
         

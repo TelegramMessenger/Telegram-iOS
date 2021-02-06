@@ -113,7 +113,7 @@ public final class ChatControllerInteraction {
     let displayDiceTooltip: (TelegramMediaDice) -> Void
     let animateDiceSuccess: (Bool) -> Void
     let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)?
-    let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
+    let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
     let openMessageStats: (MessageId) -> Void
@@ -203,7 +203,7 @@ public final class ChatControllerInteraction {
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
         animateDiceSuccess: @escaping (Bool) -> Void,
         greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)?,
-        openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
+        openPeerContextMenu: @escaping (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
         openMessageStats: @escaping (MessageId) -> Void,
@@ -334,7 +334,7 @@ public final class ChatControllerInteraction {
         }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
-        }, openPeerContextMenu: { _, _, _, _ in
+        }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
         }, openMessageStats: { _ in

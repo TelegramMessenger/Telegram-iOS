@@ -52,8 +52,8 @@ private enum InviteLinksListSection: Int32 {
     case header
     case mainLink
     case links
-    case admins
     case revokedLinks
+    case admins
 }
 
 private enum InviteLinksListEntry: ItemListNodeEntry {
@@ -65,15 +65,15 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     
     case linksHeader(PresentationTheme, String)
     case linksCreate(PresentationTheme, String)
-    case links(Int32, PresentationTheme, [ExportedInvitation]?, Int)
+    case link(Int32, PresentationTheme, ExportedInvitation?, Int32?)
     case linksInfo(PresentationTheme, String)
-    
-    case adminsHeader(PresentationTheme, String)
-    case admin(Int32, PresentationTheme, ExportedInvitationCreator)
     
     case revokedLinksHeader(PresentationTheme, String)
     case revokedLinksDeleteAll(PresentationTheme, String)
-    case revokedLinks(Int32, PresentationTheme, [ExportedInvitation]?)
+    case revokedLinks(Int32, PresentationTheme, ExportedInvitation?)
+    
+    case adminsHeader(PresentationTheme, String)
+    case admin(Int32, PresentationTheme, ExportedInvitationCreator)
     
     var section: ItemListSectionId {
         switch self {
@@ -81,12 +81,12 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 return InviteLinksListSection.header.rawValue
             case .mainLinkHeader, .mainLink, .mainLinkOtherInfo:
                 return InviteLinksListSection.mainLink.rawValue
-            case .linksHeader, .linksCreate, .links, .linksInfo:
+            case .linksHeader, .linksCreate, .link, .linksInfo:
                 return InviteLinksListSection.links.rawValue
-            case .adminsHeader, .admin:
-                return InviteLinksListSection.admins.rawValue
             case .revokedLinksHeader, .revokedLinksDeleteAll, .revokedLinks:
                 return InviteLinksListSection.revokedLinks.rawValue
+            case .adminsHeader, .admin:
+                return InviteLinksListSection.admins.rawValue
         }
     }
     
@@ -104,20 +104,20 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 return 4
             case .linksCreate:
                 return 5
-            case let .links(index, _, _, _):
+            case let .link(index, _, _, _):
                 return 6 + index
             case .linksInfo:
                 return 10000
-            case .adminsHeader:
-                return 10001
-            case let .admin(index, _, _):
-                return 10002 + index
             case .revokedLinksHeader:
-                return 20001
+                return 10001
             case .revokedLinksDeleteAll:
-                return 20002
+                return 10002
             case let .revokedLinks(index, _, _):
-                return 20003 + index
+                return 10003 + index
+            case .adminsHeader:
+                return 20001
+            case let .admin(index, _, _):
+                return 20002 + index
         }
     }
     
@@ -159,26 +159,14 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .links(lhsIndex, lhsTheme, lhsLinks, lhsCount):
-                if case let .links(rhsIndex, rhsTheme, rhsLinks, rhsCount) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsLinks == rhsLinks, lhsCount == rhsCount {
+            case let .link(lhsIndex, lhsTheme, lhsLink, lhsTick):
+                if case let .link(rhsIndex, rhsTheme, rhsLink, rhsTick) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsLink == rhsLink, lhsTick == rhsTick {
                     return true
                 } else {
                     return false
                 }
             case let .linksInfo(lhsTheme, lhsText):
                 if case let .linksInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .adminsHeader(lhsTheme, lhsText):
-                if case let .adminsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .admin(lhsIndex, lhsTheme, lhsCreator):
-                if case let .admin(rhsIndex, rhsTheme, rhsCreator) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsCreator == rhsCreator {
                     return true
                 } else {
                     return false
@@ -195,8 +183,20 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .revokedLinks(lhsIndex, lhsTheme, lhsLinks):
-                if case let .revokedLinks(rhsIndex, rhsTheme, rhsLinks) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsLinks == rhsLinks {
+            case let .revokedLinks(lhsIndex, lhsTheme, lhsLink):
+                if case let .revokedLinks(rhsIndex, rhsTheme, rhsLink) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsLink == rhsLink {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adminsHeader(lhsTheme, lhsText):
+                if case let .adminsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .admin(lhsIndex, lhsTheme, lhsCreator):
+                if case let .admin(rhsIndex, rhsTheme, rhsCreator) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsCreator == rhsCreator {
                     return true
                 } else {
                     return false
@@ -236,40 +236,40 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             case let .linksHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .linksCreate(theme, text):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, hasSeparator: false, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createLink()
                 })
-            case let .links(_, _, invites, count):
-                return ItemListInviteLinkGridItem(presentationData: presentationData, invites: invites, count: count, share: false, sectionId: self.section, style: .blocks, tapAction: { invite in
+            case let .link(_, _, invite, _):
+                return ItemListInviteLinkItem(presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
                     arguments.openLink(invite)
-                }, contextAction: { invite, node in
-                    arguments.linkContextAction(invite, node, nil)
-                })
+                } contextAction: { invite, node, gesture in
+                    arguments.linkContextAction(invite, node, gesture)
+                }
             case let .linksInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .revokedLinksHeader(_, text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .revokedLinksDeleteAll(theme, text):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.deleteIconImage(theme), title: text, sectionId: self.section, color: .destructive, editing: false, action: {
+                    arguments.deleteAllRevokedLinks()
+                })
+            case let .revokedLinks(_, _, invite):
+                return ItemListInviteLinkItem(presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
+                    arguments.openLink(invite)
+                } contextAction: { invite, node, gesture in
+                    arguments.linkContextAction(invite, node, gesture)
+                }
             case let .adminsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .admin(_, _, creator):
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: .firstLast, context: arguments.context, peer: creator.peer.peer!, height: .peerList, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .none, label: .disclosure("\(creator.count)"), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
                     arguments.openAdmin(creator)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
-            case let .revokedLinksHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .revokedLinksDeleteAll(theme, text):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.deleteIconImage(theme), title: text, hasSeparator: false, sectionId: self.section, color: .destructive, editing: false, action: {
-                    arguments.deleteAllRevokedLinks()
-                })
-            case let .revokedLinks(_, _, invites):
-                return ItemListInviteLinkGridItem(presentationData: presentationData, invites: invites, count: 0, share: false, sectionId: self.section, style: .blocks, tapAction: { invite in
-                    arguments.openLink(invite)
-                }, contextAction: { invite, node in
-                    arguments.linkContextAction(invite, node, nil)
-                })
         }
     }
 }
 
-private func inviteLinkListControllerEntries(presentationData: PresentationData, view: PeerView, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, importers: PeerInvitationImportersState?, creators: [ExportedInvitationCreator], admin: ExportedInvitationCreator?) -> [InviteLinksListEntry] {
+private func inviteLinkListControllerEntries(presentationData: PresentationData, view: PeerView, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, importers: PeerInvitationImportersState?, creators: [ExportedInvitationCreator], admin: ExportedInvitationCreator?, tick: Int32) -> [InviteLinksListEntry] {
     var entries: [InviteLinksListEntry] = []
     
     if admin == nil {
@@ -318,24 +318,33 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     }
     if let additionalInvites = additionalInvites {
         var index: Int32 = 0
-        for i in stride(from: 0, to: additionalInvites.endIndex, by: 2) {
-            var invitesPair: [ExportedInvitation] = []
-            invitesPair.append(additionalInvites[i])
-            if i + 1 < additionalInvites.count {
-                invitesPair.append(additionalInvites[i + 1])
-            }
-            entries.append(.links(index, presentationData.theme, invitesPair, invitesPair.count))
+        for invite in additionalInvites {
+            entries.append(.link(index, presentationData.theme, invite, invite.expireDate != nil ? tick : nil))
             index += 1
         }
-    } else if let admin = admin {
+    } else if let admin = admin, admin.count > 0 {
         var index: Int32 = 0
-        for _ in stride(from: 0, to: admin.count, by: 2) {
-            entries.append(.links(index, presentationData.theme, nil, 1))
+        for _ in 0 ..< admin.count - 1 {
+            entries.append(.link(index, presentationData.theme, nil, nil))
             index += 1
         }
     }
-    entries.append(.linksInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+    if admin == nil {
+        entries.append(.linksInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+    }
     
+    if let revokedInvites = revokedInvites, !revokedInvites.isEmpty {
+        entries.append(.revokedLinksHeader(presentationData.theme, presentationData.strings.InviteLink_RevokedLinks.uppercased()))
+        if admin == nil {
+            entries.append(.revokedLinksDeleteAll(presentationData.theme, presentationData.strings.InviteLink_DeleteAllRevokedLinks))
+        }
+        var index: Int32 = 0
+        for invite in revokedInvites {
+            entries.append(.revokedLinks(index, presentationData.theme, invite))
+            index += 1
+        }
+    }
+   
     if !creators.isEmpty {
         entries.append(.adminsHeader(presentationData.theme, presentationData.strings.InviteLink_OtherAdminsLinks.uppercased()))
         var index: Int32 = 0
@@ -347,23 +356,6 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         }
     }
     
-    if let revokedInvites = revokedInvites, !revokedInvites.isEmpty {
-        entries.append(.revokedLinksHeader(presentationData.theme, presentationData.strings.InviteLink_RevokedLinks.uppercased()))
-        if admin == nil {
-            entries.append(.revokedLinksDeleteAll(presentationData.theme, presentationData.strings.InviteLink_DeleteAllRevokedLinks))
-        }
-        var index: Int32 = 0
-        for i in stride(from: 0, to: revokedInvites.endIndex, by: 2) {
-            var invitesPair: [ExportedInvitation] = []
-            invitesPair.append(revokedInvites[i])
-            if i + 1 < revokedInvites.count {
-                invitesPair.append(revokedInvites[i + 1])
-            }
-            entries.append(.revokedLinks(index, presentationData.theme, invitesPair))
-            index += 1
-        }
-    }
-   
     return entries
 }
 
@@ -371,11 +363,12 @@ private struct InviteLinkListControllerState: Equatable {
     var revokingPrivateLink: Bool
 }
 
-
 public func inviteLinkListController(context: AccountContext, peerId: PeerId, admin: ExportedInvitationCreator?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
+    
+    var dismissTooltipsImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -413,6 +406,8 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
         
+        dismissTooltipsImpl?()
+        
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, mainLinkContextAction: { invite, node, gesture in
@@ -426,6 +421,8 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
         }, action: { _, f in
             f(.dismissWithoutContent)
+            
+            dismissTooltipsImpl?()
             
             UIPasteboard.general.string = invite.link
             
@@ -470,16 +467,16 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                                 }
                             }
                             if revoke {
-                                revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-                                    updateState { state in
-                                        var updatedState = state
-                                        updatedState.revokingPrivateLink = false
-                                        return updatedState
-                                    }
-                                    
-                                    invitesContext.reload()
-                                    revokedInvitesContext.reload()
-                                }))
+//                                revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
+//                                    updateState { state in
+//                                        var updatedState = state
+//                                        updatedState.revokingPrivateLink = false
+//                                        return updatedState
+//                                    }
+//
+//                                    invitesContext.reload()
+//                                    revokedInvitesContext.reload()
+//                                }))
                             }
                         })
                     ]),
@@ -489,7 +486,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: false)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, createLink: {
         let controller = inviteLinkEditController(context: context, peerId: peerId, invite: nil, completion: { invite in
@@ -516,6 +513,8 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
         }, action: { _, f in
             f(.dismissWithoutContent)
+            
+            dismissTooltipsImpl?()
             
             UIPasteboard.general.string = invite.link
 
@@ -619,7 +618,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: true)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, openAdmin: { admin in
         let controller = inviteLinkListController(context: context, peerId: peerId, admin: admin)
@@ -636,7 +635,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                 ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteAllRevokedLinksAlert_Action, color: .destructive, action: {
                     dismissAction()
                     
-                    deleteAllRevokedLinksDisposable.set((deleteAllRevokedPeerExportedInvitations(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
+                    deleteAllRevokedLinksDisposable.set((deleteAllRevokedPeerExportedInvitations(account: context.account, peerId: peerId, adminId: adminId ?? context.account.peerId) |> deliverOnMainQueue).start(completed: {
                     }))
                     
                     revokedInvitesContext.clear()
@@ -673,10 +672,16 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         }
     }
     
+    let timerPromise = ValuePromise<Int32>(0)
+    let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: {
+        timerPromise.set(Int32(CFAbsoluteTimeGetCurrent()))
+    }, queue: Queue.mainQueue())
+    timer.start()
+    
     let previousRevokedInvites = Atomic<PeerExportedInvitationsState?>(value: nil)
-    let signal = combineLatest(context.sharedContext.presentationData, peerView, importersContext, importersState.get(), invitesContext.state, revokedInvitesContext.state, creators)
+    let signal = combineLatest(context.sharedContext.presentationData, peerView, importersContext, importersState.get(), invitesContext.state, revokedInvitesContext.state, creators, timerPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, view, importersContext, importers, invites, revokedInvites, creators -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, view, importersContext, importers, invites, revokedInvites, creators, tick -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previousRevokedInvites = previousRevokedInvites.swap(invites)
         
         var crossfade = false
@@ -686,21 +691,25 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         
         let title: ItemListControllerTitle
         if let admin = admin, let peer = admin.peer.peer {
-            title = .textWithSubtitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), "\(admin.count) invite links")
+            title = .textWithSubtitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), presentationData.strings.InviteLink_InviteLinks(admin.count))
         } else {
             title = .text(presentationData.strings.InviteLink_Title)
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.invitations, importers: importers, creators: creators, admin: admin), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.invitations, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {
+        timer.invalidate()
         actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.willDisappear = { _ in
+        dismissTooltipsImpl?()
+    }
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }
@@ -727,6 +736,19 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
     getControllerImpl = { [weak controller] in
         return controller
     }
+    dismissTooltipsImpl = { [weak controller] in
+        controller?.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        controller?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
+    }
     return controller
 }
 
@@ -739,11 +761,11 @@ final class InviteLinkContextExtractedContentSource: ContextExtractedContentSour
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
     
-    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode) {
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, blurBackground: Bool) {
         self.controller = controller
         self.sourceNode = sourceNode
         self.keepInPlace = true
-        self.blurBackground = false
+        self.blurBackground = blurBackground
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {

@@ -193,7 +193,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     arguments.dismissInput()
                     arguments.updateState { state in
                         var updatedState = state
-//                        updatedState.pickingTimeLimit = !state.pickingTimeLimit
+                        updatedState.pickingTimeLimit = !state.pickingTimeLimit
                         return updatedState
                     }
                 })
