@@ -82,6 +82,7 @@ jobs:
           rm -rf $HOME/telegram-configuration
           mkdir -p $HOME/telegram-configuration
           cp -R build-system/example-configuration/* $HOME/telegram-configuration/
+          echo "ng_env = \"$NG_ENV\"" >> $HOME/telegram-configuration/variables.bzl
 
           # build the app
           python3 build-system/Make/Make.py \
