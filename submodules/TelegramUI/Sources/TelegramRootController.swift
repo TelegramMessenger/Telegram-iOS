@@ -131,14 +131,6 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-        Queue.mainQueue().after(1.0) {        
-            let datePicker = DatePickerNode(theme: DatePickerTheme(backgroundColor: .white, textColor: .black, secondaryTextColor: .gray, accentColor: .blue, disabledColor: .lightGray, selectionColor: .blue, selectedCurrentTextColor: .white, secondarySelectionColor: .cyan), strings: self.context.sharedContext.currentPresentationData.with { $0 }.strings)
-            
-            let frame = CGRect(origin: CGPoint(x: 50.0, y: 100.0), size: CGSize(width: 300.0, height: 300.0))
-            datePicker.updateLayout(size: frame.size, transition: .immediate)
-            self.rootTabController?.displayNode.addSubnode(datePicker)
-        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {

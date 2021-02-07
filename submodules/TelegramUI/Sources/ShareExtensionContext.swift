@@ -73,6 +73,32 @@ public struct ShareRootControllerInitializationData {
     }
 }
 
+private func extractTextFileHeader(path: String) -> String? {
+    guard let file = ManagedFile(queue: nil, path: path, mode: .read) else {
+        return nil
+    }
+    guard let size = file.getSize() else {
+        return nil
+    }
+    
+    let limit = 3000
+    
+    var data = file.readData(count: min(size, limit))
+    let additionalCapacity = min(10, max(0, size - data.count))
+    
+    for alignment in 0 ... additionalCapacity {
+        if alignment != 0 {
+            data.append(file.readData(count: 1))
+        }
+        if let text = String(data: data, encoding: .utf8) {
+            return text
+        } else {
+            continue
+        }
+    }
+    return nil
+}
+
 public class ShareRootControllerImpl {
     private let initializationData: ShareRootControllerInitializationData
     private let getExtensionContext: () -> NSExtensionContext?
@@ -523,11 +549,11 @@ public class ShareRootControllerImpl {
                                                 return try? NSRegularExpression(pattern: string)
                                             }
                                             
-                                            if let mainFileText = try? String(contentsOf: URL(fileURLWithPath: url.path)) {
-                                                let fullRange = NSRange(mainFileText.startIndex ..< mainFileText.endIndex, in: mainFileText)
+                                            if let mainFileTextHeader = extractTextFileHeader(path: url.path) {
+                                                let fullRange = NSRange(mainFileTextHeader.startIndex ..< mainFileTextHeader.endIndex, in: mainFileTextHeader)
                                                 var foundMatch = false
                                                 for pattern in filePatterns {
-                                                    if pattern.firstMatch(in: mainFileText, options: [], range: fullRange) != nil {
+                                                    if pattern.firstMatch(in: mainFileTextHeader, options: [], range: fullRange) != nil {
                                                         foundMatch = true
                                                         break
                                                     }
@@ -550,14 +576,7 @@ public class ShareRootControllerImpl {
                                             }
                                         }
                                         
-                                        if let mainFile = mainFile, let mainFileText = try? String(contentsOf: URL(fileURLWithPath: mainFile.path)) {
-                                            let mainFileHeader: String
-                                            if mainFileText.count < 2000 {
-                                                mainFileHeader = mainFileText
-                                            } else {
-                                                mainFileHeader = String(mainFileText[mainFileText.startIndex ..< mainFileText.index(mainFileText.startIndex, offsetBy: 2000)])
-                                            }
-                                            
+                                        if let mainFile = mainFile, let mainFileHeader = extractTextFileHeader(path :mainFile.path) {
                                             final class TempController: ViewController {
                                                 override public var _presentedInModal: Bool {
                                                     get {

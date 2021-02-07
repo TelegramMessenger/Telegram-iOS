@@ -65,6 +65,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
     var openStats: (() -> Void)?
+    var completed: (([PeerId]) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -585,6 +586,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 Queue.mainQueue().after(delay, {
                     self?.animateOut(shared: true, completion: {
                         self?.dismiss?(true)
+                        self?.completed?(peerIds)
                     })
                 })
             }

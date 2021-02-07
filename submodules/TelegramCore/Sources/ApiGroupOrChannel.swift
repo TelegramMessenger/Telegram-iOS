@@ -165,7 +165,10 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                 case .broadcast:
                     break
                 case .group:
-                    let infoFlags = TelegramChannelGroupFlags()
+                    var infoFlags = TelegramChannelGroupFlags()
+                    if (flags & Int32(1 << 22)) != 0 {
+                        infoFlags.insert(.slowModeEnabled)
+                    }
                     info = .group(TelegramChannelGroupInfo(flags: infoFlags))
                 }
                 

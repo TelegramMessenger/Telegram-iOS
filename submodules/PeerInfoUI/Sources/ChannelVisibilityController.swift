@@ -850,7 +850,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
-        
+    
     let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
         updateState { state in
             return state.withUpdatedSelectedType(type)

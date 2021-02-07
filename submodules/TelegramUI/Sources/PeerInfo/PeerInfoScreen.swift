@@ -63,6 +63,7 @@ import GalleryData
 import ChatInterfaceState
 import TelegramVoip
 import InviteLinksUI
+import UndoUI
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -4961,6 +4962,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                         
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
