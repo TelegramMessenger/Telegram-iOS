@@ -33,7 +33,7 @@ experimental:
     - ios_internal
   stage: build
   only:
-    - experimental
+    - experimental-3
   except:
     - tags
   script:
