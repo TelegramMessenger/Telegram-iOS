@@ -7092,6 +7092,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         switch error {
+                        case .generic:
+                            break
                         case let .inlineBotLocationRequest(peerId):
                             strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ShareInlineBotLocationConfirmation, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
                                 let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: Int32(Date().timeIntervalSince1970 + 10 * 60)).start()
