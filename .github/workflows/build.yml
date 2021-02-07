@@ -54,6 +54,7 @@ jobs:
           export COMMIT_COUNT=$(git rev-list --count HEAD)
           export COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
           export BUILD_NUMBER="$COMMIT_COUNT"
+          export NG_ENV="$NG_ENV"
           echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
           echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
           echo "NG_ENV=$(echo $NG_ENV)" >> $GITHUB_ENV
