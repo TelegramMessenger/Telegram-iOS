@@ -289,7 +289,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return (state?.main.nextRate ?? 0, lowerBound, inputPeer)
                 } else {
                     return (0, lowerBound, .inputPeerEmpty)
-                } 
+                }
             }
             |> mapToSignal { (nextRate, lowerBound, inputPeer) in
                 return account.network.request(Api.functions.messages.searchGlobal(flags: flags, folderId: folderId, q: query, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)

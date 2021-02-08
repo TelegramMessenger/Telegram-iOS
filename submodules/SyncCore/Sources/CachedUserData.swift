@@ -3,26 +3,46 @@ import Postbox
 
 public enum CachedPeerAutoremoveTimeout: Equatable, PostboxCoding {
     public struct Value: Equatable, PostboxCoding {
-        public var myValue: Int32
-        public var peerValue: Int32
+        public var myValue: Int32?
+        public var peerValue: Int32?
         public var isGlobal: Bool
         
-        public init(myValue: Int32, peerValue: Int32, isGlobal: Bool) {
+        public init(myValue: Int32?, peerValue: Int32?, isGlobal: Bool) {
             self.myValue = myValue
             self.peerValue = peerValue
             self.isGlobal = isGlobal
         }
         
         public init(decoder: PostboxDecoder) {
-            self.myValue = decoder.decodeInt32ForKey("myValue", orElse: 7 * 60 * 60)
-            self.peerValue = decoder.decodeInt32ForKey("peerValue", orElse: 7 * 60 * 60)
+            self.myValue = decoder.decodeOptionalInt32ForKey("myValue")
+            self.peerValue = decoder.decodeOptionalInt32ForKey("peerValue")
             self.isGlobal = decoder.decodeInt32ForKey("isGlobal", orElse: 1) != 0
         }
         
         public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeInt32(self.myValue, forKey: "myValue")
-            encoder.encodeInt32(self.peerValue, forKey: "peerValue")
+            if let myValue = self.myValue {
+                encoder.encodeInt32(myValue, forKey: "myValue")
+            } else {
+                encoder.encodeNil(forKey: "myValue")
+            }
+            if let peerValue = self.peerValue {
+                encoder.encodeInt32(peerValue, forKey: "peerValue")
+            } else {
+                encoder.encodeNil(forKey: "peerValue")
+            }
             encoder.encodeInt32(self.isGlobal ? 1 : 0, forKey: "isGlobal")
+        }
+        
+        public var effectiveValue: Int32? {
+            if let myValue = self.myValue, let peerValue = self.peerValue {
+                return min(myValue, peerValue)
+            } else if let myValue = self.myValue {
+                return myValue
+            } else if let peerValue = self.peerValue {
+                return peerValue
+            } else {
+                return nil
+            }
         }
     }
     

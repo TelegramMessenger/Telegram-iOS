@@ -30,7 +30,7 @@ private enum PeerAutoremoveSetupSection: Int32 {
 private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
     case header
     case timeHeader(String)
-    case timeValue(Int32)
+    case timeValue(Int32, Int32)
     case timeComment(String)
     case globalSwitch(String, Bool)
     
@@ -74,8 +74,8 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .timeValue(lhsValue):
-            if case let .timeValue(rhsValue) = rhs, lhsValue == rhsValue {
+        case let .timeValue(lhsValue, lhsMaxValue):
+            if case let .timeValue(rhsValue, rhsMaxValue) = rhs, lhsValue == rhsValue, lhsMaxValue == rhsMaxValue {
                 return true
             } else {
                 return false
@@ -106,8 +106,8 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: "", animation: .autoRemove, sectionId: self.section)
         case let .timeHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .timeValue(value):
-            return PeerRemoveTimeoutItem(theme: presentationData.theme, value: value, maxValue: Int32.max, enabled: true, sectionId: self.section, updated: { value in
+        case let .timeValue(value, maxValue):
+            return PeerRemoveTimeoutItem(theme: presentationData.theme, value: value, maxValue: maxValue, enabled: true, sectionId: self.section, updated: { value in
                 arguments.updateValue(value)
             }, tag: nil)
         case let .timeComment(text):
@@ -126,15 +126,25 @@ private struct PeerAutoremoveSetupState: Equatable {
     var applyingSetting: Bool = false
 }
 
-private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: PresentationData, defaultValue: Int32?, defaultGlobalValue: Bool, state: PeerAutoremoveSetupState) -> [PeerAutoremoveSetupEntry] {
+private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: PresentationData, defaultMyValue: Int32, peerValue: Int32, defaultGlobalValue: Bool, state: PeerAutoremoveSetupState) -> [PeerAutoremoveSetupEntry] {
     var entries: [PeerAutoremoveSetupEntry] = []
-    let value = state.changedValue ?? defaultValue
     let globalValue = state.changedGlobalValue ?? defaultGlobalValue
+    
+    let resolvedValue: Int32
+    let resolvedMaxValue: Int32
+    
+    if peer is TelegramUser {
+        resolvedValue = state.changedValue ?? defaultMyValue
+        resolvedMaxValue = peerValue
+    } else {
+        resolvedValue = state.changedValue ?? peerValue
+        resolvedMaxValue = Int32.max
+    }
     
     //TODO:localize
     entries.append(.header)
     entries.append(.timeHeader("AUTO-DELETE MESSAGES"))
-    entries.append(.timeValue(value ?? Int32.max))
+    entries.append(.timeValue(resolvedValue, resolvedMaxValue))
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
         entries.append(.timeComment("Automatically delete messages sent in this channel after a certain period of time."))
     } else {
@@ -184,25 +194,25 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
     |> deliverOnMainQueue
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        var defaultValue: Int32 = Int32.max
-        var maxValue: Int32 = Int32.max
+        var defaultMyValue: Int32 = Int32.max
+        var peerValue: Int32 = Int32.max
         var defaultGlobalValue = true
         if let cachedData = view.cachedData as? CachedChannelData {
             if case let .known(value) = cachedData.autoremoveTimeout {
-                defaultValue = value?.myValue ?? Int32.max
-                maxValue = value?.peerValue ?? Int32.max
+                defaultMyValue = value?.myValue ?? Int32.max
+                peerValue = value?.peerValue ?? Int32.max
                 defaultGlobalValue = value?.isGlobal ?? true
             }
         } else if let cachedData = view.cachedData as? CachedGroupData {
             if case let .known(value) = cachedData.autoremoveTimeout {
-                defaultValue = value?.myValue ?? Int32.max
-                maxValue = value?.peerValue ?? Int32.max
+                defaultMyValue = value?.myValue ?? Int32.max
+                peerValue = value?.peerValue ?? Int32.max
                 defaultGlobalValue = value?.isGlobal ?? true
             }
         } else if let cachedData = view.cachedData as? CachedUserData {
             if case let .known(value) = cachedData.autoremoveTimeout {
-                defaultValue = value?.myValue ?? Int32.max
-                maxValue = value?.peerValue ?? Int32.max
+                defaultMyValue = value?.myValue ?? Int32.max
+                peerValue = value?.peerValue ?? Int32.max
                 defaultGlobalValue = value?.isGlobal ?? true
             }
         }
@@ -217,35 +227,47 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                var value: Int32?
+                var changedValue: Int32?
                 var globalValue: Bool?
                 updateState { state in
                     var state = state
                     state.applyingSetting = true
-                    value = state.changedValue
+                    changedValue = state.changedValue
                     globalValue = state.changedGlobalValue
                     return state
                 }
+                
+                let resolvedDefaultValue: Int32
+                if peer is TelegramUser {
+                    resolvedDefaultValue = defaultMyValue
+                } else {
+                    resolvedDefaultValue = peerValue
+                }
+                
                 var updated = false
-                if let value = value, value != defaultValue {
+                if let changedValue = changedValue, changedValue != resolvedDefaultValue {
                     updated = true
                 }
                 if let globalValue = globalValue, globalValue != defaultGlobalValue {
                     updated = true
                 }
                 if updated {
-                    let resolvedValue = value ?? defaultValue
+                    var resolvedValue: Int32? = changedValue ?? resolvedDefaultValue
+                    if resolvedValue == Int32.max {
+                        resolvedValue = nil
+                    }
+                    
                     let resolvedGlobalValue = globalValue ?? defaultGlobalValue
                     
-                    let signal = setChatMessageAutoremoveTimeoutInteractively(account: context.account, peerId: peerId, timeout: resolvedValue == Int32.max ? nil : resolvedValue, isGlobal: resolvedGlobalValue)
+                    let signal = setChatMessageAutoremoveTimeoutInteractively(account: context.account, peerId: peerId, timeout: resolvedValue, isGlobal: resolvedGlobalValue)
                     |> deliverOnMainQueue
                     
                     applyDisposable.set((signal
                     |> deliverOnMainQueue).start(error: { _ in
                     }, completed: {
                         dismissImpl?()
-                        if resolvedValue != defaultValue {
-                            completion(.updated(resolvedValue))
+                        if resolvedValue != resolvedDefaultValue {
+                            completion(.updated(changedValue))
                         } else {
                             completion(.unchanged)
                         }
@@ -254,51 +276,12 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
                     dismissImpl?()
                     completion(.unchanged)
                 }
-                /*if let value = value, value != defaultValue {
-                    if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
-                            return updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
-                            |> `catch` { _ -> Signal<Void, NoError> in
-                                return .complete()
-                            }
-                            |> mapToSignal { _ -> Signal<PeerId?, NoError> in
-                                return .complete()
-                            }
-                            |> then(.single(upgradedPeerId))
-                            |> castError(ConvertGroupToSupergroupError.self)
-                        }
-                        |> deliverOnMainQueue
-                        applyDisposable.set((signal
-                        |> deliverOnMainQueue).start(next: { upgradedPeerId in
-                            if let upgradedPeerId = upgradedPeerId {
-                                upgradedToSupergroup(upgradedPeerId, {
-                                    dismissImpl?()
-                                })
-                            }
-                        }, error: { error in
-                            switch error {
-                            case .tooManyChannels:
-                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
-                            default:
-                                break
-                            }
-                        }))
-                    } else {
-                        applyDisposable.set((updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: peerId, historyAvailableForNewMembers: value)
-                        |> deliverOnMainQueue).start(completed: {
-                            dismissImpl?()
-                        }))
-                    }
-                } else {
-                    dismissImpl?()
-                }*/
             })
         }
         
         //TODO:localize
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Auto-Deletion"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peerAutoremoveSetupEntries(peer: peer, presentationData: presentationData, defaultValue: defaultValue, defaultGlobalValue: defaultGlobalValue, state: state), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peerAutoremoveSetupEntries(peer: peer, presentationData: presentationData, defaultMyValue: defaultMyValue, peerValue: peerValue, defaultGlobalValue: defaultGlobalValue, state: state), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }

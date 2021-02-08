@@ -1224,18 +1224,18 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         invitesText = ""
                     }
                     
-//                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                        interaction.editingOpenInviteLinksSetup()
-//                    }))
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
                     
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, action: {
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
                     
-                    if channel.hasPermission(.changeInfo) {
+                    /*if channel.hasPermission(.changeInfo) {
                         let timeoutString: String
                         if case let .known(value) = (data.cachedData as? CachedChannelData)?.autoremoveTimeout {
-                            if let value = value?.peerValue {
+                            if let value = value?.effectiveValue {
                                 timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
                             } else {
                                 timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
@@ -1247,7 +1247,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
                             interaction.editingOpenAutoremoveMesages()
                         }))
-                    }
+                    }*/
                     
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
@@ -1326,9 +1326,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     invitesText = ""
                                 }
                                 
-//                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                                    interaction.editingOpenInviteLinksSetup()
-//                                }))
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                                    interaction.editingOpenInviteLinksSetup()
+                                }))
                             }
                             
                             if cachedData.flags.contains(.canChangeUsername) {
@@ -1353,7 +1353,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             /*if channel.hasPermission(.changeInfo) {
                                 let timeoutString: String
                                 if case let .known(value) = cachedData.autoremoveTimeout {
-                                    if let value = value?.peerValue {
+                                    if let value = value?.effectiveValue {
                                         timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
                                     } else {
                                         timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
@@ -1428,9 +1428,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     invitesText = ""
                 }
                 
-//                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                    interaction.editingOpenInviteLinksSetup()
-//                }))
+                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
+                    interaction.editingOpenInviteLinksSetup()
+                }))
                 
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
                     interaction.editingOpenPreHistorySetup()
@@ -3808,7 +3808,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func editingOpenInviteLinksSetup() {
-        self.controller?.push(inviteLinkListController(context: self.context, peerId: self.peerId))
+        self.controller?.push(inviteLinkListController(context: self.context, peerId: self.peerId, admin: nil))
     }
     
     private func editingOpenDiscussionGroupSetup() {

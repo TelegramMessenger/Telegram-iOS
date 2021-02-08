@@ -2903,7 +2903,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     hasBots = true
                                 }
                                 if case let .known(value) = cachedGroupData.autoremoveTimeout {
-                                    autoremoveTimeout = value?.peerValue
+                                    autoremoveTimeout = value?.effectiveValue
                                 }
                             } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                                 if let channel = peer as? TelegramChannel, case .group = channel.info {
@@ -2912,11 +2912,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 if case let .known(value) = cachedChannelData.autoremoveTimeout {
-                                    autoremoveTimeout = value?.peerValue
+                                    autoremoveTimeout = value?.effectiveValue
                                 }
                             } else if let cachedUserData = peerView.cachedData as? CachedUserData {
                                 if case let .known(value) = cachedUserData.autoremoveTimeout {
-                                    autoremoveTimeout = value?.peerValue
+                                    autoremoveTimeout = value?.effectiveValue
                                 }
                             }
                         }
@@ -7681,16 +7681,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let actionSheet = actionSheet else {
                                 return
                             }
-                            actionSheet.dismissAnimated()
-                            
                             guard let strongSelf = self else {
                                 return
                             }
                             
+                            Queue.mainQueue().after(0.8, {
+                                self?.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                            })
+                            
+                            actionSheet.dismissAnimated()
+                            
                             let controller = peerAutoremoveSetupScreen(context: strongSelf.context, peerId: peer.id, completion: { updatedValue in
-                                if case .updated = updatedValue {
-                                    if currentAutoremoveTimeout == nil {
-                                        self?.navigationButtonAction(.clearHistory)
+                                if case let .updated(value) = updatedValue {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    if let value = value {
+                                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: value))").0), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     }
                                 }
                             })

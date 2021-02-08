@@ -45,7 +45,7 @@ public struct Font {
             }
             var updatedDescriptor: UIFontDescriptor? = descriptor.withSymbolicTraits(symbolicTraits)
             if traits.contains(.monospacedNumbers) {
-                updatedDescriptor = descriptor.addingAttributes([
+                updatedDescriptor = updatedDescriptor?.addingAttributes([
                 UIFontDescriptor.AttributeName.featureSettings: [
                   [UIFontDescriptor.FeatureKey.featureIdentifier:
                    kNumberSpacingType,
