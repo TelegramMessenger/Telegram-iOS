@@ -1232,10 +1232,10 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
                     
-                    if channel.hasPermission(.changeInfo) {
+                    /*if channel.hasPermission(.changeInfo) {
                         let timeoutString: String
                         if case let .known(value) = (data.cachedData as? CachedChannelData)?.autoremoveTimeout {
-                            if let value = value?.peerValue {
+                            if let value = value?.effectiveValue {
                                 timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
                             } else {
                                 timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
@@ -1247,7 +1247,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
                             interaction.editingOpenAutoremoveMesages()
                         }))
-                    }
+                    }*/
                     
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
@@ -1353,7 +1353,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             /*if channel.hasPermission(.changeInfo) {
                                 let timeoutString: String
                                 if case let .known(value) = cachedData.autoremoveTimeout {
-                                    if let value = value?.peerValue {
+                                    if let value = value?.effectiveValue {
                                         timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
                                     } else {
                                         timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled

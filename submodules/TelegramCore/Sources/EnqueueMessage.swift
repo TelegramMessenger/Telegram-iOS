@@ -336,15 +336,15 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         var messageAutoremoveTimeout: Int32?
                         if let cachedData = cachedData as? CachedUserData {
                             if case let .known(value) = cachedData.autoremoveTimeout {
-                                messageAutoremoveTimeout = value?.peerValue
+                                messageAutoremoveTimeout = value?.effectiveValue
                             }
                         } else if let cachedData = cachedData as? CachedGroupData {
                             if case let .known(value) = cachedData.autoremoveTimeout {
-                                messageAutoremoveTimeout = value?.peerValue
+                                messageAutoremoveTimeout = value?.effectiveValue
                             }
                         } else if let cachedData = cachedData as? CachedChannelData {
                             if case let .known(value) = cachedData.autoremoveTimeout {
-                                messageAutoremoveTimeout = value?.peerValue
+                                messageAutoremoveTimeout = value?.effectiveValue
                             }
                         }
                         

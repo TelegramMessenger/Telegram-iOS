@@ -5999,3 +5999,5 @@ Sorry for the inconvenience.";
 
 "PeerInfo.AutoremoveMessages" = "Auto-Delete Messages";
 "PeerInfo.AutoremoveMessagesDisabled" = "Never";
+
+"Conversation.AutoremoveChanged" = "Auto-Delete timer set to %@";

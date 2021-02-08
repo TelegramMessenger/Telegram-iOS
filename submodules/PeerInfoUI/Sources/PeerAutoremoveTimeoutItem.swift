@@ -12,6 +12,28 @@ import ItemListUI
 import PresentationDataUtils
 import AppBundle
 
+private func mapTimeoutToSliderValue(_ value: Int32) -> CGFloat {
+    switch value {
+    case 24 * 60 * 60:
+        return 0.0
+    case 7 * 24 * 60 * 60:
+        return 1.0
+    default:
+        return 2.0
+    }
+}
+
+private func mapSliderValueToTimeout(_ value: CGFloat) -> Int32 {
+    switch value {
+    case 0.0:
+        return 24 * 60 * 60
+    case 1.0:
+        return 7 * 24 * 60 * 60
+    default:
+        return Int32.max
+    }
+}
+
 class PeerRemoveTimeoutItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let value: Int32
@@ -129,21 +151,17 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.startValue = 0.0
         sliderView.positionsCount = 3
         sliderView.useLinesForPositions = true
-        sliderView.minimumUndottedValue = 2
+        sliderView.minimumUndottedValue = 0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         if let item = self.item, let params = self.layoutParams {
             sliderView.isUserInteractionEnabled = item.enabled
             
-            let value: CGFloat
-            switch item.value {
-            case 24 * 60 * 60:
-                value = 0.0
-            case 7 * 24 * 60 * 60:
-                value = 1.0
-            default:
-                value = 2.0
-            }
-            sliderView.value = value
+            sliderView.minimumUndottedValue = 0
+            
+            sliderView.value = mapTimeoutToSliderValue(item.value)
+            
+            sliderView.minimumUndottedValue = 2 - Int32(mapTimeoutToSliderValue(item.maxValue))
+            
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.theme.list.disclosureArrowColor
             sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
