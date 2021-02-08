@@ -1038,8 +1038,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.botCallbackAlertMessage.set(message |> then(delayedNoMessage))
                             case let .url(url):
                                 if isGame {
-                                    strongSelf.chatDisplayNode.dismissInput()
-                                    strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
+                                    let openBot: () -> Void = {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        strongSelf.chatDisplayNode.dismissInput()
+                                        strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
+                                    }
+                                    
+                                    if let botPeer = message.author as? TelegramUser, botPeer.flags.contains(.isVerified) {
+                                        openBot()
+                                    } else {
+                                        let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: message.id.peerId)
+                                        |> deliverOnMainQueue).start(next: { value in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            if value {
+                                                openBot()
+                                            } else if let botPeer = message.author as? TelegramUser {
+                                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_BotInteractiveUrlAlert(botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                                    if let strongSelf = self {
+                                                        let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: botPeer.id).start()
+                                                        openBot()
+                                                    }
+                                                })]), in: .window(.root), with: nil)
+                                            }
+                                        })
+                                    }
                                 } else {
                                     strongSelf.openUrl(url, concealed: false)
                                 }
