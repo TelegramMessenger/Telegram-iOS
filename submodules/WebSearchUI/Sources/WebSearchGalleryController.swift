@@ -178,7 +178,6 @@ class WebSearchGalleryController: ViewController {
         if let checkNode = self.checkNode, let controllerInteraction = self.controllerInteraction, let centralItemNode = self.galleryNode.pager.centralItemNode() as? WebSearchVideoGalleryItemNode, let item = centralItemNode.item {
             let legacyItem = LegacyWebSearchItem(result: item.result)
             
-            checkNode.setIsChecked(!checkNode.isChecked, animated: true)
             controllerInteraction.selectionState?.setItem(legacyItem, selected: checkNode.isChecked)
         }
     }

@@ -30,9 +30,9 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
-    private let authorizeCheckNode: CheckNode
+    private let authorizeCheckNode: InteractiveCheckNode
     private let authorizeLabelNode: ASTextNode
-    private let allowWriteCheckNode: CheckNode
+    private let allowWriteCheckNode: InteractiveCheckNode
     private let allowWriteLabelNode: ASTextNode
     
     private let actionNodesSeparator: ASDisplayNode
@@ -47,7 +47,7 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     
     var authorize: Bool = true {
         didSet {
-            self.authorizeCheckNode.setIsChecked(self.authorize, animated: true)
+            self.authorizeCheckNode.setSelected(self.authorize, animated: true)
             self.allowWriteCheckNode.isUserInteractionEnabled = self.authorize
             self.allowWriteCheckNode.alpha = self.authorize ? 1.0 : 0.4
             self.allowWriteLabelNode.alpha = self.authorize ? 1.0 : 0.4
@@ -59,7 +59,7 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     
     var allowWriteAccess: Bool = true {
         didSet {
-            self.allowWriteCheckNode.setIsChecked(self.allowWriteAccess, animated: true)
+            self.allowWriteCheckNode.setSelected(self.allowWriteAccess, animated: true)
         }
     }
     
@@ -77,14 +77,14 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 0
         
-        self.authorizeCheckNode = CheckNode(strokeColor: theme.separatorColor, fillColor: theme.accentColor, foregroundColor: .white, style: .plain)
-        self.authorizeCheckNode.setIsChecked(true, animated: false)
+        self.authorizeCheckNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
+        self.authorizeCheckNode.setSelected(true, animated: false)
         self.authorizeLabelNode = ASTextNode()
         self.authorizeLabelNode.maximumNumberOfLines = 4
         self.authorizeLabelNode.isUserInteractionEnabled = true
         
-        self.allowWriteCheckNode = CheckNode(strokeColor: theme.separatorColor, fillColor: theme.accentColor, foregroundColor: .white, style: .plain)
-        self.allowWriteCheckNode.setIsChecked(true, animated: false)
+        self.allowWriteCheckNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
+        self.allowWriteCheckNode.setSelected(true, animated: false)
         self.allowWriteLabelNode = ASTextNode()
         self.allowWriteLabelNode.maximumNumberOfLines = 4
         self.allowWriteLabelNode.isUserInteractionEnabled = true
@@ -128,8 +128,16 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
             self.addSubnode(separatorNode)
         }
         
-        self.authorizeCheckNode.addTarget(target: self, action: #selector(self.authorizePressed))
-        self.allowWriteCheckNode.addTarget(target: self, action: #selector(self.allowWritePressed))
+        self.authorizeCheckNode.valueChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.authorize = !strongSelf.authorize
+            }
+        }
+        self.allowWriteCheckNode.valueChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.allowWriteAccess = !strongSelf.allowWriteAccess
+            }
+        }
         
         self.updateTheme(theme)
     }
@@ -141,10 +149,6 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         self.allowWriteLabelNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.allowWriteTap(_:))))
     }
     
-    @objc private func authorizePressed() {
-        self.authorize = !self.authorize
-    }
-    
     @objc private func authorizeTap(_ gestureRecognizer: UITapGestureRecognizer) {
          self.authorize = !self.authorize
     }
@@ -153,10 +157,6 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         if self.allowWriteCheckNode.isUserInteractionEnabled {
             self.allowWriteAccess = !self.allowWriteAccess
         }
-    }
-    
-    @objc private func allowWritePressed() {
-        self.allowWriteAccess = !self.allowWriteAccess
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
@@ -196,14 +196,14 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
         origin.y += textSize.height + 16.0
         
-        let checkSize = CGSize(width: 32.0, height: 32.0)
+        let checkSize = CGSize(width: 22.0, height: 22.0)
         let condensedSize = CGSize(width: size.width - 76.0, height: size.height)
         
         var entriesHeight: CGFloat = 0.0
         
         let authorizeSize = self.authorizeLabelNode.measure(condensedSize)
         transition.updateFrame(node: self.authorizeLabelNode, frame: CGRect(origin: CGPoint(x: 46.0, y: origin.y), size: authorizeSize))
-        transition.updateFrame(node: self.authorizeCheckNode, frame: CGRect(origin: CGPoint(x: 7.0, y: origin.y - 7.0), size: checkSize))
+        transition.updateFrame(node: self.authorizeCheckNode, frame: CGRect(origin: CGPoint(x: 12.0, y: origin.y - 2.0), size: checkSize))
         origin.y += authorizeSize.height
         entriesHeight += authorizeSize.height
         
@@ -213,7 +213,7 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
             
             let allowWriteSize = self.allowWriteLabelNode.measure(condensedSize)
             transition.updateFrame(node: self.allowWriteLabelNode, frame: CGRect(origin: CGPoint(x: 46.0, y: origin.y), size: allowWriteSize))
-            transition.updateFrame(node: self.allowWriteCheckNode, frame: CGRect(origin: CGPoint(x: 7.0, y: origin.y - 7.0), size: checkSize))
+            transition.updateFrame(node: self.allowWriteCheckNode, frame: CGRect(origin: CGPoint(x: 12.0, y: origin.y - 2.0), size: checkSize))
             origin.y += allowWriteSize.height
             entriesHeight += allowWriteSize.height
         }

@@ -535,7 +535,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     selectionNode = current
                     updatedSelectionNode = selectionNode
                 } else {
-                    selectionNode = CheckNode(strokeColor: item.presentationData.theme.list.itemCheckColors.strokeColor, fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
+                    selectionNode = CheckNode(theme: CheckNodeTheme(theme: item.presentationData.theme, style: .plain))
                     selectionNode.isUserInteractionEnabled = false
                     updatedSelectionNode = selectionNode
                 }
@@ -1004,9 +1004,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.selectionNode = updatedSelectionNode
                                     strongSelf.addSubnode(updatedSelectionNode)
                                 }
-                                updatedSelectionNode.setIsChecked(isSelected, animated: animated)
+                                updatedSelectionNode.setSelected(isSelected, animated: animated)
                                 
-                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 32.0 - 12.0, y: floor((nodeLayout.contentSize.height - 32.0) / 2.0)), size: CGSize(width: 32.0, height: 32.0))
+                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 22.0 - 17.0, y: floor((nodeLayout.contentSize.height - 22.0) / 2.0)), size: CGSize(width: 22.0, height: 22.0))
                             } else if let selectionNode = strongSelf.selectionNode {
                                 selectionNode.removeFromSupernode()
                                 strongSelf.selectionNode = nil

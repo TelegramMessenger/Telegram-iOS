@@ -159,11 +159,11 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NotificationPeerExceptionArguments
         switch self {
-        case let .remove(_, theme, strings):
+        case let .remove(_, _, strings):
             return ItemListActionItem(presentationData: presentationData, title: strings.Notification_Exceptions_RemoveFromExceptions, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
                 arguments.removeFromExceptions()
             })
-        case let .switcher(_, theme, strings, mode, selected):
+        case let .switcher(_, _, strings, mode, selected):
             let title: String
             switch mode {
             case .alwaysOn:
@@ -174,9 +174,9 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                  arguments.selectMode(mode)
             })
-        case let .switcherHeader(_, theme, text):
+        case let .switcherHeader(_, _, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .displayPreviews(_, theme, strings, value, selected):
+        case let .displayPreviews(_, _, strings, value, selected):
             let title: String
             switch value {
             case .alwaysOn:
@@ -187,21 +187,21 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectDisplayPreviews(value)
             })
-        case let .displayPreviewsHeader(_, theme, text):
+        case let .displayPreviewsHeader(_, _, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .soundModernHeader(_, theme, text):
+        case let .soundModernHeader(_, _, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .soundClassicHeader(_, theme, text):
+        case let .soundClassicHeader(_, _, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .none(_, _, theme, text, selected):
+        case let .none(_, _, _, text, selected):
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: true, sectionId: self.section, action: {
                 arguments.selectSound(.none)
             })
-        case let .default(_, _, theme, text, selected):
+        case let .default(_, _, _, text, selected):
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectSound(.default)
             })
-        case let .sound(_, _, theme, text, sound, selected):
+        case let .sound(_, _, _, text, sound, selected):
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectSound(sound)
             })

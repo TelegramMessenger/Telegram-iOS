@@ -13,6 +13,7 @@ import LegacyComponents
 import ContextUI
 import LocalizedPeerData
 import AccountContext
+import CheckNode
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let textFont = Font.regular(11.0)
@@ -71,7 +72,7 @@ public final class SelectablePeerNode: ASDisplayNode {
     private let avatarNodeContainer: ASDisplayNode
     private let avatarNode: AvatarNode
     private let onlineNode: PeerOnlineMarkerNode
-    private var checkView: TGCheckButtonView?
+    private var checkNode: CheckNode?
     private let textNode: ASTextNode
 
     public var toggleSelection: (() -> Void)?
@@ -209,23 +210,20 @@ public final class SelectablePeerNode: ASDisplayNode {
             }
             
             if selected {
-                if self.checkView == nil {
-                    let checkView = TGCheckButtonView(style: TGCheckButtonStyleShare, pallete: TGCheckButtonPallete(defaultBackgroundColor: self.theme.checkBackgroundColor, accentBackgroundColor: self.theme.checkFillColor, defaultBorderColor: .clear, mediaBorderColor: .clear, chatBorderColor: .clear, check: self.theme.checkColor, blueColor: self.theme.checkFillColor, barBackgroundColor: self.theme.checkBackgroundColor))!
-                    
-                    self.checkView = checkView
-                    checkView.isUserInteractionEnabled = false
-                    self.view.addSubview(checkView)
+                if self.checkNode == nil {
+                    let checkNode = CheckNode(theme: CheckNodeTheme(backgroundColor: self.theme.checkFillColor, strokeColor: self.theme.checkColor, borderColor: self.theme.checkBackgroundColor, overlayBorder: true, hasInset: false, hasShadow: false, filledBorder: true, borderWidth: 2.0))
+                    self.checkNode = checkNode
+                    checkNode.isUserInteractionEnabled = false
+                    self.addSubnode(checkNode)
                     
                     let avatarFrame = self.avatarNode.frame
-                    let checkSize = checkView.bounds.size
-                    checkView.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - 14.0, y: avatarFrame.maxY - 22.0), size: checkSize)
-                    checkView.setSelected(true, animated: animated)
+                    let checkSize = CGSize(width: 24.0, height: 24.0)
+                    checkNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - 10.0, y: avatarFrame.maxY - 18.0), size: checkSize)
+                    checkNode.setSelected(true, animated: animated)
                 }
-            } else if let checkView = self.checkView {
-                self.checkView = nil
-                checkView.setSelected(false, animated: animated, bump: false, completion: { [weak checkView] in
-                    checkView?.removeFromSuperview()
-                })
+            } else if let checkNode = self.checkNode {
+                self.checkNode = nil
+                checkNode.setSelected(false, animated: animated)
             }
         }
     }
@@ -257,9 +255,9 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         self.onlineNode.frame = CGRect(origin: CGPoint(x: avatarContainerFrame.maxX - self.onlineNode.frame.width - 2.0, y: avatarContainerFrame.maxY - self.onlineNode.frame.height - 2.0), size: self.onlineNode.frame.size)
         
-        if let checkView = self.checkView {
-            let checkSize = checkView.bounds.size
-            checkView.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - 14.0, y: avatarFrame.maxY - 22.0), size: checkSize)
+        if let checkNode = self.checkNode {
+            let checkSize = CGSize(width: 24.0, height: 24.0)
+            checkNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - 10.0, y: avatarFrame.maxY - 18.0), size: checkSize)
         }
     }
 }
