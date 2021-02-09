@@ -134,13 +134,18 @@ public enum RevokePeerExportedInvitationError {
     case generic
 }
 
-public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> {
-    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
+public enum RevokeExportedInvitationResult {
+    case update(ExportedInvitation)
+    case replace(ExportedInvitation, ExportedInvitation)
+}
+
+public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
+    return account.postbox.transaction { transaction -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil))
             |> mapError { _ in return RevokePeerExportedInvitationError.generic }
-            |> mapToSignal { result -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
+            |> mapToSignal { result -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
                 return account.postbox.transaction { transaction in
                     if case let .exportedChatInvite(invite, users) = result {
                         var peers: [Peer] = []
@@ -151,7 +156,25 @@ public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link:
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        return ExportedInvitation(apiExportedInvite: invite)
+                        if let invite = ExportedInvitation(apiExportedInvite: invite) {
+                            return .update(invite)
+                        } else {
+                            return nil
+                        }
+                    } else if case let .exportedChatInviteReplaced(invite, newInvite, users) = result {
+                        var peers: [Peer] = []
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                        }
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        if let invite = ExportedInvitation(apiExportedInvite: invite), let newInvite = ExportedInvitation(apiExportedInvite: newInvite) {
+                            return .replace(invite, newInvite)
+                        } else {
+                            return nil
+                        }
                     } else {
                         return nil
                     }
