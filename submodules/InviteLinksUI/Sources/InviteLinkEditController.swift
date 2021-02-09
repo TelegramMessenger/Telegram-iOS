@@ -373,7 +373,14 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
                     let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
                     |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                     |> deliverOnMainQueue).start(next: { invite in
-                        completion?(invite)
+                        switch invite {
+                        case .none:
+                            completion?(nil)
+                        case let .update(invitation):
+                            completion?(invitation)
+                        case let .replace(_, invitation):
+                            completion?(invitation)
+                        }
                     }, error: { _ in
                         updateState { state in
                             var updatedState = state
