@@ -86,8 +86,8 @@ public extension ActionSheetControllerTheme {
 }
 
 public extension ActionSheetController {
-    convenience init(presentationData: PresentationData) {
-        self.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
+    convenience init(presentationData: PresentationData, allowInputInset: Bool = false) {
+        self.init(theme: ActionSheetControllerTheme(presentationData: presentationData), allowInputInset: allowInputInset)
     }
 }
 

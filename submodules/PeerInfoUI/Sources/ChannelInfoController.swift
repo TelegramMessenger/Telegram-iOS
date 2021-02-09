@@ -856,11 +856,11 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, openBanned: {
         pushControllerImpl?(channelBlacklistController(context: context, peerId: peerId))
     }, reportChannel: {
-        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
+        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), passthrough: false, present: { c, a in
             presentControllerImpl?(c, a)
         }, push: { c in
             pushControllerImpl?(c)
-        }, completion: { _ in }), nil)
+        }, completion: { _, _ in }), nil)
     }, leaveChannel: {
         let _ = (context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)

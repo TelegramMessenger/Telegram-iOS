@@ -7,6 +7,10 @@ open class ActionSheetItemNode: ASDisplayNode {
     public let backgroundNode: ASDisplayNode
     private let overflowSeparatorNode: ASDisplayNode
     
+    public var hasSeparator = true
+    
+    public var requestLayout: (() -> Void)?
+    
     public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -29,5 +33,6 @@ open class ActionSheetItemNode: ASDisplayNode {
     open override func layout() {
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: self.calculatedSize)
         self.overflowSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.calculatedSize.height), size: CGSize(width: self.calculatedSize.width, height: UIScreenPixel))
+        self.overflowSeparatorNode.isHidden = !self.hasSeparator
     }
 }

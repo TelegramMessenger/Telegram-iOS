@@ -6,6 +6,7 @@ import SwiftSignalKit
 import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import ShimmerEffect
 
 func invitationAvailability(_ invite: ExportedInvitation) -> CGFloat {
     if invite.isRevoked {
@@ -165,6 +166,9 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
     
     private let titleNode: TextNode
     private let subtitleNode: TextNode
+    
+    private var placeholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
     
     private var currentColor: ItemBackgroundColor?
     private var layoutParams: (ItemListInviteLinkItem, ListViewItemLayoutParams, ItemListNeighbors, Bool, Bool)?
@@ -581,6 +585,41 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     transition.updateFrame(node: strongSelf.subtitleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset + titleLayout.size.height + titleSpacing), size: subtitleLayout.size))
                                         
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
+                    
+                    if item.invite == nil {
+                        let shimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.placeholderNode {
+                            shimmerNode = current
+                        } else {
+                            shimmerNode = ShimmerEffectNode()
+                            strongSelf.placeholderNode = shimmerNode
+                            strongSelf.addSubnode(shimmerNode)
+                        }
+                        shimmerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            shimmerNode.updateAbsoluteRect(rect, within: size)
+                        }
+                        
+                        var shapes: [ShimmerEffectNode.Shape] = []
+                        
+                        let titleLineWidth: CGFloat = 180.0
+                        let subtitleLineWidth: CGFloat = 60.0
+                        let lineDiameter: CGFloat = 10.0
+                        
+                        let iconFrame = strongSelf.iconBackgroundNode.frame
+                        shapes.append(.circle(iconFrame))
+                        
+                        let titleFrame = strongSelf.titleNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+                        
+                        let subtitleFrame = strongSelf.subtitleNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: subtitleFrame.minX, y: subtitleFrame.minY + floor((subtitleFrame.height - lineDiameter) / 2.0)), width: subtitleLineWidth, diameter: lineDiameter))
+                        
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
+                    } else if let shimmerNode = strongSelf.placeholderNode {
+                        strongSelf.placeholderNode = nil
+                        shimmerNode.removeFromSupernode()
+                    }
                 }
             })
         }
@@ -632,8 +671,13 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    @objc private func infoPressed() {
-//        self.item?.infoAction?()
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
     }
 }
 

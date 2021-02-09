@@ -4,6 +4,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramStringFormatting
+import SegmentedControlNode
 
 public final class DatePickerTheme: Equatable {
     public let backgroundColor: UIColor
@@ -117,7 +118,7 @@ private func yearRange(for state: DatePickerNode.State) -> Range<Int> {
 
 public final class DatePickerNode: ASDisplayNode {
     class MonthNode: ASDisplayNode {
-        private let month: Date
+        let month: Date
         
         var theme: DatePickerTheme {
             didSet {
@@ -167,10 +168,26 @@ public final class DatePickerNode: ASDisplayNode {
             self.addSubnode(self.selectionNode)
             self.dateNodes.forEach { self.addSubnode($0) }
         }
+        
+        func dateAtPoint(_ point: CGPoint) -> Int32? {
+            var day: Int32 = 0
+            for node in self.dateNodes {
+                if node.isHidden {
+                    continue
+                }
+                day += 1
+                
+                if node.frame.insetBy(dx: -15.0, dy: -15.0).contains(point) {
+                    return day
+                }
+            }
+            return nil
+        }
                 
         func updateLayout(size: CGSize) {
             var weekday = self.firstWeekday
             var started = false
+            var ended = false
             var count = 0
             
             let sideInset: CGFloat = 12.0
@@ -185,7 +202,10 @@ public final class DatePickerNode: ASDisplayNode {
                     started = true
                 }
                 weekday += 1
-                if started {
+                
+                let textNode = self.dateNodes[i]
+                if started && !ended {
+                    textNode.isHidden = false
                     count += 1
                     
                     var isAvailableDate = true
@@ -219,7 +239,6 @@ public final class DatePickerNode: ASDisplayNode {
                         color = self.theme.textColor
                     }
                     
-                    let textNode = self.dateNodes[i]
                     textNode.attributedText = NSAttributedString(string: "\(count)", font: isSelected ? selectedDateFont : dateFont, textColor: color)
 
                     let textSize = textNode.updateLayout(size)
@@ -235,8 +254,10 @@ public final class DatePickerNode: ASDisplayNode {
                     }
                     
                     if count == self.numberOfDays {
-                        break
+                        ended = true
                     }
+                } else {
+                    textNode.isHidden = true
                 }
             }
         }
@@ -383,7 +404,6 @@ public final class DatePickerNode: ASDisplayNode {
         
         self.addSubnode(self.timeTitleNode)
         self.addSubnode(self.timeFieldNode)
-        self.addSubnode(self.timeSeparatorNode)
         
         self.addSubnode(self.contentNode)
                 
@@ -519,7 +539,26 @@ public final class DatePickerNode: ASDisplayNode {
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        guard let monthNode = self.monthNodes[self.months[self.currentIndex]] else {
+            return
+        }
         
+        let location = recognizer.location(in: monthNode.view)
+        if let day = monthNode.dateAtPoint(location) {
+            let monthComponents = calendar.dateComponents([.month, .year], from: monthNode.month)
+            var currentComponents = calendar.dateComponents([.hour, .minute, .day, .month, .year], from: self.date)
+
+            currentComponents.year = monthComponents.year
+            currentComponents.month = monthComponents.month
+            currentComponents.day = Int(day)
+            
+            if let date = calendar.date(from: currentComponents), date >= self.minimumDate && date < self.maximumDate {
+                let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: monthNode.month)
+                self.updateState(updatedState, animated: false)
+                
+                self.valueUpdated?(date)
+            }
+        }
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -628,7 +667,7 @@ public final class DatePickerNode: ASDisplayNode {
         let components = calendar.dateComponents([.month, .year], from: month)
         
         let timeTitleSize = self.timeTitleNode.updateLayout(size)
-        self.timeTitleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 11.0), size: timeTitleSize)
+        self.timeTitleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 14.0), size: timeTitleSize)
         self.timeSeparatorNode.frame = CGRect(x: 16.0, y: timeHeight, width: size.width - 16.0, height: UIScreenPixel)
         
         self.monthTextNode.attributedText = NSAttributedString(string: stringForMonth(strings: self.strings, month: components.month.flatMap { Int32($0) - 1 } ?? 0, ofYear: components.year.flatMap { Int32($0) - 1900 } ?? 100), font: controlFont, textColor: theme.textColor)

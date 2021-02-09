@@ -27,13 +27,15 @@ class InviteLinkViewInteraction {
     let openPeer: (PeerId) -> Void
     let copyLink: (ExportedInvitation) -> Void
     let shareLink: (ExportedInvitation) -> Void
+    let editLink: (ExportedInvitation) -> Void
     let contextAction: (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, editLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.copyLink = copyLink
         self.shareLink = shareLink
+        self.editLink = editLink
         self.contextAction = contextAction
     }
 }
@@ -57,7 +59,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
     case link(PresentationTheme, ExportedInvitation)
     case creatorHeader(PresentationTheme, String)
     case creator(PresentationTheme, PresentationDateTimeFormat, Peer, Int32)
-    case importerHeader(PresentationTheme, String)
+    case importerHeader(PresentationTheme, String, String, Bool)
     case importer(Int32, PresentationTheme, PresentationDateTimeFormat, Peer, Int32, Bool)
     
     var stableId: InviteLinkViewEntryId {
@@ -95,8 +97,8 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .importerHeader(lhsTheme, lhsTitle):
-                if case let .importerHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
+            case let .importerHeader(lhsTheme, lhsTitle, lhsSubtitle, lhsExpired):
+                if case let .importerHeader(rhsTheme, rhsTitle, rhsSubtitle, rhsExpired) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsExpired == rhsExpired {
                     return true
                 } else {
                     return false
@@ -153,11 +155,14 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
     func item(account: Account, presentationData: PresentationData, interaction: InviteLinkViewInteraction) -> ListViewItem {
         switch self {
             case let .link(_, invite):
-                let availability = invitationAvailability(invite)
-                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, count: 0, peers: [], displayButton: !invite.isRevoked && !availability.isZero, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, copyAction: {
+                return ItemListPermanentInviteLinkItem(context: interaction.context, presentationData: ItemListPresentationData(presentationData), invite: invite, count: 0, peers: [], displayButton: !invite.isRevoked, displayImporters: false, buttonColor: nil, sectionId: 0, style: .plain, copyAction: {
                     interaction.copyLink(invite)
                 }, shareAction: {
-                    interaction.shareLink(invite)
+                    if invitationAvailability(invite).isZero {
+                        interaction.editLink(invite)
+                    } else {
+                        interaction.shareLink(invite)
+                    }
                 }, contextAction: { node in
                     interaction.contextAction(invite, node, nil)
                 }, viewAction: {
@@ -166,14 +171,24 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
             case let .creator(_, dateTimeFormat, peer, date):
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
-                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
+                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil)
-            case let .importerHeader(_, title):
-                return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
+            case let .importerHeader(_, title, subtitle, expired):
+                let additionalText: SectionHeaderAdditionalText
+                if !subtitle.isEmpty {
+                    if expired {
+                        additionalText = .destructive(subtitle)
+                    } else {
+                        additionalText = .generic(subtitle)
+                    }
+                } else {
+                    additionalText = .none
+                }
+                return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title, additionalText: additionalText)
             case let .importer(_, _, dateTimeFormat, peer, date, loading):
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
-                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
+                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil, shimmering: loading ? ItemListPeerItemShimmering(alternationIndex: 0) : nil)
         }
@@ -375,7 +390,6 @@ public final class InviteLinkViewController: ViewController {
             self.titleNode = ImmediateTextNode()
             self.titleNode.maximumNumberOfLines = 1
             self.titleNode.textAlignment = .center
-            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_InviteLink, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             
             self.subtitleNode = ImmediateTextNode()
             self.subtitleNode.maximumNumberOfLines = 1
@@ -421,6 +435,8 @@ public final class InviteLinkViewController: ViewController {
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
                 self?.controller?.present(shareController, in: .window(.root))
+            }, editLink: { [weak self] invite in
+                self?.editButtonPressed()
             }, contextAction: { [weak self] invite, node, gesture in
                 guard let node = node as? ContextExtractedContentContainingNode else {
                     return
@@ -496,7 +512,18 @@ public final class InviteLinkViewController: ViewController {
                     entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, creatorPeer, invite.date))
                     
                     if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
-                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased()))
+                        let subtitle: String
+                        let subtitleExpired: Bool
+                        if let usageLimit = invite.usageLimit {
+                            let remaining = usageLimit - state.count
+                            subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
+                            subtitleExpired = remaining <= 0
+                        } else {
+                            subtitle = ""
+                            subtitleExpired = false
+                        }
+                        
+                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
                     }
                     
                     var index: Int32 = 0
@@ -703,7 +730,11 @@ public final class InviteLinkViewController: ViewController {
             
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 68.0))
             
+            var titleText = self.presentationData.strings.InviteLink_InviteLink
+  
+            
             var subtitleText = ""
+            var subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
             if self.invite.isRevoked {
                 subtitleText = self.presentationData.strings.InviteLink_Revoked
             } else if let usageLimit = self.invite.usageLimit, let count = self.invite.count, count >= usageLimit {
@@ -711,7 +742,9 @@ public final class InviteLinkViewController: ViewController {
             } else if let expireDate = self.invite.expireDate {
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 if currentTime >= expireDate {
-                    subtitleText = self.presentationData.strings.InviteLink_Expired
+                    titleText = self.presentationData.strings.InviteLink_ExpiredLink
+                    subtitleText = self.presentationData.strings.InviteLink_ExpiredLinkStatus
+                    subtitleColor = self.presentationData.theme.list.itemDestructiveColor
                     self.countdownTimer?.invalidate()
                     self.countdownTimer = nil
                 } else {
@@ -732,7 +765,9 @@ public final class InviteLinkViewController: ViewController {
                     }
                 }
             }
-            self.subtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+            
+            self.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+            self.subtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleColor)
                         
             let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: layout.size.width, height: headerHeight))
             let subtitleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: 30.0 - UIScreenPixel), size: subtitleSize)

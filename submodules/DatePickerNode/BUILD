@@ -11,6 +11,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/SegmentedControlNode:SegmentedControlNode",
     ],
     visibility = [
         "//visibility:public",

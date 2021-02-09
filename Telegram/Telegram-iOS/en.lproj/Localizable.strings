@@ -5902,7 +5902,11 @@ Sorry for the inconvenience.";
 "InviteLink.QRCode.Share" = "Share QR Code";
 
 "InviteLink.InviteLink" = "Invite Link";
+"InviteLink.ExpiredLink" = "Expired Link";
+"InviteLink.ExpiredLinkStatus" = "time limit has expired";
 "InviteLink.CreatedBy" = "Link Created By";
+
+"InviteLink.ReactivateLink" = "Reactivate Link";
 
 "InviteLink.DeleteLinkAlert.Text" = "Are you sure you want to delete this link? It will be completely gone.";
 "InviteLink.DeleteLinkAlert.Action" = "Delete";
@@ -6043,3 +6047,12 @@ Sorry for the inconvenience.";
 "PeerInfo.CustomizeNotifications" = "Customize";
 
 "Conversation.ContextMenuSpeak" = "Speak";
+
+"Conversation.SelectMessages" = "Select Messages";
+"Conversation.ReportMessages" = "Report Messages";
+
+"Report.AdditionalDetailsText" = "Please enter any additional details relevant for your report.";
+"Report.AdditionalDetailsPlaceholder" = "Additional details...";
+"Report.Report" = "Report";
+"Report.Succeed" = "Telegram moderators will study your report. Thank you!";
+

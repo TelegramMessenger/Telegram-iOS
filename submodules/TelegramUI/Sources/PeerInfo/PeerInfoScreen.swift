@@ -3221,7 +3221,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] sticker in
                 if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData:  strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
                         if strongSelf.nearbyPeerDistance != nil {
                             var viewControllers = navigationController.viewControllers
                             viewControllers = viewControllers.filter { controller in
@@ -3235,6 +3235,21 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }))
                 }
             })
+        }
+    }
+    
+    private func openChatForReporting(_ reason: ReportReason) {
+        if let navigationController = (self.controller?.navigationController as? NavigationController) {
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), keepStack: .default, reportReason: reason, completion: { _ in
+//                    var viewControllers = navigationController.viewControllers
+//                    viewControllers = viewControllers.filter { controller in
+//                        if controller is PeerInfoScreen {
+//                            return false
+//                        }
+//                        return true
+//                    }
+//                    navigationController.setViewControllers(viewControllers, animated: false)
+            }))
         }
     }
     
@@ -3722,11 +3737,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         } else {
             options = [.spam, .fake, .violence, .pornography, .childAbuse, .copyright, .other]
         }
-        controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), options: options, present: { [weak controller] c, a in
+        controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), options: options, passthrough: true, present: { [weak controller] c, a in
             controller?.present(c, in: .window(.root), with: a)
         }, push: { [weak controller] c in
             controller?.push(c)
-        }, completion: { _ in }), in: .window(.root))
+        }, completion: { [weak self] reason, _ in
+            if let reason = reason {
+                DispatchQueue.main.async {
+                    self?.openChatForReporting(reason)
+                }
+            }
+        }), in: .window(.root))
     }
     
     private func openEncryptionKey() {
@@ -5097,11 +5118,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         return
                     }
                     strongSelf.view.endEditing(true)
-                    strongSelf.controller?.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), present: { c, a in
+                    strongSelf.controller?.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), passthrough: false, present: { c, a in
                         self?.controller?.present(c, in: .window(.root), with: a)
                     }, push: { c in
                         self?.controller?.push(c)
-                    }, completion: { _ in }), in: .window(.root))
+                    }, completion: { _, _ in }), in: .window(.root))
                 })
                 self.paneContainerNode.selectionPanelNode = selectionPanelNode
                 self.paneContainerNode.addSubnode(selectionPanelNode)
