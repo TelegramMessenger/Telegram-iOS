@@ -1436,7 +1436,8 @@ private func stringForRemainingTime(_ duration: Int32, strings: PresentationStri
     let seconds = duration % 60
     let durationString: String
     if days > 0 {
-        return strings.Conversation_AutoremoveRemainingDays(days)
+        let roundDays = round(Double(duration) / (3600.0 * 24.0))
+        return strings.Conversation_AutoremoveRemainingDays(Int32(roundDays))
     } else if hours > 0 {
         durationString = String(format: "%d:%02d:%02d", hours, minutes, seconds)
     } else {

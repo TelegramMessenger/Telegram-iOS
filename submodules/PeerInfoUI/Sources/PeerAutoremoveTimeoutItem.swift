@@ -90,7 +90,7 @@ class PeerRemoveTimeoutItem: ListViewItem, ItemListItem {
 private func generateKnobImage() -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -1.0), blur: 3.5, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
+        context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 8.0, color: UIColor(white: 0.0, alpha: 0.15).cgColor)
         context.setFillColor(UIColor.white.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
     })
@@ -160,7 +160,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             
             sliderView.value = mapTimeoutToSliderValue(item.value)
             
-            sliderView.minimumUndottedValue = 2 - Int32(mapTimeoutToSliderValue(item.maxValue))
+            sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue))
             
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.theme.list.disclosureArrowColor
@@ -287,6 +287,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                     if let sliderView = strongSelf.sliderView {
                         sliderView.isUserInteractionEnabled = item.enabled
                         sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
+                        sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue))
                         
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor

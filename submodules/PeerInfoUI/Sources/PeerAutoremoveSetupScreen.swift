@@ -148,7 +148,11 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
         entries.append(.timeComment("Automatically delete messages sent in this channel after a certain period of time."))
     } else {
-        entries.append(.timeComment("Automatically delete messages sent in this chat after a certain period of time."))
+        if resolvedMaxValue != Int32.max {
+            entries.append(.timeComment("\(peer?.compactDisplayTitle ?? "") has set messages to auto-delete in \(timeIntervalString(strings: presentationData.strings, value: resolvedMaxValue)). You can't cancel it or make this interval longer."))
+        } else {
+            entries.append(.timeComment("Automatically delete messages sent in this chat after a certain period of time."))
+        }
     }
     if let user = peer as? TelegramUser {
         entries.append(.globalSwitch("Also auto-delete for \(user.compactDisplayTitle)", globalValue))
@@ -158,8 +162,13 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
 }
 
 public enum PeerAutoremoveSetupScreenResult {
+    public struct Updated {
+        public var myValue: Int32?
+        public var limitedByValue: Int32?
+    }
+    
     case unchanged
-    case updated(Int32?)
+    case updated(Updated)
 }
 
 public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, completion: @escaping (PeerAutoremoveSetupScreenResult) -> Void = { _ in }) -> ViewController {
@@ -257,6 +266,13 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
                         resolvedValue = nil
                     }
                     
+                    let resolvedMaxValue: Int32
+                    if peer is TelegramUser {
+                        resolvedMaxValue = peerValue
+                    } else {
+                        resolvedMaxValue = Int32.max
+                    }
+                    
                     let resolvedGlobalValue = globalValue ?? defaultGlobalValue
                     
                     let signal = setChatMessageAutoremoveTimeoutInteractively(account: context.account, peerId: peerId, timeout: resolvedValue, isGlobal: resolvedGlobalValue)
@@ -267,7 +283,10 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
                     }, completed: {
                         dismissImpl?()
                         if resolvedValue != resolvedDefaultValue {
-                            completion(.updated(changedValue))
+                            completion(.updated(PeerAutoremoveSetupScreenResult.Updated(
+                                myValue: resolvedValue,
+                                limitedByValue: resolvedMaxValue == Int32.max ? nil : resolvedMaxValue
+                            )))
                         } else {
                             completion(.unchanged)
                         }

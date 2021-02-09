@@ -40,6 +40,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         _startValue = 0.0f;
         _value = _startValue;
         _dotSize = 10.5f;
+        _minimumUndottedValue = -1;
         
         _lineSize = TGPhotoEditorSliderViewLineSize;
         _knobPadding = TGPhotoEditorSliderViewInternalMargin;
@@ -174,7 +175,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         CGContextSetBlendMode(context, kCGBlendModeCopy);
     }
     
-    if (_minimumUndottedValue > 0 && self.positionsCount > 1) {
+    if (_minimumUndottedValue > -1 && self.positionsCount > 1) {
         CGContextSetLineWidth(context, backFrame.size.height);
         CGContextSetLineCap(context, kCGLineCapRound);
         
@@ -222,7 +223,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 
     CGContextSetBlendMode(context, kCGBlendModeNormal);
     
-    if (_minimumUndottedValue > 0) {
+    if (_minimumUndottedValue > -1) {
     } else {
         CGContextSetFillColorWithColor(context, _trackColor.CGColor);
         [self drawRectangle:trackFrame cornerRadius:self.trackCornerRadius context:context];
@@ -357,6 +358,13 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 {
     _bordered = bordered;
     [self setNeedsDisplay];
+}
+
+- (void)setMinimumUndottedValue:(int)minimumUndottedValue {
+    if (_minimumUndottedValue != minimumUndottedValue) {
+        _minimumUndottedValue = minimumUndottedValue;
+        [self setNeedsDisplay];
+    }
 }
 
 #pragma mark - Properties

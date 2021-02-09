@@ -9,8 +9,25 @@ import NotificationsPresentationData
 import WidgetKit
 import TelegramUIPreferences
 import WidgetItemsUtils
+import AccountContext
+import AppLock
 
 import GeneratedSources
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
+private extension SelectFriendsIntent {
+    var configurationHash: String {
+        var result = "widget"
+        if let items = self.friends {
+            for item in items {
+                if let identifier = item.identifier {
+                    result.append("+\(identifier)")
+                }
+            }
+        }
+        return result
+    }
+}
 
 final class WidgetDataContext {
     private var currentAccount: Account?
@@ -18,14 +35,14 @@ final class WidgetDataContext {
     private var widgetPresentationDataDisposable: Disposable?
     private var notificationPresentationDataDisposable: Disposable?
     
-    init(basePath: String, activeAccount: Signal<Account?, NoError>, presentationData: Signal<PresentationData, NoError>) {
+    init(basePath: String, activeAccount: Signal<Account?, NoError>, presentationData: Signal<PresentationData, NoError>, appLockContext: AppLockContextImpl) {
         self.currentAccountDisposable = (activeAccount
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs === rhs
         })
         |> mapToSignal { account -> Signal<WidgetData, NoError> in
             guard let account = account else {
-                return .single(WidgetData(accountId: 0, content: .notAuthorized))
+                return .single(WidgetData(accountId: 0, content: .empty, unlockedForLockId: nil))
             }
             
             enum CombinedRecentPeers {
@@ -38,11 +55,12 @@ final class WidgetDataContext {
                 case peers(peers: [Peer], unread: [PeerId: Unread], messages: [PeerId: WidgetDataPeer.Message])
             }
             
-            let updatedAdditionalPeerIds: Signal<Set<PeerId>, NoError> = Signal { subscriber in
+            let updatedAdditionalPeerIds: Signal<(Set<PeerId>, Set<String>), NoError> = Signal { subscriber in
                 if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
                     #if arch(arm64) || arch(i386) || arch(x86_64)
                     WidgetCenter.shared.getCurrentConfigurations({ result in
                         var peerIds = Set<PeerId>()
+                        var configurationHashes = Set<String>()
                         if case let .success(infos) = result {
                             for info in infos {
                                 if let configuration = info.configuration as? SelectFriendsIntent {
@@ -54,19 +72,20 @@ final class WidgetDataContext {
                                             peerIds.insert(PeerId(peerIdValue))
                                         }
                                     }
+                                    configurationHashes.insert(configuration.configurationHash)
                                 }
                             }
                         }
                         
-                        subscriber.putNext(peerIds)
+                        subscriber.putNext((peerIds, configurationHashes))
                         subscriber.putCompletion()
                     })
                     #else
-                    subscriber.putNext(Set())
+                    subscriber.putNext((Set(), Set()))
                     subscriber.putCompletion()
                     #endif
                 } else {
-                    subscriber.putNext(Set())
+                    subscriber.putNext((Set(), Set()))
                     subscriber.putCompletion()
                 }
                 
@@ -74,33 +93,9 @@ final class WidgetDataContext {
             }
             |> runOn(.mainQueue())
             
-            let preferencesKey: PostboxViewKey = .preferences(keys: Set([
-                ApplicationSpecificPreferencesKeys.widgetSettings
-            ]))
-            let sourcePeers: Signal<RecentPeers, NoError> = account.postbox.combinedView(keys: [
-                preferencesKey
-            ])
-            |> mapToSignal { views -> Signal<RecentPeers, NoError> in
-                let widgetSettings: WidgetSettings
-                if let view = views.views[preferencesKey] as? PreferencesView, let value = view.values[ApplicationSpecificPreferencesKeys.widgetSettings] as? WidgetSettings {
-                    widgetSettings = value
-                } else {
-                    widgetSettings = .default
-                }
-                
-                if widgetSettings.useHints {
-                    return recentPeers(account: account)
-                } else {
-                    return account.postbox.transaction { transaction -> RecentPeers in
-                        return .peers(widgetSettings.peers.compactMap { peerId -> Peer? in
-                            guard let peer = transaction.getPeer(peerId) else {
-                                return nil
-                            }
-                            return peer
-                        })
-                    }
-                }
-            }
+            let unlockedForLockId: Signal<String?, NoError> = .single(nil)
+            
+            let sourcePeers: Signal<RecentPeers, NoError> = recentPeers(account: account)
             
             let recent: Signal<CombinedRecentPeers, NoError> = sourcePeers
             |> mapToSignal { recent -> Signal<CombinedRecentPeers, NoError> in
@@ -160,7 +155,7 @@ final class WidgetDataContext {
             |> map { result -> WidgetData in
                 switch result {
                 case .disabled:
-                    return WidgetData(accountId: account.id.int64, content: .disabled)
+                    return WidgetData(accountId: account.id.int64, content: .empty, unlockedForLockId: nil)
                 case let .peers(peers, unread, messages):
                     return WidgetData(accountId: account.id.int64, content: .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: peers.compactMap { peer -> WidgetDataPeer? in
                         var name: String = ""
@@ -192,15 +187,23 @@ final class WidgetDataContext {
                         return WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return account.postbox.mediaBox.resourcePath(representation.resource)
                         }, badge: badge, message: message)
-                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))))
+                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))), unlockedForLockId: nil)
                 }
             }
             |> distinctUntilChanged
             
-            let additionalPeerIds = Signal<Set<PeerId>, NoError>.single(Set()) |> then(updatedAdditionalPeerIds)
+            let additionalPeerIds = Signal<(Set<PeerId>, Set<String>), NoError>.complete() |> then(updatedAdditionalPeerIds)
             let processedCustom: Signal<WidgetData, NoError> = additionalPeerIds
-            |> distinctUntilChanged
-            |> mapToSignal { additionalPeerIds -> Signal<CombinedRecentPeers, NoError> in
+            |> distinctUntilChanged(isEqual: { lhs, rhs in
+                if lhs.0 != rhs.0 {
+                    return false
+                }
+                if lhs.1 != rhs.1 {
+                    return false
+                }
+                return true
+            })
+            |> mapToSignal { additionalPeerIds, _ -> Signal<CombinedRecentPeers, NoError> in
                 return combineLatest(queue: .mainQueue(), additionalPeerIds.map { account.postbox.peerView(id: $0) })
                 |> mapToSignal { peerViews -> Signal<CombinedRecentPeers, NoError> in
                     let topMessagesKey: PostboxViewKey = .topChatMessage(peerIds: peerViews.map {
@@ -250,7 +253,7 @@ final class WidgetDataContext {
             |> map { result -> WidgetData in
                 switch result {
                 case .disabled:
-                    return WidgetData(accountId: account.id.int64, content: .disabled)
+                    return WidgetData(accountId: account.id.int64, content: .empty, unlockedForLockId: nil)
                 case let .peers(peers, unread, messages):
                     return WidgetData(accountId: account.id.int64, content: .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: peers.compactMap { peer -> WidgetDataPeer? in
                         var name: String = ""
@@ -282,13 +285,15 @@ final class WidgetDataContext {
                         return WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return account.postbox.mediaBox.resourcePath(representation.resource)
                         }, badge: badge, message: message)
-                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))))
+                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))), unlockedForLockId: nil)
                 }
             }
             |> distinctUntilChanged
             
-            return combineLatest(processedRecent, processedCustom)
-            |> map { processedRecent, _ -> WidgetData in
+            return combineLatest(processedRecent, processedCustom, unlockedForLockId)
+            |> map { processedRecent, _, unlockedForLockId -> WidgetData in
+                var processedRecent = processedRecent
+                processedRecent.unlockedForLockId = unlockedForLockId
                 return processedRecent
             }
         }).start(next: { widgetData in

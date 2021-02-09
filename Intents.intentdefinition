@@ -76,66 +76,6 @@
 			<key>INIntentParameters</key>
 			<array>
 				<dict>
-					<key>INIntentParameterConfigurable</key>
-					<true/>
-					<key>INIntentParameterDisplayName</key>
-					<string>Contents</string>
-					<key>INIntentParameterDisplayNameID</key>
-					<string>WAiyZm</string>
-					<key>INIntentParameterDisplayPriority</key>
-					<integer>1</integer>
-					<key>INIntentParameterEnumType</key>
-					<string>Contents</string>
-					<key>INIntentParameterEnumTypeNamespace</key>
-					<string>p74MWb</string>
-					<key>INIntentParameterMetadata</key>
-					<dict>
-						<key>INIntentParameterMetadataDefaultValue</key>
-						<string>recent</string>
-					</dict>
-					<key>INIntentParameterName</key>
-					<string>contents</string>
-					<key>INIntentParameterPromptDialogs</key>
-					<array>
-						<dict>
-							<key>INIntentParameterPromptDialogCustom</key>
-							<true/>
-							<key>INIntentParameterPromptDialogType</key>
-							<string>Configuration</string>
-						</dict>
-						<dict>
-							<key>INIntentParameterPromptDialogCustom</key>
-							<true/>
-							<key>INIntentParameterPromptDialogType</key>
-							<string>Primary</string>
-						</dict>
-						<dict>
-							<key>INIntentParameterPromptDialogCustom</key>
-							<true/>
-							<key>INIntentParameterPromptDialogFormatString</key>
-							<string>There are ${count} options matching ‘${contents}’.</string>
-							<key>INIntentParameterPromptDialogFormatStringID</key>
-							<string>oSRWBb</string>
-							<key>INIntentParameterPromptDialogType</key>
-							<string>DisambiguationIntroduction</string>
-						</dict>
-						<dict>
-							<key>INIntentParameterPromptDialogCustom</key>
-							<true/>
-							<key>INIntentParameterPromptDialogFormatString</key>
-							<string>Just to confirm, you wanted ‘${contents}’?</string>
-							<key>INIntentParameterPromptDialogFormatStringID</key>
-							<string>jvYJCG</string>
-							<key>INIntentParameterPromptDialogType</key>
-							<string>Confirmation</string>
-						</dict>
-					</array>
-					<key>INIntentParameterTag</key>
-					<integer>5</integer>
-					<key>INIntentParameterType</key>
-					<string>Integer</string>
-				</dict>
-				<dict>
 					<key>INIntentParameterArraySizes</key>
 					<array>
 						<dict>
@@ -160,11 +100,11 @@
 					<key>INIntentParameterConfigurable</key>
 					<true/>
 					<key>INIntentParameterDisplayName</key>
-					<string>Chats</string>
+					<string> </string>
 					<key>INIntentParameterDisplayNameID</key>
 					<string>WIf4LD</string>
 					<key>INIntentParameterDisplayPriority</key>
-					<integer>2</integer>
+					<integer>1</integer>
 					<key>INIntentParameterFixedSizeArray</key>
 					<integer>1</integer>
 					<key>INIntentParameterName</key>
@@ -178,6 +118,10 @@
 						<dict>
 							<key>INIntentParameterPromptDialogCustom</key>
 							<true/>
+							<key>INIntentParameterPromptDialogFormatString</key>
+							<string>Search</string>
+							<key>INIntentParameterPromptDialogFormatStringID</key>
+							<string>ORCbLf</string>
 							<key>INIntentParameterPromptDialogType</key>
 							<string>Configuration</string>
 						</dict>
@@ -190,8 +134,6 @@
 					</array>
 					<key>INIntentParameterRelationship</key>
 					<dict>
-						<key>INIntentParameterRelationshipParentName</key>
-						<string>contents</string>
 						<key>INIntentParameterRelationshipPredicateName</key>
 						<string>EnumHasExactValue</string>
 						<key>INIntentParameterRelationshipPredicateValue</key>
@@ -200,6 +142,8 @@
 					<key>INIntentParameterSupportsDynamicEnumeration</key>
 					<true/>
 					<key>INIntentParameterSupportsMultipleValues</key>
+					<true/>
+					<key>INIntentParameterSupportsSearch</key>
 					<true/>
 					<key>INIntentParameterTag</key>
 					<integer>19</integer>

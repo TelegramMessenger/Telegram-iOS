@@ -54,6 +54,18 @@ public extension WidgetDataPeer.Message {
                 break
             }
         }
-        self.init(text: message.text, content: content, timestamp: message.timestamp)
+        
+        var author: Author?
+        if let _ = message.peers[message.id.peerId] as? TelegramGroup {
+            if let authorPeer = message.author {
+                author = Author(isMe: false, title: authorPeer.debugDisplayTitle)
+            }
+        } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
+            if let authorPeer = message.author {
+                author = Author(isMe: false, title: authorPeer.debugDisplayTitle)
+            }
+        }
+        
+        self.init(author: author, text: message.text, content: content, timestamp: message.timestamp)
     }
 }

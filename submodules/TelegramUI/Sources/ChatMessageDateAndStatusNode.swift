@@ -263,7 +263,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.incomingDateAndStatusPinnedIcon
                     }
                     if hasAutoremove {
-                        selfExpiringImage = graphics.incomingDateAndStatusSelfExpiringIcon
+                        //selfExpiringImage = graphics.incomingDateAndStatusSelfExpiringIcon
                     }
                 case let .BubbleOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
@@ -282,7 +282,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.outgoingDateAndStatusPinnedIcon
                     }
                     if hasAutoremove {
-                        selfExpiringImage = graphics.outgoingDateAndStatusSelfExpiringIcon
+                        //selfExpiringImage = graphics.outgoingDateAndStatusSelfExpiringIcon
                     }
                 case .ImageIncoming:
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -301,7 +301,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.mediaPinnedIcon
                     }
                     if hasAutoremove {
-                        selfExpiringImage = graphics.mediaSelfExpiringIcon
+                        //selfExpiringImage = graphics.mediaSelfExpiringIcon
                     }
                 case let .ImageOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -321,7 +321,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.mediaPinnedIcon
                     }
                     if hasAutoremove {
-                        selfExpiringImage = graphics.mediaSelfExpiringIcon
+                        //selfExpiringImage = graphics.mediaSelfExpiringIcon
                     }
                 case .FreeIncoming:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -341,7 +341,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.freePinnedIcon
                     }
                     if hasAutoremove {
-                        selfExpiringImage = graphics.freeSelfExpiringIcon
+                        //selfExpiringImage = graphics.freeSelfExpiringIcon
                     }
                 case let .FreeOutgoing(status):
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -362,7 +362,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.freePinnedIcon
                     }
                     if hasAutoremove {
-                        selfExpiringImage = graphics.freeSelfExpiringIcon
+                        //selfExpiringImage = graphics.freeSelfExpiringIcon
                     }
             }
             

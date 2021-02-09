@@ -371,7 +371,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason, _):
+            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason, ttlPeriod):
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
                 
                 let peerId: PeerId
@@ -468,17 +468,27 @@ extension StoreMessage {
                 
                 var consumableContent: (Bool, Bool)? = nil
                 
+                var resolvedTtlPeriod: Int32? = ttlPeriod
+                
                 if let media = media {
                     let (mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                     if let mediaValue = mediaValue {
                         medias.append(mediaValue)
                     
                         if let expirationTimer = expirationTimer, expirationTimer > 0 {
-                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                            if let resolvedTtlPeriodValue = resolvedTtlPeriod {
+                                resolvedTtlPeriod = min(resolvedTtlPeriodValue, expirationTimer)
+                            } else {
+                                resolvedTtlPeriod = expirationTimer
+                            }
                             
                             consumableContent = (true, false)
                         }
                     }
+                }
+                
+                if let resolvedTtlPeriod = resolvedTtlPeriod {
+                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: resolvedTtlPeriod, countdownBeginTime: ttlPeriod == nil ? nil : date))
                 }
                 
                 if let postAuthor = postAuthor {
