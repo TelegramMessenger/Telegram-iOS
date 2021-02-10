@@ -20,13 +20,13 @@ There are several things we require from **all developers** for the moment.
 git clone --recursive -j8 https://github.com/TelegramMessenger/Telegram-iOS.git
 ```
 
-3. Download Bazel 3.7.0
+3. Download Bazel 4.0.0
 
 ```
 mkdir -p $HOME/bazel-dist
 cd $HOME/bazel-dist
-curl -O -L https://github.com/bazelbuild/bazel/releases/download/3.7.0/bazel-3.7.0-darwin-x86_64
-mv bazel-3.7.0* bazel
+curl -O -L https://github.com/bazelbuild/bazel/releases/download/4.0.0/bazel-4.0.0-darwin-x86_64
+mv bazel-* bazel
 ```
 
 Verify that it's working
