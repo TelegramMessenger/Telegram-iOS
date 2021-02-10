@@ -12,41 +12,39 @@ import ItemListUI
 import PresentationDataUtils
 import AppBundle
 
-private func mapTimeoutToSliderValue(_ value: Int32) -> CGFloat {
-    switch value {
-    case 24 * 60 * 60:
-        return 0.0
-    case 7 * 24 * 60 * 60:
-        return 1.0
-    default:
-        return 2.0
+private func mapTimeoutToSliderValue(_ value: Int32, availableValues: [Int32]) -> CGFloat {
+    for i in 0 ..< availableValues.count {
+        if value <= availableValues[i] {
+            return CGFloat(i)
+        }
     }
+    return CGFloat(availableValues.count - 1)
 }
 
-private func mapSliderValueToTimeout(_ value: CGFloat) -> Int32 {
-    switch value {
-    case 0.0:
-        return 24 * 60 * 60
-    case 1.0:
-        return 7 * 24 * 60 * 60
-    default:
-        return Int32.max
+private func mapSliderValueToTimeout(_ value: CGFloat, availableValues: [Int32]) -> Int32 {
+    let intValue = Int(round(value))
+    if intValue >= 0 && intValue < availableValues.count {
+        return availableValues[intValue]
+    } else {
+        return availableValues[availableValues.count - 1]
     }
 }
 
 class PeerRemoveTimeoutItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let value: Int32
     let maxValue: Int32
+    let availableValues: [Int32]
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (Int32) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, value: Int32, maxValue: Int32, enabled: Bool = true, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void, tag: ItemListItemTag? = nil) {
-        self.theme = theme
+    init(presentationData: ItemListPresentationData, value: Int32, maxValue: Int32, availableValues: [Int32], enabled: Bool = true, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void, tag: ItemListItemTag? = nil) {
+        self.presentationData = presentationData
         self.value = value
         self.maxValue = maxValue
+        self.availableValues = availableValues
         self.enabled = enabled
         self.sectionId = sectionId
         self.updated = updated
@@ -158,13 +156,13 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             
             sliderView.minimumUndottedValue = 0
             
-            sliderView.value = mapTimeoutToSliderValue(item.value)
+            sliderView.value = mapTimeoutToSliderValue(item.value, availableValues: item.availableValues)
             
-            sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue))
+            sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue, availableValues: item.availableValues))
             
-            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.disclosureArrowColor
-            sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
+            sliderView.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+            sliderView.backColor = item.presentationData.theme.list.disclosureArrowColor
+            sliderView.trackColor = item.enabled ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemDisabledTextColor
             sliderView.knobImage = generateKnobImage()
             
             let sliderInset: CGFloat = params.leftInset + 16.0
@@ -183,7 +181,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
         
         return { item, params, neighbors in
             var themeUpdated = false
-            if currentItem?.theme !== item.theme {
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
                 themeUpdated = true
             }
             
@@ -194,15 +192,12 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             let titleLayouts = zip(0 ..< makeTitleNodeLayouts.count, makeTitleNodeLayouts).map { index, makeLayout -> (TextNodeLayout, () -> TextNode) in
                 let text: String
                 //TODO:localize
-                switch index {
-                case 0:
-                    text = "After 24 hours"
-                case 1:
-                    text = "After 7 days"
-                default:
+                if item.availableValues[index] == Int32.max {
                     text = "Never"
+                } else {
+                    text = "After \(timeIntervalString(strings: item.presentationData.strings, value: item.availableValues[index]))"
                 }
-                return makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+                return makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(13.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
             }
             
             contentSize = CGSize(width: params.width, height: 88.0)
@@ -219,11 +214,11 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let leftInset = 16.0 + params.leftInset
                     
-                    strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                    strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                    strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                    strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                    strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                     
-                    strongSelf.disabledOverlayNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4)
+                    strongSelf.disabledOverlayNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4)
                     strongSelf.disabledOverlayNode.isHidden = item.enabled
                     strongSelf.disabledOverlayNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: 44.0))
                     
@@ -263,7 +258,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -286,12 +281,12 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                     
                     if let sliderView = strongSelf.sliderView {
                         sliderView.isUserInteractionEnabled = item.enabled
-                        sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
-                        sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue))
+                        sliderView.trackColor = item.enabled ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemDisabledTextColor
+                        sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue, availableValues: item.availableValues))
                         
                         if themeUpdated {
-                            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.disclosureArrowColor
+                            sliderView.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                            sliderView.backColor = item.presentationData.theme.list.disclosureArrowColor
                             sliderView.knobImage = generateKnobImage()
                         }
                         
@@ -325,19 +320,10 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     @objc func sliderValueChanged() {
-        guard let sliderView = self.sliderView else {
+        guard let sliderView = self.sliderView, let item = self.item else {
             return
         }
-        let value: Int32
-        switch sliderView.value {
-        case 0.0:
-            value = 24 * 60 * 60
-        case 1.0:
-            value = 7 * 24 * 60 * 60
-        default:
-            value = Int32.max
-        }
-        self.item?.updated(value)
+        self.item?.updated(mapSliderValueToTimeout(sliderView.value, availableValues: item.availableValues))
     }
 }
 
