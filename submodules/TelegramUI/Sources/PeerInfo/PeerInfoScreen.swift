@@ -1262,16 +1262,16 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
                 }
             case .group:
-                let ItemUsername = 1
-                let ItemLinkedChannel = 2
-                let ItemPreHistory = 3
-                let ItemStickerPack = 4
-                let ItemPermissions = 5
-                let ItemAdmins = 6
-                let ItemLocationHeader = 7
-                let ItemLocation = 8
-                let ItemLocationSetup = 9
-                let ItemAutoremove = 10
+                let ItemUsername = 101
+                let ItemLinkedChannel = 102
+                let ItemPreHistory = 103
+                let ItemStickerPack = 104
+                let ItemPermissions = 105
+                let ItemAdmins = 106
+                let ItemLocationHeader = 107
+                let ItemLocation = 108
+                let ItemLocationSetup = 109
+                let ItemAutoremove = 110
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.username != nil
@@ -1405,12 +1405,12 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 }
             }
         } else if let group = data.peer as? TelegramGroup {
-            let ItemUsername = 1
-            let ItemInviteLinks = 2
-            let ItemPreHistory = 3
-            let ItemPermissions = 4
-            let ItemAdmins = 5
-            let ItemAutoremove = 6
+            let ItemUsername = 101
+            let ItemInviteLinks = 102
+            let ItemPreHistory = 103
+            let ItemPermissions = 104
+            let ItemAdmins = 105
+            let ItemAutoremove = 106
             
             if case .creator = group.role {
                 if let cachedData = data.cachedData as? CachedGroupData {
