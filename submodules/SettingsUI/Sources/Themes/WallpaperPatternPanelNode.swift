@@ -161,13 +161,6 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     }
 }
 
-
-
-
-
-
-
-
 final class WallpaperPatternPanelNode: ASDisplayNode {
     private let context: AccountContext
     private var theme: PresentationTheme
@@ -175,7 +168,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     private let topSeparatorNode: ASDisplayNode
     
-    private let scrollNode: ASScrollNode
+    let scrollNode: ASScrollNode
     
     private let titleNode: ImmediateTextNode
     private let labelNode: ImmediateTextNode

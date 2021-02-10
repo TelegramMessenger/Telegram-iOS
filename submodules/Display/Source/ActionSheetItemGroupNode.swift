@@ -15,9 +15,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var itemNodes: [ActionSheetItemNode] = []
     private var leadingVisibleNodeCount: CGFloat = 100.0
-    
-    var respectInputHeight = true
-    
+        
     init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -90,14 +88,14 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         
         var i = 0
         for node in self.itemNodes {
-            if CGFloat(0.0).isLess(than: itemNodesHeight) {
+            if CGFloat(0.0).isLess(than: itemNodesHeight), node.hasSeparator {
                 itemNodesHeight += UIScreenPixel
             }
             let size = node.measure(constrainedSize)
             itemNodesHeight += size.height
             
             if ceil(CGFloat(i)).isLessThanOrEqualTo(leadingVisibleNodeCount) {
-                if CGFloat(0.0).isLess(than: leadingVisibleNodeSize) {
+                if CGFloat(0.0).isLess(than: leadingVisibleNodeSize), node.hasSeparator {
                     leadingVisibleNodeSize += UIScreenPixel
                 }
                 let factor: CGFloat = min(1.0, leadingVisibleNodeCount - CGFloat(i))
@@ -109,7 +107,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         return CGSize(width: constrainedSize.width, height: min(floorToScreenPixels(itemNodesHeight), constrainedSize.height))
     }
     
-    override func layout() {
+    func updateLayout(transition: ContainedViewLayoutTransition) {
         let scrollViewFrame = CGRect(origin: CGPoint(), size: self.calculatedSize)
         var updateOffset = false
         if !self.scrollNode.frame.equalTo(scrollViewFrame) {
@@ -119,22 +117,24 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         
         let backgroundEffectViewFrame = CGRect(origin: CGPoint(), size: self.calculatedSize)
         if !self.backgroundEffectView.frame.equalTo(backgroundEffectViewFrame) {
-            self.backgroundEffectView.frame = backgroundEffectViewFrame
+            transition.updateFrame(view: self.backgroundEffectView, frame: backgroundEffectViewFrame)
         }
         
         var itemNodesHeight: CGFloat = 0.0
         var leadingVisibleNodeSize: CGFloat = 0.0
         
         var i = 0
+        var previousHadSeparator = false
         for node in self.itemNodes {
-            if CGFloat(0.0).isLess(than: itemNodesHeight) {
+            if CGFloat(0.0).isLess(than: itemNodesHeight), previousHadSeparator {
                 itemNodesHeight += UIScreenPixel
             }
+            previousHadSeparator = node.hasSeparator
             node.frame = CGRect(origin: CGPoint(x: 0.0, y: itemNodesHeight), size: node.calculatedSize)
             itemNodesHeight += node.calculatedSize.height
             
             if CGFloat(i).isLessThanOrEqualTo(leadingVisibleNodeCount) {
-                if CGFloat(0.0).isLess(than: leadingVisibleNodeSize) {
+                if CGFloat(0.0).isLess(than: leadingVisibleNodeSize), node.hasSeparator {
                     leadingVisibleNodeSize += UIScreenPixel
                 }
                 let factor: CGFloat = min(1.0, leadingVisibleNodeCount - CGFloat(i))
@@ -157,7 +157,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
             self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -scrollViewContentInsets.top)
         }
         
-        self.updateOverscroll()
+        self.updateOverscroll(transition: transition)
     }
     
     private func currentVerticalOverscroll() -> CGFloat {
@@ -180,22 +180,22 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         return verticalOverscroll
     }
     
-    private func updateOverscroll() {
+    private func updateOverscroll(transition: ContainedViewLayoutTransition) {
         let verticalOverscroll = self.currentVerticalOverscroll()
         
         self.clippingNode.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, min(0.0, verticalOverscroll), 0.0)
         let clippingNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: max(0.0, -verticalOverscroll)), size: CGSize(width: self.calculatedSize.width, height: self.calculatedSize.height - abs(verticalOverscroll)))
         if !self.clippingNode.frame.equalTo(clippingNodeFrame) {
-            self.clippingNode.frame = clippingNodeFrame
+            transition.updateFrame(node: self.clippingNode, frame: clippingNodeFrame)
             
-            self.centerDimView.frame = clippingNodeFrame
-            self.topDimView.frame = CGRect(x: 0.0, y: 0.0, width: clippingNodeFrame.size.width, height: max(0.0, clippingNodeFrame.minY))
-            self.bottomDimView.frame = CGRect(x: 0.0, y: clippingNodeFrame.maxY, width: clippingNodeFrame.size.width, height: max(0.0, self.bounds.size.height - clippingNodeFrame.maxY))
+            transition.updateFrame(view: self.centerDimView, frame: clippingNodeFrame)
+            transition.updateFrame(view: self.topDimView, frame: CGRect(x: 0.0, y: 0.0, width: clippingNodeFrame.size.width, height: max(0.0, clippingNodeFrame.minY)))
+            transition.updateFrame(view: self.bottomDimView, frame: CGRect(x: 0.0, y: clippingNodeFrame.maxY, width: clippingNodeFrame.size.width, height: max(0.0, self.bounds.size.height - clippingNodeFrame.maxY)))
         }
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateOverscroll()
+        self.updateOverscroll(transition: .immediate)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

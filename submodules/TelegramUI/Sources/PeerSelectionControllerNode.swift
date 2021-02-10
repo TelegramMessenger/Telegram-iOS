@@ -189,7 +189,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             transition.updateFrame(node: toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
             transition.updateFrame(node: toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
             
-            let controlSize = segmentedControlNode.updateLayout(.sizeToFit(maximumWidth: layout.size.width, minimumWidth: 200.0), transition: transition)
+            let controlSize = segmentedControlNode.updateLayout(.sizeToFit(maximumWidth: layout.size.width, minimumWidth: 200.0, height: 32.0), transition: transition)
             transition.updateFrame(node: segmentedControlNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: layout.size.height - toolbarHeight + floor((44.0 - controlSize.height) / 2.0)), size: controlSize))
         }
         

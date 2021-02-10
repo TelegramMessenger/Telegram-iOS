@@ -207,7 +207,10 @@ public final class PermissionController: ViewController {
                         }
                     }
             }
-        } else {
+        } else if case let .custom(icon, _, _, _, _, _, _) = state {
+            if case .animation = icon, case .modal = self.navigationPresentation {
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: ASDisplayNode())
+            }
             self.allow = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.proceed?(true)

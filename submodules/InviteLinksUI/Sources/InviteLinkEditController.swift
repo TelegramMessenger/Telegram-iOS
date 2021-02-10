@@ -51,7 +51,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     case timeHeader(PresentationTheme, String)
     case timePicker(PresentationTheme, InviteLinkTimeLimit)
     case timeExpiryDate(PresentationTheme, Int32?, Bool)
-    case timeCustomPicker(PresentationTheme, Int32?)
+    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?)
     case timeInfo(PresentationTheme, String)
     
     case usageHeader(PresentationTheme, String)
@@ -117,8 +117,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .timeCustomPicker(lhsTheme, lhsDate):
-                if case let .timeCustomPicker(rhsTheme, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDate == rhsDate {
+            case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate):
+                if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate {
                     return true
                 } else {
                     return false
@@ -193,12 +193,12 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     arguments.dismissInput()
                     arguments.updateState { state in
                         var updatedState = state
-//                        updatedState.pickingTimeLimit = !state.pickingTimeLimit
+                        updatedState.pickingTimeLimit = !state.pickingTimeLimit
                         return updatedState
                     }
                 })
-            case let .timeCustomPicker(_, date):
-                return ItemListDatePickerItem(presentationData: presentationData, date: date, sectionId: self.section, style: .blocks, updated: { date in
+            case let .timeCustomPicker(_, dateTimeFormat, date):
+                return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, sectionId: self.section, style: .blocks, updated: { date in
                     arguments.updateState({ state in
                         var updatedState = state
                         updatedState.time = .custom(date)
@@ -283,7 +283,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     }
     entries.append(.timeExpiryDate(presentationData.theme, time, state.pickingTimeLimit))
     if state.pickingTimeLimit {
-        entries.append(.timeCustomPicker(presentationData.theme, time ?? currentTime))
+        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time ?? currentTime))
     }
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     

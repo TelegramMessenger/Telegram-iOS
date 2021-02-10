@@ -13,38 +13,6 @@ private let itemSpacing: CGFloat = 10.0
 private let titleFont = Font.semibold(17.0)
 private let subtitleFont = Font.regular(12.0)
 
-private func generateBackgroundImage(colors: NSArray) -> UIImage? {
-    return generateImage(CGSize(width: 45, height: 45), contextGenerator: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 15)
-        context.addPath(path.cgPath)
-        context.clip()
-        
-        var locations: [CGFloat] = [0.0, 1.0]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
-        
-        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
-    })?.stretchableImage(withLeftCapWidth: 22, topCapHeight: 22)
-}
-
-func invitationAvailability(_ invite: ExportedInvitation) -> CGFloat {
-    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-    var availability: CGFloat = 1.0
-    if let expireDate = invite.expireDate {
-        let startDate = invite.startDate ?? invite.date
-        let fraction = CGFloat(expireDate - currentTime) / CGFloat(expireDate - startDate)
-        availability = min(fraction, availability)
-    }
-    if let usageLimit = invite.usageLimit, let count = invite.count {
-        let fraction = 1.0 - (CGFloat(count) / CGFloat(usageLimit))
-        availability = min(fraction, availability)
-    }
-    return max(0.0, min(1.0, availability))
-}
-
 private enum ItemBackgroundColor: Equatable {
     case blue
     case green

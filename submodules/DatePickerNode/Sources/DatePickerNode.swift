@@ -4,6 +4,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramStringFormatting
+import SegmentedControlNode
 
 public final class DatePickerTheme: Equatable {
     public let backgroundColor: UIColor
@@ -13,8 +14,10 @@ public final class DatePickerTheme: Equatable {
     public let disabledColor: UIColor
     public let selectionColor: UIColor
     public let selectionTextColor: UIColor
+    public let separatorColor: UIColor
+    public let segmentedControlTheme: SegmentedControlTheme
     
-    public init(backgroundColor: UIColor, textColor: UIColor, secondaryTextColor: UIColor, accentColor: UIColor, disabledColor: UIColor, selectionColor: UIColor, selectionTextColor: UIColor) {
+    public init(backgroundColor: UIColor, textColor: UIColor, secondaryTextColor: UIColor, accentColor: UIColor, disabledColor: UIColor, selectionColor: UIColor, selectionTextColor: UIColor, separatorColor: UIColor, segmentedControlTheme: SegmentedControlTheme) {
         self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.secondaryTextColor = secondaryTextColor
@@ -22,6 +25,8 @@ public final class DatePickerTheme: Equatable {
         self.disabledColor = disabledColor
         self.selectionColor = selectionColor
         self.selectionTextColor = selectionTextColor
+        self.separatorColor = separatorColor
+        self.segmentedControlTheme = segmentedControlTheme
     }
     
     public static func ==(lhs: DatePickerTheme, rhs: DatePickerTheme) -> Bool {
@@ -43,13 +48,16 @@ public final class DatePickerTheme: Equatable {
         if lhs.selectionTextColor != rhs.selectionTextColor {
             return false
         }
+        if lhs.separatorColor != rhs.separatorColor {
+            return false
+        }
         return true
     }
 }
 
 public extension DatePickerTheme {
     convenience init(theme: PresentationTheme) {
-        self.init(backgroundColor: theme.list.itemBlocksBackgroundColor, textColor: theme.list.itemPrimaryTextColor, secondaryTextColor: theme.list.itemSecondaryTextColor, accentColor: theme.list.itemAccentColor, disabledColor: theme.list.itemDisabledTextColor, selectionColor: theme.list.itemCheckColors.fillColor, selectionTextColor: theme.list.itemCheckColors.foregroundColor)
+        self.init(backgroundColor: theme.list.itemBlocksBackgroundColor, textColor: theme.list.itemPrimaryTextColor, secondaryTextColor: theme.list.itemSecondaryTextColor, accentColor: theme.list.itemAccentColor, disabledColor: theme.list.itemDisabledTextColor, selectionColor: theme.list.itemCheckColors.fillColor, selectionTextColor: theme.list.itemCheckColors.foregroundColor, separatorColor: theme.list.itemBlocksSeparatorColor, segmentedControlTheme: SegmentedControlTheme(theme: theme))
     }
 }
 
@@ -104,9 +112,15 @@ private func generateNavigationArrowImage(color: UIColor, mirror: Bool) -> UIIma
     })
 }
 
+private func yearRange(for state: DatePickerNode.State) -> Range<Int> {
+    let minYear = calendar.component(.year, from: state.minDate)
+    let maxYear = calendar.component(.year, from: state.maxDate)
+    return minYear ..< maxYear + 1
+}
+
 public final class DatePickerNode: ASDisplayNode {
     class MonthNode: ASDisplayNode {
-        private let month: Date
+        let month: Date
         
         var theme: DatePickerTheme {
             didSet {
@@ -117,29 +131,9 @@ public final class DatePickerNode: ASDisplayNode {
             }
         }
         
-        var maximumDate: Date? {
-            didSet {
-                if let size = self.validSize {
-                    self.updateLayout(size: size)
-                }
-            }
-        }
-
-        var minimumDate: Date? {
-            didSet {
-                if let size = self.validSize {
-                    self.updateLayout(size: size)
-                }
-            }
-        }
-        
-        var date: Date? {
-            didSet {
-                if let size = self.validSize {
-                    self.updateLayout(size: size)
-                }
-            }
-        }
+        var maximumDate: Date?
+        var minimumDate: Date?
+        var date: Date?
         
         private var validSize: CGSize?
         
@@ -176,10 +170,26 @@ public final class DatePickerNode: ASDisplayNode {
             self.addSubnode(self.selectionNode)
             self.dateNodes.forEach { self.addSubnode($0) }
         }
+        
+        func dateAtPoint(_ point: CGPoint) -> Int32? {
+            var day: Int32 = 0
+            for node in self.dateNodes {
+                if node.isHidden {
+                    continue
+                }
+                day += 1
+                
+                if node.frame.insetBy(dx: -15.0, dy: -15.0).contains(point) {
+                    return day
+                }
+            }
+            return nil
+        }
                 
         func updateLayout(size: CGSize) {
             var weekday = self.firstWeekday
             var started = false
+            var ended = false
             var count = 0
             
             let sideInset: CGFloat = 12.0
@@ -194,7 +204,10 @@ public final class DatePickerNode: ASDisplayNode {
                     started = true
                 }
                 weekday += 1
-                if started {
+                
+                let textNode = self.dateNodes[i]
+                if started && !ended {
+                    textNode.isHidden = false
                     count += 1
                     
                     var isAvailableDate = true
@@ -228,7 +241,6 @@ public final class DatePickerNode: ASDisplayNode {
                         color = self.theme.textColor
                     }
                     
-                    let textNode = self.dateNodes[i]
                     textNode.attributedText = NSAttributedString(string: "\(count)", font: isSelected ? selectedDateFont : dateFont, textColor: color)
 
                     let textSize = textNode.updateLayout(size)
@@ -244,8 +256,10 @@ public final class DatePickerNode: ASDisplayNode {
                     }
                     
                     if count == self.numberOfDays {
-                        break
+                        ended = true
                     }
+                } else {
+                    textNode.isHidden = true
                 }
             }
         }
@@ -266,7 +280,8 @@ public final class DatePickerNode: ASDisplayNode {
     private let strings: PresentationStrings
     
     private let timeTitleNode: ImmediateTextNode
-    private let timeFieldNode: ASImageNode
+    private let timePickerNode: TimePickerNode
+    private let timeSeparatorNode: ASDisplayNode
         
     private let dayNodes: [ImmediateTextNode]
     private var currentIndex = 0
@@ -289,6 +304,8 @@ public final class DatePickerNode: ASDisplayNode {
     private var gestureSelectedIndex: Int?
     
     private var validLayout: CGSize?
+    
+    public var valueUpdated: ((Date) -> Void)?
     
     public var maximumDate: Date {
         get {
@@ -342,16 +359,19 @@ public final class DatePickerNode: ASDisplayNode {
         }
     }
     
-    public init(theme: DatePickerTheme, strings: PresentationStrings) {
+    public init(theme: DatePickerTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         self.theme = theme
         self.strings = strings
         self.state = State(minDate: telegramReleaseDate, maxDate: upperLimitDate, date: Date(), displayingMonthSelection: false, selectedMonth: monthForDate(Date()))
                 
         self.timeTitleNode = ImmediateTextNode()
-        self.timeFieldNode = ASImageNode()
-        self.timeFieldNode.displaysAsynchronously = false
-        self.timeFieldNode.displayWithoutProcessing = true
+        self.timeTitleNode.attributedText = NSAttributedString(string: "Time", font: Font.regular(17.0), textColor: theme.textColor)
+        
+        self.timePickerNode = TimePickerNode(theme: theme, dateTimeFormat: dateTimeFormat, date: self.state.date)
     
+        self.timeSeparatorNode = ASDisplayNode()
+        self.timeSeparatorNode.backgroundColor = theme.separatorColor
+        
         self.dayNodes = (0..<7).map { _ in ImmediateTextNode() }
         
         self.contentNode = ASDisplayNode()
@@ -361,8 +381,9 @@ public final class DatePickerNode: ASDisplayNode {
         self.pickerBackgroundNode.backgroundColor = theme.backgroundColor
         self.pickerBackgroundNode.isUserInteractionEnabled = false
         
-        self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date, yearRange: 2013 ..< 2038, valueChanged: { date in
-            
+        var monthChangedImpl: ((Date) -> Void)?
+        self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date, yearRange: yearRange(for: self.state), valueChanged: { date in
+            monthChangedImpl?(date)
         })
         
         self.monthButtonNode = HighlightTrackingButtonNode()
@@ -380,9 +401,12 @@ public final class DatePickerNode: ASDisplayNode {
         
         self.clipsToBounds = true
         self.backgroundColor = theme.backgroundColor
-                
-        self.addSubnode(self.contentNode)
         
+        self.addSubnode(self.timeTitleNode)
+        self.addSubnode(self.timePickerNode)
+        
+        self.addSubnode(self.contentNode)
+                
         self.dayNodes.forEach { self.addSubnode($0) }
         
         self.addSubnode(self.previousButtonNode)
@@ -397,7 +421,9 @@ public final class DatePickerNode: ASDisplayNode {
         
         self.monthArrowNode.image = generateSmallArrowImage(color: theme.accentColor)
         self.previousButtonNode.setImage(generateNavigationArrowImage(color: theme.accentColor, mirror: true), for: .normal)
+        self.previousButtonNode.setImage(generateNavigationArrowImage(color: theme.disabledColor, mirror: true), for: .disabled)
         self.nextButtonNode.setImage(generateNavigationArrowImage(color: theme.accentColor, mirror: false), for: .normal)
+        self.nextButtonNode.setImage(generateNavigationArrowImage(color: theme.disabledColor, mirror: false), for: .disabled)
         
         self.setupItems()
         
@@ -420,6 +446,24 @@ public final class DatePickerNode: ASDisplayNode {
         
         self.previousButtonNode.addTarget(self, action: #selector(self.previousButtonPressed), forControlEvents: .touchUpInside)
         self.nextButtonNode.addTarget(self, action: #selector(self.nextButtonPressed), forControlEvents: .touchUpInside)
+        
+        self.timePickerNode.valueChanged = { [weak self] date in
+            if let strongSelf = self {
+                let updatedState = State(minDate: strongSelf.state.minDate, maxDate: strongSelf.state.maxDate, date: date, displayingMonthSelection: strongSelf.state.displayingMonthSelection, selectedMonth: strongSelf.state.selectedMonth)
+                strongSelf.updateState(updatedState, animated: false)
+                
+                strongSelf.valueUpdated?(date)
+            }
+        }
+        
+        monthChangedImpl = { [weak self] date in
+            if let strongSelf = self {
+                let updatedState = State(minDate: strongSelf.state.minDate, maxDate: strongSelf.state.maxDate, date: date, displayingMonthSelection: strongSelf.state.displayingMonthSelection, selectedMonth: monthForDate(date))
+                strongSelf.updateState(updatedState, animated: false)
+                
+                strongSelf.valueUpdated?(date)
+            }
+        }
     }
     
     override public func didLoad() {
@@ -436,6 +480,7 @@ public final class DatePickerNode: ASDisplayNode {
         self.state = state
         
         if previousState.minDate != state.minDate || previousState.maxDate != state.maxDate {
+            self.pickerNode.yearRange = yearRange(for: state)
             self.setupItems()
         } else if previousState.selectedMonth != state.selectedMonth {
             for i in 0 ..< self.months.count {
@@ -445,6 +490,7 @@ public final class DatePickerNode: ASDisplayNode {
                 }
             }
         }
+        self.pickerNode.date = self.state.date
         
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .spring) : .immediate)
@@ -455,9 +501,7 @@ public final class DatePickerNode: ASDisplayNode {
         let startMonth = monthForDate(self.state.minDate)
         let endMonth = monthForDate(self.state.maxDate)
         let selectedMonth = monthForDate(self.state.selectedMonth)
-        
-        let calendar = Calendar.current
-        
+                
         var currentIndex = 0
         
         var months: [Date] = [startMonth]
@@ -490,7 +534,7 @@ public final class DatePickerNode: ASDisplayNode {
             return
         }
         self.theme = theme
-        
+                
         self.backgroundColor = self.theme.backgroundColor
         self.monthArrowNode.image = generateSmallArrowImage(color: theme.accentColor)
         self.previousButtonNode.setImage(generateNavigationArrowImage(color: theme.accentColor, mirror: true), for: .normal)
@@ -506,7 +550,26 @@ public final class DatePickerNode: ASDisplayNode {
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        guard let monthNode = self.monthNodes[self.months[self.currentIndex]] else {
+            return
+        }
         
+        let location = recognizer.location(in: monthNode.view)
+        if let day = monthNode.dateAtPoint(location) {
+            let monthComponents = calendar.dateComponents([.month, .year], from: monthNode.month)
+            var currentComponents = calendar.dateComponents([.hour, .minute, .day, .month, .year], from: self.date)
+
+            currentComponents.year = monthComponents.year
+            currentComponents.month = monthComponents.month
+            currentComponents.day = Int(day)
+            
+            if let date = calendar.date(from: currentComponents), date >= self.minimumDate && date < self.maximumDate {
+                let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: monthNode.month)
+                self.updateState(updatedState, animated: false)
+                
+                self.valueUpdated?(date)
+            }
+        }
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -524,7 +587,7 @@ public final class DatePickerNode: ASDisplayNode {
             }
             self.transitionFraction = transitionFraction
             if let size = self.validLayout {
-                let topInset: CGFloat = 78.0
+                let topInset: CGFloat = 78.0 + 44.0
                 let containerSize = CGSize(width: size.width, height: size.height - topInset)
                 self.updateItems(size: containerSize, transition: .animated(duration: 0.3, curve: .spring))
             }
@@ -565,10 +628,13 @@ public final class DatePickerNode: ASDisplayNode {
                 var wasAdded = false
                 if let current = self.monthNodes[self.months[i]] {
                     itemNode = current
+                    current.minimumDate = self.state.minDate
+                    current.maximumDate = self.state.maxDate
+                    current.date = self.state.date
                     current.updateLayout(size: size)
                 } else {
                     wasAdded = true
-                    let addedItemNode = MonthNode(theme: self.theme, month: self.months[i], minimumDate: self.minimumDate, maximumDate: self.maximumDate, date: self.date)
+                    let addedItemNode = MonthNode(theme: self.theme, month: self.months[i], minimumDate: self.state.minDate, maximumDate: self.state.maxDate, date: self.state.date)
                     itemNode = addedItemNode
                     self.monthNodes[self.months[i]] = addedItemNode
                     self.contentNode.addSubnode(addedItemNode)
@@ -604,21 +670,37 @@ public final class DatePickerNode: ASDisplayNode {
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
     
-        let topInset: CGFloat = 78.0
+        let timeHeight: CGFloat = 44.0
+        let topInset: CGFloat = 78.0 + timeHeight
         let sideInset: CGFloat = 16.0
         
         let month = monthForDate(self.state.selectedMonth)
         let components = calendar.dateComponents([.month, .year], from: month)
         
-        self.monthTextNode.attributedText = NSAttributedString(string: stringForMonth(strings: self.strings, month: components.month.flatMap { Int32($0) - 1 } ?? 0, ofYear: components.year.flatMap { Int32($0) - 1900 } ?? 100), font: controlFont, textColor: theme.textColor)
+        let timeTitleSize = self.timeTitleNode.updateLayout(size)
+        self.timeTitleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 14.0), size: timeTitleSize)
+        
+        let timePickerSize = self.timePickerNode.updateLayout(size: size)
+        self.timePickerNode.frame = CGRect(origin: CGPoint(x: size.width - timePickerSize.width - 16.0, y: 6.0), size: timePickerSize)
+        self.timeSeparatorNode.frame = CGRect(x: 16.0, y: timeHeight, width: size.width - 16.0, height: UIScreenPixel)
+        
+        self.monthTextNode.attributedText = NSAttributedString(string: stringForMonth(strings: self.strings, month: components.month.flatMap { Int32($0) - 1 } ?? 0, ofYear: components.year.flatMap { Int32($0) - 1900 } ?? 100), font: controlFont, textColor: self.state.displayingMonthSelection ? self.theme.accentColor : self.theme.textColor)
         let monthSize = self.monthTextNode.updateLayout(size)
         
-        let monthTextFrame = CGRect(x: sideInset, y: 10.0, width: monthSize.width, height: monthSize.height)
+        let monthTextFrame = CGRect(x: sideInset, y: 11.0 + timeHeight, width: monthSize.width, height: monthSize.height)
         self.monthTextNode.frame = monthTextFrame
-        self.monthArrowNode.frame = CGRect(x: monthTextFrame.maxX + 10.0, y: monthTextFrame.minY + 4.0, width: 7.0, height: 12.0)
+        
+        let monthArrowFrame = CGRect(x: monthTextFrame.maxX + 10.0, y: monthTextFrame.minY + 4.0, width: 7.0, height: 12.0)
+        self.monthArrowNode.position = monthArrowFrame.center
+        self.monthArrowNode.bounds = CGRect(origin: CGPoint(), size: monthArrowFrame.size)
+        
+        transition.updateTransformRotation(node: self.monthArrowNode, angle: self.state.displayingMonthSelection ? CGFloat.pi / 2.0 : 0.0)
+        
         self.monthButtonNode.frame = monthTextFrame.inset(by: UIEdgeInsets(top: -6.0, left: -6.0, bottom: -6.0, right: -30.0))
         
+        self.previousButtonNode.isEnabled = self.currentIndex > 0
         self.previousButtonNode.frame = CGRect(x: size.width - sideInset - 54.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
+        self.nextButtonNode.isEnabled = self.currentIndex < self.months.count - 1
         self.nextButtonNode.frame = CGRect(x: size.width - sideInset - 13.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
 
         let daysSideInset: CGFloat = 12.0
@@ -629,7 +711,7 @@ public final class DatePickerNode: ASDisplayNode {
             dayNode.attributedText = NSAttributedString(string: shortStringForDayOfWeek(strings: self.strings, day: Int32(i)).uppercased(), font: dayFont, textColor: theme.secondaryTextColor)
             
             let textSize = dayNode.updateLayout(size)
-            let cellFrame = CGRect(x: daysSideInset + CGFloat(i) * cellSize, y: 40.0, width: cellSize, height: cellSize)
+            let cellFrame = CGRect(x: daysSideInset + CGFloat(i) * cellSize, y: topInset - 38.0, width: cellSize, height: cellSize)
             let textFrame = CGRect(origin: CGPoint(x: cellFrame.minX + floor((cellFrame.width - textSize.width) / 2.0), y: cellFrame.minY + floor((cellFrame.height - textSize.height) / 2.0)), size: textSize)
             
             dayNode.frame = textFrame
@@ -679,12 +761,15 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
     private let theme: DatePickerTheme
     private let strings: PresentationStrings
     
-    private var date: Date
-    private var yearRange: Range<Int> {
+    var date: Date
+    var yearRange: Range<Int> {
         didSet {
-            self.pickerView.reloadAllComponents()
+            self.reload()
         }
     }
+    
+    var minDate: Date?
+    var maxDate: Date?
     
     private let valueChanged: (Date) -> Void
     private let pickerView: UIPickerView
@@ -706,9 +791,16 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         self.pickerView.dataSource = self
         self.view.addSubview(self.pickerView)
         
+        self.reload()
+    }
+    
+    private func reload() {
         self.pickerView.reloadAllComponents()
-
-//        self.pickerView.selectRow(index, inComponent: 0, animated: false)
+        
+        let month = calendar.component(.month, from: date)
+        let year = calendar.component(.year, from: date)
+        self.pickerView.selectRow(month - 1, inComponent: 0, animated: false)
+        self.pickerView.selectRow(year - yearRange.startIndex, inComponent: 1, animated: false)
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -742,12 +834,110 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-//        self.valueChanged(timeoutValues[row])
+        let month = pickerView.selectedRow(inComponent: 0) + 1
+        let year = self.yearRange.startIndex + pickerView.selectedRow(inComponent: 1)
+        
+        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: self.date)
+        let day = components.day ?? 1
+        components.day = 1
+        components.month = month
+        components.year = year
+        
+        let tempDate = calendar.date(from: components)!
+        let numberOfDays = calendar.range(of: .day, in: .month, for: tempDate)!.count
+        components.day = min(day, numberOfDays)
+        
+        let date = calendar.date(from: components)!
+        self.date = date
+        
+        self.valueChanged(date)
     }
     
     override func layout() {
         super.layout()
         
         self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.size.width, height: 180.0))
+    }
+}
+
+private final class TimePickerNode: ASDisplayNode {
+    private var theme: DatePickerTheme
+    private let dateTimeFormat: PresentationDateTimeFormat
+    
+    private let backgroundNode: ASDisplayNode
+    private let textNode: ImmediateTextNode
+    private let amPMSelectorNode: SegmentedControlNode
+    
+    var date: Date
+    var minDate: Date?
+    var maxDate: Date?
+    
+    var valueChanged: ((Date) -> Void)?
+    
+    init(theme: DatePickerTheme, dateTimeFormat: PresentationDateTimeFormat, date: Date) {
+        self.theme = theme
+        self.dateTimeFormat = dateTimeFormat
+        self.date = date
+        
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.backgroundNode.cornerRadius = 9.0
+        
+        self.textNode = ImmediateTextNode()
+        
+        let hours = calendar.component(.hour, from: date)
+        
+        self.amPMSelectorNode = SegmentedControlNode(theme: theme.segmentedControlTheme, items: [SegmentedControlItem(title: "AM"), SegmentedControlItem(title: "PM")], selectedIndex: hours > 12 ? 1 : 0)
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.amPMSelectorNode)
+        
+        self.amPMSelectorNode.selectedIndexChanged = { index in
+            let hours = calendar.component(.hour, from: date)
+            var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: self.date)
+            if index == 0 && hours >= 12 {
+                components.hour = hours - 12
+            } else if index == 1 && hours < 12 {
+                components.hour = hours + 12
+            }
+            if let newDate = calendar.date(from: components) {
+                self.valueChanged?(newDate)
+            }
+        }
+    }
+    
+    func updateTheme(_ theme: DatePickerTheme) {
+        self.theme = theme
+        
+        self.backgroundNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+    }
+    
+    func updateLayout(size: CGSize) -> CGSize {
+        self.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: 75.0, height: 36.0)
+      
+        var contentSize = CGSize()
+        
+        let hours = Int32(calendar.component(.hour, from: self.date))
+        let minutes = Int32(calendar.component(.hour, from: self.date))
+        let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: self.dateTimeFormat).replacingOccurrences(of: " AM", with: "").replacingOccurrences(of: " PM", with: "")
+        
+        self.textNode.attributedText = NSAttributedString(string: string, font: Font.with(size: 21.0, design: .monospace, weight: .regular, traits: []), textColor: self.theme.textColor)
+        let textSize = self.textNode.updateLayout(size)
+        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - textSize.width) / 2.0), y: floorToScreenPixels((self.backgroundNode.frame.height - textSize.height) / 2.0)), size: textSize)
+        
+        if self.dateTimeFormat.timeFormat == .military {
+            contentSize = self.backgroundNode.frame.size
+            self.amPMSelectorNode.isHidden = true
+        } else {
+            self.amPMSelectorNode.isHidden = false
+            let segmentedSize = self.amPMSelectorNode.updateLayout(.sizeToFit(maximumWidth: 120.0, minimumWidth: 80.0, height: 36.0), transition: .immediate)
+            self.amPMSelectorNode.frame = CGRect(x: 85.0, y: 0.0, width: segmentedSize.width, height: 36.0)
+            contentSize = CGSize(width: 85.0 + segmentedSize.width, height: 36.0)
+        }
+        
+        return contentSize
     }
 }

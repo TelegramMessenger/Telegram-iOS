@@ -38,6 +38,10 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     controller.activateSearch(domain: search.0, query: search.1)
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
                     params.completion(controller)
+                } else if let reportReason = params.reportReason {
+                    controller.beginReportSelection(reason: reportReason)
+                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    params.completion(controller)
                 } else {
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
                     params.completion(controller)

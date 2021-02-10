@@ -46,3 +46,11 @@ public func convertGroupToSupergroup(account: Account, peerId: PeerId) -> Signal
         return .fail(.generic)
     }
 }
+
+public enum ConvertGroupToGigagroupError {
+    case generic
+}
+
+public func convertGroupToGigagroup() -> Signal<PeerId, ConvertGroupToGigagroupError> {
+    return .never()
+}

@@ -598,7 +598,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             if strongSelf.reorderFeedback == nil {
                                 strongSelf.reorderFeedback = HapticFeedback()
                             }
-                            strongSelf.reorderFeedback?.tap()
+                            strongSelf.reorderFeedback?.impact()
                         }))
                     }
                 }

@@ -580,6 +580,15 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                     f(.default)
                 })))
+                
+                if isSpeakSelectionEnabled() {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSpeak, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: message.text), .speak)
+                        f(.default)
+                    })))
+                }
             }
             if resourceAvailable, !message.containsSecretMedia {
                 var mediaReference: AnyMediaReference?

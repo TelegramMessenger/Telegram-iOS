@@ -12,7 +12,7 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
     }
     
     private var groups: [ActionSheetItemGroup] = []
-    private var groupNodes: [ActionSheetItemGroupNode] = []
+    var groupNodes: [ActionSheetItemGroupNode] = []
     
     init(theme: ActionSheetControllerTheme) {
         self.theme = theme
@@ -51,7 +51,7 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         return CGSize(width: constrainedSize.width, height: min(groupsHeight, constrainedSize.height))
     }
     
-    override func layout() {
+    func updateLayout(transition: ContainedViewLayoutTransition) {
         var groupsHeight: CGFloat = 0.0
         for i in 0 ..< self.groupNodes.count {
             let groupNode = self.groupNodes[i]
@@ -60,11 +60,13 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
             
             if i != 0 {
                 groupsHeight += groupSpacing
-                self.groupNodes[i - 1].trailingDimView.frame = CGRect(x: 0.0, y: groupNodes[i - 1].bounds.size.height, width: size.width, height: groupSpacing)
+                transition.updateFrame(view: self.groupNodes[i - 1].trailingDimView, frame: CGRect(x: 0.0, y: groupNodes[i - 1].bounds.size.height, width: size.width, height: groupSpacing))
             }
             
-            groupNode.frame = CGRect(origin: CGPoint(x: 0.0, y: groupsHeight), size: size)
-            groupNode.trailingDimView.frame = CGRect()
+            groupNode.updateLayout(transition: transition)
+            transition.updateFrame(node: groupNode, frame: CGRect(origin: CGPoint(x: 0.0, y: groupsHeight), size: size))
+            
+            transition.updateFrame(view: groupNode.trailingDimView, frame: CGRect())
             
             groupsHeight += size.height
         }

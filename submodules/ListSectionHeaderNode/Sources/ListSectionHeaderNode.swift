@@ -7,6 +7,11 @@ import TelegramPresentationData
 private let titleFont = Font.bold(13.0)
 private let actionFont = Font.medium(13.0)
 
+public enum ListSectionHeaderActionType {
+    case generic
+    case destructive
+}
+
 public final class ListSectionHeaderNode: ASDisplayNode {
     private let label: ImmediateTextNode
     private var actionButtonLabel: ImmediateTextNode?
@@ -25,35 +30,52 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         }
     }
     
+    public var actionType: ListSectionHeaderActionType = .generic {
+        didSet {
+            self.updateAction()
+        }
+    }
+    
     public var action: String? {
         didSet {
-            if (self.action != nil) != (self.actionButton != nil) {
-                if let _ = self.action {
-                    let actionButtonLabel = ImmediateTextNode()
-                    self.addSubnode(actionButtonLabel)
-                    self.actionButtonLabel = actionButtonLabel
-                    let actionButton = HighlightableButtonNode()
-                    self.addSubnode(actionButton)
-                    self.actionButton = actionButton
-                    actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
-                } else {
-                    if let actionButtonLabel = self.actionButtonLabel {
-                        self.actionButtonLabel = nil
-                        actionButtonLabel.removeFromSupernode()
-                    }
-                    if let actionButton = self.actionButton {
-                        self.actionButton = nil
-                        actionButton.removeFromSupernode()
-                    }
+            self.updateAction()
+        }
+    }
+    
+    private func updateAction() {
+        if (self.action != nil) != (self.actionButton != nil) {
+            if let _ = self.action {
+                let actionButtonLabel = ImmediateTextNode()
+                self.addSubnode(actionButtonLabel)
+                self.actionButtonLabel = actionButtonLabel
+                let actionButton = HighlightableButtonNode()
+                self.addSubnode(actionButton)
+                self.actionButton = actionButton
+                actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
+            } else {
+                if let actionButtonLabel = self.actionButtonLabel {
+                    self.actionButtonLabel = nil
+                    actionButtonLabel.removeFromSupernode()
+                }
+                if let actionButton = self.actionButton {
+                    self.actionButton = nil
+                    actionButton.removeFromSupernode()
                 }
             }
-            if let action = self.action {
-                self.actionButtonLabel?.attributedText = NSAttributedString(string: action, font: actionFont, textColor: self.theme.chatList.sectionHeaderTextColor)
+        }
+        if let action = self.action {
+            let actionColor: UIColor
+            switch self.actionType {
+                case .generic:
+                    actionColor = self.theme.chatList.sectionHeaderTextColor
+                case .destructive:
+                    actionColor = self.theme.list.itemDestructiveColor
             }
-            
-            if let (size, leftInset, rightInset) = self.validLayout {
-                self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
-            }
+            self.actionButtonLabel?.attributedText = NSAttributedString(string: action, font: actionFont, textColor: actionColor)
+        }
+        
+        if let (size, leftInset, rightInset) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
         }
     }
     

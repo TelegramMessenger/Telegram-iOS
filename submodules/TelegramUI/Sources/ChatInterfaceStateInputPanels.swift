@@ -42,17 +42,32 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
     }
     
     if let selectionState = chatPresentationInterfaceState.interfaceState.selectionState {
-        if let currentPanel = (currentPanel as? ChatMessageSelectionInputPanelNode) ?? (currentSecondaryPanel as? ChatMessageSelectionInputPanelNode) {
-            currentPanel.selectedMessages = selectionState.selectedIds
-            currentPanel.interfaceInteraction = interfaceInteraction
-            currentPanel.updateTheme(theme: chatPresentationInterfaceState.theme)
-            return (currentPanel, nil)
+        if let _ = chatPresentationInterfaceState.reportReason {
+            if let currentPanel = (currentPanel as? ChatMessageReportInputPanelNode) ?? (currentSecondaryPanel as? ChatMessageReportInputPanelNode) {
+                currentPanel.selectedMessages = selectionState.selectedIds
+                currentPanel.interfaceInteraction = interfaceInteraction
+                currentPanel.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                return (currentPanel, nil)
+            } else {
+                let panel = ChatMessageReportInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                panel.context = context
+                panel.selectedMessages = selectionState.selectedIds
+                panel.interfaceInteraction = interfaceInteraction
+                return (panel, nil)
+            }
         } else {
-            let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-            panel.context = context
-            panel.selectedMessages = selectionState.selectedIds
-            panel.interfaceInteraction = interfaceInteraction
-            return (panel, nil)
+            if let currentPanel = (currentPanel as? ChatMessageSelectionInputPanelNode) ?? (currentSecondaryPanel as? ChatMessageSelectionInputPanelNode) {
+                currentPanel.selectedMessages = selectionState.selectedIds
+                currentPanel.interfaceInteraction = interfaceInteraction
+                currentPanel.updateTheme(theme: chatPresentationInterfaceState.theme)
+                return (currentPanel, nil)
+            } else {
+                let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                panel.context = context
+                panel.selectedMessages = selectionState.selectedIds
+                panel.interfaceInteraction = interfaceInteraction
+                return (panel, nil)
+            }
         }
     }
     

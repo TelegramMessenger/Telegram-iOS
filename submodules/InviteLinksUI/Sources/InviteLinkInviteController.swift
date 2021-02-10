@@ -236,11 +236,27 @@ public final class InviteLinkInviteController: ViewController {
             self.isDismissed = true
             self.didAppearOnce = false
             
+            self.dismissAllTooltips()
+            
             self.controllerNode.animateOut(completion: { [weak self] in
                 completion?()
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
             })
         }
+    }
+    
+    private func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -343,6 +359,8 @@ public final class InviteLinkInviteController: ViewController {
                     if let invite = invite {
                         UIPasteboard.general.string = invite.link
                         
+                        self?.controller?.dismissAllTooltips()
+                        
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }
@@ -374,9 +392,10 @@ public final class InviteLinkInviteController: ViewController {
                             ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                                 dismissAction()
                                 
-                                self?.revokeDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-
-                                }))
+//                                revokePeerExportedInvitation(account: <#T##Account#>, peerId: <#T##PeerId#>, link: <#T##String#>)
+//                                self?.revokeDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
+//
+//                                }))
                             })
                         ]),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -384,10 +403,12 @@ public final class InviteLinkInviteController: ViewController {
                     self?.controller?.present(controller, in: .window(.root))
                 })))
 
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground:  false)), items: .single(items), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
+                
+                self?.controller?.dismissAllTooltips()
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
@@ -403,7 +424,8 @@ public final class InviteLinkInviteController: ViewController {
             let previousEntries = Atomic<[InviteLinkInviteEntry]?>(value: nil)
             
             let peerView = context.account.postbox.peerView(id: peerId)
-            self.disposable = (combineLatest(self.presentationDataPromise.get(), peerView, self.invitesContext.state)
+            let invites: Signal<PeerExportedInvitationsState, NoError> = .single(PeerExportedInvitationsState())
+            self.disposable = (combineLatest(self.presentationDataPromise.get(), peerView, invites)
             |> deliverOnMainQueue).start(next: { [weak self] presentationData, view, invites in
                 if let strongSelf = self {
                     var entries: [InviteLinkInviteEntry] = []

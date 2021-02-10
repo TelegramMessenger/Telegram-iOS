@@ -1176,11 +1176,11 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 openChatImpl?()
             })
     }, report: {
-        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
+        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), passthrough: false, present: { c, a in
             presentControllerImpl?(c, a)
         }, push: { c in
             pushControllerImpl?(c)
-        }, completion: { _ in }), nil)
+        }, completion: { _, _ in }), nil)
     })
         
     let deviceContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> = peerView.get()
