@@ -30,7 +30,7 @@ private enum PeerAutoremoveSetupSection: Int32 {
 private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
     case header
     case timeHeader(String)
-    case timeValue(Int32, Int32)
+    case timeValue(Int32, Int32, [Int32])
     case timeComment(String)
     case globalSwitch(String, Bool)
     
@@ -74,8 +74,8 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .timeValue(lhsValue, lhsMaxValue):
-            if case let .timeValue(rhsValue, rhsMaxValue) = rhs, lhsValue == rhsValue, lhsMaxValue == rhsMaxValue {
+        case let .timeValue(lhsValue, lhsMaxValue, lhsAvailableValues):
+            if case let .timeValue(rhsValue, rhsMaxValue, rhsAvailableValues) = rhs, lhsValue == rhsValue, lhsMaxValue == rhsMaxValue, lhsAvailableValues == rhsAvailableValues {
                 return true
             } else {
                 return false
@@ -106,8 +106,8 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: "", animation: .autoRemove, sectionId: self.section)
         case let .timeHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .timeValue(value, maxValue):
-            return PeerRemoveTimeoutItem(theme: presentationData.theme, value: value, maxValue: maxValue, enabled: true, sectionId: self.section, updated: { value in
+        case let .timeValue(value, maxValue, availableValues):
+            return PeerRemoveTimeoutItem(presentationData: presentationData, value: value, maxValue: maxValue, availableValues: availableValues, enabled: true, sectionId: self.section, updated: { value in
                 arguments.updateValue(value)
             }, tag: nil)
         case let .timeComment(text):
@@ -126,7 +126,7 @@ private struct PeerAutoremoveSetupState: Equatable {
     var applyingSetting: Bool = false
 }
 
-private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: PresentationData, defaultMyValue: Int32, peerValue: Int32, defaultGlobalValue: Bool, state: PeerAutoremoveSetupState) -> [PeerAutoremoveSetupEntry] {
+private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: PresentationData, isDebug: Bool, defaultMyValue: Int32, peerValue: Int32, defaultGlobalValue: Bool, state: PeerAutoremoveSetupState) -> [PeerAutoremoveSetupEntry] {
     var entries: [PeerAutoremoveSetupEntry] = []
     let globalValue = state.changedGlobalValue ?? defaultGlobalValue
     
@@ -144,7 +144,17 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
     //TODO:localize
     entries.append(.header)
     entries.append(.timeHeader("AUTO-DELETE MESSAGES"))
-    entries.append(.timeValue(resolvedValue, resolvedMaxValue))
+    
+    var availableValues: [Int32] = [
+        24 * 60 * 60,
+        24 * 60 * 60 * 7,
+        Int32.max
+    ]
+    if isDebug {
+        availableValues[0] = 5
+        availableValues[1] = 60
+    }
+    entries.append(.timeValue(resolvedValue, resolvedMaxValue, availableValues))
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
         entries.append(.timeComment("Automatically delete messages sent in this channel after a certain period of time."))
     } else {
@@ -298,9 +308,11 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
             })
         }
         
+        let isDebug = context.account.testingEnvironment
+        
         //TODO:localize
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Auto-Deletion"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peerAutoremoveSetupEntries(peer: peer, presentationData: presentationData, defaultMyValue: defaultMyValue, peerValue: peerValue, defaultGlobalValue: defaultGlobalValue, state: state), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peerAutoremoveSetupEntries(peer: peer, presentationData: presentationData, isDebug: isDebug, defaultMyValue: defaultMyValue, peerValue: peerValue, defaultGlobalValue: defaultGlobalValue, state: state), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
