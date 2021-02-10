@@ -7749,10 +7749,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
-                            Queue.mainQueue().after(0.8, {
-                                self?.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
-                            })
-                            
                             actionSheet.dismissAnimated()
                             
                             strongSelf.presentAutoremoveSetup()
@@ -11917,6 +11913,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
+                
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                 
                 var text: String?
                 if let myValue = value.myValue {

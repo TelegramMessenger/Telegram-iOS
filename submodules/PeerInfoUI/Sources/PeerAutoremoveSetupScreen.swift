@@ -32,13 +32,11 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
     case timeHeader(String)
     case timeValue(Int32, Int32, [Int32])
     case timeComment(String)
-    case globalSwitch(String, Bool)
+    case globalSwitch(String, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
-        case .header:
-            return PeerAutoremoveSetupSection.header.rawValue
-        case .timeHeader, .timeValue, .timeComment:
+        case .header, .timeHeader, .timeValue, .timeComment:
             return PeerAutoremoveSetupSection.time.rawValue
         case .globalSwitch:
             return PeerAutoremoveSetupSection.global.rawValue
@@ -86,8 +84,8 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .globalSwitch(lhsText, lhsValue):
-            if case let .globalSwitch(rhsText, rhsValue) = rhs, lhsText == rhsText, lhsValue == rhsValue {
+        case let .globalSwitch(lhsText, lhsValue, lhsEnable):
+            if case let .globalSwitch(rhsText, rhsValue, rhsEnable) = rhs, lhsText == rhsText, lhsValue == rhsValue, lhsEnable == rhsEnable {
                 return true
             } else {
                 return false
@@ -112,8 +110,8 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             }, tag: nil)
         case let .timeComment(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .globalSwitch(text, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .globalSwitch(text, value, enabled):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleGlobal(value)
             })
         }
@@ -165,7 +163,7 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
         }
     }
     if let user = peer as? TelegramUser {
-        entries.append(.globalSwitch("Also auto-delete for \(user.compactDisplayTitle)", globalValue))
+        entries.append(.globalSwitch("Also auto-delete for \(user.compactDisplayTitle)", globalValue, resolvedValue != Int32.max))
     }
     
     return entries
