@@ -16,6 +16,16 @@ public struct WidgetDataPeer: Codable, Equatable {
     }
     
     public struct Message: Codable, Equatable {
+        public struct Author: Codable, Equatable {
+            public var isMe: Bool
+            public var title: String
+            
+            public init(isMe: Bool, title: String) {
+                self.isMe = isMe
+                self.title = title
+            }
+        }
+        
         public enum Content: Codable, Equatable {
             public enum DecodingError: Error {
                 case generic
@@ -205,11 +215,13 @@ public struct WidgetDataPeer: Codable, Equatable {
             }
         }
         
+        public var author: Author?
         public var text: String
         public var content: Content
         public var timestamp: Int32
         
-        public init(text: String, content: Content, timestamp: Int32) {
+        public init(author: Author?, text: String, content: Content, timestamp: Int32) {
+            self.author = author
             self.text = text
             self.content = content
             self.timestamp = timestamp
@@ -238,10 +250,12 @@ public struct WidgetDataPeer: Codable, Equatable {
 public struct WidgetDataPeers: Codable, Equatable {
     public var accountPeerId: Int64
     public var peers: [WidgetDataPeer]
+    public var updateTimestamp: Int32
     
-    public init(accountPeerId: Int64, peers: [WidgetDataPeer]) {
+    public init(accountPeerId: Int64, peers: [WidgetDataPeer], updateTimestamp: Int32) {
         self.accountPeerId = accountPeerId
         self.peers = peers
+        self.updateTimestamp = updateTimestamp
     }
 }
 
@@ -271,23 +285,19 @@ public struct WidgetData: Codable, Equatable {
         }
         
         private enum Cases: Int32, Codable {
-            case notAuthorized
-            case disabled
+            case empty
             case peers
         }
         
-        case notAuthorized
-        case disabled
+        case empty
         case peers(WidgetDataPeers)
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let discriminator = try container.decode(Cases.self, forKey: .discriminator)
             switch discriminator {
-            case .notAuthorized:
-                self = .notAuthorized
-            case .disabled:
-                self = .disabled
+            case .empty:
+                self = .empty
             case .peers:
                 self = .peers(try container.decode(WidgetDataPeers.self, forKey: .peers))
             }
@@ -296,10 +306,8 @@ public struct WidgetData: Codable, Equatable {
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             switch self {
-            case .notAuthorized:
-                try container.encode(Cases.notAuthorized, forKey: .discriminator)
-            case .disabled:
-                try container.encode(Cases.disabled, forKey: .discriminator)
+            case .empty:
+                try container.encode(Cases.empty, forKey: .discriminator)
             case let .peers(peers):
                 try container.encode(Cases.peers, forKey: .discriminator)
                 try container.encode(peers, forKey: .peers)
@@ -309,9 +317,11 @@ public struct WidgetData: Codable, Equatable {
     
     public var accountId: Int64
     public var content: Content
+    public var unlockedForLockId: String?
     
-    public init(accountId: Int64, content: Content) {
+    public init(accountId: Int64, content: Content, unlockedForLockId: String?) {
         self.accountId = accountId
         self.content = content
+        self.unlockedForLockId = unlockedForLockId
     }
 }

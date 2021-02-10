@@ -206,8 +206,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     let peerStatusSettings = PeerStatusSettings(apiSettings: userFull.settings)
                                     
                                     let hasScheduledMessages = (userFull.flags & 1 << 12) != 0
+                                    
+                                    let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(userFull.ttl))
                                 
                                     return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                        .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                             }
                         })
                         return true
@@ -352,7 +355,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts, inputCall, _):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts, inputCall, ttl):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -379,7 +382,9 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             } else {
                                                 linkedDiscussionPeerId = nil
                                             }
-                                            
+
+                                            let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(ttl))
+                                           
                                             let peerGeoLocation: PeerGeoLocation?
                                             if let location = location {
                                                 peerGeoLocation = PeerGeoLocation(apiLocation: location)
@@ -525,6 +530,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedInvitedBy(invitedBy)
                                                     .withUpdatedPhoto(photo)
                                                     .withUpdatedActiveCall(updatedActiveCall)
+                                                    .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
@@ -553,6 +559,22 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
             } else {
                 return .single(false)
             }
+        }
+    }
+}
+
+extension CachedPeerAutoremoveTimeout.Value {
+    init?(_ apiValue: Api.PeerHistoryTTL?) {
+        if let apiValue = apiValue {
+            switch apiValue {
+            case let .peerHistoryTTLPM(flags, ttlPeriodMy, ttlPeriodPeer):
+                let pmOneSide = flags & (1 << 0) != 0
+                self.init(myValue: ttlPeriodMy, peerValue: ttlPeriodPeer, isGlobal: !pmOneSide)
+            case let .peerHistoryTTL(ttlPeriodPeer):
+                self.init(myValue: ttlPeriodPeer, peerValue: ttlPeriodPeer, isGlobal: true)
+            }
+        } else {
+            return nil
         }
     }
 }

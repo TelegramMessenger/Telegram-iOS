@@ -13,6 +13,7 @@ public enum ChatListFilterSettingsHeaderAnimation {
     case folders
     case newFolder
     case discussionGroupSetup
+    case autoRemove
 }
 
 public class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
@@ -106,7 +107,26 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             let leftInset: CGFloat = 32.0 + params.leftInset
-            let topInset: CGFloat = 92.0
+            
+            let animationName: String
+            var size = 192
+            var insetDifference = 100
+            var playbackMode: AnimatedStickerPlaybackMode = .once
+            switch item.animation {
+            case .folders:
+                animationName = "ChatListFolders"
+            case .newFolder:
+                animationName = "ChatListNewFolder"
+            case .discussionGroupSetup:
+                animationName = "DiscussionGroupSetup"
+            case .autoRemove:
+                animationName = "MessageAutoRemove"
+                size = 260
+                insetDifference = 120
+                playbackMode = .loop
+            }
+            
+            let topInset: CGFloat = CGFloat(size - insetDifference)
             
             let attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.freeTextColor)
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
@@ -119,17 +139,8 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        let animationName: String
-                        switch item.animation {
-                        case .folders:
-                            animationName = "ChatListFolders"
-                        case .newFolder:
-                            animationName = "ChatListNewFolder"
-                        case .discussionGroupSetup:
-                            animationName = "DiscussionGroupSetup"
-                        }
                         if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
-                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: size, height: size, playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
                             strongSelf.animationNode.visibility = true
                         }
                     }
@@ -137,7 +148,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         
-                    let iconSize = CGSize(width: 96.0, height: 96.0)
+                    let iconSize = CGSize(width: CGFloat(size) / 2.0, height: CGFloat(size) / 2.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                     

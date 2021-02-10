@@ -467,16 +467,24 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                                 }
                             }
                             if revoke {
-//                                revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-//                                    updateState { state in
-//                                        var updatedState = state
-//                                        updatedState.revokingPrivateLink = false
-//                                        return updatedState
-//                                    }
-//
-//                                    invitesContext.reload()
-//                                    revokedInvitesContext.reload()
-//                                }))
+                                revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                    updateState { state in
+                                        var updatedState = state
+                                        updatedState.revokingPrivateLink = false
+                                        return updatedState
+                                    }
+                                    if let result = result {
+                                        switch result {
+                                            case let .update(newInvite):
+                                                invitesContext.remove(newInvite)
+                                                revokedInvitesContext.add(newInvite)
+                                            case let .replace(previousInvite, newInvite):
+                                                revokedInvitesContext.add(previousInvite)
+                                                invitesContext.remove(previousInvite)
+                                                invitesContext.add(newInvite)
+                                        }
+                                    }
+                                }))
                             }
                         })
                     ]),
@@ -512,7 +520,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextCopy, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
         }, action: { _, f in
-            f(.dismissWithoutContent)
+            f(.default)
             
             dismissTooltipsImpl?()
             
@@ -526,7 +534,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextShare, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
-                f(.dismissWithoutContent)
+                f(.default)
             
                 let shareController = ShareController(context: context, subject: .url(invite.link))
                 presentControllerImpl?(shareController, nil)
@@ -535,7 +543,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
-                f(.dismissWithoutContent)
+                f(.default)
                 
                 let controller = InviteLinkQRCodeController(context: context, invite: invite)
                 presentControllerImpl?(controller, nil)
@@ -544,7 +552,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
-                f(.dismissWithoutContent)
+                f(.default)
             
                 let controller = inviteLinkEditController(context: context, peerId: peerId, invite: invite, completion: { invite in
                     if let invite = invite {
@@ -565,7 +573,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextDelete, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { _, f in
-                f(.dismissWithoutContent)
+                f(.default)
             
                 let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
@@ -578,7 +586,6 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                             dismissAction()
 
                             revokeLinkDisposable.set((deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
-
                             }))
                             
                             revokedInvitesContext.remove(invite)
@@ -592,7 +599,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { _, f in
-                f(.dismissWithoutContent)
+                f(.default)
             
                 let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in

@@ -408,7 +408,6 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             } else {
                 titleText = " "
                 subtitleText = " "
-                self.iconNode.isHidden = true
             }
             
             let titleAttributedString = NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)

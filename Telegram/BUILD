@@ -8,6 +8,10 @@ load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_framework",
 )
 
+load("@build_bazel_rules_apple//apple:resources.bzl",
+    "swift_intent_library",
+)
+
 load("@build_bazel_rules_apple//apple:watchos.bzl",
     "watchos_application",
     "watchos_extension",
@@ -1158,13 +1162,19 @@ plist_fragment(
 )
 
 swift_library(
-    name = "GeneratedSources",
+    name = "GeneratedSources1",
     module_name = "GeneratedSources",
     srcs = glob([
         "Generated/**/*.swift",
     ]),
     visibility = ["//visibility:public"],
 )
+
+'''swift_intent_library(
+    name = "GeneratedSources",
+    src = "SiriIntents/Intents.intentdefinition",
+    visibility = ["//visibility:public"],
+)'''
 
 swift_library(
     name = "WidgetExtensionLib",
@@ -1173,7 +1183,7 @@ swift_library(
         "WidgetKitWidget/**/*.swift",
     ]),
     data = [
-        "SiriIntents/Intents.intentdefinition",
+        #"SiriIntents/Intents.intentdefinition",
     ],
     deps = [
         "//submodules/BuildConfig:BuildConfig",
@@ -1185,7 +1195,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SyncCore:SyncCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
-        ":GeneratedSources",
+        "//:GeneratedSources",
     ],
 )
 
@@ -1267,7 +1277,7 @@ swift_library(
         "SiriIntents/**/*.swift",
     ]),
     data = [
-        "SiriIntents/Intents.intentdefinition",
+        #"SiriIntents/Intents.intentdefinition",
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -1278,7 +1288,7 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/AppLockState:AppLockState",
-        ":GeneratedSources",
+        "//:GeneratedSources",
     ],
 )
 
@@ -1578,7 +1588,7 @@ ios_application(
             ":NotificationContentExtension",
             ":NotificationServiceExtension",
             ":IntentsExtension",
-#            ":WidgetExtension",
+            ":WidgetExtension",
         ],
     }),
     watch_application = select({

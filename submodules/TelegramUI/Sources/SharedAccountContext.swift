@@ -23,6 +23,7 @@ import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
 import LocationUI
+import AppLock
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -742,7 +743,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
             |> map { primary, _, _ in
                 return primary
-            }, presentationData: self.presentationData)
+            }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl)
             
             let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))
             |> map { sharedData -> Bool in

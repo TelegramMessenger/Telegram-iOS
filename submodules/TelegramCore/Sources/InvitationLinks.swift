@@ -78,35 +78,41 @@ public enum RevokePeerExportedInvitationError {
     case generic
 }
 
-public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> {
-    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
+public enum RevokeExportedInvitationResult {
+    case update(ExportedInvitation)
+    case replace(ExportedInvitation, ExportedInvitation)
+}
+
+public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
+    return account.postbox.transaction { transaction -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil))
             |> mapError { _ in return RevokePeerExportedInvitationError.generic }
-            |> mapToSignal { result -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
+            |> mapToSignal { result -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
                 return account.postbox.transaction { transaction in
-                    switch result {
-                        case let .exportedChatInvite(invite, users):
-                            var peers: [Peer] = []
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                            }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            return ExportedInvitation(apiExportedInvite: invite)
-                        case let .exportedChatInviteReplaced(_, newInvite, users):
-                            var peers: [Peer] = []
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                            }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            return ExportedInvitation(apiExportedInvite: newInvite)
+                    if case let .exportedChatInvite(invite, users) = result {
+                        var peers: [Peer] = []
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                        }
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        return .update(ExportedInvitation(apiExportedInvite: invite))
+                    } else if case let .exportedChatInviteReplaced(invite, newInvite, users) = result {
+                        var peers: [Peer] = []
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                        }
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        return .replace(ExportedInvitation(apiExportedInvite: invite), ExportedInvitation(apiExportedInvite: newInvite))
+                    } else {
+                        return nil
                     }
                 } |> mapError { _ in .generic }
             }
@@ -123,9 +129,9 @@ public struct ExportedInvitations : Equatable {
     public let totalCount: Int32
 }
 
-public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
+public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, adminId: PeerId? = nil, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let accountPeer = transaction.getPeer(account.peerId), let adminId = apiInputUser(accountPeer) {
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let adminPeer = transaction.getPeer(adminId ?? account.peerId), let adminId = apiInputUser(adminPeer) {
             var flags: Int32 = 0
             if let _ = offsetLink {
                 flags |= (1 << 2)

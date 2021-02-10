@@ -989,22 +989,35 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                         dismissAction()
                         
-                        var revoke = false
-                        updateState { state in
-                            if !state.revokingPrivateLink {
-                                revoke = true
-                                return state.withUpdatedRevokingPrivateLink(true)
-                            } else {
-                                return state
+                        let _ = (context.account.postbox.transaction { transaction -> String? in
+                            if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
+                                if let cachedData = cachedData as? CachedChannelData {
+                                    return cachedData.exportedInvitation?.link
+                                } else if let cachedData = cachedData as? CachedGroupData {
+                                    return cachedData.exportedInvitation?.link
+                                }
                             }
-                        }
-                        if revoke {
-//                            revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-//                                updateState {
-//                                    $0.withUpdatedRevokingPrivateLink(false)
-//                                }
-//                            }))
-                        }
+                            return nil
+                        } |> deliverOnMainQueue).start(next: { link in
+                            if let link = link {
+                                var revoke = false
+                                updateState { state in
+                                    if !state.revokingPrivateLink {
+                                        revoke = true
+                                        return state.withUpdatedRevokingPrivateLink(true)
+                                    } else {
+                                        return state
+                                    }
+                                }
+                                if revoke {
+                                    revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
+                                        updateState {
+                                            $0.withUpdatedRevokingPrivateLink(false)
+                                        }
+                                    }))
+                                }
+                            }
+                        })
                     })
                 ]),
                 ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])

@@ -84,17 +84,27 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             switch items[i] {
             case let .action(action):
                 itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected)))
-                if i != items.count - 1, case .action = items[i + 1] {
-                    let separatorNode = ASDisplayNode()
-                    separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
-                    itemNodes.append(.itemSeparator(separatorNode))
+                if i != items.count - 1 {
+                    switch items[i + 1] {
+                    case .action, .custom:
+                        let separatorNode = ASDisplayNode()
+                        separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
+                        itemNodes.append(.itemSeparator(separatorNode))
+                    default:
+                        break
+                    }
                 }
             case let .custom(item, _):
                 itemNodes.append(.custom(item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)))
-                if i != items.count - 1, case .action = items[i + 1] {
-                    let separatorNode = ASDisplayNode()
-                    separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
-                    itemNodes.append(.itemSeparator(separatorNode))
+                if i != items.count - 1 {
+                    switch items[i + 1] {
+                    case .action, .custom:
+                        let separatorNode = ASDisplayNode()
+                        separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
+                        itemNodes.append(.itemSeparator(separatorNode))
+                    default:
+                        break
+                    }
                 }
             case .separator:
                 let separatorNode = ASDisplayNode()
