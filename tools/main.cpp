@@ -78,6 +78,9 @@ static bool cleanArch(std::vector<uint8_t> &archData, bool &isEncrypted) {
             if (encryptionInfoCommand->cryptid != 0) {
                 isEncrypted = true;
             }
+            // The App Store has begun to change offsets in LC_ENCRYPTION_INFO
+            memset(archData.data() + offset + offsetof(encryption_info_command_64, cryptoff), 0, sizeof(uint32_t));
+            memset(archData.data() + offset + offsetof(encryption_info_command_64, cryptsize), 0, sizeof(uint32_t));
         }
         
         offset += commandSize;
