@@ -151,8 +151,8 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
         Int32.max
     ]
     if isDebug || true {
-        availableValues[0] = 5
-        availableValues[1] = 60
+        availableValues[0] = 60
+        availableValues[1] = 5 * 60
     }
     entries.append(.timeValue(resolvedValue, resolvedMaxValue, availableValues))
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
