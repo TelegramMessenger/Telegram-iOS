@@ -7688,7 +7688,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         ], parseMarkdown: true), in: .window(.root))
                     }))
                 } else {
-                    items.append(ActionSheetTextItem(title: text))
+                    if !isClearCache {
+                        items.append(ActionSheetTextItem(title: text))
+                    }
                     items.append(ActionSheetButtonItem(title: isClearCache ? self.presentationData.strings.Conversation_ClearCache : self.presentationData.strings.Conversation_ClearAll, color: isClearCache ? .accent : .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         
