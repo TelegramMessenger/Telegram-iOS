@@ -158,7 +158,27 @@ public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link:
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        return .replace(ExportedInvitation(apiExportedInvite: invite), ExportedInvitation(apiExportedInvite: newInvite))
+                        
+                        let previous = ExportedInvitation(apiExportedInvite: invite)
+                        let new = ExportedInvitation(apiExportedInvite: newInvite)
+                        
+                        if previous.isPermanent && new.isPermanent {
+                            transaction.updatePeerCachedData(peerIds: [peerId]) { peerId, current -> CachedPeerData? in
+                                if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                    var current = current as? CachedGroupData ?? CachedGroupData()
+                                    current = current.withUpdatedExportedInvitation(new)
+                                    return current
+                                } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                    var current = current as? CachedChannelData ?? CachedChannelData()
+                                    current = current.withUpdatedExportedInvitation(new)
+                                    return current
+                                } else {
+                                    return current
+                                }
+                            }
+                        }
+                        
+                        return .replace(previous, new)
                     } else {
                         return nil
                     }

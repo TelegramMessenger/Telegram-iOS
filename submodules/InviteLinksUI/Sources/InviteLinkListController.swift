@@ -326,7 +326,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         hasLinks = true
     }
     
-    if hasLinks {
+    if hasLinks || admin == nil {
         entries.append(.linksHeader(presentationData.theme, presentationData.strings.InviteLink_AdditionalLinks.uppercased()))
     }
     if admin == nil {
