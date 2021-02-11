@@ -104,8 +104,8 @@ private extension ReportReason {
                 return .inputReportReasonCopyright
             case .irrelevantLocation:
                 return .inputReportReasonGeoIrrelevant
-            case let .custom(text):
-                return .inputReportReasonOther(text: text)
+            case .custom:
+                return .inputReportReasonOther
         }
     }
 }
@@ -113,7 +113,14 @@ private extension ReportReason {
 public func reportPeer(account: Account, peerId: PeerId, reason: ReportReason) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason))
+            var message: String = ""
+            switch reason {
+            case let .custom(text):
+                message = text
+            default:
+                break
+            }
+            return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason, message: message))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }
@@ -133,7 +140,14 @@ public func reportPeerMessages(account: Account, messageIds: [MessageId], reason
             guard let peerId = ids.first?.peerId, let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
                 return nil
             }
-            return account.network.request(Api.functions.messages.report(peer: inputPeer, id: ids.map { $0.id }, reason: reason.apiReason))
+            var message: String = ""
+            switch reason {
+            case let .custom(text):
+                message = text
+            default:
+                break
+            }
+            return account.network.request(Api.functions.messages.report(peer: inputPeer, id: ids.map { $0.id }, reason: reason.apiReason, message: message))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }

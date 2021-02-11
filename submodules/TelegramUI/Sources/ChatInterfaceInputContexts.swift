@@ -242,18 +242,14 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         if case .creator = group.role {
             canSetupAutoremoveTimeout = true
         } else if case let .admin(rights, _) = group.role {
-            if rights.flags.contains(.canChangeInfo) {
-                canSetupAutoremoveTimeout = true
-            }
-        } else if let defaultBannedRights = group.defaultBannedRights {
-            if !defaultBannedRights.flags.contains(.banChangeInfo) {
+            if rights.flags.contains(.canDeleteMessages) {
                 canSetupAutoremoveTimeout = true
             }
         }
     } else if let _ = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
         canSetupAutoremoveTimeout = true
     } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-        if channel.hasPermission(.changeInfo) {
+        if channel.hasPermission(.deleteAllMessages) {
             canSetupAutoremoveTimeout = true
         }
     }

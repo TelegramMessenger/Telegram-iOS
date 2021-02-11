@@ -839,10 +839,13 @@ public func peerExportedInvitationsCreators(account: Account, peerId: PeerId) ->
                                 peersMap[telegramUser.id] = telegramUser
                             }
                             
-                            for case let .chatAdminWithInvites(adminId, invitesCount) in admins {
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId)
-                                if let peer = peersMap[peerId], peerId != account.peerId {
-                                    creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount))
+                            for admin in admins {
+                                switch admin {
+                                case let .chatAdminWithInvites(adminId, invitesCount, revokedInvitesCount):
+                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId)
+                                    if let peer = peersMap[peerId], peerId != account.peerId {
+                                        creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount))
+                                    }
                                 }
                             }
                             
