@@ -104,7 +104,7 @@ private extension ReportReason {
                 return .inputReportReasonCopyright
             case .irrelevantLocation:
                 return .inputReportReasonGeoIrrelevant
-            case let .custom:
+            case .custom:
                 return .inputReportReasonOther
         }
     }

@@ -369,12 +369,12 @@ struct WidgetView: View {
         }
     }
     
-    private func linkForPeer(id: Int64) -> String {
+    private func linkForPeer(accountId: Int64, id: Int64) -> String {
         switch self.widgetFamily {
         case .systemSmall:
             return "\(buildConfig.appSpecificUrlScheme)://"
         default:
-            return "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(id)"
+            return "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(id)&accountId=\(accountId)"
         }
     }
     
@@ -427,7 +427,7 @@ struct WidgetView: View {
         
         return ZStack {
             ForEach(0 ..< min(peers.peers.count, columnCount * rowCount), content: { i in
-                Link(destination: URL(string: linkForPeer(id: peers.peers[i].peer.id))!, label: {
+                Link(destination: URL(string: linkForPeer(accountId: peers.peers[i].accountId, id: peers.peers[i].peer.id))!, label: {
                     AvatarItemView(
                         peer: peers.peers[i],
                         itemSize: itemSize
@@ -507,13 +507,29 @@ struct WidgetView: View {
             case .text:
                 break
             case .image:
-                text = "🖼 Photo"
+                if !message.text.isEmpty {
+                    text = "🖼 \(message.text)"
+                } else {
+                    text = "🖼 Photo"
+                }
             case .video:
-                text = "📹 Video"
+                if !message.text.isEmpty {
+                    text = "📹 \(message.text)"
+                } else {
+                    text = "📹 Video"
+                }
             case .gif:
-                text = "Gif"
+                if !message.text.isEmpty {
+                    text = "\(message.text)"
+                } else {
+                    text = "Gif"
+                }
             case let .file(file):
-                text = "📎 \(file.name)"
+                if !message.text.isEmpty {
+                    text = "📹 \(message.text)"
+                } else {
+                    text = "📎 \(file.name)"
+                }
             case let .music(music):
                 if !music.title.isEmpty && !music.artist.isEmpty {
                     text = "\(music.artist) — \(music.title)"
@@ -611,9 +627,11 @@ struct WidgetView: View {
     
     func chatContentView(_ index: Int, size: CGSize) -> AnyView {
         let peers: ParsedPeers?
+        var isPlaceholder = false
         switch data {
         case let .peers(peersValue):
             if peersValue.peers.count <= index {
+                isPlaceholder = peersValue.peers.count != 0
                 peers = nil
             } else {
                 peers = peersValue
@@ -624,9 +642,15 @@ struct WidgetView: View {
         
         let itemHeight = (size.height - 22.0) / 2.0
         
+        if isPlaceholder {
+            return AnyView(Spacer()
+                .frame(width: size.width, height: itemHeight, alignment: .leading)
+            )
+        }
+        
         let url: URL
         if let peers = peers {
-            url = URL(string: linkForPeer(id: peers.peers[index].peer.id))!
+            url = URL(string: linkForPeer(accountId: peers.peers[index].accountId, id: peers.peers[index].peer.id))!
         } else {
             url = URL(string: "\(buildConfig.appSpecificUrlScheme)://")!
         }

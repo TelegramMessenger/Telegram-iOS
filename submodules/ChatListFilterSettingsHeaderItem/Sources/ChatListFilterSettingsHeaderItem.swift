@@ -106,11 +106,14 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
+            let isHidden = params.width > params.availableHeight && params.availableHeight < 400.0
+            
             let leftInset: CGFloat = 32.0 + params.leftInset
             
             let animationName: String
             var size = 192
             var insetDifference = 100
+            var additionalBottomInset: CGFloat = 0.0
             var playbackMode: AnimatedStickerPlaybackMode = .once
             switch item.animation {
             case .folders:
@@ -123,7 +126,8 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                 animationName = "MessageAutoRemove"
                 size = 260
                 insetDifference = 120
-                playbackMode = .loop
+                playbackMode = .count(2)
+                additionalBottomInset = isHidden ? 8.0 : 16.0
             }
             
             let topInset: CGFloat = CGFloat(size - insetDifference)
@@ -132,9 +136,14 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            var insets = itemListNeighborsGroupedInsets(neighbors)
             
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            if isHidden {
+                insets = UIEdgeInsets()
+            }
+            insets.bottom += additionalBottomInset
+            
+            let layout = ListViewItemNodeLayout(contentSize: isHidden ? CGSize(width: params.width, height: 0.0) : contentSize, insets: insets)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -154,6 +163,9 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                     
                     let _ = titleApply()
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset + 8.0), size: titleLayout.size)
+                    
+                    strongSelf.animationNode.alpha = isHidden ? 0.0 : 1.0
+                    strongSelf.titleNode.alpha = isHidden ? 0.0 : 1.0
                 }
             })
         }

@@ -3638,13 +3638,13 @@ public extension Api {
     
     }
     public enum GroupCallParticipant: TypeConstructorDescription {
-        case groupCallParticipant(flags: Int32, userId: Int32, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, params: Api.DataJSON?)
+        case groupCallParticipant(flags: Int32, userId: Int32, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let params):
+                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume):
                     if boxed {
-                        buffer.appendInt32(-817921892)
+                        buffer.appendInt32(1690708501)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(userId, buffer: buffer, boxed: false)
@@ -3652,15 +3652,14 @@ public extension Api {
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(activeDate!, buffer: buffer, boxed: false)}
                     serializeInt32(source, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 10) != 0 {params!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume, let params):
-                return ("groupCallParticipant", [("flags", flags), ("userId", userId), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("params", params)])
+                case .groupCallParticipant(let flags, let userId, let date, let activeDate, let source, let volume):
+                return ("groupCallParticipant", [("flags", flags), ("userId", userId), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume)])
     }
     }
     
@@ -3677,19 +3676,14 @@ public extension Api {
             _5 = reader.readInt32()
             var _6: Int32?
             if Int(_1!) & Int(1 << 7) != 0 {_6 = reader.readInt32() }
-            var _7: Api.DataJSON?
-            if Int(_1!) & Int(1 << 10) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 7) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 10) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, userId: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6, params: _7)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, userId: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6)
             }
             else {
                 return nil
@@ -11095,6 +11089,7 @@ public extension Api {
         case channelAdminLogEventActionExportedInviteEdit(prevInvite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantJoinByInvite(invite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantVolume(participant: Api.GroupCallParticipant)
+        case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11297,6 +11292,13 @@ public extension Api {
                     }
                     participant.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1855199800)
+                    }
+                    serializeInt32(prevValue, buffer: buffer, boxed: false)
+                    serializeInt32(newValue, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -11364,6 +11366,8 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantJoinByInvite", [("invite", invite)])
                 case .channelAdminLogEventActionParticipantVolume(let participant):
                 return ("channelAdminLogEventActionParticipantVolume", [("participant", participant)])
+                case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", prevValue), ("newValue", newValue)])
     }
     }
     
@@ -11790,6 +11794,20 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantVolume(participant: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeHistoryTTL(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeHistoryTTL(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil

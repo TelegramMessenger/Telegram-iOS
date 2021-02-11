@@ -6,6 +6,54 @@ import MtProtoKit
 
 import SyncCore
 
+
+public func revokePersistentPeerExportedInvitation(account: Account, peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
+    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            let flags: Int32 = (1 << 2)
+            if let _ = peer as? TelegramChannel {
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
+                |> retryRequest
+                |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
+                    return account.postbox.transaction { transaction -> ExportedInvitation? in
+                        let invitation = ExportedInvitation(apiExportedInvite: result)
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedChannelData {
+                                return current.withUpdatedExportedInvitation(invitation)
+                            } else {
+                                return CachedChannelData().withUpdatedExportedInvitation(invitation)
+                            }
+                        })
+                        return invitation
+
+                    }
+                }
+            } else if let _ = peer as? TelegramGroup {
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
+                |> retryRequest
+                |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
+                    return account.postbox.transaction { transaction -> ExportedInvitation? in
+                        let invitation = ExportedInvitation(apiExportedInvite: result)
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedGroupData {
+                                return current.withUpdatedExportedInvitation(invitation)
+                            } else {
+                                return current
+                            }
+                        })
+                        return invitation
+                    }
+                }
+            } else {
+                return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
+
 public enum CreatePeerExportedInvitationError {
     case generic
 }
@@ -840,10 +888,13 @@ public func peerExportedInvitationsCreators(account: Account, peerId: PeerId) ->
                                 peersMap[telegramUser.id] = telegramUser
                             }
                             
-                            for case let .chatAdminWithInvites(adminId, invitesCount, revokedInvitesCount) in admins {
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId)
-                                if let peer = peersMap[peerId], peerId != account.peerId {
-                                    creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount, revokedCount: revokedInvitesCount))
+                            for admin in admins {
+                                switch admin {
+                                case let .chatAdminWithInvites(adminId, invitesCount, revokedInvitesCount):
+                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId)
+                                    if let peer = peersMap[peerId], peerId != account.peerId {
+                                        creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount, revokedCount: revokedInvitesCount))
+                                    }
                                 }
                             }
                             

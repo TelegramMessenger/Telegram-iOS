@@ -793,7 +793,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     if let searchTerm = searchTerm {
                         if !searchTerm.isEmpty {
                             for renderedPeer in transaction.searchPeers(query: searchTerm) {
-                                if let peer = renderedPeer.peer, !(peer is TelegramSecretChat) {
+                                if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                     peers.append(peer)
                                 }
                             }
@@ -804,7 +804,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                         }
                     } else {
                         for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50) {
-                            if let peer = renderedPeer.peer, !(peer is TelegramSecretChat) {
+                            if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                 peers.append(peer)
                             }
                         }

@@ -5562,18 +5562,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if case .creator = group.role {
                         canSetupAutoremoveTimeout = true
                     } else if case let .admin(rights, _) = group.role {
-                        if rights.flags.contains(.canChangeInfo) {
-                            canSetupAutoremoveTimeout = true
-                        }
-                    } else if let defaultBannedRights = group.defaultBannedRights {
-                        if !defaultBannedRights.flags.contains(.banChangeInfo) {
+                        if rights.flags.contains(.canDeleteMessages) {
                             canSetupAutoremoveTimeout = true
                         }
                     }
                 } else if let _ = peer as? TelegramUser {
                     canSetupAutoremoveTimeout = true
                 } else if let channel = peer as? TelegramChannel {
-                    if channel.hasPermission(.changeInfo) {
+                    if channel.hasPermission(.deleteAllMessages) {
                         canSetupAutoremoveTimeout = true
                     }
                 }
@@ -7466,6 +7462,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let currentButton = self.leftNavigationButton?.action, currentButton == button.action {
                     animated = false
                 }
+                animated = false
                 self.navigationItem.setLeftBarButton(button.buttonItem, animated: animated)
                 self.leftNavigationButton = button
             }
@@ -7713,7 +7710,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         ], parseMarkdown: true), in: .window(.root))
                     }))
                 } else {
-                    items.append(ActionSheetTextItem(title: text))
+                    if !isClearCache {
+                        items.append(ActionSheetTextItem(title: text))
+                    }
                     items.append(ActionSheetButtonItem(title: isClearCache ? self.presentationData.strings.Conversation_ClearCache : self.presentationData.strings.Conversation_ClearAll, color: isClearCache ? .accent : .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         
@@ -7745,18 +7744,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if case .creator = group.role {
                             canSetupAutoremoveTimeout = true
                         } else if case let .admin(rights, _) = group.role {
-                            if rights.flags.contains(.canChangeInfo) {
-                                canSetupAutoremoveTimeout = true
-                            }
-                        } else if let defaultBannedRights = group.defaultBannedRights {
-                            if !defaultBannedRights.flags.contains(.banChangeInfo) {
+                            if rights.flags.contains(.canDeleteMessages) {
                                 canSetupAutoremoveTimeout = true
                             }
                         }
                     } else if let _ = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
                         canSetupAutoremoveTimeout = true
                     } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                        if channel.hasPermission(.changeInfo) {
+                        if channel.hasPermission(.deleteAllMessages) {
                             canSetupAutoremoveTimeout = true
                         }
                     }
@@ -7770,10 +7765,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
-                            
-                            Queue.mainQueue().after(0.8, {
-                                self?.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
-                            })
                             
                             actionSheet.dismissAnimated()
                             
@@ -11940,18 +11931,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                
+                var isOn: Bool = true
+                var title: String?
                 var text: String?
                 if let myValue = value.myValue {
                     if let limitedByValue = value.limitedByValue, limitedByValue < myValue {
+                        title = "Auto-Delete On — \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue))"
                         text = "\(peer.compactDisplayTitle) has set messages to auto-delete in \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue)). You can't cancel it or make this interval longer."
                     } else {
                         text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
                     }
                 } else if let limitedByValue = value.limitedByValue {
+                    title = "Auto-Delete On — \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue))"
                     text = "\(peer.compactDisplayTitle) has set messages to auto-delete in \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue)). You can't cancel it or make this interval longer."
+                } else {
+                    isOn = false
+                    text = "Auto-Delete is now off."
                 }
                 if let text = text {
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: title, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             }
         })

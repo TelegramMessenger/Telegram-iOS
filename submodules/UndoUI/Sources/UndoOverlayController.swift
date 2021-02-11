@@ -29,6 +29,7 @@ public enum UndoOverlayContent {
     case importedMessage(text: String)
     case audioRate(slowdown: Bool, text: String)
     case forward(savedMessages: Bool, text: String)
+    case autoDelete(isOn: Bool, title: String?, text: String)
 }
 
 public enum UndoOverlayAction {
