@@ -307,23 +307,6 @@ public final class DatePickerNode: ASDisplayNode {
     
     public var valueUpdated: ((Date) -> Void)?
     
-    public var maximumDate: Date {
-        get {
-            return self.state.maxDate
-        }
-        set {
-            guard newValue != self.maximumDate else {
-                return
-            }
-            
-            let updatedState = State(minDate: self.state.minDate, maxDate: newValue, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: self.state.selectedMonth)
-            self.updateState(updatedState, animated: false)
-            
-            if let size = self.validLayout {
-                let _ = self.updateLayout(size: size, transition: .immediate)
-            }
-        }
-    }
     public var minimumDate: Date {
         get {
             return self.state.minDate
@@ -336,11 +319,34 @@ public final class DatePickerNode: ASDisplayNode {
             let updatedState = State(minDate: newValue, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: self.state.selectedMonth)
             self.updateState(updatedState, animated: false)
             
+            self.pickerNode.minimumDate = newValue
+            
             if let size = self.validLayout {
                 let _ = self.updateLayout(size: size, transition: .immediate)
             }
         }
     }
+    
+    public var maximumDate: Date {
+        get {
+            return self.state.maxDate
+        }
+        set {
+            guard newValue != self.maximumDate else {
+                return
+            }
+            
+            let updatedState = State(minDate: self.state.minDate, maxDate: newValue, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: self.state.selectedMonth)
+            self.updateState(updatedState, animated: false)
+            
+            self.pickerNode.maximumDate = newValue
+            
+            if let size = self.validLayout {
+                let _ = self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
+    
     public var date: Date {
         get {
             return self.state.date
@@ -385,6 +391,8 @@ public final class DatePickerNode: ASDisplayNode {
         self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date, yearRange: yearRange(for: self.state), valueChanged: { date in
             monthChangedImpl?(date)
         })
+        self.pickerNode.minimumDate = self.state.minDate
+        self.pickerNode.maximumDate = self.state.maxDate
         
         self.monthButtonNode = HighlightTrackingButtonNode()
         self.monthTextNode = ImmediateTextNode()
@@ -768,8 +776,8 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         }
     }
     
-    var minDate: Date?
-    var maxDate: Date?
+    var minimumDate: Date?
+    var maximumDate: Date?
     
     private let valueChanged: (Date) -> Void
     private let pickerView: UIPickerView
@@ -847,7 +855,26 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         let numberOfDays = calendar.range(of: .day, in: .month, for: tempDate)!.count
         components.day = min(day, numberOfDays)
         
-        let date = calendar.date(from: components)!
+        var date = calendar.date(from: components)!
+        
+        if let minimumDate = self.minimumDate, let maximumDate = self.maximumDate {
+            var changed = false
+            if date < minimumDate {
+                date = minimumDate
+                changed = true
+            }
+            if date > maximumDate {
+                date = maximumDate
+                changed = true
+            }
+            if changed {
+                let month = calendar.component(.month, from: date)
+                let year = calendar.component(.year, from: date)
+                self.pickerView.selectRow(month - 1, inComponent: 0, animated: true)
+                self.pickerView.selectRow(year - yearRange.startIndex, inComponent: 1, animated: true)
+            }
+        }
+        
         self.date = date
         
         self.valueChanged(date)
@@ -924,7 +951,7 @@ private final class TimePickerNode: ASDisplayNode {
         let minutes = Int32(calendar.component(.hour, from: self.date))
         let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: self.dateTimeFormat).replacingOccurrences(of: " AM", with: "").replacingOccurrences(of: " PM", with: "")
         
-        self.textNode.attributedText = NSAttributedString(string: string, font: Font.with(size: 21.0, design: .monospace, weight: .regular, traits: []), textColor: self.theme.textColor)
+        self.textNode.attributedText = NSAttributedString(string: string, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: self.theme.textColor)
         let textSize = self.textNode.updateLayout(size)
         self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - textSize.width) / 2.0), y: floorToScreenPixels((self.backgroundNode.frame.height - textSize.height) / 2.0)), size: textSize)
         

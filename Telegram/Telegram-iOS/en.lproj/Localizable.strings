@@ -5838,6 +5838,7 @@ Sorry for the inconvenience.";
 "InviteLink.PeopleJoined_many" = "%@ people joined";
 "InviteLink.PeopleJoined_any" = "%@ people joined";
 "InviteLink.CreatePrivateLinkHelp" = "Anyone who has Telegram installed will be able to join your group by following this link.";
+"InviteLink.CreatePrivateLinkHelpChannel" = "Anyone who has Telegram installed will be able to join your channel by following this link.";
 "InviteLink.Manage" = "Manage Invite Links";
 
 "InviteLink.PeopleJoinedShortNoneExpired" = "no one joined";
@@ -5899,6 +5900,7 @@ Sorry for the inconvenience.";
 
 "InviteLink.QRCode.Title" = "Invite by QR Code";
 "InviteLink.QRCode.Info" = "Everyone on Telegram can scan this code to join your group.";
+"InviteLink.QRCode.InfoChannel" = "Everyone on Telegram can scan this code to join your channel.";
 "InviteLink.QRCode.Share" = "Share QR Code";
 
 "InviteLink.InviteLink" = "Invite Link";
@@ -6021,6 +6023,9 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.DeletedInviteLink" = "%1$@ deleted invite link %2$@";
 "Channel.AdminLog.RevokedInviteLink" = "%1$@ revoked invite link %2$@";
 "Channel.AdminLog.EditedInviteLink" = "%1$@ edited invite link %2$@";
+"Channel.AdminLog.CreatedInviteLink" = "%1$@ created invite link %2$@";
+
+"Channel.AdminLog.JoinedViaInviteLink" = "%1$@ joined via invite link %2$@";
 
 "GroupInfo.Permissions.BroadcastTitle" = "Broadcast Channel";
 "GroupInfo.Permissions.BroadcastConvert" = "Convert Group to Channel";
@@ -6056,7 +6061,6 @@ Sorry for the inconvenience.";
 "Report.Report" = "Report";
 "Report.Succeed" = "Telegram moderators will study your report. Thank you!";
 
-
 "Conversation.AutoremoveRemainingTime" = "auto-delete in %@";
 "Conversation.AutoremoveRemainingDays_1" = "auto-delete in %@ day";
 "Conversation.AutoremoveRemainingDays_any" = "auto-delete in %@ days";
@@ -6066,3 +6070,7 @@ Sorry for the inconvenience.";
 
 "Conversation.AutoremoveChanged" = "Auto-Delete timer set to %@";
 
+"PeerInfo.ReportProfilePhoto" = "Report Profile Photo";
+"PeerInfo.ReportProfileVideo" = "Report Profile Video";
+
+"Channel.AdminLog.CanInviteUsersViaLink" = "Invite Users via Link";

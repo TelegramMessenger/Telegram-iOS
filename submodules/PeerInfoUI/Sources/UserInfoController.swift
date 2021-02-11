@@ -1017,7 +1017,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                                     let _ = removePeerChat(account: context.account, peerId: peerId, reportChatSpam: reportSpam).start()
                                     popToRootImpl?()
                                 } else if reportSpam {
-                                    let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam).start()
+                                    let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam, message: "").start()
                                 }
                                 
                                 deleteSendMessageIntents(peerId: peerId)

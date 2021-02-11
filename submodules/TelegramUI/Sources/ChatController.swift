@@ -2767,10 +2767,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let peer = peerViewMainPeer(peerView) {
                             if let selectionState = presentationInterfaceState.interfaceState.selectionState {
                                 if selectionState.selectedIds.count > 0 {
-                                    strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationData.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count ?? 1)), nil, false)
+                                    strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationData.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
                                 } else {
                                     if let reportReason = presentationInterfaceState.reportReason {
-                                        strongSelf.chatTitleView?.titleContent = .custom("Report Smth", strongSelf.presentationInterfaceState.strings.Conversation_SelectMessages, false)
+                                        let title: String
+                                        switch reportReason {
+                                            case .spam:
+                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonSpam
+                                            case .fake:
+                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonFake
+                                            case .violence:
+                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonViolence
+                                            case .porno:
+                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonPornography
+                                            case .childAbuse:
+                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonChildAbuse
+                                            case .copyright:
+                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonCopyright
+                                            case .custom:
+                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonOther
+                                            case .irrelevantLocation:
+                                                title = ""
+                                        }
+                                        strongSelf.chatTitleView?.titleContent = .custom(title, strongSelf.presentationInterfaceState.strings.Conversation_SelectMessages, false)
                                     } else {
                                         strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationInterfaceState.strings.Conversation_SelectMessages, nil, false)
                                     }
@@ -4753,13 +4772,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self?.view.window?.endEditing(true)
                         controller?.dismissAnimated()
                     }
+                    var message = ""
                     var items: [ActionSheetItem] = []
                     items.append(ReportPeerHeaderActionSheetItem(context: strongSelf.context, text: presentationData.strings.Report_AdditionalDetailsText))
-                    items.append(ReportPeerDetailsActionSheetItem(context: strongSelf.context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder))
+                    items.append(ReportPeerDetailsActionSheetItem(context: strongSelf.context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
+                        message = text
+                    }))
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
                         dismissAction()
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } }, completion: { _ in
-                            let _ = (reportPeerMessages(account: strongSelf.context.account, messageIds: Array(messageIds), reason: reportReason)
+                            let _ = (reportPeerMessages(account: strongSelf.context.account, messageIds: Array(messageIds), reason: reportReason, message: message)
                             |> deliverOnMainQueue).start(completed: { [weak self] in
                                 if let strongSelf = self, let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                     strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
@@ -6207,7 +6229,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.reportIrrelvantGeoDisposable = (TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peerId, reason: .irrelevantLocation)
+                strongSelf.reportIrrelvantGeoDisposable = (TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peerId, reason: .irrelevantLocation, message: "")
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.reportIrrelvantGeoNoticePromise.set(.single(true))
@@ -10667,7 +10689,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: reportSpam).start()
                         strongSelf.effectiveNavigationController?.filterController(strongSelf, animated: true)
                     } else if reportSpam {
-                        let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam).start()
+                        let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam, message: "").start()
                     }
                 })
             ] as [ActionSheetItem])

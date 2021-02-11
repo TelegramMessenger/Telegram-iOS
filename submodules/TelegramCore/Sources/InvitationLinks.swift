@@ -856,6 +856,7 @@ public final class PeerInvitationImportersContext {
 public struct ExportedInvitationCreator : Equatable {
     public let peer: RenderedPeer
     public let count: Int32
+    public let revokedCount: Int32
 }
 
 public func peerExportedInvitationsCreators(account: Account, peerId: PeerId) -> Signal<[ExportedInvitationCreator], NoError> {
@@ -892,7 +893,7 @@ public func peerExportedInvitationsCreators(account: Account, peerId: PeerId) ->
                                 case let .chatAdminWithInvites(adminId, invitesCount, revokedInvitesCount):
                                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId)
                                     if let peer = peersMap[peerId], peerId != account.peerId {
-                                        creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount))
+                                        creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount, revokedCount: revokedInvitesCount))
                                     }
                                 }
                             }

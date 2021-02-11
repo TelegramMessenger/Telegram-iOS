@@ -117,8 +117,14 @@ private class SectionHeaderItemNode: ListViewItemNode {
                             strongSelf.headerNode = headerNode
                         }
                         headerNode.title = item.title
+                        switch item.additionalText {
+                            case .none, .generic:
+                                headerNode.actionType = .generic
+                            case .destructive:
+                                headerNode.actionType = .destructive
+                                
+                        }
                         headerNode.action = item.additionalText.text
-
                         headerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                         headerNode.updateLayout(size: contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     }
