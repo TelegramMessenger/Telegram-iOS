@@ -236,18 +236,21 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 if parsedUrl.host == "localpeer" {
                      if let components = URLComponents(string: "/?" + query) {
                         var peerId: PeerId?
+                        var accountId: Int64?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
                                     if queryItem.name == "id", let intValue = Int64(value) {
                                         peerId = PeerId(intValue)
+                                    } else if queryItem.name == "accountId", let intValue = Int64(value) {
+                                        accountId = intValue
                                     }
                                 }
                             }
                         }
-                        if let peerId = peerId, let navigationController = navigationController {
+                        if let peerId = peerId, let accountId = accountId {
                             context.sharedContext.applicationBindings.dismissNativeController()
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                            context.sharedContext.navigateToChat(accountId: AccountRecordId(rawValue: accountId), peerId: peerId, messageId: nil)
                         }
                     }
                 } else if parsedUrl.host == "join" {
