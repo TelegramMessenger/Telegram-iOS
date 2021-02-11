@@ -63,6 +63,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
     private let clearButton: HighlightableButtonNode
     
     public var updateHeight: (() -> Void)?
+    public var updateText: ((String) -> Void)?
     
     private let backgroundInsets = UIEdgeInsets(top: 16.0, left: 16.0, bottom: 1.0, right: 16.0)
     private let inputInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 10.0, right: 16.0)
@@ -168,6 +169,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
     
     @objc public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         self.updateTextNodeText(animated: true)
+        self.updateText?(editableTextNode.attributedText?.string ?? "")
     }
     
     public func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {

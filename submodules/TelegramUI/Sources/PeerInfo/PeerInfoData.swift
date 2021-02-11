@@ -656,7 +656,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 if currentInvitationsContext == nil {
                     var canManageInvitations = false
-                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || ((channel.adminRights != nil && channel.hasPermission(.pinMessages)) && cachedData.flags.contains(.canChangeUsername)) {
+                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                         canManageInvitations = true
                     }
                     if canManageInvitations {
@@ -813,9 +813,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 if currentInvitationsContext == nil {
                     var canManageInvitations = false
-                    if let group = peerViewMainPeer(peerView) as? TelegramGroup, case .creator = group.role {
-                        canManageInvitations = true
-                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || ((channel.adminRights != nil && channel.hasPermission(.pinMessages)) && cachedData.flags.contains(.canChangeUsername)) {
+                    if let group = peerViewMainPeer(peerView) as? TelegramGroup {
+                        if case .creator = group.role {
+                            canManageInvitations = true
+                        } else if case let .admin(rights, _) = group.role, rights.flags.contains(.canInviteUsers) {
+                            canManageInvitations = true
+                        }
+                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                         canManageInvitations = true
                     }
                     if canManageInvitations {
@@ -1081,14 +1085,33 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
     return result
 }
 
-func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?) -> Bool {
+func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?) -> Bool {
     if let user = peer as? TelegramUser {
         if user.isDeleted {
             return false
         }
+        if let isContact = isContact, !isContact {
+            return false
+        }
         return true
-    } else if peer is TelegramChannel || peer is TelegramGroup {
-        return true
+    } else if let peer = peer as? TelegramChannel {
+        if peer.flags.contains(.isCreator) {
+            return true
+        } else if let adminRights = peer.adminRights, adminRights.flags.contains(.canAddAdmins) || adminRights.flags.contains(.canBanUsers) || adminRights.flags.contains(.canChangeInfo) || adminRights.flags.contains(.canInviteUsers) {
+            return true
+        }
+        return false
+    } else if let peer = peer as? TelegramGroup {
+        if case .creator = peer.role {
+            return true
+        } else if case let .admin(rights, _) = peer.role {
+            if rights.flags.contains(.canAddAdmins) || rights.flags.contains(.canBanUsers) || rights.flags.contains(.canChangeInfo) || rights.flags.contains(.canInviteUsers) {
+                return true
+            }
+            return false
+        } else {
+            return false
+        }
     }
     return false
 }

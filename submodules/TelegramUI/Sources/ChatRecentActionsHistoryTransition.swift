@@ -716,7 +716,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canPostMessages, self.presentationData.strings.Channel_AdminLog_CanSendMessages),
                                     (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessagesOfOthers),
                                     (.canEditMessages, self.presentationData.strings.Channel_AdminLog_CanEditMessages),
-                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
@@ -726,7 +726,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
                                     (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
                                     (.canBanUsers, self.presentationData.strings.Channel_AdminLog_CanBanUsers),
-                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canBeAnonymous, self.presentationData.strings.Channel_AdminLog_CanBeAnonymous),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
@@ -1192,6 +1192,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
                         return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
                     }
                     return []
                 }, to: &text, entities: &entities)
@@ -1211,11 +1213,13 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link)
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
                         return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
                     }
                     return []
                 }, to: &text, entities: &entities)
@@ -1235,11 +1239,13 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link)
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
                         return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
                     }
                     return []
                 }, to: &text, entities: &entities)
@@ -1259,11 +1265,39 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link)
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link.replacingOccurrences(of: "https://", with: ""))
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
                         return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .participantJoinedViaInvite(invite):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+ 
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
                     }
                     return []
                 }, to: &text, entities: &entities)

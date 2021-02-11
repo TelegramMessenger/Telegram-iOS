@@ -363,6 +363,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     if let expireDate = invite.expireDate, currentTime >= expireDate {
                         isExpired = true
                     }
+                    var isFull = false
                     
                     if let usageLimit = invite.usageLimit {
                         if !isExpired {
@@ -376,6 +377,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                                     timerValue = .fraction(fraction)
                                 }
                             } else if remaining == 0 {
+                                isFull = true
                                 if !subtitleText.isEmpty {
                                     subtitleText += " • "
                                 }
@@ -383,7 +385,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                             }
                         }
                     }
-                    if let expireDate = invite.expireDate {
+                    if let expireDate = invite.expireDate, !isFull {
                         if !isExpired {
                             if !subtitleText.isEmpty {
                                 subtitleText += " • "
@@ -570,7 +572,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                             timerNode = TimerNode()
                             timerNode.isUserInteractionEnabled = false
                             strongSelf.timerNode = timerNode
-                            strongSelf.addSubnode(timerNode)
+                            strongSelf.offsetContainerNode.addSubnode(timerNode)
                         }
                         timerNode.update(color: iconColor, value: timerValue)
                     } else if let timerNode = strongSelf.timerNode {
@@ -785,7 +787,7 @@ private final class TimerNode: ASDisplayNode {
         let startAngle: CGFloat = -CGFloat.pi / 2.0
         let endAngle: CGFloat = -CGFloat.pi / 2.0 + 2.0 * CGFloat.pi * fraction
         
-        let sparks = fraction > 0.1 && fraction != 1.0
+        let sparks = fraction > 0.05 && fraction != 1.0
         if sparks {
             let v = CGPoint(x: sin(endAngle), y: -cos(endAngle))
             let c = CGPoint(x: -v.y * radius + center.x, y: v.x * radius + center.y)

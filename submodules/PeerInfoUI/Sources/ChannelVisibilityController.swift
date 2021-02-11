@@ -968,8 +968,17 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 return nil
             } |> deliverOnMainQueue).start(next: { invite in
                 if let invite = invite {
-                    let controller = InviteLinkQRCodeController(context: context, invite: invite)
-                    presentControllerImpl?(controller, nil)
+                    let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        let isGroup: Bool
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            isGroup = false
+                        } else {
+                            isGroup = true
+                        }
+                        let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
+                        presentControllerImpl?(controller, nil)
+                    })
                 }
             })
         })))

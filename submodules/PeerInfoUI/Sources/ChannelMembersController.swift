@@ -287,25 +287,6 @@ private func ChannelMembersControllerEntries(context: AccountContext, presentati
         
         var index: Int32 = 0
         let sortedParticipants = participants
-        /*
-         participants.sorted(by: { lhs, rhs in
-         let lhsInvitedAt: Int32
-         switch lhs.participant {
-         case .creator:
-         lhsInvitedAt = Int32.min
-         case let .member(_, invitedAt, _, _):
-         lhsInvitedAt = invitedAt
-         }
-         let rhsInvitedAt: Int32
-         switch rhs.participant {
-         case .creator:
-         rhsInvitedAt = Int32.min
-         case let .member(_, invitedAt, _, _):
-         rhsInvitedAt = invitedAt
-         }
-         return lhsInvitedAt < rhsInvitedAt
-         })
-         */
         for participant in sortedParticipants {
             var editable = true
             var canEditMembers = false

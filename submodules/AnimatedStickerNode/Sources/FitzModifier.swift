@@ -10,15 +10,15 @@ public func transformedWithFitzModifier(data: Data, fitzModifier: EmojiFitzModif
         let replacementColors: [UIColor]
         switch fitzModifier {
             case .type12:
-                replacementColors = [0xca907a, 0xedc5a5, 0xf7e3c3, 0xfbefd6].map { UIColor(rgb: $0) }
+                replacementColors = [0xcb7b55, 0xf6b689, 0xffcda7, 0xffdfc5].map { UIColor(rgb: $0) }
             case .type3:
-                replacementColors = [0xaa7c60, 0xc8a987, 0xddc89f, 0xe6d6b2].map { UIColor(rgb: $0) }
+                replacementColors = [0xa45a38, 0xdf986b, 0xedb183, 0xf4c3a0].map { UIColor(rgb: $0) }
             case .type4:
-                replacementColors = [0x8c6148, 0xad8562, 0xc49e76, 0xd4b188].map { UIColor(rgb: $0) }
+                replacementColors = [0x703a17, 0xab673d, 0xc37f4e, 0xd89667].map { UIColor(rgb: $0) }
             case .type5:
-                replacementColors = [0x6e3c2c, 0x925a34, 0xa16e46, 0xac7a52].map { UIColor(rgb: $0) }
+                replacementColors = [0x4a2409, 0x7d3e0e, 0x965529, 0xa96337].map { UIColor(rgb: $0) }
             case .type6:
-                replacementColors = [0x291c12, 0x472a22, 0x573b30, 0x68493c].map { UIColor(rgb: $0) }
+                replacementColors = [0x200f0a, 0x412924, 0x593d37, 0x63453f].map { UIColor(rgb: $0) }
         }
         
         func colorToString(_ color: UIColor) -> String {

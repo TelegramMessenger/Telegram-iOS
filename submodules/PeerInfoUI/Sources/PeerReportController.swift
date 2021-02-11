@@ -78,7 +78,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 if let reportReason = reportReason {
                     switch subject {
                     case let .peer(peerId):
-                        let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason)
+                        let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
                         |> deliverOnMainQueue).start(completed: {
                             if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                 parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
@@ -86,7 +86,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                             completion(reportReason, true)
                         })
                     case let .messages(messageIds):
-                        let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason)
+                        let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
                         |> deliverOnMainQueue).start(completed: {
                             if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                 parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
@@ -155,12 +155,16 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     break
             }
             if let reportReason = reportReason {
+                var passthrough = passthrough
+                if case .fake = reportReason {
+                    passthrough = false
+                }
                 switch subject {
                     case let .peer(peerId):
                         if passthrough {
                             completion(reportReason, true)
                         } else {
-                            let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason)
+                            let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
                             |> deliverOnMainQueue).start(completed: {
                                 if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                     present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
@@ -172,7 +176,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                         if passthrough {
                             completion(reportReason, true)
                         } else {
-                            let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason)
+                            let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
                             |> deliverOnMainQueue).start(completed: {
                                 if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                     present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
@@ -326,7 +330,7 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
                 }
                 
                 if !text.isEmpty {
-                    let reportReason: ReportReason = .custom(text)
+                    let reportReason: ReportReason = .custom
                     let completed: () -> Void = {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
@@ -335,12 +339,12 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
                     }
                     switch subject {
                     case let .peer(peerId):
-                        reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: reportReason)
+                        reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: text)
                         |> deliverOnMainQueue).start(completed: {
                             completed()
                         }))
                     case let .messages(messageIds):
-                        reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason)
+                        reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: text)
                         |> deliverOnMainQueue).start(completed: {
                             completed()
                         }))

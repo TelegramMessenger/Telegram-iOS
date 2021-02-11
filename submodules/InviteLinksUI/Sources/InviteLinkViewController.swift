@@ -343,7 +343,6 @@ public final class InviteLinkViewController: ViewController {
         private var presentationDataDisposable: Disposable?
         
         private var disposable: Disposable?
-        private let actionDisposable = MetaDisposable()
         
         private let dimNode: ASDisplayNode
         private let contentNode: ASDisplayNode
@@ -473,9 +472,10 @@ public final class InviteLinkViewController: ViewController {
                                 ActionSheetTextItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Text),
                                 ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Action, color: .destructive, action: {
                                     dismissAction()
-
-                                    self?.actionDisposable.set((deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
-                                    }))
+                                    self?.controller?.dismiss()
+                                    
+                                    let _ = (deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                    })
                                     
                                     self?.controller?.revokedInvitationsContext?.remove(invite)
                                 })
@@ -490,7 +490,42 @@ public final class InviteLinkViewController: ViewController {
                     }, action: { [weak self] _, f in
                         f(.dismissWithoutContent)
                         
-                        let controller = InviteLinkQRCodeController(context: context, invite: invite)
+                        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                            let isGroup: Bool
+                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                isGroup = false
+                            } else {
+                                isGroup = true
+                            }
+                            let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
+                            self?.controller?.present(controller, in: .window(.root))
+                        })
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                    }, action: { [weak self] _, f in
+                        f(.dismissWithoutContent)
+                        
+                        let controller = ActionSheetController(presentationData: presentationData)
+                        let dismissAction: () -> Void = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        controller.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
+                                ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                                    dismissAction()
+                                    self?.controller?.dismiss()
+
+                                    let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                    })
+                                    
+                                    self?.controller?.revokedInvitationsContext?.remove(invite)
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                        ])
                         self?.controller?.present(controller, in: .window(.root))
                     })))
                 }
@@ -739,6 +774,7 @@ public final class InviteLinkViewController: ViewController {
                 subtitleText = self.presentationData.strings.InviteLink_Revoked
             } else if let usageLimit = self.invite.usageLimit, let count = self.invite.count, count >= usageLimit {
                 subtitleText = self.presentationData.strings.InviteLink_UsageLimitReached
+                subtitleColor = self.presentationData.theme.list.itemDestructiveColor
             } else if let expireDate = self.invite.expireDate {
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 if currentTime >= expireDate {

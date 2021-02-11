@@ -9610,24 +9610,25 @@ public extension Api {
     
     }
     public enum ChatAdminWithInvites: TypeConstructorDescription {
-        case chatAdminWithInvites(adminId: Int32, invitesCount: Int32)
+        case chatAdminWithInvites(adminId: Int32, invitesCount: Int32, revokedInvitesCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatAdminWithInvites(let adminId, let invitesCount):
+                case .chatAdminWithInvites(let adminId, let invitesCount, let revokedInvitesCount):
                     if boxed {
-                        buffer.appendInt32(-559275508)
+                        buffer.appendInt32(-539872497)
                     }
                     serializeInt32(adminId, buffer: buffer, boxed: false)
                     serializeInt32(invitesCount, buffer: buffer, boxed: false)
+                    serializeInt32(revokedInvitesCount, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatAdminWithInvites(let adminId, let invitesCount):
-                return ("chatAdminWithInvites", [("adminId", adminId), ("invitesCount", invitesCount)])
+                case .chatAdminWithInvites(let adminId, let invitesCount, let revokedInvitesCount):
+                return ("chatAdminWithInvites", [("adminId", adminId), ("invitesCount", invitesCount), ("revokedInvitesCount", revokedInvitesCount)])
     }
     }
     
@@ -9636,10 +9637,13 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChatAdminWithInvites.chatAdminWithInvites(adminId: _1!, invitesCount: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ChatAdminWithInvites.chatAdminWithInvites(adminId: _1!, invitesCount: _2!, revokedInvitesCount: _3!)
             }
             else {
                 return nil
@@ -12149,11 +12153,11 @@ public extension Api {
         case inputReportReasonSpam
         case inputReportReasonViolence
         case inputReportReasonPornography
-        case inputReportReasonOther(text: String)
         case inputReportReasonCopyright
         case inputReportReasonChildAbuse
         case inputReportReasonGeoIrrelevant
         case inputReportReasonFake
+        case inputReportReasonOther
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -12174,12 +12178,6 @@ public extension Api {
                         buffer.appendInt32(777640226)
                     }
                     
-                    break
-                case .inputReportReasonOther(let text):
-                    if boxed {
-                        buffer.appendInt32(-512463606)
-                    }
-                    serializeString(text, buffer: buffer, boxed: false)
                     break
                 case .inputReportReasonCopyright:
                     if boxed {
@@ -12205,6 +12203,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputReportReasonOther:
+                    if boxed {
+                        buffer.appendInt32(-1041980751)
+                    }
+                    
+                    break
     }
     }
     
@@ -12216,8 +12220,6 @@ public extension Api {
                 return ("inputReportReasonViolence", [])
                 case .inputReportReasonPornography:
                 return ("inputReportReasonPornography", [])
-                case .inputReportReasonOther(let text):
-                return ("inputReportReasonOther", [("text", text)])
                 case .inputReportReasonCopyright:
                 return ("inputReportReasonCopyright", [])
                 case .inputReportReasonChildAbuse:
@@ -12226,6 +12228,8 @@ public extension Api {
                 return ("inputReportReasonGeoIrrelevant", [])
                 case .inputReportReasonFake:
                 return ("inputReportReasonFake", [])
+                case .inputReportReasonOther:
+                return ("inputReportReasonOther", [])
     }
     }
     
@@ -12238,17 +12242,6 @@ public extension Api {
         public static func parse_inputReportReasonPornography(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonPornography
         }
-        public static func parse_inputReportReasonOther(_ reader: BufferReader) -> ReportReason? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.ReportReason.inputReportReasonOther(text: _1!)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_inputReportReasonCopyright(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonCopyright
         }
@@ -12260,6 +12253,9 @@ public extension Api {
         }
         public static func parse_inputReportReasonFake(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonFake
+        }
+        public static func parse_inputReportReasonOther(_ reader: BufferReader) -> ReportReason? {
+            return Api.ReportReason.inputReportReasonOther
         }
     
     }

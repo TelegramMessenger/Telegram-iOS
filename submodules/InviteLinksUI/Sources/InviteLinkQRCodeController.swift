@@ -37,14 +37,16 @@ public final class InviteLinkQRCodeController: ViewController {
     
     private let context: AccountContext
     private let invite: ExportedInvitation
+    private let isGroup: Bool
 
     private var presentationDataDisposable: Disposable?
     
     private let idleTimerExtensionDisposable = MetaDisposable()
     
-    public init(context: AccountContext, invite: ExportedInvitation) {
+    public init(context: AccountContext, invite: ExportedInvitation, isGroup: Bool) {
         self.context = context
         self.invite = invite
+        self.isGroup = isGroup
         
         super.init(navigationBarPresentationData: nil)
         
@@ -74,7 +76,7 @@ public final class InviteLinkQRCodeController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, invite: self.invite)
+        self.displayNode = Node(context: self.context, invite: self.invite, isGroup: self.isGroup)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -133,7 +135,7 @@ public final class InviteLinkQRCodeController: ViewController {
         var dismiss: (() -> Void)?
         var cancel: (() -> Void)?
         
-        init(context: AccountContext, invite: ExportedInvitation) {
+        init(context: AccountContext, invite: ExportedInvitation, isGroup: Bool) {
             self.context = context
             self.invite = invite
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -211,7 +213,7 @@ public final class InviteLinkQRCodeController: ViewController {
             
             let textFont = Font.regular(13.0)
             
-            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_QRCode_Info, font: textFont, textColor: secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel, font: textFont, textColor: secondaryTextColor)
             self.buttonNode.title = self.presentationData.strings.InviteLink_QRCode_Share
             
             self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)

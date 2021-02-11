@@ -62,6 +62,7 @@ public enum AdminLogEventAction {
     case deleteExportedInvitation(ExportedInvitation)
     case revokeExportedInvitation(ExportedInvitation)
     case editExportedInvitation(previous: ExportedInvitation, updated: ExportedInvitation)
+    case participantJoinedViaInvite(ExportedInvitation)
 }
 
 public enum ChannelAdminLogEventError {
@@ -241,11 +242,11 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         action = .revokeExportedInvitation(ExportedInvitation(apiExportedInvite: invite))
                                     case let .channelAdminLogEventActionExportedInviteEdit(prevInvite, newInvite):
                                         action = .editExportedInvitation(previous: ExportedInvitation(apiExportedInvite: prevInvite), updated: ExportedInvitation(apiExportedInvite: newInvite))
+                                    case let .channelAdminLogEventActionParticipantJoinByInvite(invite):
+                                        action = .participantJoinedViaInvite(ExportedInvitation(apiExportedInvite: invite))
                                     case let .channelAdminLogEventActionParticipantVolume(participant):
                                         let parsedParticipant = GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(participant)
                                         action = .groupCallUpdateParticipantVolume(peerId: parsedParticipant.peerId, volume: parsedParticipant.volume ?? 10000)
-                                    case let .channelAdminLogEventActionParticipantJoinByInvite(invite):
-                                        action = nil
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

@@ -1201,18 +1201,19 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                  
-                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
+                if channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
                         invitesText = "\(count)"
                     } else {
                         invitesText = ""
                     }
-                    
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
                         interaction.editingOpenInviteLinksSetup()
                     }))
-                    
+                }
+                
+                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
                     let discussionGroupTitle: String
                     if let _ = data.cachedData as? CachedChannelData {
                         if let peer = data.linkedDiscussionPeer {
@@ -1336,37 +1337,20 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     interaction.editingOpenPreHistorySetup()
                                 }))
                             }
-                            
-                            if channel.hasPermission(.inviteMembers) {
-                                let invitesText: String
-                                if let count = data.invitations?.count, count > 0 {
-                                    invitesText = "\(count)"
-                                } else {
-                                    invitesText = ""
-                                }
-                                
-                                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
-                                    interaction.editingOpenInviteLinksSetup()
-                                }))
-                            }
-
-                            /*if channel.hasPermission(.changeInfo) {
-                                let timeoutString: String
-                                if case let .known(value) = cachedData.autoremoveTimeout {
-                                    if let value = value?.effectiveValue {
-                                        timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
-                                    } else {
-                                        timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
-                                    }
-                                } else {
-                                    timeoutString = ""
-                                }
-                                
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
-                                    interaction.editingOpenAutoremoveMesages()
-                                }))
-                            }*/
                         }
+                    }
+                    
+                    if isCreator || (channel.hasPermission(.inviteMembers)) {
+                        let invitesText: String
+                        if let count = data.invitations?.count, count > 0 {
+                            invitesText = "\(count)"
+                        } else {
+                            invitesText = ""
+                        }
+                        
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                            interaction.editingOpenInviteLinksSetup()
+                        }))
                     }
                     
                     if cachedData.flags.contains(.canSetStickerSet) && canEditPeerInfo(context: context, peer: channel) {
@@ -1472,8 +1456,19 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                     interaction.openParticipantsSection(.admins)
                 }))
-            } else if case .admin = group.role {
-                
+            } else if case let .admin(rights, _) = group.role {
+                if rights.flags.contains(.canInviteUsers) {
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
+                    } else {
+                        invitesText = ""
+                    }
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
+                }
             }
         }
     }
@@ -3744,7 +3739,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     let _ = removePeerChat(account: strongSelf.context.account, peerId: strongSelf.peerId, reportChatSpam: reportSpam).start()
                                     (strongSelf.controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
                                 } else if reportSpam {
-                                    let _ = reportPeer(account: strongSelf.context.account, peerId: strongSelf.peerId, reason: .spam).start()
+                                    let _ = reportPeer(account: strongSelf.context.account, peerId: strongSelf.peerId, reason: .spam, message: "").start()
                                 }
                                 
                                 deleteSendMessageIntents(peerId: strongSelf.peerId)
@@ -3875,6 +3870,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func editingOpenInviteLinksSetup() {
+        
         self.controller?.push(inviteLinkListController(context: self.context, peerId: self.peerId, admin: nil))
     }
     
@@ -5307,7 +5303,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 if self.isSettings {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
-                } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData) {
+                } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
                 if self.state.selectedMessageIds == nil {
@@ -6230,14 +6226,16 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
         var canCreateInviteLink = false
         if let group = groupPeer as? TelegramGroup {
             switch group.role {
-            case .creator, .admin:
+            case .creator:
                 canCreateInviteLink = true
+            case let .admin(rights, _):
+                canCreateInviteLink = rights.flags.contains(.canInviteUsers)
             default:
                 break
             }
         } else if let channel = groupPeer as? TelegramChannel {
             if channel.hasPermission(.inviteMembers) {
-                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.username == nil) {
+                if channel.flags.contains(.isCreator) || (channel.hasPermission(.inviteMembers)) {
                     canCreateInviteLink = true
                 }
             }
