@@ -151,8 +151,8 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     isMember = true
                 }
             }
-            
-            if isMember && channel.hasBannedPermission(.banSendMessages) != nil {
+                        
+            if isMember && channel.hasBannedPermission(.banSendMessages) != nil && !channel.flags.contains(.isGigagroup) {
                 if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                     return (currentPanel, nil)
                 } else {
@@ -191,7 +191,18 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         }
                     }
                 case .member:
-                    break
+                    if channel.flags.contains(.isGigagroup) && !channel.hasPermission(.sendMessages) {
+                        if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatChannelSubscriberInputPanelNode()
+                            panel.interfaceInteraction = interfaceInteraction
+                            panel.context = context
+                            return (panel, nil)
+                        }
+                    } else {
+                        break
+                    }
                 }
             }
         } else if let group = peer as? TelegramGroup {
