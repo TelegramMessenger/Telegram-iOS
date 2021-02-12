@@ -227,6 +227,9 @@ public extension Message {
             if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
                 found = true
                 break
+            } else if let _ = attribute as? AutoclearTimeoutMessageAttribute {
+                found = true
+                break
             }
         }
         

@@ -5903,20 +5903,6 @@ public extension Api {
                     })
                 }
             
-                public static func dismissSuggestion(suggestion: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(125807007)
-                    serializeString(suggestion, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "help.dismissSuggestion", parameters: [("suggestion", suggestion)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getCountriesList(langCode: String, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.CountriesList>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1935116200)
@@ -5927,6 +5913,21 @@ public extension Api {
                         var result: Api.help.CountriesList?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.help.CountriesList
+                        }
+                        return result
+                    })
+                }
+            
+                public static func dismissSuggestion(peer: Api.InputPeer, suggestion: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-183649631)
+                    peer.serialize(buffer, true)
+                    serializeString(suggestion, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.dismissSuggestion", parameters: [("peer", peer), ("suggestion", suggestion)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

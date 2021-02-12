@@ -30,9 +30,41 @@ public func getServerProvidedSuggestions(postbox: Postbox) -> Signal<[ServerProv
 }
 
 public func dismissServerProvidedSuggestion(account: Account, suggestion: ServerProvidedSuggestion) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.help.dismissSuggestion(suggestion: suggestion.rawValue))
+    return account.network.request(Api.functions.help.dismissSuggestion(peer: .inputPeerEmpty, suggestion: suggestion.rawValue))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)
     }
     |> ignoreValues
+}
+
+
+public enum PeerSpecificServerProvidedSuggestion: String {
+    case convertToGigagroup = "CONVERT_TO_GIGAGROUP"
+}
+
+public func getPeerSpecificServerProvidedSuggestions(postbox: Postbox, peerId: PeerId) -> Signal<[PeerSpecificServerProvidedSuggestion], NoError> {
+    return postbox.peerView(id: peerId)
+    |> map { view in
+        if let cachedData = view.cachedData as? CachedChannelData {
+            return cachedData.pendingSuggestions.compactMap { item -> PeerSpecificServerProvidedSuggestion? in
+                return PeerSpecificServerProvidedSuggestion(rawValue: item)
+            }
+        }
+        return []
+    }
+    |> distinctUntilChanged
+}
+
+public func dismissPeerSpecificServerProvidedSuggestion(account: Account, peerId: PeerId, suggestion: PeerSpecificServerProvidedSuggestion) -> Signal<Never, NoError> {
+    return account.postbox.loadedPeerWithId(peerId)
+    |> mapToSignal { peer -> Signal<Never, NoError> in
+        guard let inputPeer = apiInputPeer(peer) else {
+            return .never()
+        }
+        return account.network.request(Api.functions.help.dismissSuggestion(peer: inputPeer, suggestion: suggestion.rawValue))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
+    }
 }

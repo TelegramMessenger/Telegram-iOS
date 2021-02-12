@@ -10,7 +10,12 @@ enum ContextActionSibling {
     case separator
 }
 
-final class ContextActionNode: ASDisplayNode {
+public protocol ContextActionNodeProtocol: ASDisplayNode {
+    func setIsHighlighted(_ value: Bool)
+    func performAction()
+}
+
+final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     private let action: ContextMenuActionItem
     private let getController: () -> ContextController?
     private let actionSelected: (ContextMenuActionResult) -> Void

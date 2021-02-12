@@ -5566,8 +5566,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             canSetupAutoremoveTimeout = true
                         }
                     }
-                } else if let _ = peer as? TelegramUser {
-                    canSetupAutoremoveTimeout = true
+                } else if let user = peer as? TelegramUser {
+                    if user.id != strongSelf.context.account.peerId {
+                        canSetupAutoremoveTimeout = true
+                    }
                 } else if let channel = peer as? TelegramChannel {
                     if channel.hasPermission(.deleteAllMessages) {
                         canSetupAutoremoveTimeout = true
@@ -5585,7 +5587,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let tooltipController = strongSelf.silentPostTooltipController {
                         tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
                     } else {
-                        let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                        let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, timeout: 4.0)
                         strongSelf.silentPostTooltipController = tooltipController
                         tooltipController.dismissed = { [weak tooltipController] _ in
                             if let strongSelf = self, let tooltipController = tooltipController, strongSelf.silentPostTooltipController === tooltipController {
@@ -7737,9 +7739,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var currentAutoremoveTimeout: Int32? = self.presentationInterfaceState.autoremoveTimeout
                     var canSetupAutoremoveTimeout = false
                     
-                    if let secretChat = peer as? TelegramSecretChat {
-                        currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
-                        canSetupAutoremoveTimeout = true
+                    if let _ = peer as? TelegramSecretChat {
                     } else if let group = peer as? TelegramGroup {
                         if case .creator = group.role {
                             canSetupAutoremoveTimeout = true
@@ -7748,8 +7748,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 canSetupAutoremoveTimeout = true
                             }
                         }
-                    } else if let _ = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
-                        canSetupAutoremoveTimeout = true
+                    } else if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+                        if user.id != self.context.account.peerId {
+                            canSetupAutoremoveTimeout = true
+                        }
                     } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                         if channel.hasPermission(.deleteAllMessages) {
                             canSetupAutoremoveTimeout = true

@@ -142,14 +142,14 @@ public extension Api {
     
     }
     public enum ChatFull: TypeConstructorDescription {
-        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttl: Api.PeerHistoryTTL?)
+        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttl: Api.PeerHistoryTTL?, pendingSuggestions: [String]?)
         case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?, ttl: Api.PeerHistoryTTL?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttl):
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttl, let pendingSuggestions):
                     if boxed {
-                        buffer.appendInt32(-66811386)
+                        buffer.appendInt32(2086843688)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -184,6 +184,11 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 21) != 0 {call!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 24) != 0 {ttl!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 25) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(pendingSuggestions!.count))
+                    for item in pendingSuggestions! {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }}
                     break
                 case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttl):
                     if boxed {
@@ -211,8 +216,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttl):
-                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("location", location), ("slowmodeSeconds", slowmodeSeconds), ("slowmodeNextSendDate", slowmodeNextSendDate), ("statsDc", statsDc), ("pts", pts), ("call", call), ("ttl", ttl)])
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttl, let pendingSuggestions):
+                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("location", location), ("slowmodeSeconds", slowmodeSeconds), ("slowmodeNextSendDate", slowmodeNextSendDate), ("statsDc", statsDc), ("pts", pts), ("call", call), ("ttl", ttl), ("pendingSuggestions", pendingSuggestions)])
                 case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttl):
                 return ("chatFull", [("flags", flags), ("id", id), ("about", about), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("folderId", folderId), ("call", call), ("ttl", ttl)])
     }
@@ -293,6 +298,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 24) != 0 {if let signature = reader.readInt32() {
                 _29 = Api.parse(reader, signature: signature) as? Api.PeerHistoryTTL
             } }
+            var _30: [String]?
+            if Int(_1!) & Int(1 << 25) != 0 {if let _ = reader.readInt32() {
+                _30 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -322,8 +331,9 @@ public extension Api {
             let _c27 = _27 != nil
             let _c28 = (Int(_1!) & Int(1 << 21) == 0) || _28 != nil
             let _c29 = (Int(_1!) & Int(1 << 24) == 0) || _29 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 {
-                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, slowmodeSeconds: _24, slowmodeNextSendDate: _25, statsDc: _26, pts: _27!, call: _28, ttl: _29)
+            let _c30 = (Int(_1!) & Int(1 << 25) == 0) || _30 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 {
+                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, slowmodeSeconds: _24, slowmodeNextSendDate: _25, statsDc: _26, pts: _27!, call: _28, ttl: _29, pendingSuggestions: _30)
             }
             else {
                 return nil

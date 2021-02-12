@@ -263,7 +263,25 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 var entries: [ChannelMembersSearchEntry] = []
                 
-                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                var canInviteByLink = false
+                if let peer = peerViewMainPeer(peerView) {
+                    if !(peer.addressName?.isEmpty ?? true) {
+                        canInviteByLink = true
+                    } else if let peer = peer as? TelegramChannel {
+                        if peer.flags.contains(.isCreator) || (peer.adminRights?.flags.contains(.canInviteUsers) == true) {
+                            canInviteByLink = true
+                        }
+                    } else if let peer = peer as? TelegramGroup {
+                        if case .creator = peer.role {
+                            canInviteByLink = true
+                        } else if case let .admin(rights, _) = peer.role, rights.flags.contains(.canInviteUsers) {
+                            canInviteByLink = true
+                        }
+                    }
+                }
+                
+                if case .inviteToCall = mode, canInviteByLink,
+                   !filters.contains(where: { filter in
                     if case .excludeNonMembers = filter {
                         return true
                     } else {

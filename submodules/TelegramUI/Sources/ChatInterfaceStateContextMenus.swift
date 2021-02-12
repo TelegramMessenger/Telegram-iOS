@@ -209,6 +209,8 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
     for attribute in message.attributes {
         if attribute is AutoremoveTimeoutMessageAttribute {
             return []
+        } else if attribute is AutoclearTimeoutMessageAttribute {
+            return []
         }
     }
     
@@ -809,6 +811,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
                     hasAutoremove = true
                     break
+                } else if let _ = attribute as? AutoclearTimeoutMessageAttribute {
+                    hasAutoremove = true
+                    break
                 }
             }
             
@@ -1245,7 +1250,7 @@ final class ChatDeleteMessageContextItem: ContextMenuCustomItem {
 
 private let textFont = Font.regular(17.0)
 
-private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenuCustomNode {
+private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenuCustomNode, ContextActionNodeProtocol {
     private let item: ChatDeleteMessageContextItem
     private let presentationData: PresentationData
     private let getController: () -> ContextController?

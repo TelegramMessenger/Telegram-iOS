@@ -261,12 +261,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             let isSecretMedia = message.containsSecretMedia
             var secretBeginTimeAndTimeout: (Double, Double)?
             if isSecretMedia {
-                for attribute in message.attributes {
-                    if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                        if let countdownBeginTime = attribute.countdownBeginTime {
-                            secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
-                        }
-                        break
+                if let attribute = message.autoclearAttribute {
+                    if let countdownBeginTime = attribute.countdownBeginTime {
+                        secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                    }
+                } else if let attribute = message.autoremoveAttribute {
+                    if let countdownBeginTime = attribute.countdownBeginTime {
+                        secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                     }
                 }
             }
@@ -934,14 +935,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         var secretBeginTimeAndTimeout: (Double?, Double)?
         let isSecretMedia = message.containsSecretMedia
         if isSecretMedia {
-            for attribute in message.attributes {
-                if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                    if let countdownBeginTime = attribute.countdownBeginTime {
-                        secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
-                    } else {
-                        secretBeginTimeAndTimeout = (nil, Double(attribute.timeout))
-                    }
-                    break
+            if let attribute = message.autoclearAttribute {
+                if let countdownBeginTime = attribute.countdownBeginTime {
+                    secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                }
+            } else if let attribute = message.autoremoveAttribute {
+                if let countdownBeginTime = attribute.countdownBeginTime {
+                    secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                 }
             }
         }

@@ -6027,25 +6027,9 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.JoinedViaInviteLink" = "%1$@ joined via invite link %2$@";
 
-"GroupInfo.Permissions.BroadcastTitle" = "Broadcast Channel";
-"GroupInfo.Permissions.BroadcastConvert" = "Convert Group to Channel";
-"GroupInfo.Permissions.BroadcastConvertInfo" = "You can permanently turn your group to a one to many channel ([like this]()) where only admins can post.";
-
-"ChannelIntro.ChannelsTitle" = "Telegram Channels";
-"ChannelIntro.ChannelsText" = "• No limit on the number of members.\n\n• Only admins can post.\n\n• Only admins see members list\n\n• You can enable comments for posts.";
-"ChannelIntro.ConvertToChannel" = "Convert to Channel";
-"ChannelIntro.ConvertCancel" = "Cancel";
-
-"ConvertToChannel.ConfirmationAlert.Title" = "Convert to Channel";
-"ConvertToChannel.ConfirmationAlert.Text" = "Do you want to convert your group to a channel? This action cannot be undone.";
-"ConvertToChannel.ConfirmationAlert.Proceed" = "Proceed";
-
-"ConvertToChannel.CommentsAlert.Title" = "Comments for Posts";
-"ConvertToChannel.CommentsAlert.Text" = "Do you want to allow subscribers of your channel to comment on posts of the channel?";
-
-"ConvertToChannel.LimitAlert.Title" = "Limit Reached";
-"ConvertToChannel.LimitAlert.Text" = "Your group has reached a limit of %@ members. You can increase this limit by converting the group to a broadcast channel where only admins can post, but users can comment (if you allow them). Interested?";
-"ConvertToChannel.LimitAlert.LearnMore" = "Learn More";
+"GroupInfo.Permissions.BroadcastTitle" = "Broadcast Group";
+"GroupInfo.Permissions.BroadcastConvert" = "Convert to Broadcast Group";
+"GroupInfo.Permissions.BroadcastConvertInfo" = "Broadcast groups can have over %@ members, but only admins can send message in them.";
 
 "GroupInfo.GroupHistoryShort" = "Chat History";
 
@@ -6061,9 +6045,9 @@ Sorry for the inconvenience.";
 "Report.Report" = "Report";
 "Report.Succeed" = "Telegram moderators will study your report. Thank you!";
 
-"Conversation.AutoremoveRemainingTime" = "auto-delete in %@";
-"Conversation.AutoremoveRemainingDays_1" = "auto-delete in %@ day";
-"Conversation.AutoremoveRemainingDays_any" = "auto-delete in %@ days";
+"Conversation.AutoremoveRemainingTime" = "auto-deletes in %@";
+"Conversation.AutoremoveRemainingDays_1" = "auto-deletes in %@ day";
+"Conversation.AutoremoveRemainingDays_any" = "auto-deletes in %@ days";
 
 "PeerInfo.AutoremoveMessages" = "Auto-Delete Messages";
 "PeerInfo.AutoremoveMessagesDisabled" = "Never";
@@ -6074,3 +6058,17 @@ Sorry for the inconvenience.";
 "PeerInfo.ReportProfileVideo" = "Report Profile Video";
 
 "Channel.AdminLog.CanInviteUsersViaLink" = "Invite Users via Link";
+
+
+"BroadcastGroups.IntroTitle" = "Broadcast Groups";
+"BroadcastGroups.IntroText" = "• No limit on the number of members.\n\n• Only admins can post.\n\n• Can't be turned back into a regular group.";
+"BroadcastGroups.Convert" = "Convert to Broadcast Group";
+"BroadcastGroups.Cancel" = "Leave as regular group";
+
+"BroadcastGroups.ConfirmationAlert.Title" = "Are you sure?";
+"BroadcastGroups.ConfirmationAlert.Text" = "Do you want to convert your group to a channel? This action cannot be undone.";
+"BroadcastGroups.ConfirmationAlert.Convert" = "Convert";
+
+"BroadcastGroups.LimitAlert.Title" = "Limit Reached";
+"BroadcastGroups.LimitAlert.Text" = "Your group has reached a limit of **%@** members. You can increase this limit by converting the group to a **broadcast group** where only admins can post. Interested?";
+"BroadcastGroups.LimitAlert.LearnMore" = "Learn More";

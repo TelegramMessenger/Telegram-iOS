@@ -656,7 +656,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 if currentInvitationsContext == nil {
                     var canManageInvitations = false
-                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
+                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
                         canManageInvitations = true
                     }
                     if canManageInvitations {
@@ -819,7 +819,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         } else if case let .admin(rights, _) = group.role, rights.flags.contains(.canInviteUsers) {
                             canManageInvitations = true
                         }
-                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
+                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
                         canManageInvitations = true
                     }
                     if canManageInvitations {

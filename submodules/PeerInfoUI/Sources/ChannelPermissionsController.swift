@@ -756,9 +756,9 @@ public func channelPermissionsController(context: AccountContext, peerId origina
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = PermissionController(context: context, splashScreen: true)
         controller.navigationPresentation = .modal
-        controller.setState(.custom(icon: .animation("Channels"), title: presentationData.strings.ChannelIntro_ChannelsTitle, subtitle: nil, text: presentationData.strings.ChannelIntro_ChannelsText, buttonTitle: presentationData.strings.ChannelIntro_ConvertToChannel, secondaryButtonTitle: presentationData.strings.Common_Cancel, footerText: nil), animated: false)
+        controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
         controller.proceed = { result in
-            presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.ConvertToChannel_ConfirmationAlert_Title, text: presentationData.strings.ConvertToChannel_ConfirmationAlert_Text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.ConvertToChannel_ConfirmationAlert_Proceed, action: {
+            presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, text: presentationData.strings.BroadcastGroups_ConfirmationAlert_Text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Convert, action: {
                 
             })]), nil)
             
