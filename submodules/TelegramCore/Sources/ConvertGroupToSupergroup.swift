@@ -51,6 +51,19 @@ public enum ConvertGroupToGigagroupError {
     case generic
 }
 
-public func convertGroupToGigagroup() -> Signal<PeerId, ConvertGroupToGigagroupError> {
-    return .never()
+public func convertGroupToGigagroup(account: Account, peerId: PeerId) -> Signal<Never, ConvertGroupToGigagroupError> {
+    return account.postbox.transaction { transaction -> Signal<Never, ConvertGroupToGigagroupError> in
+        guard let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.channels.convertToGigagroup(channel: inputChannel))
+        |> mapError { _ -> ConvertGroupToGigagroupError in return .generic }
+        |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
+        |> mapToSignal { updates -> Signal<Never, ConvertGroupToGigagroupError> in
+            account.stateManager.addUpdates(updates)
+            return .complete()
+        }
+    }
+    |> mapError { _ -> ConvertGroupToGigagroupError in return .generic }
+    |> switchToLatest
 }
