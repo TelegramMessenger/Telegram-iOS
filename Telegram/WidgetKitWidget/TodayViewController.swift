@@ -316,6 +316,7 @@ extension PeersWidgetData {
 struct AvatarItemView: View {
     var peer: ParsedPeer?
     var itemSize: CGFloat
+    var placeholderColor: Color
     var displayBadge: Bool = true
     
     var body: some View {
@@ -324,11 +325,12 @@ struct AvatarItemView: View {
                 Image(uiImage: avatarImage(accountPeerId: peer.accountPeerId, peer: peer.peer, size: CGSize(width: itemSize, height: itemSize)))
                 .clipShape(Circle())
             } else {
-                Image(uiImage: avatarImage(accountPeerId: nil, peer: nil, size: CGSize(width: itemSize, height: itemSize)))
-                //Rectangle()
-                .frame(width: itemSize, height: itemSize)
-                .clipShape(Circle())
-                .redacted(reason: .placeholder)
+                Circle()
+                    .fill(placeholderColor)
+                    .frame(width: itemSize, height: itemSize)
+                //Image(uiImage: avatarImage(accountPeerId: nil, peer: nil, size: CGSize(width: itemSize, height: itemSize)))
+                //.clipShape(Circle())
+                //.redacted(reason: .placeholder)
             }
             /*if let peer = peer, displayBadge, let badge = peer.badge, badge.count > 0 {
                 Text("\(badge.count)")
@@ -430,7 +432,8 @@ struct WidgetView: View {
                 Link(destination: URL(string: linkForPeer(accountId: peers.peers[i].accountId, id: peers.peers[i].peer.id))!, label: {
                     AvatarItemView(
                         peer: peers.peers[i],
-                        itemSize: itemSize
+                        itemSize: itemSize,
+                        placeholderColor: getPlaceholderColor()
                     ).frame(width: itemSize, height: itemSize)
                 }).frame(width: itemSize, height: itemSize)
                 .position(x: floor(horizontalInsetFraction * geometry.size.width + itemSize / 2.0 + CGFloat(i % columnCount) * (itemSize + horizontalSpacingFraction * geometry.size.width)), y: floor(verticalInsetFraction * geometry.size.height + itemSize / 2.0 + CGFloat(i / columnCount) * (itemSize + verticalSpacingFraction * geometry.size.height)))
@@ -461,7 +464,7 @@ struct WidgetView: View {
     func chatTopLine(_ peer: ParsedPeer?) -> some View {
         let dateText: String
         
-        let chatTitle: Text
+        let chatTitle: AnyView
         let date: Text
         
         if let peer = peer {
@@ -470,26 +473,44 @@ struct WidgetView: View {
             } else {
                 dateText = ""
             }
-            chatTitle = Text(peer.peer.name).font(Font.system(size: 16.0, weight: .medium, design: .default)).foregroundColor(.primary)
+            chatTitle = AnyView(Text(peer.peer.name)
+                .lineLimit(1)
+                .font(Font.system(size: 16.0, weight: .medium, design: .default))
+                .foregroundColor(.primary))
             date = Text(dateText)
             .font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
         } else {
-            dateText = "10:00"
-            chatTitle = Text("Chat Title").font(Font.system(size: 16.0, weight: .medium, design: .default)).foregroundColor(.primary)
+            dateText = "         "
+            chatTitle = AnyView(Text(" ").font(Font.system(size: 16.0, weight: .medium, design: .default)).foregroundColor(.primary))
             date = Text(dateText)
-            .font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
+            .font(Font.system(size: 16.0, weight: .regular, design: .default)).foregroundColor(.secondary)
         }
         return HStack(alignment: .center, spacing: 0.0, content: {
             if peer != nil {
                 chatTitle
             } else {
-                chatTitle.redacted(reason: .placeholder)
+                chatTitle
+                    .frame(minWidth: 48.0)
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0 + 1.0)
+                        }
+                    )
             }
             Spacer()
             if peer != nil {
                 date
             } else {
-                date.redacted(reason: .placeholder)
+                date
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0)
+                        }
+                    )
             }
         })
         .padding(0.0)
@@ -580,15 +601,42 @@ struct WidgetView: View {
             .foregroundColor(.secondary)
             .multilineTextAlignment(.leading)
             .padding(0.0)
-            //.frame(maxHeight: .infinity, alignment: .topLeading)
-            //.background(Rectangle().foregroundColor(.gray))
         
         if peer != nil {
             return AnyView(textView)
         } else {
             return AnyView(
-                textView
-                    .redacted(reason: .placeholder)
+                VStack(alignment: .leading, spacing: 0.0, content: {
+                    Text(" ")
+                        .lineLimit(1)
+                        .font(Font.system(size: 15.0, weight: .regular, design: .default))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .padding(0.0)
+                        .frame(minWidth: 182.0)
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0 - 1.0)
+                        }
+                    )
+                    Text(" ")
+                        .lineLimit(1)
+                        .font(Font.system(size: 15.0, weight: .regular, design: .default))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .padding(0.0)
+                        .frame(minWidth: 96.0)
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0 - 1.0)
+                        }
+                    )
+                })
+                //textView.redacted(reason: .placeholder)
             )
         }
         
@@ -658,7 +706,7 @@ struct WidgetView: View {
         return AnyView(
             Link(destination: url, label: {
                 HStack(alignment: .center, spacing: 0.0, content: {
-                    AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, displayBadge: false).frame(width: 54.0, height: 54.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                    AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, placeholderColor: getPlaceholderColor(), displayBadge: false).frame(width: 54.0, height: 54.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
                     chatContent(peers?.peers[index]).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
                 })
             })
@@ -718,7 +766,7 @@ struct WidgetView: View {
                 }
             }
         default:
-            text = ""
+            text = "Long tap to edit widget"
         }
         
         return Text(text)
@@ -760,6 +808,17 @@ struct WidgetView: View {
             return Color(.sRGB, red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 146.0 / 255.0, opacity: 1.0)
         case .dark:
             return Color(.sRGB, red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 146.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    func getPlaceholderColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 242.0 / 255.0, green: 242.0 / 255.0, blue: 247.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 21.0 / 255.0, green: 21.0 / 255.0, blue: 21.0 / 255.0, opacity: 1.0)
         @unknown default:
             return .secondary
         }

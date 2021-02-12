@@ -152,43 +152,8 @@ final class WidgetDataContext {
             }
             
             let processedRecent = recent
-            |> map { result -> WidgetData in
-                switch result {
-                case .disabled:
-                    return WidgetData(accountId: account.id.int64, content: .empty, unlockedForLockId: nil)
-                case let .peers(peers, unread, messages):
-                    return WidgetData(accountId: account.id.int64, content: .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: peers.compactMap { peer -> WidgetDataPeer? in
-                        var name: String = ""
-                        var lastName: String?
-                        
-                        if let user = peer as? TelegramUser {
-                            if let firstName = user.firstName {
-                                name = firstName
-                                lastName = user.lastName
-                            } else if let lastName = user.lastName {
-                                name = lastName
-                            } else if let phone = user.phone, !phone.isEmpty {
-                                name = phone
-                            }
-                        } else {
-                            name = peer.debugDisplayTitle
-                        }
-                        
-                        var badge: WidgetDataPeer.Badge?
-                        if let unreadValue = unread[peer.id], unreadValue.count > 0 {
-                            badge = WidgetDataPeer.Badge(
-                                count: Int(unreadValue.count),
-                                isMuted: unreadValue.isMuted
-                            )
-                        }
-                        
-                        let message = messages[peer.id]
-                        
-                        return WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                            return account.postbox.mediaBox.resourcePath(representation.resource)
-                        }, badge: badge, message: message)
-                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))), unlockedForLockId: nil)
-                }
+            |> map { _ -> WidgetData in
+                return WidgetData(accountId: account.id.int64, content: .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: [], updateTimestamp: Int32(Date().timeIntervalSince1970))), unlockedForLockId: nil)
             }
             |> distinctUntilChanged
             

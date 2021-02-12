@@ -268,19 +268,20 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
                 if let globalValue = globalValue, globalValue != defaultGlobalValue {
                     updated = true
                 }
+                
+                var resolvedValue: Int32? = changedValue ?? resolvedDefaultValue
+                if resolvedValue == Int32.max {
+                    resolvedValue = nil
+                }
+                
+                let resolvedMaxValue: Int32
+                if peer is TelegramUser {
+                    resolvedMaxValue = peerValue
+                } else {
+                    resolvedMaxValue = Int32.max
+                }
+                
                 if updated {
-                    var resolvedValue: Int32? = changedValue ?? resolvedDefaultValue
-                    if resolvedValue == Int32.max {
-                        resolvedValue = nil
-                    }
-                    
-                    let resolvedMaxValue: Int32
-                    if peer is TelegramUser {
-                        resolvedMaxValue = peerValue
-                    } else {
-                        resolvedMaxValue = Int32.max
-                    }
-                    
                     let resolvedGlobalValue = globalValue ?? defaultGlobalValue
                     
                     let signal = setChatMessageAutoremoveTimeoutInteractively(account: context.account, peerId: peerId, timeout: resolvedValue, isGlobal: resolvedGlobalValue)
@@ -301,7 +302,12 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
                     }))
                 } else {
                     dismissImpl?()
-                    completion(.unchanged)
+                    
+                    if resolvedMaxValue != Int32.max {
+                        completion(.updated(PeerAutoremoveSetupScreenResult.Updated(myValue: resolvedValue, limitedByValue: resolvedMaxValue)))
+                    } else {
+                        completion(.unchanged)
+                    }
                 }
             })
         }
