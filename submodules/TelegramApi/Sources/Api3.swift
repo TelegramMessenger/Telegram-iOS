@@ -4108,13 +4108,12 @@ public extension Api {
                     })
                 }
             
-                public static func setHistoryTTL(flags: Int32, peer: Api.InputPeer, period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func setHistoryTTL(peer: Api.InputPeer, period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-859093215)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(-1207017500)
                     peer.serialize(buffer, true)
                     serializeInt32(period, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.setHistoryTTL", parameters: [("flags", flags), ("peer", peer), ("period", period)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "messages.setHistoryTTL", parameters: [("peer", peer), ("period", period)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

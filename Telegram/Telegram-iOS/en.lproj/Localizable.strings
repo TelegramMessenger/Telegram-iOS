@@ -6059,19 +6059,21 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.CanInviteUsersViaLink" = "Invite Users via Link";
 
-
 "BroadcastGroups.IntroTitle" = "Broadcast Groups";
 "BroadcastGroups.IntroText" = "• No limit on the number of members.\n\n• Only admins can post.\n\n• Can't be turned back into a regular group.";
 "BroadcastGroups.Convert" = "Convert to Broadcast Group";
 "BroadcastGroups.Cancel" = "Leave as regular group";
 
 "BroadcastGroups.ConfirmationAlert.Title" = "Are you sure?";
-"BroadcastGroups.ConfirmationAlert.Text" = "Do you want to convert your group to a channel? This action cannot be undone.";
+"BroadcastGroups.ConfirmationAlert.Text" = "Regular members of the group (non-admins) will irrevocably lose their right to post messages in the group.\n\nThis action **cannot** be undone.";
 "BroadcastGroups.ConfirmationAlert.Convert" = "Convert";
 
 "BroadcastGroups.LimitAlert.Title" = "Limit Reached";
-"BroadcastGroups.LimitAlert.Text" = "Your group has reached a limit of **%@** members. You can increase this limit by converting the group to a **broadcast group** where only admins can post. Interested?";
+"BroadcastGroups.LimitAlert.Text" = "Your group has reached a limit of **%@** members.\n\nYou can increase this limit by converting the group to a **broadcast group** where only admins can post. Interested?";
 "BroadcastGroups.LimitAlert.LearnMore" = "Learn More";
+"BroadcastGroups.LimitAlert.SettingsTip" = "If you change your mind, go to the settings of your group.";
+
+"VoiceOver.AuthSessions.CurrentSession" = "Current Session";
 
 "Channel.AdminLog.MessageChangedAutoremoveTimeoutSet" = "%1$@ set auto-remove timer to %2$@";
 "Channel.AdminLog.MessageChangedAutoremoveTimeoutRemove" = "%1$@ disabled auto-remove timer";

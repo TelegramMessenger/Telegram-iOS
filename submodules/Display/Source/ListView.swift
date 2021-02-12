@@ -4024,7 +4024,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    public func ensureItemNodeVisible(_ node: ListViewItemNode, animated: Bool = true, overflow: CGFloat = 0.0, curve: ListViewAnimationCurve = .Default(duration: 0.25)) {
+    public func ensureItemNodeVisible(_ node: ListViewItemNode, animated: Bool = true, overflow: CGFloat = 0.0, allowIntersection: Bool = false, curve: ListViewAnimationCurve = .Default(duration: 0.25)) {
         if let index = node.index {
             if node.apparentHeight > self.visibleSize.height - self.insets.top - self.insets.bottom {
                 if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
@@ -4037,9 +4037,25 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.visible, animated: animated, curve: ListViewAnimationCurve.Default(duration: nil), directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                 } else {
                     if node.frame.minY < self.insets.top {
-                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                        if !allowIntersection || node.frame.maxY < self.insets.top {
+                            let position: ListViewScrollPosition
+                            if allowIntersection {
+                                position = .center(.top)
+                            } else {
+                                position = .top(overflow)
+                            }
+                            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                        }
                     } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
-                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                        if !allowIntersection || node.frame.minY > self.visibleSize.height - self.insets.bottom {
+                            let position: ListViewScrollPosition
+                            if allowIntersection {
+                                position = .center(.bottom)
+                            } else {
+                                position = .bottom(-overflow)
+                            }
+                            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                        }
                     }
                 }
             }
@@ -4284,7 +4300,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     override open func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
-        let distance = floor((self.visibleSize.height - self.insets.top - self.insets.bottom) / 2.0)
+        let distance = floor((self.visibleSize.height - self.insets.top - self.insets.bottom))
         let scrollDirection: ListViewScrollDirection
         switch direction {
             case .down:

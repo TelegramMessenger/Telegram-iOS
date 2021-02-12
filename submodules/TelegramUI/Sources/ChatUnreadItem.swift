@@ -59,6 +59,8 @@ class ChatUnreadItemNode: ListViewItemNode {
     let backgroundNode: ASImageNode
     let labelNode: TextNode
     
+    let activateArea: AccessibilityAreaNode
+    
     private var theme: ChatPresentationThemeData?
     
     private let layoutConstants = ChatMessageItemLayoutConstants.default
@@ -71,11 +73,16 @@ class ChatUnreadItemNode: ListViewItemNode {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         
+        self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = .staticText
+        
         super.init(layerBacked: false, dynamicBounce: true, rotated: true)
         
         self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.labelNode)
+        
+        self.addSubnode(self.activateArea)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
@@ -114,7 +121,8 @@ class ChatUnreadItemNode: ListViewItemNode {
                 updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.presentationData.theme.theme)
             }
             
-            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Conversation_UnreadMessages, font: titleFont, textColor: item.presentationData.theme.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let string = item.presentationData.strings.Conversation_UnreadMessages
+            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: string, font: titleFont, textColor: item.presentationData.theme.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let backgroundSize = CGSize(width: params.width, height: 25.0)
             
@@ -128,6 +136,9 @@ class ChatUnreadItemNode: ListViewItemNode {
                     }
                     
                     let _ = apply()
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: backgroundSize)
+                    strongSelf.activateArea.accessibilityLabel = string
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - size.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0)), size: size.size)

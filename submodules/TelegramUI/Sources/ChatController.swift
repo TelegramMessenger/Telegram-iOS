@@ -1,3 +1,4 @@
+
 import Foundation
 import UIKit
 import Postbox
@@ -61,6 +62,8 @@ import GalleryData
 import ChatInterfaceState
 import InviteLinksUI
 import ChatHistoryImportTasks
+import Markdown
+import TelegramPermissionsUI
 
 extension ChatLocation {
     var peerId: PeerId {
@@ -310,6 +313,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private let checksTooltipDisposable = MetaDisposable()
     private var shouldDisplayChecksTooltip = false
+    
+    private let peerSuggestionsDisposable = MetaDisposable()
+    private let peerSuggestionsDismissDisposable = MetaDisposable()
+    private var displayedConvertToGigagroupSuggestion = false
     
     private var checkedPeerChatServiceActions = false
     
@@ -575,6 +582,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             return true
+                        case .messageAutoremoveTimeoutUpdated:
+                            var canSetupAutoremoveTimeout = false
+                            
+                            if let _ = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                                canSetupAutoremoveTimeout = false
+                            } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                                if case .creator = group.role {
+                                    canSetupAutoremoveTimeout = true
+                                } else if case let .admin(rights, _) = group.role {
+                                    if rights.flags.contains(.canDeleteMessages) {
+                                        canSetupAutoremoveTimeout = true
+                                    }
+                                }
+                            } else if let user = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+                                if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
+                                    canSetupAutoremoveTimeout = true
+                                }
+                            } else if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                                if channel.hasPermission(.deleteAllMessages) {
+                                    canSetupAutoremoveTimeout = true
+                                }
+                            }
+                            
+                            if canSetupAutoremoveTimeout {
+                                strongSelf.presentAutoremoveSetup()
+                            }
                         default:
                             break
                     }
@@ -3602,6 +3635,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.hasActiveGroupCallDisposable?.dispose()
         self.createVoiceChatDisposable.dispose()
         self.checksTooltipDisposable.dispose()
+        self.peerSuggestionsDisposable.dispose()
+        self.peerSuggestionsDismissDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.importStateDisposable?.dispose()
@@ -7013,6 +7048,54 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.shouldDisplayChecksTooltip = true
         }))
+        
+        if case let .peer(peerId) = self.chatLocation {
+            self.peerSuggestionsDisposable.set((getPeerSpecificServerProvidedSuggestions(postbox: self.context.account.postbox, peerId: peerId)
+            |> deliverOnMainQueue).start(next: { [weak self] values in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if values.contains(.convertToGigagroup) && !strongSelf.displayedConvertToGigagroupSuggestion {
+                    strongSelf.displayedConvertToGigagroupSuggestion = true
+                    
+                    let attributedTitle = NSAttributedString(string: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_Title, font: Font.medium(17.0), textColor: strongSelf.presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+                    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: strongSelf.presentationData.theme.actionSheet.primaryTextColor)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: strongSelf.presentationData.theme.actionSheet.primaryTextColor)
+                    let text = strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_Text(presentationStringsFormattedNumber(200000, strongSelf.presentationData.dateTimeFormat.groupingSeparator)).0
+                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+                    
+                    let controller = richTextAlertController(context: strongSelf.context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_SettingsTip), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_LearnMore, action: {
+                        
+                        let context = strongSelf.context
+                        let presentationData = strongSelf.presentationData
+                        let controller = PermissionController(context: context, splashScreen: true)
+                        controller.navigationPresentation = .modal
+                        controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
+                        controller.proceed = { result in
+                            let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.medium(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+                            let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+                            let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+                            let attributedText = parseMarkdownIntoAttributedString(presentationData.strings.BroadcastGroups_ConfirmationAlert_Text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+                            
+                            let alertController = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Convert, action: { [weak controller] in
+                                controller?.dismiss()
+                                
+                                let _ = (convertGroupToGigagroup(account: context.account, peerId: peerId)
+                                |> deliverOnMainQueue).start(completed: {
+                                    
+                                })
+                            })])
+                            strongSelf.present(alertController, in: .window(.root))
+                        }
+                        strongSelf.push(controller)
+                    })])
+                    strongSelf.present(controller, in: .window(.root))
+                }
+            }))
+        }
         
         if self.scheduledActivateInput {
             self.scheduledActivateInput = false
@@ -11938,16 +12021,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var isOn: Bool = true
                 var title: String?
                 var text: String?
-                if let myValue = value.myValue {
-                    if let limitedByValue = value.limitedByValue, limitedByValue < myValue {
-                        title = "Auto-Delete On — \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue))"
-                        text = "\(peer.compactDisplayTitle) has set messages to auto-delete in \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue)). You can't cancel it or make this interval longer."
-                    } else {
-                        text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
-                    }
-                } else if let limitedByValue = value.limitedByValue {
-                    title = "Auto-Delete On — \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue))"
-                    text = "\(peer.compactDisplayTitle) has set messages to auto-delete in \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue)). You can't cancel it or make this interval longer."
+                if let myValue = value.value {
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
                 } else {
                     isOn = false
                     text = "Auto-Delete is now off."

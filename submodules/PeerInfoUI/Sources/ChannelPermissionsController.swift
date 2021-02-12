@@ -17,6 +17,7 @@ import PresentationDataUtils
 import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
+import Markdown
 
 private final class ChannelPermissionsControllerArguments {
     let context: AccountContext
@@ -29,11 +30,11 @@ private final class ChannelPermissionsControllerArguments {
     let openPeerInfo: (Peer) -> Void
     let openKicked: () -> Void
     let presentRestrictedPermissionAlert: (TelegramChatBannedRightsFlags) -> Void
-    let presentConversionToChannel: () -> Void
+    let presentConversionToBroadcastGroup: () -> Void
     let openChannelExample: () -> Void
     let updateSlowmode: (Int32) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToChannel: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -43,7 +44,7 @@ private final class ChannelPermissionsControllerArguments {
         self.openPeerInfo = openPeerInfo
         self.openKicked = openKicked
         self.presentRestrictedPermissionAlert = presentRestrictedPermissionAlert
-        self.presentConversionToChannel = presentConversionToChannel
+        self.presentConversionToBroadcastGroup = presentConversionToBroadcastGroup
         self.openChannelExample = openChannelExample
         self.updateSlowmode = updateSlowmode
     }
@@ -277,7 +278,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
             case let .conversion(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks) {
-                    arguments.presentConversionToChannel()
+                    arguments.presentConversionToBroadcastGroup()
                 }
             case let .conversionInfo(_, value):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(value), sectionId: self.section) { _ in
@@ -465,10 +466,10 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
             rightIndex += 1
         }
         
-        if channel.flags.contains(.isCreator) && effectiveRightsFlags.contains(.banSendMessages) {
+        if channel.flags.contains(.isCreator) && effectiveRightsFlags.contains(.banSendMessages) && !channel.flags.contains(.isGigagroup) {
             entries.append(.conversionHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastTitle.uppercased()))
             entries.append(.conversion(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvert))
-            entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo("200,000").0))
+            entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(200000, presentationData.dateTimeFormat.groupingSeparator)).0))
         } else {
             entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
             entries.append(.slowmode(presentationData.theme, presentationData.strings, state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)))
@@ -752,18 +753,26 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
             }
         })
-    }, presentConversionToChannel: {
+    }, presentConversionToBroadcastGroup: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = PermissionController(context: context, splashScreen: true)
         controller.navigationPresentation = .modal
         controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
         controller.proceed = { result in
-            presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, text: presentationData.strings.BroadcastGroups_ConfirmationAlert_Text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Convert, action: {
+            let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.medium(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+            let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let attributedText = parseMarkdownIntoAttributedString(presentationData.strings.BroadcastGroups_ConfirmationAlert_Text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+            
+            let alertController = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Convert, action: { [weak controller] in
+                controller?.dismiss()
                 
-            })]), nil)
-            
-//                (strongSelf.navigationController as? NavigationController)?.replaceTopController(createChannelController(context: strongSelf.context), animated: true)
-            
+                let _ = (convertGroupToGigagroup(account: context.account, peerId: originalPeerId)
+                |> deliverOnMainQueue).start(completed: {
+                    
+                })
+            })])
+            presentControllerImpl?(alertController, nil)
         }
         pushControllerImpl?(controller)
     }, openChannelExample: {

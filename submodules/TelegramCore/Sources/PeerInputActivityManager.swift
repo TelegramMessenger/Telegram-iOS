@@ -83,7 +83,7 @@ private final class PeerInputActivityContext {
             }, queue: self.queue)
             let updateId = nextUpdateId
             nextUpdateId += 1
-            self.activities.insert(ActivityRecord(peerId: peerId, activity: activity, id: activityId, timer: timer, episodeId: episodeId, timestamp: timestamp, updateId: updateId), at: 0)
+            self.activities.append(ActivityRecord(peerId: peerId, activity: activity, id: activityId, timer: timer, episodeId: episodeId, timestamp: timestamp, updateId: updateId))
             timer.start()
         }
         
