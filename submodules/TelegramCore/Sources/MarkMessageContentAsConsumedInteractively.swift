@@ -82,7 +82,37 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                             }
                         }
                     }
-                    break
+                } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
+                    if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
+                        var timeout = attribute.timeout
+                        if let duration = message.secretMediaDuration {
+                            timeout = max(timeout, duration)
+                        }
+                        updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: timeout, countdownBeginTime: timestamp)
+                        updateMessage = true
+                        
+                        if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
+                            var layer: SecretChatLayer?
+                            let state = transaction.getPeerChatState(message.id.peerId) as? SecretChatState
+                            if let state = state {
+                                switch state.embeddedState {
+                                    case .terminated, .handshake:
+                                        break
+                                    case .basicLayer:
+                                        layer = .layer8
+                                    case let .sequenceBasedLayer(sequenceState):
+                                        layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
+                                }
+                            }
+                            
+                            if let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
+                                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), state: state)
+                                if updatedState != state {
+                                    transaction.setPeerChatState(messageId.peerId, state: updatedState)
+                                }
+                            }
+                        }
+                    }
                 }
             }
             
@@ -140,7 +170,22 @@ func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: M
                         }
                     }
                 }
-                break
+            } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
+                if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
+                    updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
+                    updateMessage = true
+                    
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                    } else {
+                        for i in 0 ..< updatedMedia.count {
+                            if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                            } else if let _ = updatedMedia[i] as? TelegramMediaFile {
+                                updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                            }
+                        }
+                    }
+                }
             }
         }
         

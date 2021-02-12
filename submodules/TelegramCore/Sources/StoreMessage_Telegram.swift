@@ -8,7 +8,11 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     var isSecret = false
     var isUnconsumedPersonalMention = false
     for attribute in attributes {
-        if let timerAttribute = attribute as? AutoremoveTimeoutMessageAttribute {
+        if let timerAttribute = attribute as? AutoclearTimeoutMessageAttribute {
+            if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
+                isSecret = true
+            }
+        } else if let timerAttribute = attribute as? AutoremoveTimeoutMessageAttribute {
             if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
                 isSecret = true
             }
@@ -468,27 +472,21 @@ extension StoreMessage {
                 
                 var consumableContent: (Bool, Bool)? = nil
                 
-                var resolvedTtlPeriod: Int32? = ttlPeriod
-                
                 if let media = media {
                     let (mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                     if let mediaValue = mediaValue {
                         medias.append(mediaValue)
                     
                         if let expirationTimer = expirationTimer, expirationTimer > 0 {
-                            if let resolvedTtlPeriodValue = resolvedTtlPeriod {
-                                resolvedTtlPeriod = min(resolvedTtlPeriodValue, expirationTimer)
-                            } else {
-                                resolvedTtlPeriod = expirationTimer
-                            }
+                            attributes.append(AutoclearTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                             
                             consumableContent = (true, false)
                         }
                     }
                 }
                 
-                if let resolvedTtlPeriod = resolvedTtlPeriod {
-                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: resolvedTtlPeriod, countdownBeginTime: ttlPeriod == nil ? nil : date))
+                if let ttlPeriod = ttlPeriod {
+                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttlPeriod, countdownBeginTime: date))
                 }
                 
                 if let postAuthor = postAuthor {

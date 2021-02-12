@@ -5585,7 +5585,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let tooltipController = strongSelf.silentPostTooltipController {
                         tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
                     } else {
-                        let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                        let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, timeout: 4.0)
                         strongSelf.silentPostTooltipController = tooltipController
                         tooltipController.dismissed = { [weak tooltipController] _ in
                             if let strongSelf = self, let tooltipController = tooltipController, strongSelf.silentPostTooltipController === tooltipController {
@@ -7737,9 +7737,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var currentAutoremoveTimeout: Int32? = self.presentationInterfaceState.autoremoveTimeout
                     var canSetupAutoremoveTimeout = false
                     
-                    if let secretChat = peer as? TelegramSecretChat {
-                        currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
-                        canSetupAutoremoveTimeout = true
+                    if let _ = peer as? TelegramSecretChat {
                     } else if let group = peer as? TelegramGroup {
                         if case .creator = group.role {
                             canSetupAutoremoveTimeout = true

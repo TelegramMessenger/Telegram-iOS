@@ -209,6 +209,8 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
     for attribute in message.attributes {
         if attribute is AutoremoveTimeoutMessageAttribute {
             return []
+        } else if attribute is AutoclearTimeoutMessageAttribute {
+            return []
         }
     }
     
@@ -807,6 +809,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             var hasAutoremove = false
             for attribute in message.attributes {
                 if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
+                    hasAutoremove = true
+                    break
+                } else if let _ = attribute as? AutoclearTimeoutMessageAttribute {
                     hasAutoremove = true
                     break
                 }

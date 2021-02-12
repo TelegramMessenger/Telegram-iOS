@@ -494,12 +494,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let isSecretMedia = item.message.containsSecretMedia
         var secretBeginTimeAndTimeout: (Double, Double)?
         if isSecretMedia {
-            for attribute in item.message.attributes {
-                if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                    if let countdownBeginTime = attribute.countdownBeginTime {
-                        secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
-                    }
-                    break
+            if let attribute = item.message.autoclearAttribute {
+                if let countdownBeginTime = attribute.countdownBeginTime {
+                    secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                }
+            } else if let attribute = item.message.autoremoveAttribute {
+                if let countdownBeginTime = attribute.countdownBeginTime {
+                    secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                 }
             }
         }
