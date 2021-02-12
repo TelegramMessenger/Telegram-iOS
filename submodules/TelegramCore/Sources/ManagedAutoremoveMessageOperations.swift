@@ -76,14 +76,13 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> S
                 |> suspendAwareDelay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in
                     if let message = transaction.getMessage(entry.messageId) {
-                        var action: AutoremoveTimeoutMessageAttribute.Action = .remove
                         for attribute in message.attributes {
                             if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                                action = attribute.action
+                                
                             }
                         }
                         
-                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat || action == .remove {
+                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat || true {
                             deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
                         } else {
                             transaction.updateMessage(message.id, update: { currentMessage in

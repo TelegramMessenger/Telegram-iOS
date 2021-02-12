@@ -2,20 +2,14 @@ import Foundation
 import Postbox
 
 public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
-    public enum Action: Int32 {
-        case remove = 0
-        case clear = 1
-    }
-    
     public let timeout: Int32
     public let countdownBeginTime: Int32?
-    public let action: Action
     
     public var associatedMessageIds: [MessageId] = []
     
     public let automaticTimestampBasedAttribute: (UInt16, Int32)?
     
-    public init(timeout: Int32, countdownBeginTime: Int32?, action: Action = .remove) {
+    public init(timeout: Int32, countdownBeginTime: Int32?) {
         self.timeout = timeout
         self.countdownBeginTime = countdownBeginTime
         
@@ -24,8 +18,6 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         } else {
             self.automaticTimestampBasedAttribute = nil
         }
-        
-        self.action = action
     }
     
     required public init(decoder: PostboxDecoder) {
@@ -37,8 +29,6 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         } else {
             self.automaticTimestampBasedAttribute = nil
         }
-        
-        self.action = Action(rawValue: decoder.decodeInt32ForKey("a", orElse: 0)) ?? .remove
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -48,24 +38,30 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         } else {
             encoder.encodeNil(forKey: "c")
         }
-        encoder.encodeInt32(self.action.rawValue, forKey: "a")
     }
 }
 
 public extension Message {
-    var containsSecretMedia: Bool {
-        var found = false
+    var minAutoremoveOrClearTimeout: Int32? {
+        var timeout: Int32?
         for attribute in self.attributes {
             if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                if attribute.timeout > 1 * 60 {
-                    return false
+                if let timeoutValue = timeout {
+                    timeout = min(timeoutValue, attribute.timeout)
+                } else {
+                    timeout = attribute.timeout
                 }
-                found = true
                 break
             }
         }
-        
-        if !found {
+        return timeout
+    }
+    
+    var containsSecretMedia: Bool {
+        guard let timeout = self.minAutoremoveOrClearTimeout else {
+            return false
+        }
+        if timeout > 1 * 60 {
             return false
         }
         
@@ -86,11 +82,7 @@ public extension Message {
     }
     
     var isSelfExpiring: Bool {
-        for attribute in self.attributes {
-            if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
-                return true
-            }
-        }
-        return false
+        return self.minAutoremoveOrClearTimeout != nil
     }
 }
+

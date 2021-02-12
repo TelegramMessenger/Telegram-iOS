@@ -324,36 +324,55 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             
             switch message {
                 case let .message(text, requestedAttributes, mediaReference, replyToMessageId, localGroupingKey):
+                    var peerAutoremoveTimeout: Int32?
                     if let peer = peer as? TelegramSecretChat {
                         var isAction = false
                         if let _ = mediaReference?.media as? TelegramMediaAction {
                             isAction = true
                         }
                         if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
-                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
+                            peerAutoremoveTimeout = messageAutoremoveTimeout
                         }
-                    } else if let cachedData = transaction.getPeerCachedData(peerId: peer.id) {
-                        var messageAutoremoveTimeout: Int32?
-                        if let cachedData = cachedData as? CachedUserData {
-                            if case let .known(value) = cachedData.autoremoveTimeout {
-                                messageAutoremoveTimeout = value?.effectiveValue
-                            }
-                        } else if let cachedData = cachedData as? CachedGroupData {
-                            if case let .known(value) = cachedData.autoremoveTimeout {
-                                messageAutoremoveTimeout = value?.effectiveValue
-                            }
-                        } else if let cachedData = cachedData as? CachedChannelData {
-                            if case let .known(value) = cachedData.autoremoveTimeout {
-                                messageAutoremoveTimeout = value?.effectiveValue
+                    } else if let cachedData = transaction.getPeerCachedData(peerId: peer.id), !disableAutoremove {
+                        var isScheduled = false
+                        for attribute in requestedAttributes {
+                            if let _ = attribute as? OutgoingScheduleInfoMessageAttribute {
+                                isScheduled = true
                             }
                         }
                         
-                        if let messageAutoremoveTimeout = messageAutoremoveTimeout {
-                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
+                        if !isScheduled {
+                            var messageAutoremoveTimeout: Int32?
+                            if let cachedData = cachedData as? CachedUserData {
+                                if case let .known(value) = cachedData.autoremoveTimeout {
+                                    messageAutoremoveTimeout = value?.effectiveValue
+                                }
+                            } else if let cachedData = cachedData as? CachedGroupData {
+                                if case let .known(value) = cachedData.autoremoveTimeout {
+                                    messageAutoremoveTimeout = value?.effectiveValue
+                                }
+                            } else if let cachedData = cachedData as? CachedChannelData {
+                                if case let .known(value) = cachedData.autoremoveTimeout {
+                                    messageAutoremoveTimeout = value?.effectiveValue
+                                }
+                            }
+                            
+                            if let messageAutoremoveTimeout = messageAutoremoveTimeout {
+                                peerAutoremoveTimeout = messageAutoremoveTimeout
+                            }
                         }
                     }
                     
-                    attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(requestedAttributes))
+                    for attribute in filterMessageAttributesForOutgoingMessage(requestedAttributes) {
+                        if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
+                            peerAutoremoveTimeout = nil
+                        }
+                        attributes.append(attribute)
+                    }
+                    
+                    if let peerAutoremoveTimeout = peerAutoremoveTimeout {
+                        attributes.append(AutoremoveTimeoutMessageAttribute(timeout: peerAutoremoveTimeout, countdownBeginTime: nil))
+                    }
                         
                     if let replyToMessageId = replyToMessageId, replyToMessageId.peerId == peerId {
                         var threadMessageId: MessageId?
@@ -470,7 +489,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
-                case let .forward(source, grouping, requestedAttributes):
+                case let .forward(source, grouping, requestedAttributes):    
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
@@ -482,6 +501,35 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                             if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
+                            }
+                        } else if let cachedData = transaction.getPeerCachedData(peerId: peer.id), !disableAutoremove {
+                            var isScheduled = false
+                            for attribute in attributes {
+                                if let _ = attribute as? OutgoingScheduleInfoMessageAttribute {
+                                    isScheduled = true
+                                    break
+                                }
+                            }
+                            
+                            if !isScheduled {
+                                var messageAutoremoveTimeout: Int32?
+                                if let cachedData = cachedData as? CachedUserData {
+                                    if case let .known(value) = cachedData.autoremoveTimeout {
+                                        messageAutoremoveTimeout = value?.effectiveValue
+                                    }
+                                } else if let cachedData = cachedData as? CachedGroupData {
+                                    if case let .known(value) = cachedData.autoremoveTimeout {
+                                        messageAutoremoveTimeout = value?.effectiveValue
+                                    }
+                                } else if let cachedData = cachedData as? CachedChannelData {
+                                    if case let .known(value) = cachedData.autoremoveTimeout {
+                                        messageAutoremoveTimeout = value?.effectiveValue
+                                    }
+                                }
+                                
+                                if let messageAutoremoveTimeout = messageAutoremoveTimeout {
+                                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
+                                }
                             }
                         }
                         
