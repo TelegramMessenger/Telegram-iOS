@@ -311,6 +311,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let checksTooltipDisposable = MetaDisposable()
     private var shouldDisplayChecksTooltip = false
     
+    private let peerSuggestionsDisposable = MetaDisposable()
+    private let peerSuggestionsDismissDisposable = MetaDisposable()
+    private var displayedConvertToGigagroupSuggestion = false
+    
     private var checkedPeerChatServiceActions = false
     
     private var willAppear = false
@@ -3602,6 +3606,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.hasActiveGroupCallDisposable?.dispose()
         self.createVoiceChatDisposable.dispose()
         self.checksTooltipDisposable.dispose()
+        self.peerSuggestionsDisposable.dispose()
+        self.peerSuggestionsDismissDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.importStateDisposable?.dispose()
@@ -7013,6 +7019,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.shouldDisplayChecksTooltip = true
         }))
+        
+        if case let .peer(peerId) = self.chatLocation {
+            self.peerSuggestionsDisposable.set((getPeerSpecificServerProvidedSuggestions(postbox: self.context.account.postbox, peerId: peerId)
+            |> deliverOnMainQueue).start(next: { [weak self] values in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if values.contains(.convertToGigagroup) && !strongSelf.displayedConvertToGigagroupSuggestion {
+                    strongSelf.displayedConvertToGigagroupSuggestion = true
+                    
+//                    let attributedTitle = NSAttributedString(string: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_Title, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+//                    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
+//                    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+//                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+//                    
+////                    let controller = richTextAlertController(context: strongSelf.context, title: <#T##NSAttributedString?#>, text: <#T##NSAttributedString#>, actions: <#T##[TextAlertAction]#>)
+                }
+            }))
+        }
         
         if self.scheduledActivateInput {
             self.scheduledActivateInput = false

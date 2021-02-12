@@ -126,7 +126,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
             } else {
                 return nil
             }
-        case let .messageService(flags, _, fromId, chatPeerId, _, _, _):
+        case let .messageService(flags, _, fromId, chatPeerId, _, _, _, _):
             return chatPeerId.peerId
     }
 }
@@ -185,7 +185,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             return result
         case .messageEmpty:
             return []
-        case let .messageService(flags, _, fromId, chatPeerId, _, _, action):
+        case let .messageService(flags, _, fromId, chatPeerId, _, _, action, _):
             let peerId: PeerId = chatPeerId.peerId
             var result = [peerId]
             
@@ -240,7 +240,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
             }
         case .messageEmpty:
             break
-        case let .messageService(_, _, _, chatPeerId, replyHeader, _, _):
+        case let .messageService(_, _, _, chatPeerId, replyHeader, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
                 case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
@@ -620,7 +620,7 @@ extension StoreMessage {
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
-            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action):
+            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action, ttlPeriod):
                 let peerId: PeerId = chatPeerId.peerId
                 let authorId: PeerId? = fromId?.peerId ?? chatPeerId.peerId
                 
@@ -671,6 +671,10 @@ extension StoreMessage {
                 var media: [Media] = []
                 if let action = telegramMediaActionFromApiAction(action) {
                     media.append(action)
+                }
+                
+                if let ttlPeriod = ttlPeriod {
+                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttlPeriod, countdownBeginTime: date))
                 }
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil, isPinned: false)

@@ -6059,7 +6059,6 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.CanInviteUsersViaLink" = "Invite Users via Link";
 
-
 "BroadcastGroups.IntroTitle" = "Broadcast Groups";
 "BroadcastGroups.IntroText" = "• No limit on the number of members.\n\n• Only admins can post.\n\n• Can't be turned back into a regular group.";
 "BroadcastGroups.Convert" = "Convert to Broadcast Group";
