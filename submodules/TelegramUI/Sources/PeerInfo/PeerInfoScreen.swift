@@ -1340,7 +1340,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }
                     }
                     
-                    if isCreator || (channel.hasPermission(.inviteMembers)) {
+                    if isCreator || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
                         let invitesText: String
                         if let count = data.invitations?.count, count > 0 {
                             invitesText = "\(count)"
@@ -6234,10 +6234,8 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                 break
             }
         } else if let channel = groupPeer as? TelegramChannel {
-            if channel.hasPermission(.inviteMembers) {
-                if channel.flags.contains(.isCreator) || (channel.hasPermission(.inviteMembers)) {
-                    canCreateInviteLink = true
-                }
+            if channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                canCreateInviteLink = true
             }
         }
         
