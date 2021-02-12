@@ -4038,11 +4038,23 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 } else {
                     if node.frame.minY < self.insets.top {
                         if !allowIntersection || node.frame.maxY < self.insets.top {
-                            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                            let position: ListViewScrollPosition
+                            if allowIntersection {
+                                position = .center(.top)
+                            } else {
+                                position = .top(overflow)
+                            }
+                            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                         }
                     } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
                         if !allowIntersection || node.frame.minY > self.visibleSize.height - self.insets.bottom {
-                            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                            let position: ListViewScrollPosition
+                            if allowIntersection {
+                                position = .center(.bottom)
+                            } else {
+                                position = .bottom(-overflow)
+                            }
+                            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                         }
                     }
                 }
@@ -4288,7 +4300,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     override open func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
-        let distance = floor((self.visibleSize.height - self.insets.top - self.insets.bottom) / 2.0)
+        let distance = floor((self.visibleSize.height - self.insets.top - self.insets.bottom))
         let scrollDirection: ListViewScrollDirection
         switch direction {
             case .down:
