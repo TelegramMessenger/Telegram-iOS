@@ -1250,7 +1250,7 @@ final class ChatDeleteMessageContextItem: ContextMenuCustomItem {
 
 private let textFont = Font.regular(17.0)
 
-private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenuCustomNode {
+private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenuCustomNode, ContextActionNodeProtocol {
     private let item: ChatDeleteMessageContextItem
     private let presentationData: PresentationData
     private let getController: () -> ContextController?

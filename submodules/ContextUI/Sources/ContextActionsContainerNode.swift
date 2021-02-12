@@ -50,7 +50,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     private let feedbackTap: () -> Void
     
     private(set) var gesture: UIGestureRecognizer?
-    private var currentHighlightedActionNode: ContextActionNode?
+    private var currentHighlightedActionNode: ContextActionNodeProtocol?
     
     var panSelectionGestureEnabled: Bool = true {
         didSet {
@@ -291,12 +291,16 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.containerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
     }
     
-    func actionNode(at point: CGPoint) -> ContextActionNode? {
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol? {
         for itemNode in self.itemNodes {
             switch itemNode {
             case let .action(actionNode):
                 if actionNode.frame.contains(point) {
                     return actionNode
+                }
+            case let .custom(node):
+                if let node = node as? ContextActionNodeProtocol, node.frame.contains(point) {
+                    return node
                 }
             default:
                 break
@@ -536,7 +540,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.scrollNode.frame = CGRect(origin: CGPoint(), size: containerSize)
     }
     
-    func actionNode(at point: CGPoint) -> ContextActionNode? {
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol? {
         return self.actionsNode.actionNode(at: self.view.convert(point, to: self.actionsNode.view))
     }
     

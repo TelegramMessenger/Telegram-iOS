@@ -6045,9 +6045,9 @@ Sorry for the inconvenience.";
 "Report.Report" = "Report";
 "Report.Succeed" = "Telegram moderators will study your report. Thank you!";
 
-"Conversation.AutoremoveRemainingTime" = "auto-delete in %@";
-"Conversation.AutoremoveRemainingDays_1" = "auto-delete in %@ day";
-"Conversation.AutoremoveRemainingDays_any" = "auto-delete in %@ days";
+"Conversation.AutoremoveRemainingTime" = "auto-deletes in %@";
+"Conversation.AutoremoveRemainingDays_1" = "auto-deletes in %@ day";
+"Conversation.AutoremoveRemainingDays_any" = "auto-deletes in %@ days";
 
 "PeerInfo.AutoremoveMessages" = "Auto-Delete Messages";
 "PeerInfo.AutoremoveMessagesDisabled" = "Never";

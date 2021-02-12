@@ -5566,8 +5566,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             canSetupAutoremoveTimeout = true
                         }
                     }
-                } else if let _ = peer as? TelegramUser {
-                    canSetupAutoremoveTimeout = true
+                } else if let user = peer as? TelegramUser {
+                    if user.id != strongSelf.context.account.peerId {
+                        canSetupAutoremoveTimeout = true
+                    }
                 } else if let channel = peer as? TelegramChannel {
                     if channel.hasPermission(.deleteAllMessages) {
                         canSetupAutoremoveTimeout = true
@@ -7746,8 +7748,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 canSetupAutoremoveTimeout = true
                             }
                         }
-                    } else if let _ = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
-                        canSetupAutoremoveTimeout = true
+                    } else if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+                        if user.id != self.context.account.peerId {
+                            canSetupAutoremoveTimeout = true
+                        }
                     } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                         if channel.hasPermission(.deleteAllMessages) {
                             canSetupAutoremoveTimeout = true
