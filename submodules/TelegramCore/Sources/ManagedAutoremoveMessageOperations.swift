@@ -39,7 +39,7 @@ private final class ManagedAutoremoveMessageOperationsHelper {
     }
 }
 
-func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRemove: Bool) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic(value: ManagedAutoremoveMessageOperationsHelper())
         
@@ -61,7 +61,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> S
         }
         |> distinctUntilChanged
         
-        let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: 0)).start(next: { timeOffset, view in
+        let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: isRemove ? 0 : 1)).start(next: { timeOffset, view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)]) in
                 return helper.update(view.head)
             }
@@ -76,13 +76,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> S
                 |> suspendAwareDelay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in
                     if let message = transaction.getMessage(entry.messageId) {
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                                
-                            }
-                        }
-                        
-                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat || true {
+                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
                             deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
                         } else {
                             transaction.updateMessage(message.id, update: { currentMessage in
@@ -100,7 +94,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox) -> S
                                 }
                                 var updatedAttributes = currentMessage.attributes
                                 for i in 0 ..< updatedAttributes.count {
-                                    if let _ = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
+                                    if let _ = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
                                         updatedAttributes.remove(at: i)
                                         break
                                     }

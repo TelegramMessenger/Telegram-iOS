@@ -364,10 +364,16 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     for attribute in filterMessageAttributesForOutgoingMessage(requestedAttributes) {
-                        if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
-                            peerAutoremoveTimeout = nil
+                        if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                            if let _ = peer as? TelegramSecretChat {
+                                peerAutoremoveTimeout = nil
+                                attributes.append(attribute)
+                            } else {
+                                attributes.append(AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: nil))
+                            }
+                        } else {
+                            attributes.append(attribute)
                         }
-                        attributes.append(attribute)
                     }
                     
                     if let peerAutoremoveTimeout = peerAutoremoveTimeout {

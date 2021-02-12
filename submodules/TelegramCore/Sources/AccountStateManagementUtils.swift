@@ -1006,7 +1006,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             medias.append(mediaValue)
                         }
                         if let expirationTimer = expirationTimer {
-                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                            attributes.append(AutoclearTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                         }
                         
                         if type.hasPrefix("auth") {
