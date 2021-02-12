@@ -30,16 +30,13 @@ private enum PeerAutoremoveSetupSection: Int32 {
 private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
     case header
     case timeHeader(String)
-    case timeValue(Int32, Int32, [Int32])
+    case timeValue(Int32, [Int32])
     case timeComment(String)
-    case globalSwitch(String, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
         case .header, .timeHeader, .timeValue, .timeComment:
             return PeerAutoremoveSetupSection.time.rawValue
-        case .globalSwitch:
-            return PeerAutoremoveSetupSection.global.rawValue
         }
     }
     
@@ -53,8 +50,6 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             return 2
         case .timeComment:
             return 3
-        case .globalSwitch:
-            return 4
         }
     }
     
@@ -72,20 +67,14 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .timeValue(lhsValue, lhsMaxValue, lhsAvailableValues):
-            if case let .timeValue(rhsValue, rhsMaxValue, rhsAvailableValues) = rhs, lhsValue == rhsValue, lhsMaxValue == rhsMaxValue, lhsAvailableValues == rhsAvailableValues {
+        case let .timeValue(lhsValue, lhsAvailableValues):
+            if case let .timeValue(rhsValue, rhsAvailableValues) = rhs, lhsValue == rhsValue, lhsAvailableValues == rhsAvailableValues {
                 return true
             } else {
                 return false
             }
         case let .timeComment(lhsText):
             if case let .timeComment(rhsText) = rhs, lhsText == rhsText {
-                return true
-            } else {
-                return false
-            }
-        case let .globalSwitch(lhsText, lhsValue, lhsEnable):
-            if case let .globalSwitch(rhsText, rhsValue, rhsEnable) = rhs, lhsText == rhsText, lhsValue == rhsValue, lhsEnable == rhsEnable {
                 return true
             } else {
                 return false
@@ -104,16 +93,12 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
             return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: "", animation: .autoRemove, sectionId: self.section)
         case let .timeHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .timeValue(value, maxValue, availableValues):
-            return PeerRemoveTimeoutItem(presentationData: presentationData, value: value, maxValue: maxValue, availableValues: availableValues, enabled: true, sectionId: self.section, updated: { value in
+        case let .timeValue(value, availableValues):
+            return PeerRemoveTimeoutItem(presentationData: presentationData, value: value, availableValues: availableValues, enabled: true, sectionId: self.section, updated: { value in
                 arguments.updateValue(value)
             }, tag: nil)
         case let .timeComment(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .globalSwitch(text, value, enabled):
-            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.toggleGlobal(value)
-            })
         }
     }
 }
@@ -126,17 +111,13 @@ private struct PeerAutoremoveSetupState: Equatable {
 
 private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: PresentationData, isDebug: Bool, defaultMyValue: Int32, peerValue: Int32, defaultGlobalValue: Bool, state: PeerAutoremoveSetupState) -> [PeerAutoremoveSetupEntry] {
     var entries: [PeerAutoremoveSetupEntry] = []
-    let globalValue = state.changedGlobalValue ?? defaultGlobalValue
     
     let resolvedValue: Int32
-    let resolvedMaxValue: Int32
     
     if peer is TelegramUser {
         resolvedValue = state.changedValue ?? defaultMyValue
-        resolvedMaxValue = peerValue
     } else {
         resolvedValue = state.changedValue ?? peerValue
-        resolvedMaxValue = Int32.max
     }
     
     //TODO:localize
@@ -144,26 +125,19 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
     entries.append(.timeHeader("AUTO-DELETE MESSAGES"))
     
     var availableValues: [Int32] = [
+        Int32.max,
         24 * 60 * 60,
-        24 * 60 * 60 * 7,
-        Int32.max
+        24 * 60 * 60 * 7
     ]
     if isDebug || true {
-        availableValues[0] = 60
-        availableValues[1] = 5 * 60
+        availableValues[1] = 60
+        availableValues[2] = 5 * 60
     }
-    entries.append(.timeValue(resolvedValue, resolvedMaxValue, availableValues))
+    entries.append(.timeValue(resolvedValue, availableValues))
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
         entries.append(.timeComment("Automatically delete messages sent in this channel after a certain period of time."))
     } else {
-        if resolvedMaxValue != Int32.max {
-            entries.append(.timeComment("\(peer?.compactDisplayTitle ?? "") has set messages to auto-delete in \(timeIntervalString(strings: presentationData.strings, value: resolvedMaxValue)). You can't cancel it or make this interval longer."))
-        } else {
-            entries.append(.timeComment("Automatically delete messages sent in this chat after a certain period of time."))
-        }
-    }
-    if let user = peer as? TelegramUser {
-        entries.append(.globalSwitch("Also auto-delete for \(user.compactDisplayTitle)", globalValue, resolvedValue != Int32.max))
+        entries.append(.timeComment("Automatically delete messages sent in this chat after a certain period of time."))
     }
     
     return entries

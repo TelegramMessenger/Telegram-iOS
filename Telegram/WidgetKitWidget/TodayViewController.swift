@@ -233,15 +233,96 @@ struct Provider: IntentTimelineProvider {
             let result = ParsedPeers(peers: orderedPeers, updateTimestamp: Int32(Date().timeIntervalSince1970))
             completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(result))], policy: .atEnd))
         })
+    }
+}
+
+struct AvatarsProvider: IntentTimelineProvider {
+    public typealias Entry = SimpleEntry
+    
+    func placeholder(in context: Context) -> SimpleEntry {
+        return SimpleEntry(date: Date(), contents: .recent)
+    }
+
+    func getSnapshot(for configuration: SelectAvatarFriendsIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
+        let entry = SimpleEntry(date: Date(), contents: .peers(ParsedPeers(accountId: 0, peers: WidgetDataPeers(accountPeerId: 0, peers: [], updateTimestamp: 0))))
+        completion(entry)
+    }
+
+    func getTimeline(for configuration: SelectAvatarFriendsIntent, in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        let currentDate = Date()
+        let entryDate = Calendar.current.date(byAdding: .hour, value: 0, to: currentDate)!
         
-        /*let _ = (accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: widgetData.accountId), encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> ParsedPeers in
-            var peers: [ParsedPeer] = []
-            if let items = configuration.friends {
-                for item in items {
-                    guard let identifier = item.identifier, let peerIdValue = Int64(identifier) else {
-                        continue
-                    }
-                    guard let peer = transaction.getPeer(PeerId(peerIdValue)) else {
+        guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
+            return
+        }
+        
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+        
+        let appGroupName = "group.\(baseAppBundleId)"
+        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        
+        guard let appGroupUrl = maybeAppGroupUrl else {
+            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
+            return
+        }
+        
+        let rootPath = rootPathForBasePath(appGroupUrl.path)
+        
+        let dataPath = rootPath + "/widget-data"
+        
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data), case let .peers(widgetPeers) = widgetData.content else {
+            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
+            return
+        }
+        
+        TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: arc4random64())
+        
+        let logsPath = rootPath + "/widget-logs"
+        let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
+        
+        setupSharedLogger(rootPath: rootPath, path: logsPath)
+        
+        initializeAccountManagement()
+        
+        let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
+        let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        
+        var itemsByAccount: [Int64: [(Int64, Friend)]] = [:]
+        var itemOrder: [(Int64, Int64)] = []
+        if let friends = configuration.friends {
+            for item in friends {
+                guard let identifier = item.identifier else {
+                    continue
+                }
+                guard let index = identifier.firstIndex(of: ":") else {
+                    continue
+                }
+                guard let accountId = Int64(identifier[identifier.startIndex ..< index]) else {
+                    continue
+                }
+                guard let peerId = Int64(identifier[identifier.index(after: index)...]) else {
+                    continue
+                }
+                if itemsByAccount[accountId] == nil {
+                    itemsByAccount[accountId] = []
+                }
+                itemsByAccount[accountId]?.append((peerId, item))
+                itemOrder.append((accountId, peerId))
+            }
+        }
+        
+        var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
+        for (accountId, items) in itemsByAccount {
+            friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> [ParsedPeer] in
+                guard let state = transaction.getState() as? AuthorizedAccountState else {
+                    return []
+                }
+                
+                var result: [ParsedPeer] = []
+                
+                for (peerId, _) in items {
+                    guard let peer = transaction.getPeer(PeerId(peerId)) else {
                         continue
                     }
                     
@@ -281,16 +362,34 @@ struct Provider: IntentTimelineProvider {
                         }
                     }
                     
-                    peers.append(WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
+                    let widgetPeer = WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                         return postbox.mediaBox.resourcePath(representation.resource)
-                    }, badge: badge, message: mappedMessage))
+                    }, badge: badge, message: mappedMessage)
+                    
+                    result.append(ParsedPeer(accountId: accountId, accountPeerId: state.peerId.toInt64(), peer: widgetPeer))
+                }
+                
+                return result
+            }))
+        }
+        
+        let _ = combineLatest(friendsByAccount).start(next: { allPeers in
+            var orderedPeers: [ParsedPeer] = []
+            
+            outer: for (accountId, peerId) in itemOrder {
+                for peerSet in allPeers {
+                    for peer in peerSet {
+                        if peer.accountId == accountId && peer.peer.id == peerId {
+                            orderedPeers.append(peer)
+                            continue outer
+                        }
+                    }
                 }
             }
-            return ParsedPeers(peers: peers, updateTimestamp: Int32(Date().timeIntervalSince1970))
+            
+            let result = ParsedPeers(peers: orderedPeers, updateTimestamp: Int32(Date().timeIntervalSince1970))
+            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(result))], policy: .atEnd))
         })
-        |> deliverOnMainQueue).start(next: { peers in
-            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(peers))], policy: .atEnd))
-        })*/
     }
 }
 
@@ -783,9 +882,9 @@ struct WidgetView: View {
     func getSeparatorColor() -> Color {
         switch colorScheme {
         case .light:
-            return Color(.sRGB, red: 200.0 / 255.0, green: 199.0 / 255.0, blue: 204.0 / 255.0, opacity: 1.0)
+            return Color(.sRGB, red: 216.0 / 255.0, green: 216.0 / 255.0, blue: 216.0 / 255.0, opacity: 1.0)
         case .dark:
-            return Color(.sRGB, red: 61.0 / 255.0, green: 61.0 / 255.0, blue: 64.0 / 255.0, opacity: 1.0)
+            return Color(.sRGB, red: 0.0 / 255.0, green: 0.0 / 255.0, blue: 0.0 / 255.0, opacity: 1.0)
         @unknown default:
             return .secondary
         }
@@ -816,9 +915,9 @@ struct WidgetView: View {
     func getPlaceholderColor() -> Color {
         switch colorScheme {
         case .light:
-            return Color(.sRGB, red: 242.0 / 255.0, green: 242.0 / 255.0, blue: 247.0 / 255.0, opacity: 1.0)
+            return Color(.sRGB, red: 235.0 / 255.0, green: 235.0 / 255.0, blue: 241.0 / 255.0, opacity: 1.0)
         case .dark:
-            return Color(.sRGB, red: 21.0 / 255.0, green: 21.0 / 255.0, blue: 21.0 / 255.0, opacity: 1.0)
+            return Color(.sRGB, red: 38.0 / 255.0, green: 38.0 / 255.0, blue: 41.0 / 255.0, opacity: 1.0)
         @unknown default:
             return .secondary
         }
@@ -921,7 +1020,6 @@ func getWidgetData(contents: SimpleEntry.Contents) -> PeersWidgetData {
     }
 }
 
-@main
 struct Static_Widget: Widget {
     private let kind: String = "Static_Widget"
 
@@ -933,4 +1031,25 @@ struct Static_Widget: Widget {
         .configurationDisplayName(presentationData.widgetGalleryTitle)
         .description(presentationData.widgetGalleryDescription)
     }
+}
+
+struct Static_AvatarsWidget: Widget {
+    private let kind: String = "Static_AvatarsWidget"
+
+    public var body: some WidgetConfiguration {
+        return IntentConfiguration(kind: kind, intent: SelectAvatarFriendsIntent.self, provider: AvatarsProvider(), content: { entry in
+            Spacer()
+        })
+        .supportedFamilies([.systemMedium])
+        .configurationDisplayName(presentationData.widgetGalleryTitle)
+        .description(presentationData.widgetGalleryDescription)
+    }
+}
+
+@main
+struct AllWidgets: WidgetBundle {
+   var body: some Widget {
+        Static_Widget()
+        //Static_AvatarsWidget()
+   }
 }

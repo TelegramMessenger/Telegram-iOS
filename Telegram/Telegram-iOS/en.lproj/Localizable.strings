@@ -6072,3 +6072,6 @@ Sorry for the inconvenience.";
 "BroadcastGroups.LimitAlert.Title" = "Limit Reached";
 "BroadcastGroups.LimitAlert.Text" = "Your group has reached a limit of **%@** members. You can increase this limit by converting the group to a **broadcast group** where only admins can post. Interested?";
 "BroadcastGroups.LimitAlert.LearnMore" = "Learn More";
+
+"Channel.AdminLog.MessageChangedAutoremoveTimeoutSet" = "%1$@ set auto-remove timer to %2$@";
+"Channel.AdminLog.MessageChangedAutoremoveTimeoutRemove" = "%1$@ disabled auto-remove timer";

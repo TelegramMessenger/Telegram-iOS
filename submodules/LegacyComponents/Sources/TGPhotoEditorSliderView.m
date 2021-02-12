@@ -175,7 +175,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         CGContextSetBlendMode(context, kCGBlendModeCopy);
     }
     
-    if (_minimumUndottedValue > -1 && self.positionsCount > 1) {
+    if (false && _minimumUndottedValue > -1 && self.positionsCount > 1) {
         CGContextSetLineWidth(context, backFrame.size.height);
         CGContextSetLineCap(context, kCGLineCapRound);
         
@@ -223,7 +223,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 
     CGContextSetBlendMode(context, kCGBlendModeNormal);
     
-    if (_minimumUndottedValue > -1) {
+    if (false && _minimumUndottedValue > -1) {
     } else {
         CGContextSetFillColorWithColor(context, _trackColor.CGColor);
         [self drawRectangle:trackFrame cornerRadius:self.trackCornerRadius context:context];
