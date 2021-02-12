@@ -6069,6 +6069,8 @@ Sorry for the inconvenience.";
 "BroadcastGroups.ConfirmationAlert.Convert" = "Convert";
 
 "BroadcastGroups.LimitAlert.Title" = "Limit Reached";
-"BroadcastGroups.LimitAlert.Text" = "Your group has reached a limit of **%@** members. You can increase this limit by converting the group to a **broadcast group** where only admins can post. Interested?";
+"BroadcastGroups.LimitAlert.Text" = "Your group has reached a limit of **%@** members.\n\nYou can increase this limit by converting the group to a **broadcast group** where only admins can post. Interested?";
 "BroadcastGroups.LimitAlert.LearnMore" = "Learn More";
 "BroadcastGroups.LimitAlert.SettingsTip" = "If you change your mind, go to the settings of your group.";
+
+"VoiceOver.AuthSessions.CurrentSession" = "Current Session";

@@ -119,9 +119,9 @@ public final class PermissionContentNode: ASDisplayNode {
             secondaryText = true
         }
         
-        self.textNode.textAlignment = secondaryText ? .natural : .center
+        self.textNode.textAlignment = secondaryButtonTitle != nil ? .natural : .center
         
-        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: secondaryText ? theme.list.itemSecondaryTextColor : theme.list.itemPrimaryTextColor)
+        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: secondaryButtonTitle != nil ? theme.list.itemSecondaryTextColor : theme.list.itemPrimaryTextColor)
         let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
         self.textNode.attributedText = parseMarkdownIntoAttributedString(text.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: secondaryText ? .natural : .center)
         

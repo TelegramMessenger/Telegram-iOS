@@ -30,7 +30,6 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
                                 if let peer = peers[participant.peerId] {
                                     items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: presences))
                                 }
-                                
                             }
                         
                             return account.postbox.transaction { transaction -> [RenderedChannelParticipant] in
