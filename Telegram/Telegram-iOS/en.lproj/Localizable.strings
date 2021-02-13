@@ -6074,3 +6074,6 @@ Sorry for the inconvenience.";
 "BroadcastGroups.LimitAlert.SettingsTip" = "If you change your mind, go to the settings of your group.";
 
 "VoiceOver.AuthSessions.CurrentSession" = "Current Session";
+
+"Channel.AdminLog.MessageChangedAutoremoveTimeoutSet" = "%1$@ set auto-remove timer to %2$@";
+"Channel.AdminLog.MessageChangedAutoremoveTimeoutRemove" = "%1$@ disabled auto-remove timer";

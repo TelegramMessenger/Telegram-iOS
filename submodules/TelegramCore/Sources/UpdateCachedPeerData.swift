@@ -207,7 +207,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     
                                     let hasScheduledMessages = (userFull.flags & 1 << 12) != 0
                                     
-                                    let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(userFull.ttl))
+                                    let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(userFull.ttlPeriod))
                                 
                                     return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                                         .withUpdatedAutoremoveTimeout(autoremoveTimeout)
@@ -565,15 +565,9 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
 }
 
 extension CachedPeerAutoremoveTimeout.Value {
-    init?(_ apiValue: Api.PeerHistoryTTL?) {
-        if let apiValue = apiValue {
-            switch apiValue {
-            case let .peerHistoryTTLPM(flags, ttlPeriodMy, ttlPeriodPeer):
-                let pmOneSide = flags & (1 << 0) != 0
-                self.init(myValue: ttlPeriodMy, peerValue: ttlPeriodPeer, isGlobal: !pmOneSide)
-            case let .peerHistoryTTL(ttlPeriodPeer):
-                self.init(myValue: ttlPeriodPeer, peerValue: ttlPeriodPeer, isGlobal: true)
-            }
+    init?(_ apiValue: Int32?) {
+        if let value = apiValue {
+            self.init(peerValue: value)
         } else {
             return nil
         }

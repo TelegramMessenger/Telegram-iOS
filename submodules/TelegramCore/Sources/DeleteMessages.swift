@@ -146,7 +146,7 @@ public enum SetChatMessageAutoremoveTimeoutError {
     case generic
 }
 
-public func setChatMessageAutoremoveTimeoutInteractively(account: Account, peerId: PeerId, timeout: Int32?, isGlobal: Bool) -> Signal<Never, SetChatMessageAutoremoveTimeoutError> {
+public func setChatMessageAutoremoveTimeoutInteractively(account: Account, peerId: PeerId, timeout: Int32?) -> Signal<Never, SetChatMessageAutoremoveTimeoutError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
@@ -155,11 +155,7 @@ public func setChatMessageAutoremoveTimeoutInteractively(account: Account, peerI
         guard let inputPeer = inputPeer else {
             return .fail(.generic)
         }
-        var flags: Int32 = 0
-        if !isGlobal {
-            flags |= 1 << 0
-        }
-        return account.network.request(Api.functions.messages.setHistoryTTL(flags: flags, peer: inputPeer, period: timeout ?? 0))
+        return account.network.request(Api.functions.messages.setHistoryTTL(peer: inputPeer, period: timeout ?? 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
@@ -171,24 +167,9 @@ public func setChatMessageAutoremoveTimeoutInteractively(account: Account, peerI
                 
                 return account.postbox.transaction { transaction -> Void in
                     transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
-                        var currentPeerValue: Int32?
-                        if let current = current as? CachedUserData {
-                            if case let .known(value?) = current.autoremoveTimeout {
-                                currentPeerValue = value.peerValue
-                            }
-                        } else if let current = current as? CachedGroupData {
-                            if case let .known(value?) = current.autoremoveTimeout {
-                                currentPeerValue = value.peerValue
-                            }
-                        } else if let current = current as? CachedChannelData {
-                            if case let .known(value?) = current.autoremoveTimeout {
-                                currentPeerValue = value.peerValue
-                            }
-                        }
-                        
                         let updatedTimeout: CachedPeerAutoremoveTimeout
                         if let timeout = timeout {
-                            updatedTimeout = .known(CachedPeerAutoremoveTimeout.Value(myValue: timeout, peerValue: currentPeerValue ?? timeout, isGlobal: isGlobal))
+                            updatedTimeout = .known(CachedPeerAutoremoveTimeout.Value(peerValue: timeout))
                         } else {
                             updatedTimeout = .known(nil)
                         }

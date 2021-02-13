@@ -582,6 +582,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             return true
+                        case .messageAutoremoveTimeoutUpdated:
+                            var canSetupAutoremoveTimeout = false
+                            
+                            if let _ = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                                canSetupAutoremoveTimeout = false
+                            } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                                if case .creator = group.role {
+                                    canSetupAutoremoveTimeout = true
+                                } else if case let .admin(rights, _) = group.role {
+                                    if rights.flags.contains(.canDeleteMessages) {
+                                        canSetupAutoremoveTimeout = true
+                                    }
+                                }
+                            } else if let user = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+                                if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
+                                    canSetupAutoremoveTimeout = true
+                                }
+                            } else if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                                if channel.hasPermission(.deleteAllMessages) {
+                                    canSetupAutoremoveTimeout = true
+                                }
+                            }
+                            
+                            if canSetupAutoremoveTimeout {
+                                strongSelf.presentAutoremoveSetup()
+                            }
                         default:
                             break
                     }
@@ -5576,7 +5602,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 } else if let user = peer as? TelegramUser {
-                    if user.id != strongSelf.context.account.peerId {
+                    if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
                         canSetupAutoremoveTimeout = true
                     }
                 } else if let channel = peer as? TelegramChannel {
@@ -7806,7 +7832,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     } else if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
-                        if user.id != self.context.account.peerId {
+                        if user.id != self.context.account.peerId && user.botInfo == nil {
                             canSetupAutoremoveTimeout = true
                         }
                     } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
@@ -11995,16 +12021,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var isOn: Bool = true
                 var title: String?
                 var text: String?
-                if let myValue = value.myValue {
-                    if let limitedByValue = value.limitedByValue, limitedByValue < myValue {
-                        title = "Auto-Delete On — \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue))"
-                        text = "\(peer.compactDisplayTitle) has set messages to auto-delete in \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue)). You can't cancel it or make this interval longer."
-                    } else {
-                        text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
-                    }
-                } else if let limitedByValue = value.limitedByValue {
-                    title = "Auto-Delete On — \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue))"
-                    text = "\(peer.compactDisplayTitle) has set messages to auto-delete in \(timeIntervalString(strings: strongSelf.presentationData.strings, value: limitedByValue)). You can't cancel it or make this interval longer."
+                if let myValue = value.value {
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
                 } else {
                     isOn = false
                     text = "Auto-Delete is now off."

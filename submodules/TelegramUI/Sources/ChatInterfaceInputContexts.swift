@@ -246,8 +246,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 canSetupAutoremoveTimeout = true
             }
         }
-    } else if let _ = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
-        canSetupAutoremoveTimeout = true
+    } else if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+        if user.botInfo == nil {
+            canSetupAutoremoveTimeout = true
+        }
     } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
         if channel.hasPermission(.deleteAllMessages) {
             canSetupAutoremoveTimeout = true

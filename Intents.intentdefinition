@@ -3,51 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>INEnums</key>
-	<array>
-		<dict>
-			<key>INEnumDisplayName</key>
-			<string>Display Chats</string>
-			<key>INEnumDisplayNameID</key>
-			<string>k9oGrF</string>
-			<key>INEnumGeneratesHeader</key>
-			<true/>
-			<key>INEnumName</key>
-			<string>Contents</string>
-			<key>INEnumType</key>
-			<string>Regular</string>
-			<key>INEnumValues</key>
-			<array>
-				<dict>
-					<key>INEnumValueDisplayName</key>
-					<string>unknown</string>
-					<key>INEnumValueDisplayNameID</key>
-					<string>OnVgw0</string>
-					<key>INEnumValueName</key>
-					<string>unknown</string>
-				</dict>
-				<dict>
-					<key>INEnumValueDisplayName</key>
-					<string>Recent Chats</string>
-					<key>INEnumValueDisplayNameID</key>
-					<string>X0HAPm</string>
-					<key>INEnumValueIndex</key>
-					<integer>1</integer>
-					<key>INEnumValueName</key>
-					<string>recent</string>
-				</dict>
-				<dict>
-					<key>INEnumValueDisplayName</key>
-					<string>Custom</string>
-					<key>INEnumValueDisplayNameID</key>
-					<string>VpZ0cC</string>
-					<key>INEnumValueIndex</key>
-					<integer>2</integer>
-					<key>INEnumValueName</key>
-					<string>custom</string>
-				</dict>
-			</array>
-		</dict>
-	</array>
+	<array/>
 	<key>INIntentDefinitionModelVersion</key>
 	<string>1.2</string>
 	<key>INIntentDefinitionNamespace</key>
@@ -55,9 +11,9 @@
 	<key>INIntentDefinitionSystemVersion</key>
 	<string>20C69</string>
 	<key>INIntentDefinitionToolsBuildVersion</key>
-	<string>12C33</string>
+	<string>12D4e</string>
 	<key>INIntentDefinitionToolsVersion</key>
-	<string>12.3</string>
+	<string>12.4</string>
 	<key>INIntents</key>
 	<array>
 		<dict>
@@ -80,7 +36,7 @@
 					<array>
 						<dict>
 							<key>INIntentParameterArraySizeSize</key>
-							<integer>4</integer>
+							<integer>1</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Small</string>
 						</dict>
@@ -92,7 +48,7 @@
 						</dict>
 						<dict>
 							<key>INIntentParameterArraySizeSize</key>
-							<integer>16</integer>
+							<integer>8</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Large</string>
 						</dict>
@@ -171,6 +127,111 @@
 			<string>Select Chats</string>
 			<key>INIntentTitleID</key>
 			<string>lMot0c</string>
+			<key>INIntentType</key>
+			<string>Custom</string>
+			<key>INIntentVerb</key>
+			<string>View</string>
+		</dict>
+		<dict>
+			<key>INIntentCategory</key>
+			<string>information</string>
+			<key>INIntentDescriptionID</key>
+			<string>zzS0gJ</string>
+			<key>INIntentEligibleForWidgets</key>
+			<true/>
+			<key>INIntentIneligibleForSuggestions</key>
+			<true/>
+			<key>INIntentLastParameterTag</key>
+			<integer>3</integer>
+			<key>INIntentName</key>
+			<string>SelectAvatarFriends</string>
+			<key>INIntentParameters</key>
+			<array>
+				<dict>
+					<key>INIntentParameterArraySizes</key>
+					<array>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>1</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>Small</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>4</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>Medium</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>8</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>Large</string>
+						</dict>
+					</array>
+					<key>INIntentParameterConfigurable</key>
+					<true/>
+					<key>INIntentParameterDisplayPriority</key>
+					<integer>1</integer>
+					<key>INIntentParameterFixedSizeArray</key>
+					<integer>1</integer>
+					<key>INIntentParameterName</key>
+					<string>friends</string>
+					<key>INIntentParameterObjectType</key>
+					<string>Friend</string>
+					<key>INIntentParameterObjectTypeNamespace</key>
+					<string>p74MWb</string>
+					<key>INIntentParameterPromptDialogs</key>
+					<array>
+						<dict>
+							<key>INIntentParameterPromptDialogCustom</key>
+							<true/>
+							<key>INIntentParameterPromptDialogFormatString</key>
+							<string>Search</string>
+							<key>INIntentParameterPromptDialogFormatStringID</key>
+							<string>xeb2pd</string>
+							<key>INIntentParameterPromptDialogType</key>
+							<string>Configuration</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterPromptDialogCustom</key>
+							<true/>
+							<key>INIntentParameterPromptDialogType</key>
+							<string>Primary</string>
+						</dict>
+					</array>
+					<key>INIntentParameterSupportsDynamicEnumeration</key>
+					<true/>
+					<key>INIntentParameterSupportsMultipleValues</key>
+					<true/>
+					<key>INIntentParameterSupportsSearch</key>
+					<true/>
+					<key>INIntentParameterTag</key>
+					<integer>3</integer>
+					<key>INIntentParameterType</key>
+					<string>Object</string>
+				</dict>
+			</array>
+			<key>INIntentResponse</key>
+			<dict>
+				<key>INIntentResponseCodes</key>
+				<array>
+					<dict>
+						<key>INIntentResponseCodeName</key>
+						<string>success</string>
+						<key>INIntentResponseCodeSuccess</key>
+						<true/>
+					</dict>
+					<dict>
+						<key>INIntentResponseCodeName</key>
+						<string>failure</string>
+					</dict>
+				</array>
+			</dict>
+			<key>INIntentTitle</key>
+			<string>Select</string>
+			<key>INIntentTitleID</key>
+			<string>kiqCaL</string>
 			<key>INIntentType</key>
 			<string>Custom</string>
 			<key>INIntentVerb</key>

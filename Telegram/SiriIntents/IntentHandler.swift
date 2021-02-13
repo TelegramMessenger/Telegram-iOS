@@ -54,7 +54,7 @@ enum IntentHandlingError {
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
-class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling {
+class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling, SelectAvatarFriendsIntentHandling {
     private let accountPromise = Promise<Account?>()
     private let allAccounts = Promise<[(AccountRecordId, PeerId)]>()
     
@@ -845,74 +845,69 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }, error: { error in
             completion(nil, error)
         }))
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func provideFriendsOptionsCollection(for intent: SelectAvatarFriendsIntent, searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        guard let rootPath = self.rootPath, let _ = self.accountManager, let encryptionParameters = self.encryptionParameters else {
+            completion(nil, nil)
+            return
+        }
         
-        /*let _ = (self.accountPromise.get()
-        |> take(1)
-        |> mapToSignal { account -> Signal<[Friend], NoError> in
-            guard let account = account else {
-                return .single([])
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
+            if state.isManuallyLocked || state.autolockTimeout != nil {
+                let error = NSError(domain: "Locked", code: 1, userInfo: [
+                    NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
+                ])
+                
+                completion(nil, error)
+                return
             }
+        }
+        
+        self.searchDisposable.set((self.allAccounts.get()
+        |> castError(Error.self)
+        |> take(1)
+        |> mapToSignal { accounts -> Signal<INObjectCollection<Friend>, Error> in
+            var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
-            if let searchTerm = searchTerm {
-                if !searchTerm.isEmpty {
-                    return account.postbox.searchPeers(query: searchTerm)
-                    |> map { renderedPeers -> [Friend] in
-                        var peers: [Peer] = []
-                        
-                        for renderedPeer in renderedPeers {
-                            if let peer = renderedPeer.peer, !(peer is TelegramSecretChat) {
+            for (accountId, accountPeerId) in accounts {
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                    var accountTitle: String = ""
+                    if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
+                        if let username = peer.username, !username.isEmpty {
+                            accountTitle = "@\(username)"
+                        } else {
+                            accountTitle = peer.debugDisplayTitle
+                        }
+                    }
+                    
+                    var peers: [Peer] = []
+                    
+                    if let searchTerm = searchTerm {
+                        if !searchTerm.isEmpty {
+                            for renderedPeer in transaction.searchPeers(query: searchTerm) {
+                                if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
+                                    peers.append(peer)
+                                }
+                            }
+                            
+                            if peers.count > 30 {
+                                peers = Array(peers.dropLast(peers.count - 30))
+                            }
+                        }
+                    } else {
+                        for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50) {
+                            if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                 peers.append(peer)
                             }
                         }
-                        
-                        peers.sort(by: { lhs, rhs in
-                            return lhs.debugDisplayTitle < rhs.debugDisplayTitle
-                        })
-                        
-                        if peers.count > 30 {
-                            peers = Array(peers.dropLast(peers.count - 30))
-                        }
-                        
-                        var result: [Friend] = []
-                        for peer in peers {
-                            let profileImage = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                                return account.postbox.mediaBox.resourcePath(representation.resource)
-                            }.flatMap { path -> INImage? in
-                                if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                    return INImage(imageData: data)
-                                } else {
-                                    return nil
-                                }
-                            }
-                            result.append(Friend(identifier: "\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: nil))
-                        }
-                        return result
-                    }
-                } else {
-                    return .single([])
-                }
-            } else {
-                return account.postbox.transaction { transaction -> [Friend] in
-                    var peers: [Peer] = []
-                    
-                    for peerId in transaction.getContactPeerIds() {
-                        if let peer = transaction.getPeer(peerId) as? TelegramUser {
-                            peers.append(peer)
-                        }
                     }
                     
-                    peers.sort(by: { lhs, rhs in
-                        return lhs.debugDisplayTitle < rhs.debugDisplayTitle
-                    })
-                    
-                    if peers.count > 50 {
-                        peers = Array(peers.dropLast(peers.count - 50))
-                    }
-                    
-                    var result: [Friend] = []
+                    var items: [Friend] = []
                     for peer in peers {
                         let profileImage = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                            return account.postbox.mediaBox.resourcePath(representation.resource)
+                            return postbox.mediaBox.resourcePath(representation.resource)
                         }.flatMap { path -> INImage? in
                             if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
                                 return INImage(imageData: data)
@@ -920,15 +915,29 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                                 return nil
                             }
                         }
-                        result.append(Friend(identifier: "\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: nil))
+                        items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: nil))
                     }
-                    return result
+                    
+                    return INObjectSection<Friend>(title: accountTitle, items: items)
+                })
+                |> castError(Error.self))
+            }
+            
+            return combineLatest(accountResults)
+            |> map { accountResults -> INObjectCollection<Friend> in
+                let filteredSections = accountResults.filter { section in
+                    return !section.items.isEmpty
+                }
+                if filteredSections.count == 1 {
+                    return INObjectCollection<Friend>(items: filteredSections[0].items)
+                } else {
+                    return INObjectCollection<Friend>(sections: filteredSections)
                 }
             }
-        }
-        |> deliverOnMainQueue).start(next: { result in
-            let collection = INObjectCollection(items: result)
-            completion(collection, nil)
-        })*/
+        }).start(next: { result in
+            completion(result, nil)
+        }, error: { error in
+            completion(nil, error)
+        }))
     }
 }

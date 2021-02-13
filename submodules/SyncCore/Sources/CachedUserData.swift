@@ -3,46 +3,22 @@ import Postbox
 
 public enum CachedPeerAutoremoveTimeout: Equatable, PostboxCoding {
     public struct Value: Equatable, PostboxCoding {
-        public var myValue: Int32?
-        public var peerValue: Int32?
-        public var isGlobal: Bool
+        public var peerValue: Int32
         
-        public init(myValue: Int32?, peerValue: Int32?, isGlobal: Bool) {
-            self.myValue = myValue
+        public init(peerValue: Int32) {
             self.peerValue = peerValue
-            self.isGlobal = isGlobal
         }
         
         public init(decoder: PostboxDecoder) {
-            self.myValue = decoder.decodeOptionalInt32ForKey("myValue")
-            self.peerValue = decoder.decodeOptionalInt32ForKey("peerValue")
-            self.isGlobal = decoder.decodeInt32ForKey("isGlobal", orElse: 1) != 0
+            self.peerValue = decoder.decodeInt32ForKey("peerValue", orElse: 0)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
-            if let myValue = self.myValue {
-                encoder.encodeInt32(myValue, forKey: "myValue")
-            } else {
-                encoder.encodeNil(forKey: "myValue")
-            }
-            if let peerValue = self.peerValue {
-                encoder.encodeInt32(peerValue, forKey: "peerValue")
-            } else {
-                encoder.encodeNil(forKey: "peerValue")
-            }
-            encoder.encodeInt32(self.isGlobal ? 1 : 0, forKey: "isGlobal")
+            encoder.encodeInt32(self.peerValue, forKey: "peerValue")
         }
         
-        public var effectiveValue: Int32? {
-            if let myValue = self.myValue, let peerValue = self.peerValue {
-                return min(myValue, peerValue)
-            } else if let myValue = self.myValue {
-                return myValue
-            } else if let peerValue = self.peerValue {
-                return peerValue
-            } else {
-                return nil
-            }
+        public var effectiveValue: Int32 {
+            return self.peerValue
         }
     }
     

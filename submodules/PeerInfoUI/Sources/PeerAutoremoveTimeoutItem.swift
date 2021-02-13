@@ -14,8 +14,14 @@ import AppBundle
 
 private func mapTimeoutToSliderValue(_ value: Int32, availableValues: [Int32]) -> CGFloat {
     for i in 0 ..< availableValues.count {
-        if value <= availableValues[i] {
-            return CGFloat(i)
+        if availableValues[i] == Int32.max {
+            if value == Int32.max {
+                return CGFloat(i)
+            }
+        } else {
+            if value <= availableValues[i] {
+                return CGFloat(i)
+            }
         }
     }
     return CGFloat(availableValues.count - 1)
@@ -23,7 +29,9 @@ private func mapTimeoutToSliderValue(_ value: Int32, availableValues: [Int32]) -
 
 private func mapSliderValueToTimeout(_ value: CGFloat, availableValues: [Int32]) -> Int32 {
     let intValue = Int(round(value))
-    if intValue >= 0 && intValue < availableValues.count {
+    if intValue == 0 {
+        return Int32.max
+    } else if intValue >= 0 && intValue < availableValues.count {
         return availableValues[intValue]
     } else {
         return availableValues[availableValues.count - 1]
@@ -33,17 +41,15 @@ private func mapSliderValueToTimeout(_ value: CGFloat, availableValues: [Int32])
 class PeerRemoveTimeoutItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let value: Int32
-    let maxValue: Int32
     let availableValues: [Int32]
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (Int32) -> Void
     let tag: ItemListItemTag?
     
-    init(presentationData: ItemListPresentationData, value: Int32, maxValue: Int32, availableValues: [Int32], enabled: Bool = true, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void, tag: ItemListItemTag? = nil) {
+    init(presentationData: ItemListPresentationData, value: Int32, availableValues: [Int32], enabled: Bool = true, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void, tag: ItemListItemTag? = nil) {
         self.presentationData = presentationData
         self.value = value
-        self.maxValue = maxValue
         self.availableValues = availableValues
         self.enabled = enabled
         self.sectionId = sectionId
@@ -154,11 +160,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
         if let item = self.item, let params = self.layoutParams {
             sliderView.isUserInteractionEnabled = item.enabled
             
-            sliderView.minimumUndottedValue = 0
-            
             sliderView.value = mapTimeoutToSliderValue(item.value, availableValues: item.availableValues)
-            
-            sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue, availableValues: item.availableValues))
             
             sliderView.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.presentationData.theme.list.disclosureArrowColor
@@ -282,7 +284,6 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                     if let sliderView = strongSelf.sliderView {
                         sliderView.isUserInteractionEnabled = item.enabled
                         sliderView.trackColor = item.enabled ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemDisabledTextColor
-                        sliderView.minimumUndottedValue = Int32(mapTimeoutToSliderValue(item.maxValue, availableValues: item.availableValues))
                         
                         if themeUpdated {
                             sliderView.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor

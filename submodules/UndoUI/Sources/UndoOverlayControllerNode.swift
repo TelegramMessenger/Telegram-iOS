@@ -657,6 +657,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.validLayout = layout
         
         var preferredSize: CGSize?
+        var verticalOffset: CGFloat = 0.0
         if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
             if case .messagesUnpinned = self.content {
                 let factor: CGFloat = 0.5
@@ -668,7 +669,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 let factor: CGFloat = 0.08
                 preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
             } else if case .autoDelete = self.content {
-                let factor: CGFloat = 0.06
+                let factor: CGFloat = 0.07
+                verticalOffset = -3.0
                 preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
             } else {
                 preferredSize = iconSize
@@ -735,7 +737,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: textContentOrigin + textOffset), size: textSize))
         
         if let iconNode = self.iconNode, let iconSize = iconNode.image?.size {
-            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
             transition.updateFrame(node: iconNode, frame: iconFrame)
             
             if let iconCheckNode = self.iconCheckNode {
@@ -749,7 +751,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         }
         
         if let animationNode = self.animationNode, let iconSize = preferredSize {
-            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
             transition.updateFrame(node: animationNode, frame: iconFrame)
         }
         
