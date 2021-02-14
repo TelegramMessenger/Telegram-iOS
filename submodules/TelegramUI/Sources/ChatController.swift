@@ -4991,6 +4991,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return interfaceState.withUpdatedEffectiveInputState(updatedState)
                         }.updatedInputMode({ _ in updatedMode })
                 })
+                
+                if !strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string.isEmpty {
+                    strongSelf.silentPostTooltipController?.dismiss()
+                }
             }
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { [weak self] f in
             if let strongSelf = self {
@@ -5618,6 +5622,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     //TODO:localize
                     let intervalText = timeIntervalString(strings: strongSelf.presentationData.strings, value: currentAutoremoveTimeout)
                     let text: String = "Messages in this chat are automatically\ndeleted \(intervalText) after they have been sent."
+                    
+                    strongSelf.mediaRecordingModeTooltipController?.dismiss()
                     
                     if let tooltipController = strongSelf.silentPostTooltipController {
                         tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
@@ -11466,6 +11472,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             text = self.presentationData.strings.Conversation_HoldForVideo
         }
         
+        self.silentPostTooltipController?.dismiss()
+        
         if let tooltipController = self.mediaRecordingModeTooltipController {
             tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
         } else if let rect = rect {
@@ -12023,7 +12031,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                 
                 var isOn: Bool = true
-                var title: String?
                 var text: String?
                 if let myValue = value.value {
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
@@ -12032,7 +12039,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     text = "Auto-Delete is now off."
                 }
                 if let text = text {
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: title, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             }
         })
@@ -12110,5 +12117,31 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
     
     func animatedIn() {
+    }
+}
+
+extension Peer {
+    func canSetupAutoremoveTimeout(accountPeerId: PeerId) -> Bool {
+        if let _ = self as? TelegramSecretChat {
+            return false
+        } else if let group = self as? TelegramGroup {
+            if case .creator = group.role {
+                return true
+            } else if case let .admin(rights, _) = group.role {
+                if rights.flags.contains(.canDeleteMessages) {
+                    return true
+                }
+            }
+        } else if let user = self as? TelegramUser {
+            if user.id != accountPeerId && user.botInfo == nil {
+                return true
+            }
+        } else if let channel = self as? TelegramChannel {
+            if channel.hasPermission(.deleteAllMessages) {
+                return true
+            }
+        }
+        
+        return true
     }
 }

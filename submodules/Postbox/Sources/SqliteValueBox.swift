@@ -155,6 +155,7 @@ public final class SqliteValueBox: ValueBox {
     private let lock = NSRecursiveLock()
     
     fileprivate let basePath: String
+    private let isTemporary: Bool
     private let inMemory: Bool
     private let encryptionParameters: ValueBoxEncryptionParameters?
     private let databasePath: String
@@ -193,13 +194,18 @@ public final class SqliteValueBox: ValueBox {
     
     private let queue: Queue
     
-    public init(basePath: String, queue: Queue, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void, inMemory: Bool = false) {
+    public init?(basePath: String, queue: Queue, isTemporary: Bool, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void, inMemory: Bool = false) {
         self.basePath = basePath
+        self.isTemporary = isTemporary
         self.inMemory = inMemory
         self.encryptionParameters = encryptionParameters
         self.databasePath = basePath + "/db_sqlite"
         self.queue = queue
-        self.database = self.openDatabase(encryptionParameters: encryptionParameters, upgradeProgress: upgradeProgress)
+        if let database = self.openDatabase(encryptionParameters: encryptionParameters, isTemporary: isTemporary, upgradeProgress: upgradeProgress) {
+            self.database = database
+        } else {
+            return nil
+        }
     }
     
     deinit {
@@ -212,7 +218,7 @@ public final class SqliteValueBox: ValueBox {
         self.database = nil
     }
     
-    private func openDatabase(encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void) -> Database {
+    private func openDatabase(encryptionParameters: ValueBoxEncryptionParameters?, isTemporary: Bool, upgradeProgress: (Float) -> Void) -> Database? {
         precondition(self.queue.isCurrent())
         
         checkpoints.set(nil)
@@ -297,6 +303,9 @@ public final class SqliteValueBox: ValueBox {
                 assert(resultCode)
                 
                 if self.isEncrypted(database) {
+                    if isTemporary {
+                        return nil
+                    }
                     postboxLog("Encryption key is invalid")
                     
                     for fileName in dabaseFileNames {
@@ -2060,7 +2069,7 @@ public final class SqliteValueBox: ValueBox {
             let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/\(fileName)")
         }
         
-        self.database = self.openDatabase(encryptionParameters: self.encryptionParameters, upgradeProgress: { _ in })
+        self.database = self.openDatabase(encryptionParameters: self.encryptionParameters, isTemporary: self.isTemporary, upgradeProgress: { _ in })
         
         tables.removeAll()
     }

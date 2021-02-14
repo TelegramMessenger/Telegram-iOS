@@ -105,7 +105,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         initializeAccountManagement()
-        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true)
         self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
@@ -820,6 +820,9 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     
                     return INObjectSection<Friend>(title: accountTitle, items: items)
                 })
+                |> `catch` { _ -> Signal<INObjectSection<Friend>, NoError> in
+                    return .single(INObjectSection<Friend>(title: nil, items: []))
+                }
                 |> castError(Error.self))
             }
             
@@ -895,7 +898,7 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         initializeAccountManagement()
-        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true)
         self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
@@ -1043,6 +1046,9 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
                     
                     return INObjectSection<Friend>(title: accountTitle, items: items)
                 })
+                |> `catch` { _ -> Signal<INObjectSection<Friend>, NoError> in
+                    return .single(INObjectSection<Friend>(title: nil, items: []))
+                }
                 |> castError(Error.self))
             }
             
@@ -1103,6 +1109,9 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
                     
                     return items
                 })
+                |> `catch` { _ -> Signal<[Friend], NoError> in
+                    return .single([])
+                }
                 |> castError(Error.self))
             }
             

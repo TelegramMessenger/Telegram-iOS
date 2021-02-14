@@ -1096,6 +1096,7 @@ public final class Transaction {
 public enum PostboxResult {
     case upgrading(Float)
     case postbox(Postbox)
+    case error
 }
 
 func debugSaveState(basePath:String, name: String) {
@@ -1137,9 +1138,12 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             
             let startTime = CFAbsoluteTimeGetCurrent()
             
-            var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+            guard var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                 subscriber.putNext(.upgrading(progress))
-            })
+            }) else {
+                subscriber.putNext(.error)
+                return
+            }
             
             loop: while true {
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
@@ -1150,16 +1154,20 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
                         if isTemporary {
-                            subscriber.putNext(.upgrading(0.0))
+                            subscriber.putNext(.error)
                             return
                         } else {
                             if userVersion > currentUserVersion {
                                 postboxLog("Version \(userVersion) is newer than supported")
                                 assertionFailure("Version \(userVersion) is newer than supported")
                                 valueBox.drop()
-                                valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                     subscriber.putNext(.upgrading(progress))
-                                })
+                                }) else {
+                                    subscriber.putNext(.error)
+                                    return
+                                }
+                                valueBox = updatedValueBox
                             } else {
                                 if let operation = registeredUpgrades()[userVersion] {
                                     switch operation {
@@ -1177,9 +1185,13 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                                 valueBox.internalClose()
                                                 let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
                                                 let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
-                                                valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                                     subscriber.putNext(.upgrading(progress))
-                                                })
+                                                }) else {
+                                                    subscriber.putNext(.error)
+                                                    return
+                                                }
+                                                valueBox = updatedValueBox
                                             }
                                     }
                                     continue loop
@@ -1187,9 +1199,13 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                     assertionFailure("Couldn't find any upgrade for \(userVersion)")
                                     postboxLog("Couldn't find any upgrade for \(userVersion)")
                                     valueBox.drop()
-                                    valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                    guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                         subscriber.putNext(.upgrading(progress))
-                                    })
+                                    }) else {
+                                        subscriber.putNext(.error)
+                                        return
+                                    }
+                                    valueBox = updatedValueBox
                                 }
                             }
                         }
