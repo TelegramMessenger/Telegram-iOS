@@ -187,6 +187,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let botStart: ChatControllerInitialBotStart?
     
     private let peerDisposable = MetaDisposable()
+    private let titleDisposable = MetaDisposable()
     private let navigationActionDisposable = MetaDisposable()
     private var networkStateDisposable: Disposable?
     
@@ -2788,48 +2789,48 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     |> distinctUntilChanged
                 }
-                
-                self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, hasScheduledMessages, self.reportIrrelvantGeoNoticePromise.get(), pinnedCountSignal, self.presentationInterfaceStatePromise.get())
-                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, presentationInterfaceState in
+                                                         
+                self.titleDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, pinnedCountSignal, self.presentationInterfaceStatePromise.get())
+                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, pinnedCount, presentationInterfaceState in
                     if let strongSelf = self {
                         var isScheduledMessages = false
-                        if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
+                        if case .scheduledMessages = presentationInterfaceState.subject {
                             isScheduledMessages = true
                         }
                         
                         if let peer = peerViewMainPeer(peerView) {
                             if let selectionState = presentationInterfaceState.interfaceState.selectionState {
                                 if selectionState.selectedIds.count > 0 {
-                                    strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationData.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
+                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
                                 } else {
                                     if let reportReason = presentationInterfaceState.reportReason {
                                         let title: String
                                         switch reportReason {
                                             case .spam:
-                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonSpam
+                                                title = presentationInterfaceState.strings.ReportPeer_ReasonSpam
                                             case .fake:
-                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonFake
+                                                title = presentationInterfaceState.strings.ReportPeer_ReasonFake
                                             case .violence:
-                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonViolence
+                                                title = presentationInterfaceState.strings.ReportPeer_ReasonViolence
                                             case .porno:
-                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonPornography
+                                                title = presentationInterfaceState.strings.ReportPeer_ReasonPornography
                                             case .childAbuse:
-                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonChildAbuse
+                                                title = presentationInterfaceState.strings.ReportPeer_ReasonChildAbuse
                                             case .copyright:
-                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonCopyright
+                                                title = presentationInterfaceState.strings.ReportPeer_ReasonCopyright
                                             case .custom:
-                                                title = strongSelf.presentationData.strings.ReportPeer_ReasonOther
+                                                title = presentationInterfaceState.strings.ReportPeer_ReasonOther
                                             case .irrelevantLocation:
                                                 title = ""
                                         }
-                                        strongSelf.chatTitleView?.titleContent = .custom(title, strongSelf.presentationInterfaceState.strings.Conversation_SelectMessages, false)
+                                        strongSelf.chatTitleView?.titleContent = .custom(title, presentationInterfaceState.strings.Conversation_SelectMessages, false)
                                     } else {
-                                        strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationInterfaceState.strings.Conversation_SelectMessages, nil, false)
+                                        strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectMessages, nil, false)
                                     }
                                 }
                             } else {
-                                if case .pinnedMessages = strongSelf.presentationInterfaceState.subject {
-                                    strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationData.strings.Chat_TitlePinnedMessages(Int32(pinnedCount ?? 1)), nil, false)
+                                if case .pinnedMessages = presentationInterfaceState.subject {
+                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitlePinnedMessages(Int32(pinnedCount ?? 1)), nil, false)
                                 } else {
                                     strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages)
                                     let imageOverride: AvatarNodeImageOverride?
@@ -2847,7 +2848,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }
-                                                
+                    }
+                }))
+                
+                self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, hasScheduledMessages, self.reportIrrelvantGeoNoticePromise.get(), pinnedCountSignal)
+                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount in
+                    if let strongSelf = self {
                         if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages {
                             return
                         }
@@ -3103,12 +3109,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let peerView = context.account.viewTracker.peerView(peerId)
                 
+                self.titleDisposable.set(nil)
                 self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(),
                     peerView,
-                    messagePromise.get(),
-                    hasScheduledMessages
+                    messagePromise.get()
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] peerView, message, onlineMemberCount in
+                |> deliverOnMainQueue).start(next: { [weak self] peerView, message in
                     if let strongSelf = self {
                         var count = 0
                         if let message = message {
@@ -3583,6 +3589,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.galleryHiddenMesageAndMediaDisposable.dispose()
         self.temporaryHiddenGalleryMediaDisposable.dispose()
         self.peerDisposable.dispose()
+        self.titleDisposable.dispose()
         self.messageContextDisposable.dispose()
         self.controllerNavigationDisposable.dispose()
         self.sentMessageEventsDisposable.dispose()
@@ -7068,7 +7075,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let attributedTitle = NSAttributedString(string: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_Title, font: Font.medium(17.0), textColor: strongSelf.presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
                     let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: strongSelf.presentationData.theme.actionSheet.primaryTextColor)
                     let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: strongSelf.presentationData.theme.actionSheet.primaryTextColor)
-                    let text = strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_Text(presentationStringsFormattedNumber(200000, strongSelf.presentationData.dateTimeFormat.groupingSeparator)).0
+                    
+                    let participantsLimit = strongSelf.context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
+                    let text = strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_Text(presentationStringsFormattedNumber(participantsLimit, strongSelf.presentationData.dateTimeFormat.groupingSeparator)).0
                     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
                     
                     let controller = richTextAlertController(context: strongSelf.context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
