@@ -179,7 +179,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             if self.effectView == nil {
                 let effectView: UIVisualEffectView
                 if #available(iOS 13.0, *) {
-                    if self.presentationData.theme.overallDarkAppearance {
+                    if self.presentationData.theme.rootController.keyboardColor == .dark {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
                     } else {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))

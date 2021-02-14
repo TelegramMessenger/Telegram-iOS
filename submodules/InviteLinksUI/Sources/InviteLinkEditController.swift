@@ -44,7 +44,11 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
     if number.rangeOfCharacter(from: invalidAmountCharacters) != nil || number == "0" {
         return false
     }
-    return true
+    if let _ = Int32(number) {
+        return true
+    } else {
+        return false
+    }
 }
 
 private enum InviteLinksEditEntry: ItemListNodeEntry {
@@ -55,7 +59,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     case timeInfo(PresentationTheme, String)
     
     case usageHeader(PresentationTheme, String)
-    case usagePicker(PresentationTheme, InviteLinkUsageLimit)
+    case usagePicker(PresentationTheme, PresentationDateTimeFormat, InviteLinkUsageLimit)
     case usageCustomPicker(PresentationTheme, Int32?, Bool, Bool)
     case usageInfo(PresentationTheme, String)
     
@@ -135,8 +139,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .usagePicker(lhsTheme, lhsValue):
-                if case let .usagePicker(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+            case let .usagePicker(lhsTheme, lhsDateTimeFormat, lhsValue):
+                if case let .usagePicker(rhsTheme, rhsDateTimeFormat, rhsValue) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -209,8 +213,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .usageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .usagePicker(_, value):
-                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, value: value, enabled: true, sectionId: self.section, updated: { value in
+            case let .usagePicker(_, dateTimeFormat, value):
+                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, value: value, enabled: true, sectionId: self.section, updated: { value in
                     arguments.dismissInput()
                     arguments.updateState({ state in
                         var updatedState = state
@@ -234,7 +238,9 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     }
                     arguments.updateState { state in
                         var updatedState = state
-                        updatedState.usage = InviteLinkUsageLimit(value: Int32(updatedText))
+                        if let value = Int32(updatedText) {
+                            updatedState.usage = InviteLinkUsageLimit(value: value)
+                        }
                         return updatedState
                     }
                 }, shouldUpdateText: { text in
@@ -288,7 +294,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     
     entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
-    entries.append(.usagePicker(presentationData.theme, state.usage))
+    entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage))
     
     var customValue = false
     if case .custom = state.usage {
@@ -358,42 +364,51 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
         guard let invite = invite else {
             return
         }
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationData: presentationData)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                    dismissAction()
-                    dismissImpl?()
-                    
-                    let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
-                    |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
-                    |> deliverOnMainQueue).start(next: { invite in
-                        switch invite {
-                        case .none:
-                            completion?(nil)
-                        case let .update(invitation):
-                            completion?(invitation)
-                        case let .replace(_, invitation):
-                            completion?(invitation)
-                        }
-                    }, error: { _ in
-                        updateState { state in
-                            var updatedState = state
-                            updatedState.updating = false
-                            return updatedState
-                        }
-                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+        |> deliverOnMainQueue).start(next: { peer in
+            let isGroup: Bool
+            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                isGroup = false
+            } else {
+                isGroup = true
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationData: presentationData)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                        dismissAction()
+                        dismissImpl?()
+                        
+                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
+                        |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                        |> deliverOnMainQueue).start(next: { invite in
+                            switch invite {
+                            case .none:
+                                completion?(nil)
+                            case let .update(invitation):
+                                completion?(invitation)
+                            case let .replace(_, invitation):
+                                completion?(invitation)
+                            }
+                        }, error: { _ in
+                            updateState { state in
+                                var updatedState = state
+                                updatedState.updating = false
+                                return updatedState
+                            }
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        })
                     })
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, nil)
+                ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            presentControllerImpl?(controller, nil)
+        })
     })
     
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramStringFormatting
 import SegmentedControlNode
+import DirectionalPanGesture
 
 public final class DatePickerTheme: Equatable {
     public let backgroundColor: UIColor
@@ -69,7 +70,11 @@ private let dayFont = Font.regular(13.0)
 private let dateFont = Font.with(size: 17.0, design: .regular, traits: .monospacedNumbers)
 private let selectedDateFont = Font.with(size: 17.0, design: .regular, traits: [.bold, .monospacedNumbers])
 
-private let calendar = Calendar(identifier: .gregorian)
+private var calendar: Calendar = {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.locale = Locale.current
+    return calendar
+}()
 
 private func monthForDate(_ date: Date) -> Date {
     var components = calendar.dateComponents([.year, .month], from: date)
@@ -300,9 +305,6 @@ public final class DatePickerNode: ASDisplayNode {
     
     private var transitionFraction: CGFloat = 0.0
     
-    private var gestureRecognizer: UIPanGestureRecognizer?
-    private var gestureSelectedIndex: Int?
-    
     private var validLayout: CGSize?
     
     public var valueUpdated: ((Date) -> Void)?
@@ -479,7 +481,10 @@ public final class DatePickerNode: ASDisplayNode {
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        self.contentNode.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        let panGesture = DirectionalPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        panGesture.direction = .horizontal
+        
+        self.contentNode.view.addGestureRecognizer(panGesture)
         self.contentNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
@@ -499,6 +504,7 @@ public final class DatePickerNode: ASDisplayNode {
             }
         }
         self.pickerNode.date = self.state.date
+        self.timePickerNode.date = self.state.date
         
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .spring) : .immediate)
@@ -714,15 +720,17 @@ public final class DatePickerNode: ASDisplayNode {
         let daysSideInset: CGFloat = 12.0
         let cellSize: CGFloat = floor((size.width - daysSideInset * 2.0) / 7.0)
         
+        var dayIndex: Int32 = Int32(calendar.firstWeekday) - 1
         for i in 0 ..< self.dayNodes.count {
             let dayNode = self.dayNodes[i]
-            dayNode.attributedText = NSAttributedString(string: shortStringForDayOfWeek(strings: self.strings, day: Int32(i)).uppercased(), font: dayFont, textColor: theme.secondaryTextColor)
+            dayNode.attributedText = NSAttributedString(string: shortStringForDayOfWeek(strings: self.strings, day: dayIndex % 7).uppercased(), font: dayFont, textColor: theme.secondaryTextColor)
             
             let textSize = dayNode.updateLayout(size)
             let cellFrame = CGRect(x: daysSideInset + CGFloat(i) * cellSize, y: topInset - 38.0, width: cellSize, height: cellSize)
             let textFrame = CGRect(origin: CGPoint(x: cellFrame.minX + floor((cellFrame.width - textSize.width) / 2.0), y: cellFrame.minY + floor((cellFrame.height - textSize.height) / 2.0)), size: textSize)
             
             dayNode.frame = textFrame
+            dayIndex += 1
         }
         
         let containerSize = CGSize(width: size.width, height: size.height - topInset)
@@ -887,19 +895,123 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
     }
 }
 
+private class TimeInputView: UIView, UIKeyInput {
+    override var canBecomeFirstResponder: Bool {
+        return true
+    }
+    
+    var keyboardType: UIKeyboardType = .numberPad
+    
+    var text: String = ""
+    var hasText: Bool {
+        return !self.text.isEmpty
+    }
+    
+    var textUpdated: ((String) -> Void)?
+    
+    private let nonDigits = CharacterSet.decimalDigits.inverted
+    func insertText(_ text: String) {
+        if text.rangeOfCharacter(from: nonDigits) != nil {
+            return
+        }
+        var updatedText = self.text
+        updatedText.append(updatedText)
+        updatedText = String(updatedText.suffix(4))
+        self.text = updatedText
+        self.textUpdated?(self.text)
+    }
+    
+    func deleteBackward() {
+        var updatedText = self.text
+        updatedText.removeLast()
+        self.text = updatedText
+        self.textUpdated?(self.text)
+    }
+}
+
+private class TimeInputNode: ASDisplayNode {
+    var textUpdated: ((String) -> Void)? {
+        didSet {
+            if let view = self.view as? TimeInputView {
+                view.textUpdated = self.textUpdated
+            }
+        }
+    }
+    
+    override init() {
+        super.init()
+        
+        self.setViewBlock { () -> UIView in
+            return TimeInputView()
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap)))
+       
+        if let view = self.view as? TimeInputView {
+            view.textUpdated = self.textUpdated
+        }
+    }
+    
+    @objc private func handleTap() {
+        self.view.becomeFirstResponder()
+    }
+}
+
+public func stringTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    switch dateTimeFormat.timeFormat {
+    case .regular:
+        let hourString: String
+        if hours == 0 {
+            hourString = "12"
+        } else if hours > 12 {
+            hourString = "\(hours - 12)"
+        } else {
+            hourString = "\(hours)"
+        }
+        
+        let periodString: String
+        if hours >= 12 {
+            periodString = "PM"
+        } else {
+            periodString = "AM"
+        }
+        if minutes >= 10 {
+            return "\(hourString) \(minutes) \(periodString)"
+        } else {
+            return "\(hourString):0\(minutes) \(periodString)"
+        }
+    case .military:
+        return String(format: "%02d %02d", arguments: [Int(hours), Int(minutes)])
+    }
+}
+
 private final class TimePickerNode: ASDisplayNode {
     private var theme: DatePickerTheme
     private let dateTimeFormat: PresentationDateTimeFormat
     
     private let backgroundNode: ASDisplayNode
     private let textNode: ImmediateTextNode
+    private let colonNode: ImmediateTextNode
+    private let inputNode: TimeInputNode
     private let amPMSelectorNode: SegmentedControlNode
     
-    var date: Date
+    var date: Date {
+        didSet {
+            if let size = self.validLayout {
+                self.updateLayout(size: size)
+            }
+        }
+    }
     var minDate: Date?
     var maxDate: Date?
     
     var valueChanged: ((Date) -> Void)?
+    
+    private var validLayout: CGSize?
     
     init(theme: DatePickerTheme, dateTimeFormat: PresentationDateTimeFormat, date: Date) {
         self.theme = theme
@@ -911,6 +1023,8 @@ private final class TimePickerNode: ASDisplayNode {
         self.backgroundNode.cornerRadius = 9.0
         
         self.textNode = ImmediateTextNode()
+        self.colonNode = ImmediateTextNode()
+        self.inputNode = TimeInputNode()
         
         let hours = calendar.component(.hour, from: date)
         
@@ -920,6 +1034,8 @@ private final class TimePickerNode: ASDisplayNode {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.textNode)
+//        self.addSubnode(self.colonNode)
+//        self.addSubnode(self.inputNode)
         self.addSubnode(self.amPMSelectorNode)
         
         self.amPMSelectorNode.selectedIndexChanged = { index in
@@ -933,6 +1049,10 @@ private final class TimePickerNode: ASDisplayNode {
             if let newDate = calendar.date(from: components) {
                 self.valueChanged?(newDate)
             }
+        }
+        
+        self.inputNode.textUpdated = { text in
+            
         }
     }
     
@@ -950,10 +1070,18 @@ private final class TimePickerNode: ASDisplayNode {
         let hours = Int32(calendar.component(.hour, from: self.date))
         let minutes = Int32(calendar.component(.hour, from: self.date))
         let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: self.dateTimeFormat).replacingOccurrences(of: " AM", with: "").replacingOccurrences(of: " PM", with: "")
-        
+            
         self.textNode.attributedText = NSAttributedString(string: string, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: self.theme.textColor)
+        
+        self.colonNode.attributedText = NSAttributedString(string: ":", font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: self.theme.textColor)
+        
         let textSize = self.textNode.updateLayout(size)
         self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - textSize.width) / 2.0), y: floorToScreenPixels((self.backgroundNode.frame.height - textSize.height) / 2.0)), size: textSize)
+        
+        let colonSize = self.colonNode.updateLayout(size)
+        self.colonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - colonSize.width) / 2.0) - 7.0, y: floorToScreenPixels((self.backgroundNode.frame.height - colonSize.height) / 2.0) - 2.0), size: colonSize)
+        
+        self.inputNode.frame = self.backgroundNode.frame
         
         if self.dateTimeFormat.timeFormat == .military {
             contentSize = self.backgroundNode.frame.size

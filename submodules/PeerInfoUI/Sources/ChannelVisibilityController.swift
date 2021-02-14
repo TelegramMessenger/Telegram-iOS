@@ -988,50 +988,60 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         }, action: { _, f in
             f(.dismissWithoutContent)
         
-            let controller = ActionSheetController(presentationData: presentationData)
-            let dismissAction: () -> Void = { [weak controller] in
-                controller?.dismissAnimated()
-            }
-            controller.setItemGroups([
-                ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                        dismissAction()
-                        
-                        let _ = (context.account.postbox.transaction { transaction -> String? in
-                            if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                                if let cachedData = cachedData as? CachedChannelData {
-                                    return cachedData.exportedInvitation?.link
-                                } else if let cachedData = cachedData as? CachedGroupData {
-                                    return cachedData.exportedInvitation?.link
-                                }
-                            }
-                            return nil
-                        } |> deliverOnMainQueue).start(next: { link in
-                            if let link = link {
-                                var revoke = false
-                                updateState { state in
-                                    if !state.revokingPrivateLink {
-                                        revoke = true
-                                        return state.withUpdatedRevokingPrivateLink(true)
-                                    } else {
-                                        return state
+            let _ = (context.account.postbox.loadedPeerWithId(peerId)
+            |> deliverOnMainQueue).start(next: { peer in
+                let isGroup: Bool
+                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    isGroup = false
+                } else {
+                    isGroup = true
+                }
+                
+                let controller = ActionSheetController(presentationData: presentationData)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                        ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                            dismissAction()
+                            
+                            let _ = (context.account.postbox.transaction { transaction -> String? in
+                                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
+                                    if let cachedData = cachedData as? CachedChannelData {
+                                        return cachedData.exportedInvitation?.link
+                                    } else if let cachedData = cachedData as? CachedGroupData {
+                                        return cachedData.exportedInvitation?.link
                                     }
                                 }
-                                if revoke {
-                                    revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
-                                        updateState {
-                                            $0.withUpdatedRevokingPrivateLink(false)
+                                return nil
+                            } |> deliverOnMainQueue).start(next: { link in
+                                if let link = link {
+                                    var revoke = false
+                                    updateState { state in
+                                        if !state.revokingPrivateLink {
+                                            revoke = true
+                                            return state.withUpdatedRevokingPrivateLink(true)
+                                        } else {
+                                            return state
                                         }
-                                    }))
+                                    }
+                                    if revoke {
+                                        revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
+                                            updateState {
+                                                $0.withUpdatedRevokingPrivateLink(false)
+                                            }
+                                        }))
+                                    }
                                 }
-                            }
+                            })
                         })
-                    })
-                ]),
-                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    ]),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            })
         })))
 
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: nil)

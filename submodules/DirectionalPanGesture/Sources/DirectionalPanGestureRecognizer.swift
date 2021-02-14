@@ -2,10 +2,17 @@ import Foundation
 import UIKit
 
 public class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
+    public enum Direction {
+        case horizontal
+        case vertical
+    }
+    
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
     
     public var shouldBegin: ((CGPoint) -> Bool)?
+    
+    public var direction: Direction = .vertical
     
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
@@ -46,10 +53,19 @@ public class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
         let absTranslationY: CGFloat = abs(translation.y)
         
         if !self.validatedGesture {
-            if absTranslationX > 4.0 && absTranslationX > absTranslationY * 2.0 {
-                self.state = .failed
-            } else if absTranslationY > 2.0 && absTranslationX * 2.0 < absTranslationY {
-                self.validatedGesture = true
+            switch self.direction {
+                case .horizontal:
+                    if absTranslationY > 4.0 && absTranslationY > absTranslationX * 2.0 {
+                        self.state = .failed
+                    } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                        self.validatedGesture = true
+                    }
+                case .vertical:
+                    if absTranslationX > 4.0 && absTranslationX > absTranslationY * 2.0 {
+                        self.state = .failed
+                    } else if absTranslationY > 2.0 && absTranslationX * 2.0 < absTranslationY {
+                        self.validatedGesture = true
+                    }
             }
         }
         

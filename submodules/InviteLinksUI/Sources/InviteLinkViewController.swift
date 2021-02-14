@@ -511,26 +511,35 @@ public final class InviteLinkViewController: ViewController {
                     }, action: { [weak self] _, f in
                         f(.dismissWithoutContent)
                         
-                        let controller = ActionSheetController(presentationData: presentationData)
-                        let dismissAction: () -> Void = { [weak controller] in
-                            controller?.dismissAnimated()
-                        }
-                        controller.setItemGroups([
-                            ActionSheetItemGroup(items: [
-                                ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                                ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                                    dismissAction()
-                                    self?.controller?.dismiss()
+                        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                        |> deliverOnMainQueue).start(next: { peer in
+                            let isGroup: Bool
+                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                isGroup = false
+                            } else {
+                                isGroup = true
+                            }
+                            let controller = ActionSheetController(presentationData: presentationData)
+                            let dismissAction: () -> Void = { [weak controller] in
+                                controller?.dismissAnimated()
+                            }
+                            controller.setItemGroups([
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                                        dismissAction()
+                                        self?.controller?.dismiss()
 
-                                    let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                        })
+                                        
+                                        self?.controller?.revokedInvitationsContext?.remove(invite)
                                     })
-                                    
-                                    self?.controller?.revokedInvitationsContext?.remove(invite)
-                                })
-                            ]),
-                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                        ])
-                        self?.controller?.present(controller, in: .window(.root))
+                                ]),
+                                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                            ])
+                            self?.controller?.present(controller, in: .window(.root))
+                        })
                     })))
                 }
                            

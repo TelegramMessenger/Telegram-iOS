@@ -41,6 +41,11 @@ public final class InviteLinkQRCodeController: ViewController {
 
     private var presentationDataDisposable: Disposable?
     
+    private var initialBrightness: CGFloat?
+    private var brightnessArguments: (Double, Double, CGFloat, CGFloat)?
+    
+    private var animator: ConstantDisplayLinkAnimator?
+    
     private let idleTimerExtensionDisposable = MetaDisposable()
     
     public init(context: AccountContext, invite: ExportedInvitation, isGroup: Bool) {
@@ -64,6 +69,11 @@ public final class InviteLinkQRCodeController: ViewController {
         self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+            self?.updateBrightness()
+        })
+        self.animator?.isPaused = true
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -73,6 +83,7 @@ public final class InviteLinkQRCodeController: ViewController {
     deinit {
         self.presentationDataDisposable?.dispose()
         self.idleTimerExtensionDisposable.dispose()
+        self.animator?.invalidate()
     }
     
     override public func loadDisplayNode() {
@@ -85,20 +96,43 @@ public final class InviteLinkQRCodeController: ViewController {
         }
     }
     
-    override public func loadView() {
-        super.loadView()
-    }
-    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if !self.animatedIn {
             self.animatedIn = true
             self.controllerNode.animateIn()
+            
+            self.initialBrightness = UIScreen.main.brightness
+            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, 1.0)
+            self.updateBrightness()
+        }
+    }
+    
+    private func updateBrightness() {
+        if let (startTime, duration, initial, target) = self.brightnessArguments {
+            self.animator?.isPaused = false
+            
+            let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
+            let value = initial + (target - initial) * t
+            
+            UIScreen.main.brightness = value
+            
+            if t >= 1.0 {
+                self.brightnessArguments = nil
+                self.animator?.isPaused = true
+            }
+        } else {
+            self.animator?.isPaused = true
         }
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        if UIScreen.main.brightness > 0.99, let initialBrightness = self.initialBrightness {
+            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, initialBrightness)
+            self.updateBrightness()
+        }
+        
         self.controllerNode.animateOut(completion: completion)
     }
     
@@ -344,7 +378,7 @@ public final class InviteLinkQRCodeController: ViewController {
             self.containerLayout = (layout, navigationBarHeight)
             
             var insets = layout.insets(options: [.statusBar, .input])
-            insets.top = max(10.0, insets.top)
+            insets.top = 48.0
             
             let makeImageLayout = self.qrImageNode.asyncLayout()
             let imageSide: CGFloat = 240.0

@@ -6077,3 +6077,5 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.MessageChangedAutoremoveTimeoutSet" = "%1$@ set auto-remove timer to %2$@";
 "Channel.AdminLog.MessageChangedAutoremoveTimeoutRemove" = "%1$@ disabled auto-remove timer";
+
+"ChannelInfo.InviteLink.RevokeAlert.Text" = "Are you sure you want to revoke this link? Once you do, no one will be able to join the channel using it.";
