@@ -297,7 +297,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         mainInvite = nil
     }
     
-    entries.append(.mainLinkHeader(presentationData.theme, isPublic ? presentationData.strings.InviteLink_PublicLink.uppercased() : presentationData.strings.InviteLink_PermanentLink.uppercased()))
+    entries.append(.mainLinkHeader(presentationData.theme, isPublic ? presentationData.strings.InviteLink_PublicLink.uppercased() : presentationData.strings.InviteLink_InviteLink.uppercased()))
     
     let importersCount: Int32
     if let count = importers?.count {

@@ -89,14 +89,16 @@ enum InviteLinkUsageLimit: Equatable {
 final class ItemListInviteLinkUsageLimitItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let value: InviteLinkUsageLimit
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (InviteLinkUsageLimit) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, value: InviteLinkUsageLimit, enabled: Bool, sectionId: ItemListSectionId, updated: @escaping (InviteLinkUsageLimit) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, value: InviteLinkUsageLimit, enabled: Bool, sectionId: ItemListSectionId, updated: @escaping (InviteLinkUsageLimit) -> Void) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.value = value
         self.enabled = enabled
         self.sectionId = sectionId
@@ -285,7 +287,7 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
             
             let customTextString: String
             if case let .custom(value) = item.value {
-                customTextString = "\(value)"
+                customTextString = compactNumericCountString(Int(value), decimalSeparator: item.dateTimeFormat.decimalSeparator)
             } else {
                 customTextString = ""
             }

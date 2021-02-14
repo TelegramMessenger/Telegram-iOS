@@ -44,7 +44,11 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
     if number.rangeOfCharacter(from: invalidAmountCharacters) != nil || number == "0" {
         return false
     }
-    return true
+    if let _ = Int32(number) {
+        return true
+    } else {
+        return false
+    }
 }
 
 private enum InviteLinksEditEntry: ItemListNodeEntry {
@@ -55,7 +59,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     case timeInfo(PresentationTheme, String)
     
     case usageHeader(PresentationTheme, String)
-    case usagePicker(PresentationTheme, InviteLinkUsageLimit)
+    case usagePicker(PresentationTheme, PresentationDateTimeFormat, InviteLinkUsageLimit)
     case usageCustomPicker(PresentationTheme, Int32?, Bool, Bool)
     case usageInfo(PresentationTheme, String)
     
@@ -135,8 +139,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .usagePicker(lhsTheme, lhsValue):
-                if case let .usagePicker(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+            case let .usagePicker(lhsTheme, lhsDateTimeFormat, lhsValue):
+                if case let .usagePicker(rhsTheme, rhsDateTimeFormat, rhsValue) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -209,8 +213,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .usageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .usagePicker(_, value):
-                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, value: value, enabled: true, sectionId: self.section, updated: { value in
+            case let .usagePicker(_, dateTimeFormat, value):
+                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, value: value, enabled: true, sectionId: self.section, updated: { value in
                     arguments.dismissInput()
                     arguments.updateState({ state in
                         var updatedState = state
@@ -234,7 +238,9 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     }
                     arguments.updateState { state in
                         var updatedState = state
-                        updatedState.usage = InviteLinkUsageLimit(value: Int32(updatedText))
+                        if let value = Int32(updatedText) {
+                            updatedState.usage = InviteLinkUsageLimit(value: value)
+                        }
                         return updatedState
                     }
                 }, shouldUpdateText: { text in
@@ -288,7 +294,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     
     entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
-    entries.append(.usagePicker(presentationData.theme, state.usage))
+    entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage))
     
     var customValue = false
     if case .custom = state.usage {
