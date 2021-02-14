@@ -1111,8 +1111,8 @@ func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?)
                 return true
             }
             return false
-        } else {
-            return false
+        } else if !peer.hasBannedPermission(.banChangeInfo) {
+            return true
         }
     }
     return false
