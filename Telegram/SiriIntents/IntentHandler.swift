@@ -56,7 +56,7 @@ enum IntentHandlingError {
 @objc(IntentHandler)
 class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling {
     private let accountPromise = Promise<Account?>()
-    private let allAccounts = Promise<[(AccountRecordId, PeerId)]>()
+    private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
     
     private let resolvePersonsDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
@@ -114,8 +114,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         
         self.allAccounts.set(accountManager.accountRecords()
         |> take(1)
-        |> map { view -> [(AccountRecordId, PeerId)] in
-            var result: [(AccountRecordId, Int, PeerId)] = []
+        |> map { view -> [(AccountRecordId, PeerId, Bool)] in
+            var result: [(AccountRecordId, Int, PeerId, Bool)] = []
             for record in view.records {
                 let isLoggedOut = record.attributes.contains(where: { attribute in
                     return attribute is LoggedOutAccountAttribute
@@ -140,7 +140,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     }
                 }
                 if let backupData = backupData {
-                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId)))
+                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentRecord?.id == record.id))
                 }
             }
             result.sort(by: { lhs, rhs in
@@ -150,8 +150,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     return lhs.0 < rhs.0
                 }
             })
-            return result.map { record -> (AccountRecordId, PeerId) in
-                return (record.0, record.2)
+            return result.map { record -> (AccountRecordId, PeerId, Bool) in
+                return (record.0, record.2, record.3)
             }
         })
         
@@ -768,15 +768,13 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             return
         }
         
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
-            if state.isManuallyLocked || state.autolockTimeout != nil {
-                let error = NSError(domain: "Locked", code: 1, userInfo: [
-                    NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
-                ])
-                
-                completion(nil, error)
-                return
-            }
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            let error = NSError(domain: "Locked", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
+            ])
+            
+            completion(nil, error)
+            return
         }
         
         self.searchDisposable.set((self.allAccounts.get()
@@ -785,7 +783,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> mapToSignal { accounts -> Signal<INObjectCollection<Friend>, Error> in
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
-            for (accountId, accountPeerId) in accounts {
+            for (accountId, accountPeerId, _) in accounts {
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
@@ -818,21 +816,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                         }
                     }
                     
-                    var items: [Friend] = []
-                    for peer in peers {
-                        let path = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                            return postbox.mediaBox.resourcePath(representation.resource)
-                        }
-                        
-                        let profileImage: INImage?
-                        let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
-                        if let data = image.pngData() {
-                            profileImage = INImage(imageData: data)
-                        } else {
-                            profileImage = nil
-                        }
-                        items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: profileImage))
-                    }
+                    let items = mapPeersToFriends(accountId: accountId, accountPeerId: accountPeerId, mediaBox: postbox.mediaBox, peers: peers)
                     
                     return INObjectSection<Friend>(title: accountTitle, items: items)
                 })
@@ -862,7 +846,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
 @objc(AvatarsIntentHandler)
 class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
     private let accountPromise = Promise<Account?>()
-    private let allAccounts = Promise<[(AccountRecordId, PeerId)]>()
+    private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
     
     private let resolvePersonsDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
@@ -920,8 +904,8 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
         
         self.allAccounts.set(accountManager.accountRecords()
         |> take(1)
-        |> map { view -> [(AccountRecordId, PeerId)] in
-            var result: [(AccountRecordId, Int, PeerId)] = []
+        |> map { view -> [(AccountRecordId, PeerId, Bool)] in
+            var result: [(AccountRecordId, Int, PeerId, Bool)] = []
             for record in view.records {
                 let isLoggedOut = record.attributes.contains(where: { attribute in
                     return attribute is LoggedOutAccountAttribute
@@ -946,7 +930,7 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
                     }
                 }
                 if let backupData = backupData {
-                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId)))
+                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentRecord?.id == record.id))
                 }
             }
             result.sort(by: { lhs, rhs in
@@ -956,8 +940,8 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
                     return lhs.0 < rhs.0
                 }
             })
-            return result.map { record -> (AccountRecordId, PeerId) in
-                return (record.0, record.2)
+            return result.map { record -> (AccountRecordId, PeerId, Bool) in
+                return (record.0, record.2, record.3)
             }
         })
         
@@ -1007,15 +991,13 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
             return
         }
         
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
-            if state.isManuallyLocked || state.autolockTimeout != nil {
-                let error = NSError(domain: "Locked", code: 1, userInfo: [
-                    NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
-                ])
-                
-                completion(nil, error)
-                return
-            }
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            let error = NSError(domain: "Locked", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
+            ])
+            
+            completion(nil, error)
+            return
         }
         
         self.searchDisposable.set((self.allAccounts.get()
@@ -1024,7 +1006,7 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
         |> mapToSignal { accounts -> Signal<INObjectCollection<Friend>, Error> in
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
-            for (accountId, accountPeerId) in accounts {
+            for (accountId, accountPeerId, _) in accounts {
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
@@ -1057,21 +1039,7 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
                         }
                     }
                     
-                    var items: [Friend] = []
-                    for peer in peers {
-                        let path = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                            return postbox.mediaBox.resourcePath(representation.resource)
-                        }
-                        
-                        let profileImage: INImage?
-                        let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
-                        if let data = image.pngData() {
-                            profileImage = INImage(imageData: data)
-                        } else {
-                            profileImage = nil
-                        }
-                        items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: profileImage))
-                    }
+                    let items = mapPeersToFriends(accountId: accountId, accountPeerId: accountPeerId, mediaBox: postbox.mediaBox, peers: peers)
                     
                     return INObjectSection<Friend>(title: accountTitle, items: items)
                 })
@@ -1094,6 +1062,72 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
         }, error: { error in
             completion(nil, error)
         }))
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func defaultFriends(for intent: SelectAvatarFriendsIntent) -> [Friend]? {
+        guard let rootPath = self.rootPath, let _ = self.accountManager, let encryptionParameters = self.encryptionParameters else {
+            return []
+        }
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            return []
+        }
+        
+        var resultItems: [Friend] = []
+        
+        let semaphore: DispatchSemaphore = DispatchSemaphore(value: 0)
+        let _ = ((self.allAccounts.get()
+        |> castError(Error.self)
+        |> take(1)
+        |> mapToSignal { accounts -> Signal<[Friend], Error> in
+            var accountResults: [Signal<[Friend], Error>] = []
+            
+            for (accountId, accountPeerId, isActive) in accounts {
+                if !isActive {
+                    continue
+                }
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> [Friend] in
+                    var peers: [Peer] = []
+                    
+                    for id in getRecentPeers(transaction: transaction) {
+                        if let peer = transaction.getPeer(id), !(peer is TelegramSecretChat), !peer.isDeleted {
+                            peers.append(peer)
+                        }
+                        if peers.count >= 8 {
+                            break
+                        }
+                    }
+                    
+                    let items = mapPeersToFriends(accountId: accountId, accountPeerId: accountPeerId, mediaBox: postbox.mediaBox, peers: peers)
+                    
+                    return items
+                })
+                |> castError(Error.self))
+            }
+            
+            return combineLatest(accountResults)
+            |> map { accountResults -> [Friend] in
+                var combinedResult: [Friend] = []
+                for result in accountResults {
+                    combinedResult.append(contentsOf: result)
+                }
+                return combinedResult
+            }
+        }).start(next: { result in
+            resultItems = result
+            semaphore.signal()
+        }, error: { error in
+            semaphore.signal()
+        }))
+        
+        semaphore.wait()
+        
+        if resultItems.count > 8 {
+            resultItems = Array(resultItems.dropLast(resultItems.count - 8))
+        }
+        
+        return resultItems
     }
 }
 
@@ -1141,7 +1175,7 @@ private let gradientColors: [NSArray] = [
 ]
 
 private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: Int64, letters: [String]) -> UIImage? {
-    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
     let context = UIGraphicsGetCurrentContext()
     
     context?.beginPath()
@@ -1188,4 +1222,58 @@ private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, let
     } else {
         return avatarViewLettersImage(size: size, peerId: peerId, accountPeerId: accountPeerId, letters: letters)!
     }
+}
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
+private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId, mediaBox: MediaBox, peers: [Peer]) -> [Friend] {
+    var items: [Friend] = []
+    for peer in peers {
+        autoreleasepool {
+            var profileImage: INImage?
+            
+            if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
+                let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.uniqueId, representationId: "intents.png", keepDuration: .shortLived)
+                if let _ = fileSize(cachedPath) {
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                } else {
+                    let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                    if let data = image.pngData() {
+                        let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+                    }
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                }
+            }
+            if profileImage == nil {
+                let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
+                if let _ = fileSize(cachedPath) {
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                } else {
+                    let image = avatarImage(path: nil, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                    if let data = image.pngData() {
+                        let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+                    }
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                }
+            }
+            
+            items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: profileImage))
+        }
+    }
+    return items
 }
