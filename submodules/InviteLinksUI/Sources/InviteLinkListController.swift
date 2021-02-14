@@ -563,35 +563,37 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         })))
         
         if !invite.isRevoked {
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextShare, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
-                f(.default)
-            
-                let shareController = ShareController(context: context, subject: .url(invite.link))
-                presentControllerImpl?(shareController, nil)
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
-                f(.default)
+            if !invitationAvailability(invite).isZero {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextShare, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
                 
-                let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                |> deliverOnMainQueue).start(next: { peer in
-                    let isGroup: Bool
-                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                        isGroup = false
-                    } else {
-                        isGroup = true
-                    }
-                    Queue.mainQueue().after(0.2) {
-                        let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
-                        presentControllerImpl?(controller, nil)
-                    }
-                })
-            })))
-        
+                    let shareController = ShareController(context: context, subject: .url(invite.link))
+                    presentControllerImpl?(shareController, nil)
+                })))
+                
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
+                    
+                    let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        let isGroup: Bool
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            isGroup = false
+                        } else {
+                            isGroup = true
+                        }
+                        Queue.mainQueue().after(0.2) {
+                            let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
+                            presentControllerImpl?(controller, nil)
+                        }
+                    })
+                })))
+            }
+            
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in

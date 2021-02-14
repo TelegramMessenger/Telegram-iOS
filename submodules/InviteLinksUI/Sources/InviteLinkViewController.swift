@@ -487,23 +487,25 @@ public final class InviteLinkViewController: ViewController {
                         self?.controller?.present(controller, in: .window(.root))
                     })))
                 } else {
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.dismissWithoutContent)
-                        
-                        let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                        |> deliverOnMainQueue).start(next: { [weak self] peer in
-                            let isGroup: Bool
-                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                isGroup = false
-                            } else {
-                                isGroup = true
-                            }
-                            let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
-                            self?.controller?.present(controller, in: .window(.root))
-                        })
-                    })))
+                    if !invitationAvailability(invite).isZero {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                let isGroup: Bool
+                                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                    isGroup = false
+                                } else {
+                                    isGroup = true
+                                }
+                                let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
+                                self?.controller?.present(controller, in: .window(.root))
+                            })
+                        })))
+                    }
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { [weak self] _, f in
