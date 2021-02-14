@@ -12,6 +12,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
+        "//submodules/DirectionalPanGesture:DirectionalPanGesture",
     ],
     visibility = [
         "//visibility:public",

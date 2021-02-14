@@ -71,7 +71,7 @@ public final class PermissionContentNode: ASDisplayNode {
         if case let .animation(animation) = icon {
             self.animationNode = AnimatedStickerNode()
             if let path = getAppBundle().path(forResource: animation, ofType: "tgs") {
-                self.animationNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 320, height: 320, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                self.animationNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 320, height: 320, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 self.animationNode?.visibility = true
             }
             self.nearbyIconNode = nil

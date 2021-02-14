@@ -364,42 +364,51 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
         guard let invite = invite else {
             return
         }
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationData: presentationData)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                    dismissAction()
-                    dismissImpl?()
-                    
-                    let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
-                    |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
-                    |> deliverOnMainQueue).start(next: { invite in
-                        switch invite {
-                        case .none:
-                            completion?(nil)
-                        case let .update(invitation):
-                            completion?(invitation)
-                        case let .replace(_, invitation):
-                            completion?(invitation)
-                        }
-                    }, error: { _ in
-                        updateState { state in
-                            var updatedState = state
-                            updatedState.updating = false
-                            return updatedState
-                        }
-                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+        |> deliverOnMainQueue).start(next: { peer in
+            let isGroup: Bool
+            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                isGroup = false
+            } else {
+                isGroup = true
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationData: presentationData)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                        dismissAction()
+                        dismissImpl?()
+                        
+                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
+                        |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                        |> deliverOnMainQueue).start(next: { invite in
+                            switch invite {
+                            case .none:
+                                completion?(nil)
+                            case let .update(invitation):
+                                completion?(invitation)
+                            case let .replace(_, invitation):
+                                completion?(invitation)
+                            }
+                        }, error: { _ in
+                            updateState { state in
+                                var updatedState = state
+                                updatedState.updating = false
+                                return updatedState
+                            }
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        })
                     })
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, nil)
+                ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            presentControllerImpl?(controller, nil)
+        })
     })
     
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)

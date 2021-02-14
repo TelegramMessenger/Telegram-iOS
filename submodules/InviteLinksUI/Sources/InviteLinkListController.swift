@@ -476,53 +476,63 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { _, f in
                 f(.dismissWithoutContent)
-            
-                let controller = ActionSheetController(presentationData: presentationData)
-                let dismissAction: () -> Void = { [weak controller] in
-                    controller?.dismissAnimated()
-                }
-                controller.setItemGroups([
-                    ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                        ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                            dismissAction()
-                            
-                            var revoke = false
-                            updateState { state in
-                                if !state.revokingPrivateLink {
-                                    revoke = true
-                                    var updatedState = state
-                                    updatedState.revokingPrivateLink = true
-                                    return updatedState
-                                } else {
-                                    return state
-                                }
-                            }
-                            if revoke {
-                                revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
-                                    updateState { state in
+                
+                let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                |> deliverOnMainQueue).start(next: { peer in
+                    let isGroup: Bool
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        isGroup = false
+                    } else {
+                        isGroup = true
+                    }
+
+                    let controller = ActionSheetController(presentationData: presentationData)
+                    let dismissAction: () -> Void = { [weak controller] in
+                        controller?.dismissAnimated()
+                    }
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                            ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                                dismissAction()
+                                
+                                var revoke = false
+                                updateState { state in
+                                    if !state.revokingPrivateLink {
+                                        revoke = true
                                         var updatedState = state
-                                        updatedState.revokingPrivateLink = false
+                                        updatedState.revokingPrivateLink = true
                                         return updatedState
+                                    } else {
+                                        return state
                                     }
-                                    if let result = result {
-                                        switch result {
-                                            case let .update(newInvite):
-                                                invitesContext.remove(newInvite)
-                                                revokedInvitesContext.add(newInvite)
-                                            case let .replace(previousInvite, newInvite):
-                                                revokedInvitesContext.add(previousInvite)
-                                                invitesContext.remove(previousInvite)
-                                                invitesContext.add(newInvite)
+                                }
+                                if revoke {
+                                    revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                        updateState { state in
+                                            var updatedState = state
+                                            updatedState.revokingPrivateLink = false
+                                            return updatedState
                                         }
-                                    }
-                                }))
-                            }
-                        })
-                    ]),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                ])
-                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        if let result = result {
+                                            switch result {
+                                                case let .update(newInvite):
+                                                    invitesContext.remove(newInvite)
+                                                    revokedInvitesContext.add(newInvite)
+                                                case let .replace(previousInvite, newInvite):
+                                                    revokedInvitesContext.add(previousInvite)
+                                                    invitesContext.remove(previousInvite)
+                                                    invitesContext.add(newInvite)
+                                            }
+                                        }
+                                    }))
+                                }
+                            })
+                        ]),
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                })
             })))
         }
 
@@ -646,27 +656,36 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             }, action: { _, f in
                 f(.default)
             
-                let controller = ActionSheetController(presentationData: presentationData)
-                let dismissAction: () -> Void = { [weak controller] in
-                    controller?.dismissAnimated()
-                }
-                controller.setItemGroups([
-                    ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                        ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                            dismissAction()
-                            
-                            revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                |> deliverOnMainQueue).start(next: { peer in
+                    let isGroup: Bool
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        isGroup = false
+                    } else {
+                        isGroup = true
+                    }
+                    let controller = ActionSheetController(presentationData: presentationData)
+                    let dismissAction: () -> Void = { [weak controller] in
+                        controller?.dismissAnimated()
+                    }
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                            ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                                dismissAction()
+                                
+                                revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
 
-                            }))
-                            
-                            invitesContext.remove(invite)
-                            revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
-                        })
-                    ]),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                ])
-                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                }))
+                                
+                                invitesContext.remove(invite)
+                                revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
+                            })
+                        ]),
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                })
             })))
         }
 
