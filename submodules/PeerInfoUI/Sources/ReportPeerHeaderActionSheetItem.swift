@@ -69,7 +69,7 @@ private final class ReportPeerHeaderActionSheetItemNode: ActionSheetItemNode {
         self.accessibilityArea.accessibilityTraits = .staticText
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedSize.width - 120.0, height: .greatestFiniteMagnitude))
         
         let topInset: CGFloat = 26.0
@@ -84,11 +84,8 @@ private final class ReportPeerHeaderActionSheetItemNode: ActionSheetItemNode {
         
         let size = CGSize(width: constrainedSize.width, height: topInset + iconSize.height + textSpacing + textSize.height + bottomInset)
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
-        
+               
+        self.updateInternalLayout(size)
         return size
-    }
-    
-    override func layout() {
-        super.layout()
     }
 }

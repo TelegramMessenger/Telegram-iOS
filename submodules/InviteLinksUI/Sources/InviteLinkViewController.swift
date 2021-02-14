@@ -45,6 +45,8 @@ private struct InviteLinkViewTransaction {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let isLoading: Bool
+    let animated: Bool
+    let crossfade: Bool
 }
 
 private enum InviteLinkViewEntryId: Hashable {
@@ -195,14 +197,14 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [InviteLinkViewEntry], to toEntries: [InviteLinkViewEntry], isLoading: Bool, account: Account, presentationData: PresentationData, interaction: InviteLinkViewInteraction) -> InviteLinkViewTransaction {
+private func preparedTransition(from fromEntries: [InviteLinkViewEntry], to toEntries: [InviteLinkViewEntry], isLoading: Bool, animated: Bool, crossfade: Bool, account: Account, presentationData: PresentationData, interaction: InviteLinkViewInteraction) -> InviteLinkViewTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
-    return InviteLinkViewTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading)
+    return InviteLinkViewTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, animated: animated, crossfade: crossfade)
 }
 
 private let titleFont = Font.bold(17.0)
@@ -485,23 +487,25 @@ public final class InviteLinkViewController: ViewController {
                         self?.controller?.present(controller, in: .window(.root))
                     })))
                 } else {
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.dismissWithoutContent)
-                        
-                        let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                        |> deliverOnMainQueue).start(next: { [weak self] peer in
-                            let isGroup: Bool
-                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                isGroup = false
-                            } else {
-                                isGroup = true
-                            }
-                            let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
-                            self?.controller?.present(controller, in: .window(.root))
-                        })
-                    })))
+                    if !invitationAvailability(invite).isZero {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                let isGroup: Bool
+                                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                    isGroup = false
+                                } else {
+                                    isGroup = true
+                                }
+                                let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
+                                self?.controller?.present(controller, in: .window(.root))
+                            })
+                        })))
+                    }
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { [weak self] _, f in
@@ -535,6 +539,8 @@ public final class InviteLinkViewController: ViewController {
             })
             
             let previousEntries = Atomic<[InviteLinkViewEntry]?>(value: nil)
+            let previousCount = Atomic<Int32?>(value: nil)
+            let previousLoading = Atomic<Bool?>(value: nil)
             
             let creatorPeer = context.account.postbox.loadedPeerWithId(invite.adminId)
             self.disposable = (combineLatest(self.presentationDataPromise.get(), self.importersContext.state, creatorPeer)
@@ -561,13 +567,20 @@ public final class InviteLinkViewController: ViewController {
                         entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
                     }
                     
+                    let count: Int32
+                    let loading: Bool
+                    
                     var index: Int32 = 0
                     if state.importers.isEmpty && state.isLoadingMore {
+                        count = min(4, state.count)
+                        loading = true
                         let fakeUser = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-                        for i in 0 ..< min(4, state.count) {
+                        for i in 0 ..< count {
                             entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, fakeUser, 0, true))
                         }
                     } else {
+                        count = min(4, Int32(state.importers.count))
+                        loading = false
                         for importer in state.importers {
                             if let peer = importer.peer.peer {
                                 entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, peer, importer.date, false))
@@ -576,9 +589,21 @@ public final class InviteLinkViewController: ViewController {
                         }
                     }
                     
+                    let previousCount = previousCount.swap(count)
+                    let previousLoading = previousLoading.swap(loading)
+                    
+                    var animated = false
+                    var crossfade = false
+                    if let previousCount = previousCount, let previousLoading = previousLoading {
+                        if (previousCount == count || previousCount >= 4) && previousLoading && !loading {
+                            crossfade = true
+                        } else if previousCount < 4 && previousCount != count && !loading {
+                            animated = true
+                        }
+                    }
                     let previousEntries = previousEntries.swap(entries)
                     
-                    let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: false, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction!)
+                    let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: false, animated: animated, crossfade: crossfade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction!)
                     strongSelf.enqueueTransition(transition)
                 }
             })
@@ -700,7 +725,11 @@ public final class InviteLinkViewController: ViewController {
             }
             self.enqueuedTransitions.remove(at: 0)
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: ListViewDeleteAndInsertOptions(), updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+            var options = ListViewDeleteAndInsertOptions()
+            if transition.animated {
+                options.insert(.AnimateInsertion)
+            }
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
             })
         }
         

@@ -103,14 +103,13 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.pickerView.addTarget(self, action: #selector(self.pickerChanged), for: .valueChanged)
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 157.0)
-    }
-    
-    override func layout() {
-        super.layout()
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 157.0)
         
-        self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.size.width, height: 180.0))
+        self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 180.0))
+       
+        self.updateInternalLayout(size)
+        return size
     }
     
     @objc func pickerChanged() {

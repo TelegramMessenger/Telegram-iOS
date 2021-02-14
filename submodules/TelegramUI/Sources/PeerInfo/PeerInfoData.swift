@@ -1097,6 +1097,8 @@ func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?)
     } else if let peer = peer as? TelegramChannel {
         if peer.flags.contains(.isCreator) {
             return true
+        } else if peer.hasPermission(.changeInfo) {
+            return true
         } else if let adminRights = peer.adminRights, adminRights.flags.contains(.canAddAdmins) || adminRights.flags.contains(.canBanUsers) || adminRights.flags.contains(.canChangeInfo) || adminRights.flags.contains(.canInviteUsers) {
             return true
         }
@@ -1109,8 +1111,8 @@ func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?)
                 return true
             }
             return false
-        } else {
-            return false
+        } else if !peer.hasBannedPermission(.banChangeInfo) {
+            return true
         }
     }
     return false

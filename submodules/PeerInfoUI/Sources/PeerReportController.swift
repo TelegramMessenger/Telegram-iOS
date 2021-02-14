@@ -14,6 +14,8 @@ import AlertUI
 import PresentationDataUtils
 import UndoUI
 import AppBundle
+import TelegramPermissionsUI
+import Markdown
 
 public enum PeerReportSubject {
     case peer(PeerId)
@@ -152,38 +154,67 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                 case .copyright:
                     reportReason = .copyright
                 case .other:
-                    break
+                    reportReason = .custom
             }
             if let reportReason = reportReason {
                 var passthrough = passthrough
-                if case .fake = reportReason {
+                if [.fake, .custom].contains(reportReason) {
                     passthrough = false
                 }
-                switch subject {
-                    case let .peer(peerId):
-                        if passthrough {
-                            completion(reportReason, true)
-                        } else {
-                            let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
-                            |> deliverOnMainQueue).start(completed: {
-                                if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                                    present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
-                                }
+                
+                let action = {
+                    switch subject {
+                        case let .peer(peerId):
+                            if passthrough {
                                 completion(reportReason, true)
-                            })
-                        }
-                    case let .messages(messageIds):
-                        if passthrough {
-                            completion(reportReason, true)
-                        } else {
-                            let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
-                            |> deliverOnMainQueue).start(completed: {
-                                if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                                    present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
-                                }
+                            } else {
+                                let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                |> deliverOnMainQueue).start(completed: {
+                                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
+                                        present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
+                                    }
+                                    completion(nil, false)
+                                })
+                            }
+                        case let .messages(messageIds):
+                            if passthrough {
                                 completion(reportReason, true)
-                            })
-                        }
+                            } else {
+                                let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
+                                |> deliverOnMainQueue).start(completed: {
+                                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
+                                        present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
+                                    }
+                                    completion(nil, false)
+                                })
+                            }
+                    }
+                }
+                
+                if [.fake, .custom].contains(reportReason) {
+                    let controller = ActionSheetController(presentationData: presentationData, allowInputInset: true)
+                    let dismissAction: () -> Void = { [weak controller] in
+                        controller?.dismissAnimated()
+                    }
+                    var message = ""
+                    var items: [ActionSheetItem] = []
+                    items.append(ReportPeerHeaderActionSheetItem(context: context, text: presentationData.strings.Report_AdditionalDetailsText))
+                    items.append(ReportPeerDetailsActionSheetItem(context: context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
+                        message = text
+                    }))
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
+                        dismissAction()
+             
+                        action()
+                    }))
+                    
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: items),
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                    present(controller, nil)
+                } else {
+                    action()
                 }
             } else {
                 push(peerReportController(context: context, subject: subject, completion: completion))

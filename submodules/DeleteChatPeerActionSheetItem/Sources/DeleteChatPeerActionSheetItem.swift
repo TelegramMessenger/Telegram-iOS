@@ -152,7 +152,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedSize.width - 20.0, height: .greatestFiniteMagnitude))
         
         let topInset: CGFloat = 16.0
@@ -166,10 +166,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         let size = CGSize(width: constrainedSize.width, height: topInset + avatarSize + textSpacing + textSize.height + bottomInset)
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
         
+        self.updateInternalLayout(size)
         return size
-    }
-    
-    override func layout() {
-        super.layout()
     }
 }

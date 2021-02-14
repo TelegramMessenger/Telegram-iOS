@@ -69,19 +69,15 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         self.setNeedsLayout()
     }
     
-    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let labelSize = self.label.updateLayout(CGSize(width: max(1.0, constrainedSize.width - 20.0), height: constrainedSize.height))
-        return CGSize(width: constrainedSize.width, height: max(57.0, labelSize.height + 32.0))
-    }
-    
-    public override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
-        
-        let labelSize = self.label.updateLayout(CGSize(width: max(1.0, size.width - 20.0), height: size.height))
+        let size = CGSize(width: constrainedSize.width, height: max(57.0, labelSize.height + 32.0))
+       
         self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size)
+        return size
     }
 }

@@ -128,14 +128,13 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         self.pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 216.0)
-    }
-    
-    override func layout() {
-        super.layout()
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 216.0)
+      
+        self.pickerView.frame = CGRect(origin: CGPoint(), size: size)
         
-        self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.size.width, height: 216.0))
+        self.updateInternalLayout(size)
+        return size
     }
     
     @objc private func datePickerUpdated() {
