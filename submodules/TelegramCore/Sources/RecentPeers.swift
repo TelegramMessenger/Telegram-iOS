@@ -41,6 +41,13 @@ public func recentPeers(account: Account) -> Signal<RecentPeers, NoError> {
     }
 }
 
+public func getRecentPeers(transaction: Transaction) -> [PeerId] {
+    guard let entry = transaction.retrieveItemCacheEntry(id: cachedRecentPeersEntryId()) as? CachedRecentPeers else {
+        return []
+    }
+    return entry.ids
+}
+
 public func managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
     let peersEnabled = postbox.combinedView(keys: [key])

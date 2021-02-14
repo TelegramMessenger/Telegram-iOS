@@ -929,8 +929,8 @@ struct AvatarsWidgetView: View {
                 })
             }).aspectRatio(1.0, contentMode: .fit))
         } else if isPlaceholder {
-            return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(.clear))
-            //return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
+            //return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(.clear))
+            return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
         } else {
             return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
         }
