@@ -195,7 +195,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
         
         self.offsetContainerNode = ASDisplayNode()
         
-        self.iconBackgroundNode = ASImageNode()
+        self.iconBackgroundNode = ASDisplayNode()
         self.iconBackgroundNode.setLayerBlock { () -> CALayer in
             return CAShapeLayer()
         }

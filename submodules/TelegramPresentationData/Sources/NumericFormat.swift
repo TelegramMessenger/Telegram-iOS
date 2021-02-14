@@ -37,7 +37,7 @@ public func presentationStringsFormattedNumber(_ count: Int32, _ groupingSeparat
     }
 }
 
-public func timeIntervalString(strings: PresentationStrings, value: Int32) -> String {
+public func timeIntervalString(strings: PresentationStrings, value: Int32, roundToNearest: Bool = false) -> String {
     if value < 60 {
         return strings.MessageTimer_Seconds(max(1, value))
     } else if value < 60 * 60 {

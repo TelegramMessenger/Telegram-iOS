@@ -53,19 +53,18 @@ private final class ReportPeerDetailsActionSheetItemNode: ActionSheetItemNode {
         self.inputFieldNode.updateText = { text in
             textUpdated(text)
         }
-        self.inputFieldNode.updateHeight = { 
-            
+        self.inputFieldNode.updateHeight = { [weak self] in
+            self?.requestLayout?()
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let inputHeight = self.inputFieldNode.updateLayout(width: constrainedSize.width, transition: .immediate)
         self.inputFieldNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: inputHeight))
+        
+        let size = CGSize(width: constrainedSize.width, height: inputHeight)
        
-        return CGSize(width: constrainedSize.width, height: inputHeight)
-    }
-    
-    override func layout() {
-        super.layout()
+        self.updateInternalLayout(size)
+        return size
     }
 }

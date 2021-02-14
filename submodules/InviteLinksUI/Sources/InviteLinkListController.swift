@@ -585,8 +585,10 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                     } else {
                         isGroup = true
                     }
-                    let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
-                    presentControllerImpl?(controller, nil)
+                    Queue.mainQueue().after(0.2) {
+                        let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
+                        presentControllerImpl?(controller, nil)
+                    }
                 })
             })))
         
@@ -727,13 +729,19 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
     timer.start()
     
     let previousRevokedInvites = Atomic<PeerExportedInvitationsState?>(value: nil)
+    let previousCreators = Atomic<[ExportedInvitationCreator]?>(value: nil)
+    
     let signal = combineLatest(context.sharedContext.presentationData, peerView, importersContext, importersState.get(), invitesContext.state, revokedInvitesContext.state, creators, timerPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, view, importersContext, importers, invites, revokedInvites, creators, tick -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previousRevokedInvites = previousRevokedInvites.swap(invites)
+        let previousCreators = previousCreators.swap(creators)
         
         var crossfade = false
         if (previousRevokedInvites?.hasLoadedOnce ?? false) != (revokedInvites.hasLoadedOnce) {
+            crossfade = true
+        }
+        if (previousCreators?.count ?? 0) != creators.count {
             crossfade = true
         }
         

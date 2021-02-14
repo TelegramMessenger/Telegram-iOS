@@ -112,14 +112,8 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         self.setNeedsLayout()
     }
     
-    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 57.0)
-    }
-    
-    public override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 57.0)
         
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
@@ -133,6 +127,9 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         
         let timerSize = CGSize(width: 28.0, height: 28.0)
         self.timerNode.frame = CGRect(origin: CGPoint(x: size.width - 16.0 - timerSize.width, y: floorToScreenPixels((size.height - timerSize.height) / 2.0)), size: timerSize)
+        
+        self.updateInternalLayout(size)
+        return size
     }
     
     @objc func buttonPressed() {

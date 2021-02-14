@@ -39,7 +39,7 @@ public func dismissServerProvidedSuggestion(account: Account, suggestion: Server
 
 
 public enum PeerSpecificServerProvidedSuggestion: String {
-    case convertToGigagroup = "CONVERT_TO_GIGAGROUP"
+    case convertToGigagroup = "CONVERT_GIGAGROUP"
 }
 
 public func getPeerSpecificServerProvidedSuggestions(postbox: Postbox, peerId: PeerId) -> Signal<[PeerSpecificServerProvidedSuggestion], NoError> {

@@ -1201,7 +1201,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                  
-                if channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                if  (channel.flags.contains(.isCreator) && (channel.username?.isEmpty ?? true)) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
                         invitesText = "\(count)"
@@ -1340,7 +1340,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }
                     }
                     
-                    if isCreator || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                    if (isCreator && (channel.username?.isEmpty ?? true)) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
                         let invitesText: String
                         if let count = data.invitations?.count, count > 0 {
                             invitesText = "\(count)"
@@ -1438,16 +1438,18 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     activePermissionCount = count
                 }
                 
-                let invitesText: String
-                if let count = data.invitations?.count, count > 0 {
-                    invitesText = "\(count)"
-                } else {
-                    invitesText = ""
+                if (group.addressName?.isEmpty ?? true) {
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
+                    } else {
+                        invitesText = ""
+                    }
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
                 }
-                
-                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
-                    interaction.editingOpenInviteLinksSetup()
-                }))
                 
                 items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
                     interaction.openPermissions()

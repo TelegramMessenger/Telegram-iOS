@@ -152,11 +152,11 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                 case .copyright:
                     reportReason = .copyright
                 case .other:
-                    break
+                    reportReason = .custom
             }
             if let reportReason = reportReason {
                 var passthrough = passthrough
-                if case .fake = reportReason {
+                if [.fake, .custom].contains(reportReason) {
                     passthrough = false
                 }
                 switch subject {
@@ -169,7 +169,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                                 if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                     present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
                                 }
-                                completion(reportReason, true)
+                                completion(nil, false)
                             })
                         }
                     case let .messages(messageIds):
@@ -181,7 +181,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                                 if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                     present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
                                 }
-                                completion(reportReason, true)
+                                completion(nil, false)
                             })
                         }
                 }

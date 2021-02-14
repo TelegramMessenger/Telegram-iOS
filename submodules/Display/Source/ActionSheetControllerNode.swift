@@ -61,7 +61,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.itemGroupsContainerNode = ActionSheetItemGroupsContainerNode(theme: self.theme)
         
         super.init()
-        
+                
         self.scrollView.delegate = self
         
         self.addSubnode(self.scrollNode)
@@ -78,6 +78,12 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.addSubnode(self.itemGroupsContainerNode)
         
         self.updateTheme()
+        
+        self.itemGroupsContainerNode.requestLayout = { [weak self] in
+            if let strongSelf = self, let layout = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+            }
+        }
     }
     
     func updateTheme() {
@@ -107,9 +113,9 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollView.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.dismissTapView.frame = CGRect(origin: CGPoint(), size: layout.size)
                 
-        self.itemGroupsContainerNode.measure(CGSize(width: layout.size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: layout.size.height - containerInsets.top - containerInsets.bottom - insets.top - insets.bottom))
+        let itemGroupsContainerSize = self.itemGroupsContainerNode.updateLayout(constrainedSize: CGSize(width: layout.size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: layout.size.height - containerInsets.top - containerInsets.bottom - insets.top - insets.bottom), transition: transition)
         
-        if self.allowInputInset, let inputHeight = layout.inputHeight, inputHeight > 0.0, self.itemGroupsContainerNode.groupNodes.count > 1, let lastGroupHeight = self.itemGroupsContainerNode.groupNodes.last?.calculatedSize.height {
+        if self.allowInputInset, let inputHeight = layout.inputHeight, inputHeight > 0.0, self.itemGroupsContainerNode.groupNodes.count > 1, let lastGroupHeight = self.itemGroupsContainerNode.groupNodes.last?.frame.height {
             insets.bottom -= lastGroupHeight + containerInsets.bottom
         }
         
@@ -117,8 +123,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if !self.allowInputInset {
             transition = .immediate
         }
-        transition.updateFrame(node: self.itemGroupsContainerNode, frame: CGRect(origin: CGPoint(x: insets.left + containerInsets.left, y: layout.size.height - insets.bottom - containerInsets.bottom - self.itemGroupsContainerNode.calculatedSize.height), size: self.itemGroupsContainerNode.calculatedSize))
-        self.itemGroupsContainerNode.updateLayout(transition: transition)
+        transition.updateFrame(node: self.itemGroupsContainerNode, frame: CGRect(origin: CGPoint(x: insets.left + containerInsets.left, y: layout.size.height - insets.bottom - containerInsets.bottom - itemGroupsContainerSize.height), size: itemGroupsContainerSize))
         
         self.updateScrollDimViews(size: layout.size, insets: insets, transition: transition)
     }

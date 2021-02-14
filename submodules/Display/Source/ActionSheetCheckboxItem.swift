@@ -136,15 +136,9 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         self.setNeedsLayout()
     }
     
-    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 57.0)
-    }
-    
-    public override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
-        
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 57.0)
+       
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
         var titleOrigin: CGFloat = 50.0
@@ -164,6 +158,9 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         }
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size)
+        return size
     }
     
     @objc func buttonPressed() {
