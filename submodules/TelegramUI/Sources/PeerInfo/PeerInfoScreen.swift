@@ -1180,15 +1180,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 }))
             }
         } else if let channel = data.peer as? TelegramChannel {
-            let ItemUsername = 1
-            let ItemInviteLinks = 2
-            let ItemDiscussionGroup = 3
-            let ItemSignMessages = 4
-            let ItemSignMessagesHelp = 5
-            let ItemAutoremove = 6
-            
             switch channel.info {
             case .broadcast:
+                let ItemUsername = 1
+                let ItemInviteLinks = 2
+                let ItemDiscussionGroup = 3
+                let ItemSignMessages = 4
+                let ItemSignMessagesHelp = 5
+                let ItemAutoremove = 6
+                
                 if channel.flags.contains(.isCreator) {
                     let linkText: String
                     if let username = channel.username {
@@ -1266,13 +1266,16 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemUsername = 101
                 let ItemLinkedChannel = 102
                 let ItemPreHistory = 103
-                let ItemStickerPack = 104
-                let ItemPermissions = 105
-                let ItemAdmins = 106
-                let ItemLocationHeader = 107
-                let ItemLocation = 108
-                let ItemLocationSetup = 109
-                let ItemAutoremove = 110
+                let ItemInviteLinks = 104
+                let ItemStickerPack = 105
+                let ItemPermissions = 106
+                let ItemMembers = 107
+                let ItemAdmins = 108
+                let ItemRemovedUsers = 109
+                let ItemLocationHeader = 110
+                let ItemLocation = 111
+                let ItemLocationSetup = 112
+                let ItemAutoremove = 113
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.username != nil
@@ -1316,7 +1319,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
-                                
                             }
                                                          
                             if cachedData.flags.contains(.canChangeUsername) {
@@ -1378,13 +1380,25 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             activePermissionCount = count
                         }
                         
-                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
-                            interaction.openPermissions()
-                        }))
+                        if !channel.flags.contains(.isGigagroup) {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
+                                interaction.openPermissions()
+                            }))
+                        } else {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text(cachedData.participantsSummary.memberCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.Group_Info_Members, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                                interaction.openParticipantsSection(.members)
+                            }))
+                        }
                         
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text(cachedData.participantsSummary.adminCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                             interaction.openParticipantsSection(.admins)
                         }))
+                        
+                        if channel.flags.contains(.isGigagroup) {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
+                                interaction.openParticipantsSection(.banned)
+                            }))
+                        }
                     }
                 }
             }

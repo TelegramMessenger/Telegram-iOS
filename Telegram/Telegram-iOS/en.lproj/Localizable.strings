@@ -6029,7 +6029,7 @@ Sorry for the inconvenience.";
 
 "GroupInfo.Permissions.BroadcastTitle" = "Broadcast Group";
 "GroupInfo.Permissions.BroadcastConvert" = "Convert to Broadcast Group";
-"GroupInfo.Permissions.BroadcastConvertInfo" = "Broadcast groups can have over %@ members, but only admins can send message in them.";
+"GroupInfo.Permissions.BroadcastConvertInfo" = "Broadcast groups can have over %@ members, but only admins can send messages in them.";
 
 "GroupInfo.GroupHistoryShort" = "Chat History";
 
@@ -6068,6 +6068,8 @@ Sorry for the inconvenience.";
 "BroadcastGroups.ConfirmationAlert.Text" = "Regular members of the group (non-admins) will irrevocably lose their right to post messages in the group.\n\nThis action **cannot** be undone.";
 "BroadcastGroups.ConfirmationAlert.Convert" = "Convert";
 
+"BroadcastGroups.Success" = "Your group can now have more than %@ members.";
+
 "BroadcastGroups.LimitAlert.Title" = "Limit Reached";
 "BroadcastGroups.LimitAlert.Text" = "Your group has reached a limit of **%@** members.\n\nYou can increase this limit by converting the group to a **broadcast group** where only admins can post. Interested?";
 "BroadcastGroups.LimitAlert.LearnMore" = "Learn More";
@@ -6079,3 +6081,5 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageChangedAutoremoveTimeoutRemove" = "%1$@ disabled auto-remove timer";
 
 "ChannelInfo.InviteLink.RevokeAlert.Text" = "Are you sure you want to revoke this link? Once you do, no one will be able to join the channel using it.";
+
+"Group.Info.Members" = "Members";

@@ -2259,6 +2259,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
             let textColor = presentationData.theme.list.itemPrimaryTextColor
             
             self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
+            self.textNode.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
+            self.textNode.tintColor = presentationData.theme.list.itemAccentColor
             
             self.textNode.clipsToBounds = true
             self.textNode.delegate = self
