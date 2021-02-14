@@ -136,13 +136,13 @@
 			<key>INIntentCategory</key>
 			<string>information</string>
 			<key>INIntentDescriptionID</key>
-			<string>zzS0gJ</string>
+			<string>DwL4WQ</string>
 			<key>INIntentEligibleForWidgets</key>
 			<true/>
 			<key>INIntentIneligibleForSuggestions</key>
 			<true/>
 			<key>INIntentLastParameterTag</key>
-			<integer>3</integer>
+			<integer>19</integer>
 			<key>INIntentName</key>
 			<string>SelectAvatarFriends</string>
 			<key>INIntentParameters</key>
@@ -152,25 +152,29 @@
 					<array>
 						<dict>
 							<key>INIntentParameterArraySizeSize</key>
-							<integer>1</integer>
+							<integer>4</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Small</string>
 						</dict>
 						<dict>
 							<key>INIntentParameterArraySizeSize</key>
-							<integer>4</integer>
+							<integer>8</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Medium</string>
 						</dict>
 						<dict>
 							<key>INIntentParameterArraySizeSize</key>
-							<integer>8</integer>
+							<integer>16</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Large</string>
 						</dict>
 					</array>
 					<key>INIntentParameterConfigurable</key>
 					<true/>
+					<key>INIntentParameterDisplayName</key>
+					<string> </string>
+					<key>INIntentParameterDisplayNameID</key>
+					<string>Jg5dYF</string>
 					<key>INIntentParameterDisplayPriority</key>
 					<integer>1</integer>
 					<key>INIntentParameterFixedSizeArray</key>
@@ -189,7 +193,7 @@
 							<key>INIntentParameterPromptDialogFormatString</key>
 							<string>Search</string>
 							<key>INIntentParameterPromptDialogFormatStringID</key>
-							<string>xeb2pd</string>
+							<string>ORCbLf</string>
 							<key>INIntentParameterPromptDialogType</key>
 							<string>Configuration</string>
 						</dict>
@@ -200,6 +204,13 @@
 							<string>Primary</string>
 						</dict>
 					</array>
+					<key>INIntentParameterRelationship</key>
+					<dict>
+						<key>INIntentParameterRelationshipPredicateName</key>
+						<string>EnumHasExactValue</string>
+						<key>INIntentParameterRelationshipPredicateValue</key>
+						<string>custom</string>
+					</dict>
 					<key>INIntentParameterSupportsDynamicEnumeration</key>
 					<true/>
 					<key>INIntentParameterSupportsMultipleValues</key>
@@ -207,7 +218,7 @@
 					<key>INIntentParameterSupportsSearch</key>
 					<true/>
 					<key>INIntentParameterTag</key>
-					<integer>3</integer>
+					<integer>19</integer>
 					<key>INIntentParameterType</key>
 					<string>Object</string>
 				</dict>
@@ -229,9 +240,9 @@
 				</array>
 			</dict>
 			<key>INIntentTitle</key>
-			<string>Select</string>
+			<string>Select Chats</string>
 			<key>INIntentTitleID</key>
-			<string>kiqCaL</string>
+			<string>3Sbb7H</string>
 			<key>INIntentType</key>
 			<string>Custom</string>
 			<key>INIntentVerb</key>
