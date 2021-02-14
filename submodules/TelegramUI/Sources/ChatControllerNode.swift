@@ -1158,6 +1158,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             previewing = false
         }
         
+        var isSelectionEnabled = true
+        if previewing {
+            isSelectionEnabled = false
+        } else if case .pinnedMessages = self.chatPresentationInterfaceState.subject {
+            isSelectionEnabled = false
+        }
+        self.historyNode.isSelectionGestureEnabled = isSelectionEnabled
+        
         var inputPanelSize: CGSize?
         var immediatelyLayoutInputPanelAndAnimateAppearance = false
         var secondaryInputPanelSize: CGSize?

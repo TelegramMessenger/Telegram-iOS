@@ -573,7 +573,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
     }
-    
+        
     private(set) var isScrollAtBottomPosition = false
     public var isScrollAtBottomPositionUpdated: (() -> Void)?
     
@@ -588,6 +588,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
     let topVisibleMessageRange = ValuePromise<ChatTopVisibleMessageRange?>(nil, ignoreRepeated: true)
+    
+    var isSelectionGestureEnabled = true
     
     private let clientId: Atomic<Int32>
     
@@ -1173,10 +1175,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             guard let strongSelf = self else {
                 return false
             }
-            if case .pinnedMessages = strongSelf.subject {
-                return false
-            }
-            return true
+            return strongSelf.isSelectionGestureEnabled
         }
         self.view.addGestureRecognizer(selectionRecognizer)
     }
