@@ -54,7 +54,7 @@ enum IntentHandlingError {
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
-class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling, SelectAvatarFriendsIntentHandling {
+class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling {
     private let accountPromise = Promise<Account?>()
     private let allAccounts = Promise<[(AccountRecordId, PeerId)]>()
     
@@ -195,7 +195,15 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
     
     override public func handler(for intent: INIntent) -> Any {
-        return self
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+            if intent is SelectAvatarFriendsIntent {
+                return AvatarsIntentHandler()
+            } else {
+                return self
+            }
+        } else {
+            return self
+        }
     }
     
     enum ResolveResult {
@@ -812,16 +820,18 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     
                     var items: [Friend] = []
                     for peer in peers {
-                        let profileImage = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
+                        let path = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return postbox.mediaBox.resourcePath(representation.resource)
-                        }.flatMap { path -> INImage? in
-                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                return INImage(imageData: data)
-                            } else {
-                                return nil
-                            }
                         }
-                        items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: nil))
+                        
+                        let profileImage: INImage?
+                        let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                        if let data = image.pngData() {
+                            profileImage = INImage(imageData: data)
+                        } else {
+                            profileImage = nil
+                        }
+                        items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: profileImage))
                     }
                     
                     return INObjectSection<Friend>(title: accountTitle, items: items)
@@ -845,6 +855,149 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }, error: { error in
             completion(nil, error)
         }))
+    }
+}
+
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
+@objc(AvatarsIntentHandler)
+class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
+    private let accountPromise = Promise<Account?>()
+    private let allAccounts = Promise<[(AccountRecordId, PeerId)]>()
+    
+    private let resolvePersonsDisposable = MetaDisposable()
+    private let actionDisposable = MetaDisposable()
+    private let searchDisposable = MetaDisposable()
+    
+    private var rootPath: String?
+    private var accountManager: AccountManager?
+    private var encryptionParameters: ValueBoxEncryptionParameters?
+    private var appGroupUrl: URL?
+    
+    override init() {
+        super.init()
+        
+        guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+            return
+        }
+        
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+        let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+        
+        let apiId: Int32 = buildConfig.apiId
+        let apiHash: String = buildConfig.apiHash
+        let languagesCategory = "ios"
+        
+        let appGroupName = "group.\(baseAppBundleId)"
+        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        
+        guard let appGroupUrl = maybeAppGroupUrl else {
+            return
+        }
+        
+        self.appGroupUrl = appGroupUrl
+        
+        let rootPath = rootPathForBasePath(appGroupUrl.path)
+        performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
+        
+        self.rootPath = rootPath
+        
+        TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: arc4random64())
+        
+        let logsPath = rootPath + "/siri-logs"
+        let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
+        
+        setupSharedLogger(rootPath: rootPath, path: logsPath)
+        
+        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+        
+        initializeAccountManagement()
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+        self.accountManager = accountManager
+        
+        let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
+        let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        self.encryptionParameters = encryptionParameters
+        
+        self.allAccounts.set(accountManager.accountRecords()
+        |> take(1)
+        |> map { view -> [(AccountRecordId, PeerId)] in
+            var result: [(AccountRecordId, Int, PeerId)] = []
+            for record in view.records {
+                let isLoggedOut = record.attributes.contains(where: { attribute in
+                    return attribute is LoggedOutAccountAttribute
+                })
+                if isLoggedOut {
+                    continue
+                }
+                /*let isTestingEnvironment = record.attributes.contains(where: { attribute in
+                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                        return true
+                    } else {
+                        return false
+                    }
+                })*/
+                var backupData: AccountBackupData?
+                var sortIndex: Int32 = 0
+                for attribute in record.attributes {
+                    if let attribute = attribute as? AccountSortOrderAttribute {
+                        sortIndex = attribute.order
+                    } else if let attribute = attribute as? AccountBackupDataAttribute {
+                        backupData = attribute.data
+                    }
+                }
+                if let backupData = backupData {
+                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId)))
+                }
+            }
+            result.sort(by: { lhs, rhs in
+                if lhs.1 != rhs.1 {
+                    return lhs.1 < rhs.1
+                } else {
+                    return lhs.0 < rhs.0
+                }
+            })
+            return result.map { record -> (AccountRecordId, PeerId) in
+                return (record.0, record.2)
+            }
+        })
+        
+        let account: Signal<Account?, NoError>
+        if let accountCache = accountCache {
+            account = .single(accountCache)
+        } else {
+            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
+            |> mapToSignal { account -> Signal<Account?, NoError> in
+                if let account = account {
+                    switch account {
+                        case .upgrading:
+                            return .complete()
+                        case let .authorized(account):
+                            return applicationSettings(accountManager: accountManager)
+                            |> deliverOnMainQueue
+                            |> map { settings -> Account in
+                                accountCache = account
+                                Logger.shared.logToFile = settings.logging.logToFile
+                                Logger.shared.logToConsole = settings.logging.logToConsole
+                                
+                                Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
+                                return account
+                            }
+                        case .unauthorized:
+                            return .complete()
+                    }
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> take(1)
+        }
+        self.accountPromise.set(account)
+    }
+    
+    deinit {
+        self.resolvePersonsDisposable.dispose()
+        self.actionDisposable.dispose()
+        self.searchDisposable.dispose()
     }
     
     @available(iOSApplicationExtension 14.0, iOS 14.0, *)
@@ -906,16 +1059,18 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     
                     var items: [Friend] = []
                     for peer in peers {
-                        let profileImage = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
+                        let path = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                             return postbox.mediaBox.resourcePath(representation.resource)
-                        }.flatMap { path -> INImage? in
-                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                return INImage(imageData: data)
-                            } else {
-                                return nil
-                            }
                         }
-                        items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: nil))
+                        
+                        let profileImage: INImage?
+                        let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                        if let data = image.pngData() {
+                            profileImage = INImage(imageData: data)
+                        } else {
+                            profileImage = nil
+                        }
+                        items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: profileImage))
                     }
                     
                     return INObjectSection<Friend>(title: accountTitle, items: items)
@@ -939,5 +1094,98 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }, error: { error in
             completion(nil, error)
         }))
+    }
+}
+
+private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    let context = UIGraphicsGetCurrentContext()
+    
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+    
+    source.draw(in: CGRect(origin: CGPoint(), size: size))
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+private let deviceColorSpace: CGColorSpace = {
+    if #available(iOSApplicationExtension 9.3, iOS 9.3, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
+
+private extension UIColor {
+    convenience init(rgb: UInt32) {
+        self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: 1.0)
+    }
+}
+
+private let gradientColors: [NSArray] = [
+    [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
+    [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],
+    [UIColor(rgb: 0x665fff).cgColor, UIColor(rgb: 0x82b1ff).cgColor],
+    [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
+    [UIColor(rgb: 0x4acccd).cgColor, UIColor(rgb: 0x00fcfd).cgColor],
+    [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
+    [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
+]
+
+private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: Int64, letters: [String]) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    let context = UIGraphicsGetCurrentContext()
+    
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+    
+    let colorIndex = abs(Int(accountPeerId + peerId))
+    
+    let colorsArray = gradientColors[colorIndex % gradientColors.count]
+    var locations: [CGFloat] = [1.0, 0.0]
+    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+    
+    context?.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    
+    context?.setBlendMode(.normal)
+    
+    let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
+    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 20.0), NSAttributedString.Key.foregroundColor: UIColor.white])
+    
+    let line = CTLineCreateWithAttributedString(attributedString)
+    let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+    
+    let lineOffset = CGPoint(x: string == "B" ? 1.0 : 0.0, y: 0.0)
+    let lineOrigin = CGPoint(x: floor(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floor(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0))
+    
+    context?.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context?.scaleBy(x: 1.0, y: -1.0)
+    context?.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    context?.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+    if let context = context {
+        CTLineDraw(line, context)
+    }
+    context?.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, letters: [String], size: CGSize) -> UIImage {
+    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+        return roundImage
+    } else {
+        return avatarViewLettersImage(size: size, peerId: peerId, accountPeerId: accountPeerId, letters: letters)!
     }
 }

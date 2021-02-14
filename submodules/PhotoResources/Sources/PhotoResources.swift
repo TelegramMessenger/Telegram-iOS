@@ -41,7 +41,7 @@ public func representationFetchRangeForDisplayAtSize(representation: TelegramMed
     if representation.progressiveSizes.count > 1, let dimension = dimension {
         var largestByteSize = Int(representation.progressiveSizes[0])
         for (maxDimension, byteSizes) in progressiveRangeMap {
-            largestByteSize = Int(representation.progressiveSizes[byteSizes.last!])
+            largestByteSize = Int(representation.progressiveSizes[min(representation.progressiveSizes.count - 1, byteSizes.last!)])
             if maxDimension >= dimension {
                 break
             }
@@ -52,7 +52,7 @@ public func representationFetchRangeForDisplayAtSize(representation: TelegramMed
 }
 
 public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false, tryAdditionalRepresentations: Bool = false, synchronousLoad: Bool = false, useMiniThumbnailIfAvailable: Bool = false) -> Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError> {
-    if let progressiveRepresentation = progressiveImageRepresentation(photoReference.media.representations), progressiveRepresentation.progressiveSizes.count == 5 {
+    if let progressiveRepresentation = progressiveImageRepresentation(photoReference.media.representations), progressiveRepresentation.progressiveSizes.count > 1 {
         enum SizeSource {
             case miniThumbnail(data: Data)
             case image(size: Int)
@@ -68,10 +68,13 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
             if Int(fullRepresentationSize.width) > 100 && maxDimension <= 100 {
                 continue
             }
-            sources.append(contentsOf: byteSizes.map { sizeIndex -> SizeSource in
+            sources.append(contentsOf: byteSizes.compactMap { sizeIndex -> SizeSource? in
+                if progressiveRepresentation.progressiveSizes.count - 1 < sizeIndex {
+                    return nil
+                }
                 return .image(size: Int(progressiveRepresentation.progressiveSizes[sizeIndex]))
             })
-            largestByteSize = Int(progressiveRepresentation.progressiveSizes[byteSizes.last!])
+            largestByteSize = Int(progressiveRepresentation.progressiveSizes[min(progressiveRepresentation.progressiveSizes.count - 1, byteSizes.last!)])
             if maxDimension >= Int(fullRepresentationSize.width) {
                 break
             }

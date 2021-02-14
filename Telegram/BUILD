@@ -1162,21 +1162,6 @@ plist_fragment(
 )
 
 swift_library(
-    name = "GeneratedSources1",
-    module_name = "GeneratedSources",
-    srcs = glob([
-        "Generated/**/*.swift",
-    ]),
-    visibility = ["//visibility:public"],
-)
-
-'''swift_intent_library(
-    name = "GeneratedSources",
-    src = "SiriIntents/Intents.intentdefinition",
-    visibility = ["//visibility:public"],
-)'''
-
-swift_library(
     name = "WidgetExtensionLib",
     module_name = "WidgetExtensionLib",
     srcs = glob([
@@ -1258,6 +1243,7 @@ plist_fragment(
                 <string>INSetMessageAttributeIntent</string>
                 <string>INSearchCallHistoryIntent</string>
                 <string>SelectFriendsIntent</string>
+                <string>SelectAvatarFriendsIntent</string>
             </array>
         </dict>
         <key>NSExtensionPointIdentifier</key>

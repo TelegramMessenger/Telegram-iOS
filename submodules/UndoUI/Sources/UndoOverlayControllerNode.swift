@@ -47,8 +47,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private let animationBackgroundColor: UIColor
         
-    private var originalRemainingSeconds: Int
-    private var remainingSeconds: Int
+    private var originalRemainingSeconds: Double
+    private var remainingSeconds: Double
     private var timer: SwiftSignalKit.Timer?
     
     private var validLayout: ContainerViewLayout?
@@ -147,7 +147,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = false
-                self.originalRemainingSeconds = 5
+                self.originalRemainingSeconds = 3.5
             case let .succeed(text):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -175,7 +175,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
-                self.originalRemainingSeconds = max(5, min(8, text.count / 14))
+                self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
             case let .actionSucceeded(title, text, cancel):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -617,9 +617,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private func checkTimer() {
         if self.timer != nil {
-            self.remainingSeconds -= 1
+            self.remainingSeconds -= 0.5
         }
-        if self.remainingSeconds == 0 {
+        if self.remainingSeconds <= 0.0 {
             let _ = self.action(.commit)
             self.dismiss()
         } else {
@@ -637,7 +637,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             if let validLayout = self.validLayout {
                 self.containerLayoutUpdated(layout: validLayout, transition: .immediate)
             }
-            let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: false, completion: { [weak self] in
                 self?.checkTimer()
             }, queue: .mainQueue())
             self.timer = timer

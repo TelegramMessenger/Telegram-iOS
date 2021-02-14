@@ -288,7 +288,7 @@ struct AvatarsProvider: IntentTimelineProvider {
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         
-        var itemsByAccount: [Int64: [(Int64, Friend)]] = [:]
+        var itemsByAccount: [Int64: [(Int64, Any)]] = [:]
         var itemOrder: [(Int64, Int64)] = []
         if let friends = configuration.friends {
             for item in friends {
@@ -416,7 +416,6 @@ struct AvatarItemView: View {
     var peer: ParsedPeer?
     var itemSize: CGFloat
     var placeholderColor: Color
-    var displayBadge: Bool = true
     
     var body: some View {
         return ZStack {
@@ -427,23 +426,7 @@ struct AvatarItemView: View {
                 Circle()
                     .fill(placeholderColor)
                     .frame(width: itemSize, height: itemSize)
-                //Image(uiImage: avatarImage(accountPeerId: nil, peer: nil, size: CGSize(width: itemSize, height: itemSize)))
-                //.clipShape(Circle())
-                //.redacted(reason: .placeholder)
             }
-            /*if let peer = peer, displayBadge, let badge = peer.badge, badge.count > 0 {
-                Text("\(badge.count)")
-                    .font(Font.system(size: 16.0))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 4.0)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(badge.isMuted ? Color.gray : Color.red)
-                            .frame(minWidth: 20, idealWidth: 20, maxWidth: .infinity, minHeight: 20, idealHeight: 20, maxHeight: 20.0, alignment: .center)
-                    )
-                    .position(x: floor(0.84 * itemSize), y: floor(0.16 * itemSize))
-            }*/
         }
     }
 }
@@ -689,11 +672,6 @@ struct WidgetView: View {
             }
         }
         
-        var hasBadge = false
-        if let peer = peer, let badge = peer.peer.badge, badge.count > 0 {
-            hasBadge = true
-        }
-        
         let textView = Text(text)
             .lineLimit(2)
             .font(Font.system(size: 15.0, weight: .regular, design: .default))
@@ -735,34 +713,8 @@ struct WidgetView: View {
                         }
                     )
                 })
-                //textView.redacted(reason: .placeholder)
             )
         }
-        
-        /*return HStack(alignment: .center, spacing: hasBadge ? 6.0 : 0.0, content: {
-            if peer != nil {
-                textView
-            } else {
-                textView.redacted(reason: .placeholder)
-            }
-            //Spacer()
-            /*if let peer = peer, let badge = peer.badge, badge.count > 0 {
-                VStack {
-                    Spacer()
-                    Text("\(badge.count)")
-                        .font(Font.system(size: 14.0))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 4.0)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(badge.isMuted ? Color.gray : Color.blue)
-                                .frame(minWidth: 20, idealWidth: 20, maxWidth: .infinity, minHeight: 20, idealHeight: 20, maxHeight: 20.0, alignment: .center)
-                        )
-                        .padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 6.0, trailing: 3.0))
-                }
-            }*/
-        })*/
     }
     
     func chatContent(_ peer: ParsedPeer?) -> some View {
@@ -805,7 +757,7 @@ struct WidgetView: View {
         return AnyView(
             Link(destination: url, label: {
                 HStack(alignment: .center, spacing: 0.0, content: {
-                    AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, placeholderColor: getPlaceholderColor(), displayBadge: false).frame(width: 54.0, height: 54.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                    AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, placeholderColor: getPlaceholderColor()).frame(width: 54.0, height: 54.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
                     chatContent(peers?.peers[index]).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
                 })
             })
@@ -821,11 +773,6 @@ struct WidgetView: View {
                 .frame(width: size.width - 54.0 - 20.0, height: 0.5, alignment: .leading)
         })
         .frame(width: size.width, height: 1.0, alignment: .leading)
-        /*let separatorWidth = size.width - 54.0 - 20.0
-        let itemHeight = (size.height - 22.0) / 2.0
-        return Rectangle().foregroundColor(getSeparatorColor())
-            //.position(x: (54.0 + 20.0 + separatorWidth) / 2.0, y: itemHeight / 2.0)
-            .frame(width: size.width, height: 1.0, alignment: .leading)*/
     }
     
     func chatsUpdateBackgroundView(size: CGSize) -> some View {
@@ -871,12 +818,6 @@ struct WidgetView: View {
         return Text(text)
             .font(Font.system(size: 12.0))
             .foregroundColor(getUpdatedTextColor())
-        
-        /*return HStack(alignment: .center, spacing: 0.0, content: {
-            Text(text)
-                .font(Font.system(size: 12.0))
-                .foregroundColor(getUpdatedTextColor())
-        }).position(x: size.width / 2.0, y: size.height - 11.0).frame(width: size.width, height: 22.0, alignment: .leading)*/
     }
     
     func getSeparatorColor() -> Color {
@@ -933,6 +874,89 @@ struct WidgetView: View {
             })
         })
         .padding(0.0)
+        .unredacted()
+    }
+}
+
+struct AvatarsWidgetView: View {
+    @Environment(\.widgetFamily) private var widgetFamily
+    @Environment(\.colorScheme) private var colorScheme
+    let data: PeersWidgetData
+    
+    func placeholder(geometry: GeometryProxy) -> some View {
+        return Spacer()
+    }
+    
+    private func linkForPeer(accountId: Int64, id: Int64) -> String {
+        switch self.widgetFamily {
+        case .systemSmall:
+            return "\(buildConfig.appSpecificUrlScheme)://"
+        default:
+            return "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(id)&accountId=\(accountId)"
+        }
+    }
+    
+    func getPlaceholderColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 235.0 / 255.0, green: 235.0 / 255.0, blue: 241.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 38.0 / 255.0, green: 38.0 / 255.0, blue: 41.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    func itemView(index: Int) -> some View {
+        let peers: ParsedPeers?
+        var isPlaceholder = false
+        switch data {
+        case let .peers(peersValue):
+            if peersValue.peers.count <= index {
+                isPlaceholder = peersValue.peers.count != 0
+                peers = nil
+            } else {
+                peers = peersValue
+            }
+        default:
+            peers = nil
+        }
+        
+        if let peers = peers {
+            return AnyView(Link(destination: URL(string: linkForPeer(accountId: peers.peers[index].accountId, id: peers.peers[index].peer.id))!, label: {
+                GeometryReader(content: { geometry in
+                    AvatarItemView(peer: peers.peers[index], itemSize: geometry.size.height, placeholderColor: getPlaceholderColor())
+                })
+            }).aspectRatio(1.0, contentMode: .fit))
+        } else if isPlaceholder {
+            return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(.clear))
+            //return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
+        } else {
+            return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
+        }
+    }
+    
+    var body: some View {
+        return VStack(alignment: .center, spacing: 18.0, content: {
+            HStack(alignment: .center, spacing: nil, content: {
+                ForEach(0 ..< 4, id: \.self) { index in
+                    itemView(index: index)
+                    if index != 3 {
+                        Spacer()
+                    }
+                }
+            })
+            HStack(alignment: .center, spacing: nil, content: {
+                ForEach(0 ..< 4, id: \.self) { index in
+                    itemView(index: 4 + index)
+                    if index != 3 {
+                        Spacer()
+                    }
+                }
+            })
+        })
+        .padding(EdgeInsets(top: 10.0, leading: 10.0, bottom: 10.0, trailing: 10.0))
+        .unredacted()
     }
 }
 
@@ -1038,7 +1062,7 @@ struct Static_AvatarsWidget: Widget {
 
     public var body: some WidgetConfiguration {
         return IntentConfiguration(kind: kind, intent: SelectAvatarFriendsIntent.self, provider: AvatarsProvider(), content: { entry in
-            Spacer()
+            AvatarsWidgetView(data: getWidgetData(contents: entry.contents))
         })
         .supportedFamilies([.systemMedium])
         .configurationDisplayName(presentationData.widgetGalleryTitle)
@@ -1050,6 +1074,6 @@ struct Static_AvatarsWidget: Widget {
 struct AllWidgets: WidgetBundle {
    var body: some Widget {
         Static_Widget()
-        //Static_AvatarsWidget()
+        Static_AvatarsWidget()
    }
 }
