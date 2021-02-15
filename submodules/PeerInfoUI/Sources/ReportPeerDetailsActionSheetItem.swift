@@ -51,7 +51,7 @@ private final class ReportPeerDetailsActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.inputFieldNode)
         
         self.inputFieldNode.updateText = { text in
-            textUpdated(text)
+            textUpdated(String(text.prefix(512)))
         }
         self.inputFieldNode.updateHeight = { [weak self] in
             self?.requestLayout?()

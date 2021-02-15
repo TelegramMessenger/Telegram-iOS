@@ -526,6 +526,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     var pushControllerImpl: ((ViewController) -> Void)?
     var navigateToChatControllerImpl: ((PeerId) -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var dismissToChatController: (() -> Void)?
     var resetSlowmodeVisualValueImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -772,7 +773,9 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 let _ = (convertGroupToGigagroup(account: context.account, peerId: originalPeerId)
                 |> deliverOnMainQueue).start(completed: {
                     let participantsLimit = context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
-                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).0), elevatedLayout: false, action: { _ in return false }), nil)
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .gigagroupConversion(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).0), elevatedLayout: true, action: { _ in return false }), nil)
+                    
+                    dismissToChatController?()
                 })
             })])
             presentControllerImpl?(alertController, nil)
@@ -957,6 +960,21 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    dismissToChatController = { [weak controller] in
+        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+            var viewControllers = navigationController.viewControllers
+            viewControllers = viewControllers.filter { controller in
+                if controller is ItemListController {
+                    return false
+                }
+                if controller is PeerInfoScreen {
+                    return false
+                }
+                return true
+            }
+            navigationController.setViewControllers(viewControllers, animated: true)
+        }
     }
     resetSlowmodeVisualValueImpl = { [weak controller] in
         guard let controller = controller else {

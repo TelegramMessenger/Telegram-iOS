@@ -30,6 +30,7 @@ public final class PermissionController: ViewController {
     private var skip: (() -> Void)?
     public var proceed: ((Bool) -> Void)?
     
+    
     public init(context: AccountContext, splashScreen: Bool = true, splitTest: PermissionUISplitTest? = nil) {
         self.context = context
         self.splitTest = splitTest
@@ -241,8 +242,16 @@ public final class PermissionController: ViewController {
         }
     }
     
+    @objc private func cancelPressed() {
+        self.dismiss()
+    }
+    
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        if let state = self.state, case .custom(.animation, _, _, _, _, _, _) = state, layout.size.width <= 320.0 {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.splashScreen ? 0.0 : self.navigationHeight, transition: transition)
     }
