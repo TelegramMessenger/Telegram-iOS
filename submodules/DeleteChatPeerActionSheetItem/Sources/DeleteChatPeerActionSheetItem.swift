@@ -12,7 +12,7 @@ import AccountContext
 public enum DeleteChatPeerAction {
     case delete
     case deleteAndLeave
-    case clearHistory
+    case clearHistory(canClearCache: Bool)
     case clearCache
     case clearCacheSuggestion
     case removeFromGroup
@@ -128,8 +128,18 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 } else {
                     text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
-            case .clearHistory:
-                text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+            case let .clearHistory(canClearCache):
+                if peer.id == context.account.peerId {
+                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
+                } else if peer is TelegramUser {
+                    text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                } else {
+                    text = strings.Conversation_DeleteAllMessagesInChat(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                }
+                
+                if canClearCache {
+                    text?.0 += "\n\n\(strings.Conversation_AlsoClearCacheTitle)"
+                }
             case .removeFromGroup:
                 text = strings.VoiceChat_RemovePeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
             default:

@@ -633,7 +633,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     snapshot?.removeFromSuperview()
                 })
             }
-            self.timerTextNode.attributedText = NSAttributedString(string: "\(self.remainingSeconds)", font: Font.regular(16.0), textColor: .white)
+            self.timerTextNode.attributedText = NSAttributedString(string: "\(Int(self.remainingSeconds))", font: Font.regular(16.0), textColor: .white)
             if let validLayout = self.validLayout {
                 self.containerLayoutUpdated(layout: validLayout, transition: .immediate)
             }

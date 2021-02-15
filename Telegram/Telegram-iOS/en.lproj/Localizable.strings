@@ -6083,3 +6083,6 @@ Sorry for the inconvenience.";
 "ChannelInfo.InviteLink.RevokeAlert.Text" = "Are you sure you want to revoke this link? Once you do, no one will be able to join the channel using it.";
 
 "Group.Info.Members" = "Members";
+
+"Conversation.AlsoClearCacheTitle" = "You can use \"clear cache\" to remove unnecessary media — and re-downloaded files if you need them again.";
+"Conversation.DeleteAllMessagesInChat" = "Are you sure you want to delete all messages in %@?";
