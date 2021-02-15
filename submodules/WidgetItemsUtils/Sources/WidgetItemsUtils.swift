@@ -6,7 +6,7 @@ import TelegramCore
 import WidgetItems
 
 public extension WidgetDataPeer.Message {
-    init(message: Message) {
+    init(accountPeerId: PeerId, message: Message) {
         var content: WidgetDataPeer.Message.Content = .text
         for media in message.media {
             switch media {
@@ -58,11 +58,11 @@ public extension WidgetDataPeer.Message {
         var author: Author?
         if let _ = message.peers[message.id.peerId] as? TelegramGroup {
             if let authorPeer = message.author {
-                author = Author(isMe: false, title: authorPeer.debugDisplayTitle)
+                author = Author(isMe: authorPeer.id == accountPeerId, title: authorPeer.debugDisplayTitle)
             }
         } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
             if let authorPeer = message.author {
-                author = Author(isMe: false, title: authorPeer.debugDisplayTitle)
+                author = Author(isMe: authorPeer.id == accountPeerId, title: authorPeer.debugDisplayTitle)
             }
         }
         

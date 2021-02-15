@@ -53,6 +53,18 @@ final class AccountManagerImpl {
     private var noticeEntryViews = Bag<(MutableNoticeEntryView, ValuePipe<NoticeEntryView>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     
+    static func getCurrentRecords(basePath: String) -> (records: [AccountRecord], currentId: AccountRecordId?) {
+        let atomicStatePath = "\(basePath)/atomic-state"
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: atomicStatePath))
+            let atomicState = try JSONDecoder().decode(AccountManagerAtomicState.self, from: data)
+            return (atomicState.records.sorted(by: { $0.key.int64 < $1.key.int64 }).map({ $1 }), atomicState.currentRecordId)
+        } catch let e {
+            postboxLog("decode atomic state error: \(e)")
+            preconditionFailure()
+        }
+    }
+    
     fileprivate init?(queue: Queue, basePath: String, isTemporary: Bool, temporarySessionId: Int64) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
@@ -78,7 +90,6 @@ final class AccountManagerImpl {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
             do {
-                
                 let atomicState = try JSONDecoder().decode(AccountManagerAtomicState.self, from: data)
                 self.currentAtomicState = atomicState
             } catch let e {
@@ -311,7 +322,6 @@ final class AccountManagerImpl {
         return (.single(AccountRecordsView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<AccountRecordsView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -331,7 +341,6 @@ final class AccountManagerImpl {
         return (.single(AccountSharedDataView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<AccountSharedDataView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -351,7 +360,6 @@ final class AccountManagerImpl {
         return (.single(NoticeEntryView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<NoticeEntryView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -371,7 +379,6 @@ final class AccountManagerImpl {
         return (.single(AccessChallengeDataView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<AccessChallengeDataView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -456,6 +463,10 @@ public final class AccountManager {
     private let queue: Queue
     private let impl: QueueLocalObject<AccountManagerImpl>
     public let temporarySessionId: Int64
+    
+    public static func getCurrentRecords(basePath: String) -> (records: [AccountRecord], currentId: AccountRecordId?) {
+        return AccountManagerImpl.getCurrentRecords(basePath: basePath)
+    }
     
     public init(basePath: String, isTemporary: Bool) {
         self.queue = sharedQueue

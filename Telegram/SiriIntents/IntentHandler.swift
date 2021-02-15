@@ -54,7 +54,7 @@ enum IntentHandlingError {
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
-class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling {
+class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
     private let accountPromise = Promise<Account?>()
     private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
     
@@ -198,6 +198,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
             if intent is SelectAvatarFriendsIntent {
                 return AvatarsIntentHandler()
+            } else if intent is SelectFriendsIntent {
+                return FriendsIntentHandler()
             } else {
                 return self
             }
@@ -845,34 +847,21 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
 }
 
-@available(iOSApplicationExtension 10.0, iOS 10.0, *)
-@objc(AvatarsIntentHandler)
-class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
-    private let accountPromise = Promise<Account?>()
+private final class WidgetIntentHandler {
     private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
     
-    private let resolvePersonsDisposable = MetaDisposable()
-    private let actionDisposable = MetaDisposable()
     private let searchDisposable = MetaDisposable()
     
     private var rootPath: String?
-    private var accountManager: AccountManager?
     private var encryptionParameters: ValueBoxEncryptionParameters?
     private var appGroupUrl: URL?
     
-    override init() {
-        super.init()
-        
+    init() {
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return
         }
         
         let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-        let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
-        
-        let apiId: Int32 = buildConfig.apiId
-        let apiHash: String = buildConfig.apiHash
-        let languagesCategory = "ios"
         
         let appGroupName = "group.\(baseAppBundleId)"
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
@@ -895,106 +884,60 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
         
         setupSharedLogger(rootPath: rootPath, path: logsPath)
         
-        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
-        
         initializeAccountManagement()
-        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true)
-        self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         self.encryptionParameters = encryptionParameters
         
-        self.allAccounts.set(accountManager.accountRecords()
-        |> take(1)
-        |> map { view -> [(AccountRecordId, PeerId, Bool)] in
-            var result: [(AccountRecordId, Int, PeerId, Bool)] = []
-            for record in view.records {
-                let isLoggedOut = record.attributes.contains(where: { attribute in
-                    return attribute is LoggedOutAccountAttribute
-                })
-                if isLoggedOut {
-                    continue
-                }
-                /*let isTestingEnvironment = record.attributes.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
-                        return true
-                    } else {
-                        return false
-                    }
-                })*/
-                var backupData: AccountBackupData?
-                var sortIndex: Int32 = 0
-                for attribute in record.attributes {
-                    if let attribute = attribute as? AccountSortOrderAttribute {
-                        sortIndex = attribute.order
-                    } else if let attribute = attribute as? AccountBackupDataAttribute {
-                        backupData = attribute.data
-                    }
-                }
-                if let backupData = backupData {
-                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentRecord?.id == record.id))
+        let view = AccountManager.getCurrentRecords(basePath: rootPath + "/accounts-metadata")
+        
+        var result: [(AccountRecordId, Int, PeerId, Bool)] = []
+        for record in view.records {
+            let isLoggedOut = record.attributes.contains(where: { attribute in
+                return attribute is LoggedOutAccountAttribute
+            })
+            if isLoggedOut {
+                continue
+            }
+            var backupData: AccountBackupData?
+            var sortIndex: Int32 = 0
+            for attribute in record.attributes {
+                if let attribute = attribute as? AccountSortOrderAttribute {
+                    sortIndex = attribute.order
+                } else if let attribute = attribute as? AccountBackupDataAttribute {
+                    backupData = attribute.data
                 }
             }
-            result.sort(by: { lhs, rhs in
-                if lhs.1 != rhs.1 {
-                    return lhs.1 < rhs.1
-                } else {
-                    return lhs.0 < rhs.0
-                }
-            })
-            return result.map { record -> (AccountRecordId, PeerId, Bool) in
-                return (record.0, record.2, record.3)
+            if let backupData = backupData {
+                result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentId == record.id))
+            }
+        }
+        result.sort(by: { lhs, rhs in
+            if lhs.1 != rhs.1 {
+                return lhs.1 < rhs.1
+            } else {
+                return lhs.0 < rhs.0
             }
         })
-        
-        let account: Signal<Account?, NoError>
-        if let accountCache = accountCache {
-            account = .single(accountCache)
-        } else {
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
-            |> mapToSignal { account -> Signal<Account?, NoError> in
-                if let account = account {
-                    switch account {
-                        case .upgrading:
-                            return .complete()
-                        case let .authorized(account):
-                            return applicationSettings(accountManager: accountManager)
-                            |> deliverOnMainQueue
-                            |> map { settings -> Account in
-                                accountCache = account
-                                Logger.shared.logToFile = settings.logging.logToFile
-                                Logger.shared.logToConsole = settings.logging.logToConsole
-                                
-                                Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
-                                return account
-                            }
-                        case .unauthorized:
-                            return .complete()
-                    }
-                } else {
-                    return .single(nil)
-                }
-            }
-            |> take(1)
-        }
-        self.accountPromise.set(account)
+        self.allAccounts.set(.single(result.map { record -> (AccountRecordId, PeerId, Bool) in
+            return (record.0, record.2, record.3)
+        }))
     }
     
     deinit {
-        self.resolvePersonsDisposable.dispose()
-        self.actionDisposable.dispose()
         self.searchDisposable.dispose()
     }
     
     @available(iOSApplicationExtension 14.0, iOS 14.0, *)
-    func provideFriendsOptionsCollection(for intent: SelectAvatarFriendsIntent, searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
-        guard let rootPath = self.rootPath, let _ = self.accountManager, let encryptionParameters = self.encryptionParameters else {
+    func provideFriendsOptionsCollection(searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        guard let rootPath = self.rootPath, let encryptionParameters = self.encryptionParameters else {
             completion(nil, nil)
             return
         }
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            //TODO:localize
             let error = NSError(domain: "Locked", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
             ])
@@ -1071,8 +1014,8 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
     }
     
     @available(iOSApplicationExtension 14.0, iOS 14.0, *)
-    func defaultFriends(for intent: SelectAvatarFriendsIntent) -> [Friend]? {
-        guard let rootPath = self.rootPath, let _ = self.accountManager, let encryptionParameters = self.encryptionParameters else {
+    func defaultFriends() -> [Friend]? {
+        guard let rootPath = self.rootPath, let encryptionParameters = self.encryptionParameters else {
             return []
         }
         
@@ -1137,6 +1080,45 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
         }
         
         return resultItems
+    }
+}
+
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
+@objc(FriendsIntentHandler)
+class FriendsIntentHandler: NSObject, SelectFriendsIntentHandling {
+    private let handler: WidgetIntentHandler
+    
+    override init() {
+        self.handler = WidgetIntentHandler()
+        
+        super.init()
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func provideFriendsOptionsCollection(for intent: SelectFriendsIntent, searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        self.handler.provideFriendsOptionsCollection(searchTerm: searchTerm, with: completion)
+    }
+}
+
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
+@objc(AvatarsIntentHandler)
+class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
+    private let handler: WidgetIntentHandler
+    
+    override init() {
+        self.handler = WidgetIntentHandler()
+        
+        super.init()
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func provideFriendsOptionsCollection(for intent: SelectAvatarFriendsIntent, searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        self.handler.provideFriendsOptionsCollection(searchTerm: searchTerm, with: completion)
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func defaultFriends(for intent: SelectAvatarFriendsIntent) -> [Friend]? {
+        return self.handler.defaultFriends()
     }
 }
 

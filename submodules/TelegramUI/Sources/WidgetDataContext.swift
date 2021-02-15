@@ -208,7 +208,27 @@ final class WidgetDataContext {
                     }
                     var result: [WidgetDataPeer] = []
                     for (peerId, message) in topMessages.messages {
-                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: "", lastName: "", letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(message: message)))
+                        guard let peer = message.peers[message.id.peerId] else {
+                            continue
+                        }
+                        
+                        var name: String = ""
+                        var lastName: String?
+                        
+                        if let user = peer as? TelegramUser {
+                            if let firstName = user.firstName {
+                                name = firstName
+                                lastName = user.lastName
+                            } else if let lastName = user.lastName {
+                                name = lastName
+                            } else if let phone = user.phone, !phone.isEmpty {
+                                name = phone
+                            }
+                        } else {
+                            name = peer.debugDisplayTitle
+                        }
+                        
+                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: message)))
                     }
                     result.sort(by: { lhs, rhs in
                         return lhs.id < rhs.id
