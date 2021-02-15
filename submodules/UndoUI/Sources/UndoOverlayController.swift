@@ -30,6 +30,7 @@ public enum UndoOverlayContent {
     case audioRate(slowdown: Bool, text: String)
     case forward(savedMessages: Bool, text: String)
     case autoDelete(isOn: Bool, title: String?, text: String)
+    case gigagroupConversion(text: String)
 }
 
 public enum UndoOverlayAction {

@@ -6085,5 +6085,9 @@ Sorry for the inconvenience.";
 
 "Group.Info.Members" = "Members";
 
+"Group.Members.Title" = "Members";
+"Group.Members.AddMembers" = "Add Members";
+"Group.Members.AddMembersHelp" = "Only group admins can see this list.";
+
 "Conversation.AlsoClearCacheTitle" = "You can use \"clear cache\" to remove unnecessary media — and re-downloaded files if you need them again.";
 "Conversation.DeleteAllMessagesInChat" = "Are you sure you want to delete all messages in %@?";
