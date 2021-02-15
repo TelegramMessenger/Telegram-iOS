@@ -18,6 +18,7 @@ import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
 import Markdown
+import UndoUI
 
 private final class ChannelPermissionsControllerArguments {
     let context: AccountContext
@@ -770,7 +771,8 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 
                 let _ = (convertGroupToGigagroup(account: context.account, peerId: originalPeerId)
                 |> deliverOnMainQueue).start(completed: {
-                    
+                    let participantsLimit = context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).0), elevatedLayout: false, action: { _ in return false }), nil)
                 })
             })])
             presentControllerImpl?(alertController, nil)

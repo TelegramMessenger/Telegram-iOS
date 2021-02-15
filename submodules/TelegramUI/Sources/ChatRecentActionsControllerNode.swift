@@ -20,6 +20,7 @@ import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
 import PeerInfoUI
+import InviteLinksUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -148,6 +149,15 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             case let .changeStickerPack(_, new):
                                 if let new = new {
                                     strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), nil)
+                                    return true
+                                }
+                            case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite):
+                                if !invite.link.hasSuffix("...") {
+                                    let controller = inviteLinkEditController(context: strongSelf.context, peerId: peer.id, invite: invite, completion: { [weak self] _ in
+                                        self?.eventLogContext.reload()
+                                    })
+                                    controller.navigationPresentation = .modal
+                                    strongSelf.pushController(controller)
                                     return true
                                 }
                             default:
