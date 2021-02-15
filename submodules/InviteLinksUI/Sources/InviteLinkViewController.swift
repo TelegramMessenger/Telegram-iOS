@@ -531,9 +531,12 @@ public final class InviteLinkViewController: ViewController {
                                         self?.controller?.dismiss()
 
                                         let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                            
                                         })
                                         
-                                        self?.controller?.revokedInvitationsContext?.remove(invite)
+                                        self?.controller?.invitationsContext?.remove(invite)
+                                        let revokedInvite = invite.withUpdated(isRevoked: true)
+                                        self?.controller?.revokedInvitationsContext?.add(revokedInvite)
                                     })
                                 ]),
                                 ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])

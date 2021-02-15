@@ -126,6 +126,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private let containerNode: ContextControllerSourceNode
     private let addressButtonNode: HighlightTrackingButtonNode
     private let addressButtonIconNode: ASImageNode
+    private var addressShimmerNode: ShimmerEffectNode?
     private var shareButtonNode: SolidRoundedButtonNode?
     
     private let avatarsButtonNode: HighlightTrackingButtonNode
@@ -133,7 +134,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private var avatarsContent: AnimatedAvatarSetContext.Content?
     private let avatarsNode: AnimatedAvatarSetNode
     private let invitedPeersNode: TextNode
-    private var peersPlaceholderNode: ShimmerEffectNode?
+    private var shimmerNode: ShimmerEffectNode?
     private var absoluteLocation: (CGRect, CGSize)?
     
     private let activateArea: AccessibilityAreaNode
@@ -492,11 +493,11 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     if item.invite == nil {
                         let shimmerNode: ShimmerEffectNode
-                        if let current = strongSelf.peersPlaceholderNode {
+                        if let current = strongSelf.shimmerNode {
                             shimmerNode = current
                         } else {
                             shimmerNode = ShimmerEffectNode()
-                            strongSelf.peersPlaceholderNode = shimmerNode
+                            strongSelf.shimmerNode = shimmerNode
                             strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.fieldNode)
                         }
                         shimmerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
@@ -504,17 +505,41 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                             shimmerNode.updateAbsoluteRect(rect, within: size)
                         }
                         
-                        var shapes: [ShimmerEffectNode.Shape] = []
-                        
                         let lineWidth: CGFloat = 180.0
-                        let lineDiameter: CGFloat = 10.0
-                        
+                        let lineDiameter: CGFloat = 12.0
                         let titleFrame = strongSelf.invitedPeersNode.frame
+                        
+                        var shapes: [ShimmerEffectNode.Shape] = []
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: floor(titleFrame.center.x - lineWidth / 2.0), y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: lineWidth, diameter: lineDiameter))
                         shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
-                    } else if let shimmerNode = strongSelf.peersPlaceholderNode {
-                        strongSelf.peersPlaceholderNode = nil
-                        shimmerNode.removeFromSupernode()
+                        
+                        let addressShimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.addressShimmerNode {
+                            addressShimmerNode = current
+                        } else {
+                            addressShimmerNode = ShimmerEffectNode()
+                            strongSelf.addressShimmerNode = addressShimmerNode
+                            strongSelf.insertSubnode(addressShimmerNode, aboveSubnode: strongSelf.fieldNode)
+                        }
+                        addressShimmerNode.frame = strongSelf.fieldNode.frame.insetBy(dx: 18.0, dy: 0.0)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            addressShimmerNode.updateAbsoluteRect(CGRect(x: rect.minX + strongSelf.fieldNode.frame.minX + 18.0, y: rect.minY + strongSelf.fieldNode.frame.minY, width: strongSelf.fieldNode.frame.width - 18.0 * 2.0, height: strongSelf.fieldNode.frame.height), within: size)
+                        }
+                        
+                        let addressLineWidth: CGFloat = strongSelf.fieldNode.frame.width - 100.0
+                        var addressShapes: [ShimmerEffectNode.Shape] = []
+                        addressShapes.append(.roundedRectLine(startPoint: CGPoint(x: floor(addressShimmerNode.frame.width / 2.0 - addressLineWidth / 2.0), y: 16.0 + floor((22.0 - lineDiameter) / 2.0)), width: addressLineWidth, diameter: lineDiameter))
+                        addressShimmerNode.update(backgroundColor: item.presentationData.theme.list.itemInputField.backgroundColor, foregroundColor: item.presentationData.theme.list.itemInputField.controlColor.mixedWith(item.presentationData.theme.list.itemInputField.backgroundColor, alpha: 0.7), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: addressShapes, size: addressShimmerNode.frame.size)
+
+                    } else {
+                        if let shimmerNode = strongSelf.shimmerNode {
+                            strongSelf.shimmerNode = nil
+                            shimmerNode.removeFromSupernode()
+                        }
+                        if let shimmerNode = strongSelf.addressShimmerNode {
+                            strongSelf.shimmerNode = nil
+                            shimmerNode.removeFromSupernode()
+                        }
                     }
                 }
             })
@@ -537,7 +562,10 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         var rect = rect
         rect.origin.y += self.insets.top
         self.absoluteLocation = (rect, containerSize)
-        if let shimmerNode = self.peersPlaceholderNode {
+        if let shimmerNode = self.addressShimmerNode {
+            shimmerNode.updateAbsoluteRect(CGRect(x: rect.minX + self.fieldNode.frame.minX + 18.0, y: rect.minY + self.fieldNode.frame.minY, width: self.fieldNode.frame.width - 18.0 * 2.0, height: self.fieldNode.frame.height), within: containerSize)
+        }
+        if let shimmerNode = self.shimmerNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)
         }
     }

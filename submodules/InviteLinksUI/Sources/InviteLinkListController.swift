@@ -716,21 +716,31 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
-        
+    
     let peerView = context.account.viewTracker.peerView(peerId)
     |> deliverOnMainQueue
     
-    let importersState = Promise<PeerInvitationImportersState?>(nil)
-    let importersContext: Signal<PeerInvitationImportersContext?, NoError> = peerView
-    |> mapToSignal { view -> Signal<ExportedInvitation?, NoError> in
-        if let cachedData = view.cachedData as? CachedGroupData, let exportedInvitation = cachedData.exportedInvitation {
-            return .single(exportedInvitation)
-        } else if let cachedData = view.cachedData as? CachedChannelData, let exportedInvitation = cachedData.exportedInvitation {
-            return .single(exportedInvitation)
-        } else {
-            return .single(nil)
+    let mainLink: Signal<ExportedInvitation?, NoError>
+    if let _ = admin {
+        mainLink = invitesContext.state
+        |> mapToSignal { state -> Signal<ExportedInvitation?, NoError> in
+            return .single(state.invitations.first(where: { $0.isPermanent && !$0.isRevoked }))
+        }
+    } else {
+        mainLink = peerView
+        |> mapToSignal { view -> Signal<ExportedInvitation?, NoError> in
+            if let cachedData = view.cachedData as? CachedGroupData, let exportedInvitation = cachedData.exportedInvitation {
+                return .single(exportedInvitation)
+            } else if let cachedData = view.cachedData as? CachedChannelData, let exportedInvitation = cachedData.exportedInvitation {
+                return .single(exportedInvitation)
+            } else {
+                return .single(nil)
+            }
         }
     }
+    
+    let importersState = Promise<PeerInvitationImportersState?>(nil)
+    let importersContext: Signal<PeerInvitationImportersContext?, NoError> = mainLink
     |> distinctUntilChanged
     |> deliverOnMainQueue
     |> map { invite -> PeerInvitationImportersContext? in
@@ -749,21 +759,31 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
     }, queue: Queue.mainQueue())
     timer.start()
     
+    let previousInvites = Atomic<PeerExportedInvitationsState?>(value: nil)
     let previousRevokedInvites = Atomic<PeerExportedInvitationsState?>(value: nil)
     let previousCreators = Atomic<[ExportedInvitationCreator]?>(value: nil)
     
     let signal = combineLatest(context.sharedContext.presentationData, peerView, importersContext, importersState.get(), invitesContext.state, revokedInvitesContext.state, creators, timerPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, view, importersContext, importers, invites, revokedInvites, creators, tick -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let previousRevokedInvites = previousRevokedInvites.swap(invites)
+        let previousInvites = previousInvites.swap(invites)
+        let previousRevokedInvites = previousRevokedInvites.swap(revokedInvites)
         let previousCreators = previousCreators.swap(creators)
         
         var crossfade = false
+        if (previousInvites?.hasLoadedOnce ?? false) != (invites.hasLoadedOnce) {
+            crossfade = true
+        }
         if (previousRevokedInvites?.hasLoadedOnce ?? false) != (revokedInvites.hasLoadedOnce) {
             crossfade = true
         }
         if (previousCreators?.count ?? 0) != creators.count {
             crossfade = true
+        }
+        
+        var animateChanges = false
+        if !crossfade && previousInvites?.hasLoadedOnce == true && previousRevokedInvites?.hasLoadedOnce == true && previousCreators != nil {
+            animateChanges = true
         }
         
         let title: ItemListControllerTitle
@@ -774,7 +794,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.invitations, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.invitations, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

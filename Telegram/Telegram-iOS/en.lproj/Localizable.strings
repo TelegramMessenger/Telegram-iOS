@@ -2689,6 +2689,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLogFilter.EventsPinned" = "Pinned Messages";
 "Channel.AdminLogFilter.EventsLeaving" = "Members Removed";
 "Channel.AdminLogFilter.EventsCalls" = "Voice Chats";
+"Channel.AdminLogFilter.EventsInviteLinks" = "Invite Links";
 "Channel.AdminLogFilter.AdminsTitle" = "ADMINS";
 "Channel.AdminLogFilter.AdminsAll" = "All Admins";
 

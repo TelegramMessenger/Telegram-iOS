@@ -7104,7 +7104,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                                 let _ = (convertGroupToGigagroup(account: context.account, peerId: peerId)
                                 |> deliverOnMainQueue).start(completed: {
-                                    
+                                    let participantsLimit = context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
+                                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                                 })
                             })])
                             strongSelf.present(alertController, in: .window(.root))
