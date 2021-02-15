@@ -656,7 +656,7 @@ public final class InviteLinkViewController: ViewController {
                 }
             })
             
-            if invite.isRevoked {
+            if invite.isPermanent || invite.isRevoked {
                 self.editButton.isHidden = true
             }
         }
