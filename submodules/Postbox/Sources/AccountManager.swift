@@ -53,7 +53,7 @@ final class AccountManagerImpl {
     private var noticeEntryViews = Bag<(MutableNoticeEntryView, ValuePipe<NoticeEntryView>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     
-    fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64) {
+    fileprivate init?(queue: Queue, basePath: String, isTemporary: Bool, temporarySessionId: Int64) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         self.queue = queue
@@ -61,8 +61,14 @@ final class AccountManagerImpl {
         self.atomicStatePath = "\(basePath)/atomic-state"
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
-        self.guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
-        self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
+        guard let guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, isTemporary: isTemporary, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+            return nil
+        }
+        self.guardValueBox = guardValueBox
+        guard let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+            return nil
+        }
+        self.valueBox = valueBox
         
         self.legacyMetadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
         self.legacyRecordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
@@ -451,7 +457,7 @@ public final class AccountManager {
     private let impl: QueueLocalObject<AccountManagerImpl>
     public let temporarySessionId: Int64
     
-    public init(basePath: String) {
+    public init(basePath: String, isTemporary: Bool) {
         self.queue = sharedQueue
         self.basePath = basePath
         var temporarySessionId: Int64 = 0
@@ -459,7 +465,11 @@ public final class AccountManager {
         self.temporarySessionId = temporarySessionId
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return AccountManagerImpl(queue: queue, basePath: basePath, temporarySessionId: temporarySessionId)
+            if let value = AccountManagerImpl(queue: queue, basePath: basePath, isTemporary: isTemporary, temporarySessionId: temporarySessionId) {
+                return value
+            } else {
+                preconditionFailure()
+            }
         })
         self.mediaBox = MediaBox(basePath: basePath + "/media")
     }

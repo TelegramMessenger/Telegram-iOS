@@ -740,9 +740,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.updateNotificationTokensRegistration()
         
         if applicationBindings.isMainApp {
-            self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
-            |> map { primary, _, _ in
-                return primary
+            self.widgetDataContext = WidgetDataContext(basePath: self.basePath, inForeground: self.applicationBindings.applicationInForeground, activeAccounts: self.activeAccounts
+            |> map { _, accounts, _ in
+                return accounts.map { $0.1 }
             }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl)
             
             let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))

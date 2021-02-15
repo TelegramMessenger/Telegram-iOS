@@ -21,6 +21,7 @@ import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
 import PeerInfoUI
 import InviteLinksUI
+import UndoUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -158,6 +159,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     })
                                     controller.navigationPresentation = .modal
                                     strongSelf.pushController(controller)
+                                    return true
+                                }
+                            case .changeHistoryTTL:
+                                if strongSelf.peer.canSetupAutoremoveTimeout(accountPeerId: strongSelf.context.account.peerId) {
+                                    strongSelf.presentAutoremoveSetup()
                                     return true
                                 }
                             default:
@@ -875,5 +881,30 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }
         }))
+    }
+    
+    private func presentAutoremoveSetup() {
+        let peer = self.peer
+        
+        let controller = peerAutoremoveSetupScreen(context: self.context, peerId: peer.id, completion: { [weak self] updatedValue in
+            if case let .updated(value) = updatedValue {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var isOn: Bool = true
+                var text: String?
+                if let myValue = value.value {
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
+                } else {
+                    isOn = false
+                    text = "Auto-Delete is now off."
+                }
+                if let text = text {
+                    strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), nil)
+                }
+            }
+        })
+        self.pushController(controller)
     }
 }

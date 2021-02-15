@@ -112,13 +112,6 @@ struct Provider: IntentTimelineProvider {
         
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         
-        let dataPath = rootPath + "/widget-data"
-        
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data), case let .peers(widgetPeers) = widgetData.content else {
-            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
-            return
-        }
-        
         TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: arc4random64())
         
         let logsPath = rootPath + "/widget-logs"
@@ -213,7 +206,10 @@ struct Provider: IntentTimelineProvider {
                 }
                 
                 return result
-            }))
+            })
+            |> `catch` { _ -> Signal<[ParsedPeer], NoError> in
+                return .single([])
+            })
         }
         
         let _ = combineLatest(friendsByAccount).start(next: { allPeers in
@@ -268,13 +264,6 @@ struct AvatarsProvider: IntentTimelineProvider {
         }
         
         let rootPath = rootPathForBasePath(appGroupUrl.path)
-        
-        let dataPath = rootPath + "/widget-data"
-        
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data), case let .peers(widgetPeers) = widgetData.content else {
-            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
-            return
-        }
         
         TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: arc4random64())
         
@@ -370,7 +359,10 @@ struct AvatarsProvider: IntentTimelineProvider {
                 }
                 
                 return result
-            }))
+            })
+            |> `catch` { _ -> Signal<[ParsedPeer], NoError> in
+                return .single([])
+            })
         }
         
         let _ = combineLatest(friendsByAccount).start(next: { allPeers in
@@ -1006,39 +998,7 @@ private let presentationData: WidgetPresentationData = {
 func getWidgetData(contents: SimpleEntry.Contents) -> PeersWidgetData {
     switch contents {
     case .recent:
-        let appBundleIdentifier = Bundle.main.bundleIdentifier!
-        guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-            return .empty
-        }
-        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-        
-        let appGroupName = "group.\(baseAppBundleId)"
-        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-        
-        guard let appGroupUrl = maybeAppGroupUrl else {
-            return .empty
-        }
-        
-        let rootPath = rootPathForBasePath(appGroupUrl.path)
-        
-        /*if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
-            if state.isManuallyLocked || state.autolockTimeout != nil {
-                return .empty
-            }
-        }*/
-        
-        let dataPath = rootPath + "/widget-data"
-        
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
-            switch widgetData.content {
-            case let .peers(peers):
-                return .peers(ParsedPeers(accountId: widgetData.accountId, peers: peers))
-            case .empty:
-                return .empty
-            }
-        } else {
-            return .empty
-        }
+        return .empty
     case let .peers(peers):
         return .peers(peers)
     }

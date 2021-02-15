@@ -219,6 +219,8 @@ public func temporaryAccount(manager: AccountManager, rootPath: String, encrypti
             switch result {
                 case .upgrading:
                     return .complete()
+                case .error:
+                    return .complete()
                 case let .postbox(postbox):
                     return .single(TemporaryAccount(id: id, basePath: path, postbox: postbox))
             }

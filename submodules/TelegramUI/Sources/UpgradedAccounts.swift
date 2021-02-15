@@ -298,6 +298,9 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
                         })
                     })
                     |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, NoError> in
+                        return .complete()
+                    }
                     importSignal = importSignal |> then(importInfoAccounttSignal)
                 }
                 return importSignal

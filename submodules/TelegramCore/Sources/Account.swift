@@ -176,6 +176,8 @@ public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys
                     }
                     return .result(path, result)
                 }
+            case .error:
+                return .single(.progress(0.0))
         }
     }
 }
@@ -197,6 +199,8 @@ public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encrypti
                 return postbox.transaction { transaction -> AccountNoticeEntriesResult in
                     return .result(path, transaction.getAllNoticeEntries())
                 }
+            case .error:
+                return .single(.progress(0.0))
         }
     }
 }
@@ -218,6 +222,8 @@ public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecord
                 return postbox.transaction { transaction -> LegacyAccessChallengeDataResult in
                     return .result(transaction.legacyGetAccessChallengeData())
                 }
+            case .error:
+                return .single(.progress(0.0))
         }
     }
 }
@@ -232,6 +238,8 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
         switch result {
             case let .upgrading(progress):
                 return .single(.upgrading(progress))
+            case .error:
+                return .single(.upgrading(0.0))
             case let .postbox(postbox):
                 return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
                     return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)

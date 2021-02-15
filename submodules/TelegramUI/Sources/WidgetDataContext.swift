@@ -29,251 +29,209 @@ private extension SelectFriendsIntent {
     }
 }
 
-final class WidgetDataContext {
-    private var currentAccount: Account?
-    private var currentAccountDisposable: Disposable?
-    private var widgetPresentationDataDisposable: Disposable?
-    private var notificationPresentationDataDisposable: Disposable?
+private final class WidgetReloadManager {
+    private var inForeground = false
+    private var inForegroundDisposable: Disposable?
     
-    init(basePath: String, activeAccount: Signal<Account?, NoError>, presentationData: Signal<PresentationData, NoError>, appLockContext: AppLockContextImpl) {
-        self.currentAccountDisposable = (activeAccount
-        |> distinctUntilChanged(isEqual: { lhs, rhs in
-            return lhs === rhs
+    private var isReloadRequested = false
+    private var lastBackgroundReload: Double?
+    
+    init(inForeground: Signal<Bool, NoError>) {
+        self.inForegroundDisposable = (inForeground
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.inForeground != value {
+                strongSelf.inForeground = value
+                if value {
+                    strongSelf.performReloadIfNeeded()
+                }
+            }
         })
-        |> mapToSignal { account -> Signal<WidgetData, NoError> in
-            guard let account = account else {
-                return .single(WidgetData(accountId: 0, content: .empty, unlockedForLockId: nil))
-            }
-            
-            enum CombinedRecentPeers {
-                struct Unread {
-                    var count: Int32
-                    var isMuted: Bool
+    }
+    
+    deinit {
+        self.inForegroundDisposable?.dispose()
+    }
+    
+    func requestReload() {
+        self.isReloadRequested = true
+        
+        if self.inForeground {
+            self.performReloadIfNeeded()
+        } else {
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if let lastBackgroundReloadValue = self.lastBackgroundReload {
+                if abs(lastBackgroundReloadValue - timestamp) > 25.0 * 60.0 {
+                    self.lastBackgroundReload = timestamp
+                    performReloadIfNeeded()
                 }
-                
-                case disabled
-                case peers(peers: [Peer], unread: [PeerId: Unread], messages: [PeerId: WidgetDataPeer.Message])
-            }
-            
-            let updatedAdditionalPeerIds: Signal<(Set<PeerId>, Set<String>), NoError> = Signal { subscriber in
-                if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
-                    #if arch(arm64) || arch(i386) || arch(x86_64)
-                    WidgetCenter.shared.getCurrentConfigurations({ result in
-                        var peerIds = Set<PeerId>()
-                        var configurationHashes = Set<String>()
-                        if case let .success(infos) = result {
-                            for info in infos {
-                                if let configuration = info.configuration as? SelectFriendsIntent {
-                                    if let items = configuration.friends {
-                                        for item in items {
-                                            guard let identifier = item.identifier, let peerIdValue = Int64(identifier) else {
-                                                continue
-                                            }
-                                            peerIds.insert(PeerId(peerIdValue))
-                                        }
-                                    }
-                                    configurationHashes.insert(configuration.configurationHash)
-                                }
-                            }
-                        }
-                        
-                        subscriber.putNext((peerIds, configurationHashes))
-                        subscriber.putCompletion()
-                    })
-                    #else
-                    subscriber.putNext((Set(), Set()))
-                    subscriber.putCompletion()
-                    #endif
-                } else {
-                    subscriber.putNext((Set(), Set()))
-                    subscriber.putCompletion()
-                }
-                
-                return EmptyDisposable
-            }
-            |> runOn(.mainQueue())
-            
-            let unlockedForLockId: Signal<String?, NoError> = .single(nil)
-            
-            let sourcePeers: Signal<RecentPeers, NoError> = recentPeers(account: account)
-            
-            let recent: Signal<CombinedRecentPeers, NoError> = sourcePeers
-            |> mapToSignal { recent -> Signal<CombinedRecentPeers, NoError> in
-                switch recent {
-                    case .disabled:
-                        return .single(.disabled)
-                    case let .peers(peers):
-                        return combineLatest(queue: .mainQueue(), peers.filter { !$0.isDeleted }.map { account.postbox.peerView(id: $0.id)})
-                        |> mapToSignal { peerViews -> Signal<CombinedRecentPeers, NoError> in
-                            let topMessagesKey: PostboxViewKey = .topChatMessage(peerIds: peerViews.map {
-                                $0.peerId
-                             })
-                            return combineLatest(queue: .mainQueue(),
-                                 account.postbox.unreadMessageCountsView(items: peerViews.map {
-                                     .peer($0.peerId)
-                                 }),
-                                 account.postbox.combinedView(keys: [topMessagesKey])
-                            )
-                            |> map { values, combinedView -> CombinedRecentPeers in
-                                var peers: [Peer] = []
-                                var unread: [PeerId: CombinedRecentPeers.Unread] = [:]
-                                var messages: [PeerId: WidgetDataPeer.Message] = [:]
-                                
-                                let topMessages = combinedView.views[topMessagesKey] as! TopChatMessageView
-                                
-                                for peerView in peerViews {
-                                    if let peer = peerViewMainPeer(peerView) {
-                                        var isMuted: Bool = false
-                                        if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                            switch notificationSettings.muteState {
-                                                case .muted:
-                                                    isMuted = true
-                                                default:
-                                                    break
-                                            }
-                                        }
-                                        
-                                        let unreadCount = values.count(for: .peer(peerView.peerId))
-                                        if let unreadCount = unreadCount, unreadCount > 0 {
-                                            unread[peerView.peerId] = CombinedRecentPeers.Unread(count: Int32(unreadCount), isMuted: isMuted)
-                                        }
-                                        
-                                        if let message = topMessages.messages[peerView.peerId] {
-                                            messages[peerView.peerId] = WidgetDataPeer.Message(message: message)
-                                        }
-                                        
-                                        peers.append(peer)
-                                    }
-                                }
-                                return .peers(peers: peers, unread: unread, messages: messages)
-                            }
-                        }
-                }
-            }
-            
-            let processedRecent = recent
-            |> map { _ -> WidgetData in
-                return WidgetData(accountId: account.id.int64, content: .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: [], updateTimestamp: Int32(Date().timeIntervalSince1970))), unlockedForLockId: nil)
-            }
-            |> distinctUntilChanged
-            
-            let additionalPeerIds = Signal<(Set<PeerId>, Set<String>), NoError>.complete() |> then(updatedAdditionalPeerIds)
-            let processedCustom: Signal<WidgetData, NoError> = additionalPeerIds
-            |> distinctUntilChanged(isEqual: { lhs, rhs in
-                if lhs.0 != rhs.0 {
-                    return false
-                }
-                if lhs.1 != rhs.1 {
-                    return false
-                }
-                return true
-            })
-            |> mapToSignal { additionalPeerIds, _ -> Signal<CombinedRecentPeers, NoError> in
-                return combineLatest(queue: .mainQueue(), additionalPeerIds.map { account.postbox.peerView(id: $0) })
-                |> mapToSignal { peerViews -> Signal<CombinedRecentPeers, NoError> in
-                    let topMessagesKey: PostboxViewKey = .topChatMessage(peerIds: peerViews.map {
-                        $0.peerId
-                     })
-                    return combineLatest(queue: .mainQueue(),
-                         account.postbox.unreadMessageCountsView(items: peerViews.map {
-                             .peer($0.peerId)
-                         }),
-                         account.postbox.combinedView(keys: [topMessagesKey])
-                    )
-                    |> map { values, combinedView -> CombinedRecentPeers in
-                        var peers: [Peer] = []
-                        var unread: [PeerId: CombinedRecentPeers.Unread] = [:]
-                        var messages: [PeerId: WidgetDataPeer.Message] = [:]
-                        
-                        let topMessages = combinedView.views[topMessagesKey] as! TopChatMessageView
-                        
-                        for peerView in peerViews {
-                            if let peer = peerViewMainPeer(peerView) {
-                                var isMuted: Bool = false
-                                if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                    switch notificationSettings.muteState {
-                                        case .muted:
-                                            isMuted = true
-                                        default:
-                                            break
-                                    }
-                                }
-                                
-                                let unreadCount = values.count(for: .peer(peerView.peerId))
-                                if let unreadCount = unreadCount, unreadCount > 0 {
-                                    unread[peerView.peerId] = CombinedRecentPeers.Unread(count: Int32(unreadCount), isMuted: isMuted)
-                                }
-                                
-                                if let message = topMessages.messages[peerView.peerId] {
-                                    messages[peerView.peerId] = WidgetDataPeer.Message(message: message)
-                                }
-                                
-                                peers.append(peer)
-                            }
-                        }
-                        return .peers(peers: peers, unread: unread, messages: messages)
-                    }
-                }
-            }
-            |> map { result -> WidgetData in
-                switch result {
-                case .disabled:
-                    return WidgetData(accountId: account.id.int64, content: .empty, unlockedForLockId: nil)
-                case let .peers(peers, unread, messages):
-                    return WidgetData(accountId: account.id.int64, content: .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: peers.compactMap { peer -> WidgetDataPeer? in
-                        var name: String = ""
-                        var lastName: String?
-                        
-                        if let user = peer as? TelegramUser {
-                            if let firstName = user.firstName {
-                                name = firstName
-                                lastName = user.lastName
-                            } else if let lastName = user.lastName {
-                                name = lastName
-                            } else if let phone = user.phone, !phone.isEmpty {
-                                name = phone
-                            }
-                        } else {
-                            name = peer.debugDisplayTitle
-                        }
-                        
-                        var badge: WidgetDataPeer.Badge?
-                        if let unreadValue = unread[peer.id], unreadValue.count > 0 {
-                            badge = WidgetDataPeer.Badge(
-                                count: Int(unreadValue.count),
-                                isMuted: unreadValue.isMuted
-                            )
-                        }
-                        
-                        let message = messages[peer.id]
-                        
-                        return WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                            return account.postbox.mediaBox.resourcePath(representation.resource)
-                        }, badge: badge, message: message)
-                    }, updateTimestamp: Int32(Date().timeIntervalSince1970))), unlockedForLockId: nil)
-                }
-            }
-            |> distinctUntilChanged
-            
-            return combineLatest(processedRecent, processedCustom, unlockedForLockId)
-            |> map { processedRecent, _, unlockedForLockId -> WidgetData in
-                var processedRecent = processedRecent
-                processedRecent.unlockedForLockId = unlockedForLockId
-                return processedRecent
-            }
-        }).start(next: { widgetData in
-            let path = basePath + "/widget-data"
-            if let data = try? JSONEncoder().encode(widgetData) {
-                let _ = try? data.write(to: URL(fileURLWithPath: path), options: [.atomic])
             } else {
-                let _ = try? FileManager.default.removeItem(atPath: path)
+                self.lastBackgroundReload = timestamp
+                performReloadIfNeeded()
             }
-            
+        }
+    }
+    
+    private func performReloadIfNeeded() {
+        if !self.isReloadRequested {
+            return
+        }
+        self.isReloadRequested = false
+        
+        DispatchQueue.global(qos: .background).async {
             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
                 #if arch(arm64) || arch(i386) || arch(x86_64)
                 WidgetCenter.shared.reloadAllTimelines()
                 #endif
             }
+        }
+    }
+}
+
+final class WidgetDataContext {
+    private let reloadManager: WidgetReloadManager
+    
+    private var disposable: Disposable?
+    private var widgetPresentationDataDisposable: Disposable?
+    private var notificationPresentationDataDisposable: Disposable?
+    
+    init(basePath: String, inForeground: Signal<Bool, NoError>, activeAccounts: Signal<[Account], NoError>, presentationData: Signal<PresentationData, NoError>, appLockContext: AppLockContextImpl) {
+        self.reloadManager = WidgetReloadManager(inForeground: inForeground)
+        
+        let queue = Queue()
+        let updatedAdditionalPeerIds: Signal<[AccountRecordId: Set<PeerId>], NoError> = Signal { subscriber in
+            if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+                #if arch(arm64) || arch(i386) || arch(x86_64)
+                WidgetCenter.shared.getCurrentConfigurations { result in
+                    var peerIds: [AccountRecordId: Set<PeerId>] = [:]
+                    
+                    func processFriend(_ item: Friend) {
+                        guard let identifier = item.identifier else {
+                            return
+                        }
+                        guard let index = identifier.firstIndex(of: ":") else {
+                            return
+                        }
+                        guard let accountIdValue = Int64(identifier[identifier.startIndex ..< index]) else {
+                            return
+                        }
+                        guard let peerIdValue = Int64(identifier[identifier.index(after: index)...]) else {
+                            return
+                        }
+                        let accountId = AccountRecordId(rawValue: accountIdValue)
+                        let peerId = PeerId(peerIdValue)
+                        if peerIds[accountId] == nil {
+                            peerIds[accountId] = Set()
+                        }
+                        peerIds[accountId]?.insert(peerId)
+                    }
+                    
+                    if case let .success(infos) = result {
+                        for info in infos {
+                            if let configuration = info.configuration as? SelectFriendsIntent {
+                                if let items = configuration.friends {
+                                    for item in items {
+                                        processFriend(item)
+                                    }
+                                }
+                            } else if let configuration = info.configuration as? SelectAvatarFriendsIntent {
+                                if let items = configuration.friends {
+                                    for item in items {
+                                        processFriend(item)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    subscriber.putNext(peerIds)
+                    subscriber.putCompletion()
+                }
+                #else
+                subscriber.putNext([:])
+                subscriber.putCompletion()
+                #endif
+            } else {
+                subscriber.putNext([:])
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+        |> runOn(queue)
+        |> then(
+            Signal<[AccountRecordId: Set<PeerId>], NoError>.complete()
+            |> delay(10.0, queue: queue)
+        )
+        |> restart
+        
+        self.disposable = (combineLatest(queue: queue,
+            updatedAdditionalPeerIds |> distinctUntilChanged,
+            activeAccounts |> distinctUntilChanged(isEqual: { lhs, rhs in
+                if lhs.count != rhs.count {
+                    return false
+                }
+                for i in 0 ..< lhs.count {
+                    if lhs[i] !== rhs[i] {
+                        return false
+                    }
+                }
+                return true
+            })
+        )
+        |> mapToSignal { peerIdsByAccount, accounts -> Signal<[WidgetDataPeer], NoError> in
+            var accountSignals: [Signal<[WidgetDataPeer], NoError>] = []
+            
+            for (accountId, peerIds) in peerIdsByAccount {
+                var accountValue: Account?
+                for value in accounts {
+                    if value.id == accountId {
+                        accountValue = value
+                        break
+                    }
+                }
+                guard let account = accountValue else {
+                    continue
+                }
+                if peerIds.isEmpty {
+                    continue
+                }
+                let topMessagesKey: PostboxViewKey = .topChatMessage(peerIds: Array(peerIds))
+                
+                accountSignals.append(account.postbox.combinedView(keys: [topMessagesKey])
+                |> map { combinedView -> [WidgetDataPeer] in
+                    guard let topMessages = combinedView.views[topMessagesKey] as? TopChatMessageView else {
+                        return []
+                    }
+                    var result: [WidgetDataPeer] = []
+                    for (peerId, message) in topMessages.messages {
+                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: "", lastName: "", letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(message: message)))
+                    }
+                    result.sort(by: { lhs, rhs in
+                        return lhs.id < rhs.id
+                    })
+                    return result
+                })
+            }
+            
+            return combineLatest(queue: queue, accountSignals)
+            |> map { lists -> [WidgetDataPeer] in
+                var result: [WidgetDataPeer] = []
+                for list in lists {
+                    result.append(contentsOf: list)
+                }
+                result.sort(by: { lhs, rhs in
+                    return lhs.id < rhs.id
+                })
+                return result
+            }
+        }
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            self?.reloadManager.requestReload()
         })
         
         self.widgetPresentationDataDisposable = (presentationData
@@ -310,6 +268,8 @@ final class WidgetDataContext {
     }
     
     deinit {
-        self.currentAccountDisposable?.dispose()
+        self.disposable?.dispose()
+        self.widgetPresentationDataDisposable?.dispose()
+        self.notificationPresentationDataDisposable?.dispose()
     }
 }
