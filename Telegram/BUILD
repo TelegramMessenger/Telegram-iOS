@@ -1161,6 +1161,12 @@ plist_fragment(
     )
 )
 
+filegroup(
+    name = "WidgetAssets",
+    srcs = glob(["WidgetKitWidget/WidgetImages.xcassets/**"]),
+    visibility = ["//visibility:public"],
+)
+
 swift_library(
     name = "WidgetExtensionLib",
     module_name = "WidgetExtensionLib",
@@ -1168,7 +1174,7 @@ swift_library(
         "WidgetKitWidget/**/*.swift",
     ]),
     data = [
-        #"SiriIntents/Intents.intentdefinition",
+        ":WidgetAssets",
     ],
     deps = [
         "//submodules/BuildConfig:BuildConfig",
@@ -1205,7 +1211,9 @@ ios_extension(
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
     }),
-    deps = [":WidgetExtensionLib"],
+    deps = [
+        ":WidgetExtensionLib",
+    ],
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",

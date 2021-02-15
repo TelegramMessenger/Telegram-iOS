@@ -87,11 +87,16 @@ struct Provider: IntentTimelineProvider {
     }
 
     func getSnapshot(for configuration: SelectFriendsIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), contents: .peers(ParsedPeers(accountId: 0, peers: WidgetDataPeers(accountPeerId: 0, peers: [], updateTimestamp: 0))))
+        let entry = SimpleEntry(date: Date(), contents: context.isPreview ? .preview : .peers(ParsedPeers(accountId: 0, peers: WidgetDataPeers(accountPeerId: 0, peers: [], updateTimestamp: 0))))
         completion(entry)
     }
 
     func getTimeline(for configuration: SelectFriendsIntent, in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        if context.isPreview {
+            completion(Timeline(entries: [SimpleEntry(date: Date(), contents: .preview)], policy: .atEnd))
+            return
+        }
+        
         let currentDate = Date()
         let entryDate = Calendar.current.date(byAdding: .hour, value: 0, to: currentDate)!
         
@@ -240,11 +245,16 @@ struct AvatarsProvider: IntentTimelineProvider {
     }
 
     func getSnapshot(for configuration: SelectAvatarFriendsIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), contents: .peers(ParsedPeers(accountId: 0, peers: WidgetDataPeers(accountPeerId: 0, peers: [], updateTimestamp: 0))))
+        let entry = SimpleEntry(date: Date(), contents: context.isPreview ? .preview : .peers(ParsedPeers(accountId: 0, peers: WidgetDataPeers(accountPeerId: 0, peers: [], updateTimestamp: 0))))
         completion(entry)
     }
 
     func getTimeline(for configuration: SelectAvatarFriendsIntent, in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        if context.isPreview {
+            completion(Timeline(entries: [SimpleEntry(date: Date(), contents: .preview)], policy: .atEnd))
+            return
+        }
+        
         let currentDate = Date()
         let entryDate = Calendar.current.date(byAdding: .hour, value: 0, to: currentDate)!
         
@@ -388,6 +398,7 @@ struct AvatarsProvider: IntentTimelineProvider {
 struct SimpleEntry: TimelineEntry {
     enum Contents {
         case recent
+        case preview
         case peers(ParsedPeers)
     }
     
@@ -397,11 +408,8 @@ struct SimpleEntry: TimelineEntry {
 
 enum PeersWidgetData {
     case empty
+    case preview
     case peers(ParsedPeers)
-}
-
-extension PeersWidgetData {
-    static let previewData = PeersWidgetData.empty
 }
 
 struct AvatarItemView: View {
@@ -428,23 +436,6 @@ struct WidgetView: View {
     @Environment(\.colorScheme) private var colorScheme
     let data: PeersWidgetData
     
-    func placeholder(geometry: GeometryProxy) -> some View {
-        let defaultItemSize: CGFloat = 60.0
-        let defaultPaddingFraction: CGFloat = 0.36
-        
-        let columnCount = Int(round(geometry.size.width / (defaultItemSize * (1.0 + defaultPaddingFraction))))
-        let itemSize = floor(geometry.size.width / (CGFloat(columnCount) + defaultPaddingFraction * CGFloat(columnCount - 1)))
-        
-        let firstRowY = itemSize / 2.0
-        let secondRowY = itemSize / 2.0 + geometry.size.height - itemSize
-        
-        return ZStack {
-            ForEach(0 ..< columnCount * 2, content: { i in
-                return Circle().frame(width: itemSize, height: itemSize).position(x: itemSize / 2.0 + floor(CGFloat(i % columnCount) * itemSize * (1.0 + defaultPaddingFraction)), y: i / columnCount == 0 ? firstRowY : secondRowY).foregroundColor(.gray)
-            })
-        }
-    }
-    
     private func linkForPeer(accountId: Int64, id: Int64) -> String {
         switch self.widgetFamily {
         case .systemSmall:
@@ -454,94 +445,15 @@ struct WidgetView: View {
         }
     }
     
-    func peersView(geometry: GeometryProxy, peers: ParsedPeers) -> some View {
-        let columnCount: Int
-        let rowCount: Int
-        
-        let itemSizeFraction: CGFloat
-        let horizontalInsetFraction: CGFloat
-        let verticalInsetFraction: CGFloat
-        let horizontalSpacingFraction: CGFloat
-        let verticalSpacingFraction: CGFloat
-        
-        switch self.widgetFamily {
-        case .systemLarge:
-            itemSizeFraction = 0.1762917933
-            horizontalInsetFraction = 0.04863221884
-            verticalInsetFraction = 0.04863221884
-            horizontalSpacingFraction = 0.06079027356
-            verticalSpacingFraction = 0.06079027356
-            columnCount = 4
-            rowCount = 4
-        case .systemMedium:
-            itemSizeFraction = 0.1762917933
-            horizontalInsetFraction = 0.04863221884
-            verticalInsetFraction = 0.1032258065
-            horizontalSpacingFraction = 0.06079027356
-            verticalSpacingFraction = 0.07741935484
-            columnCount = 4
-            rowCount = 2
-        case .systemSmall:
-            itemSizeFraction = 0.335483871
-            horizontalInsetFraction = 0.1032258065
-            verticalInsetFraction = 0.1032258065
-            horizontalSpacingFraction = 0.1161290323
-            verticalSpacingFraction = 0.1161290323
-            columnCount = 2
-            rowCount = 2
-        @unknown default:
-            itemSizeFraction = 0.335483871
-            horizontalInsetFraction = 0.1032258065
-            verticalInsetFraction = 0.1032258065
-            horizontalSpacingFraction = 0.1161290323
-            verticalSpacingFraction = 0.1161290323
-            columnCount = 2
-            rowCount = 2
-        }
-        
-        let itemSize = floor(geometry.size.width * itemSizeFraction)
-        
-        return ZStack {
-            ForEach(0 ..< min(peers.peers.count, columnCount * rowCount), content: { i in
-                Link(destination: URL(string: linkForPeer(accountId: peers.peers[i].accountId, id: peers.peers[i].peer.id))!, label: {
-                    AvatarItemView(
-                        peer: peers.peers[i],
-                        itemSize: itemSize,
-                        placeholderColor: getPlaceholderColor()
-                    ).frame(width: itemSize, height: itemSize)
-                }).frame(width: itemSize, height: itemSize)
-                .position(x: floor(horizontalInsetFraction * geometry.size.width + itemSize / 2.0 + CGFloat(i % columnCount) * (itemSize + horizontalSpacingFraction * geometry.size.width)), y: floor(verticalInsetFraction * geometry.size.height + itemSize / 2.0 + CGFloat(i / columnCount) * (itemSize + verticalSpacingFraction * geometry.size.height)))
-            })
-        }
-    }
-    
-    func peerViews() -> AnyView {
-        switch data {
-        case .empty:
-            return AnyView(GeometryReader { geometry in
-                placeholder(geometry: geometry)
-            })
-        case let .peers(peers):
-            return AnyView(GeometryReader { geometry in
-                peersView(geometry: geometry, peers: peers)
-            })
-        }
-    }
-    
-    var body1: some View {
-        ZStack {
-            peerViews()
-        }
-        .padding(0.0)
-    }
-    
-    func chatTopLine(_ peer: ParsedPeer?) -> some View {
+    func chatTopLine(_ content: ChatContent) -> some View {
         let dateText: String
         
         let chatTitle: AnyView
         let date: Text
+        var isPlaceholder = false
         
-        if let peer = peer {
+        switch content {
+        case let .peer(peer):
             if let message = peer.peer.message {
                 dateText = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .none, timeStyle: .short)
             } else {
@@ -553,14 +465,23 @@ struct WidgetView: View {
                 .foregroundColor(.primary))
             date = Text(dateText)
             .font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
-        } else {
+        case let .preview(index):
+            dateText = index == 0 ? "9:00" : "8:42"
+            chatTitle = AnyView(Text("News Channel")
+                .lineLimit(1)
+                .font(Font.system(size: 16.0, weight: .medium, design: .default))
+                .foregroundColor(.primary))
+            date = Text(dateText)
+            .font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
+        case .placeholder:
+            isPlaceholder = true
             dateText = "         "
             chatTitle = AnyView(Text(" ").font(Font.system(size: 16.0, weight: .medium, design: .default)).foregroundColor(.primary))
             date = Text(dateText)
             .font(Font.system(size: 16.0, weight: .regular, design: .default)).foregroundColor(.secondary)
         }
         return HStack(alignment: .center, spacing: 0.0, content: {
-            if peer != nil {
+            if !isPlaceholder {
                 chatTitle
             } else {
                 chatTitle
@@ -574,7 +495,7 @@ struct WidgetView: View {
                     )
             }
             Spacer()
-            if peer != nil {
+            if !isPlaceholder {
                 date
             } else {
                 date
@@ -590,78 +511,88 @@ struct WidgetView: View {
         .padding(0.0)
     }
     
-    func chatBottomLine(_ peer: ParsedPeer?) -> AnyView {
-        var text = peer?.peer.message?.text ?? ""
-        text += "\n"
-        if peer == nil {
-            text = "First Line Of Text Here\nSecond line fwqefeqwfqwef qwef wq"
-        }
-        if let message = peer?.peer.message {
-            //TODO:localize
-            switch message.content {
-            case .text:
-                break
-            case .image:
-                if !message.text.isEmpty {
-                    text = "🖼 \(message.text)"
-                } else {
-                    text = "🖼 Photo"
+    func chatBottomLine(_ content: ChatContent) -> AnyView {
+        var text = ""
+        var isPlaceholder = false
+        switch content {
+        case let .peer(peer):
+            if let message = peer.peer.message {
+                //TODO:localize
+                switch message.content {
+                case .text:
+                    break
+                case .image:
+                    if !message.text.isEmpty {
+                        text = "🖼 \(message.text)"
+                    } else {
+                        text = "🖼 Photo"
+                    }
+                case .video:
+                    if !message.text.isEmpty {
+                        text = "📹 \(message.text)"
+                    } else {
+                        text = "📹 Video"
+                    }
+                case .gif:
+                    if !message.text.isEmpty {
+                        text = "\(message.text)"
+                    } else {
+                        text = "Gif"
+                    }
+                case let .file(file):
+                    if !message.text.isEmpty {
+                        text = "📹 \(message.text)"
+                    } else {
+                        text = "📎 \(file.name)"
+                    }
+                case let .music(music):
+                    if !music.title.isEmpty && !music.artist.isEmpty {
+                        text = "\(music.artist) — \(music.title)"
+                    } else if !music.title.isEmpty {
+                        text = music.title
+                    } else if !music.artist.isEmpty {
+                        text = music.artist
+                    } else {
+                        text = "Music"
+                    }
+                case .voiceMessage:
+                    text = "🎤 Voice Message"
+                case .videoMessage:
+                    text = "Video Message"
+                case let .sticker(sticker):
+                    text = "\(sticker.altText) Sticker"
+                case let .call(call):
+                    if call.isVideo {
+                        text = "Video Call"
+                    } else {
+                        text = "Voice Call"
+                    }
+                case .mapLocation:
+                    text = "Location"
+                case let .game(game):
+                    text = "🎮 \(game.title)"
+                case let .poll(poll):
+                    text = "📊 \(poll.title)"
                 }
-            case .video:
-                if !message.text.isEmpty {
-                    text = "📹 \(message.text)"
-                } else {
-                    text = "📹 Video"
+                
+                if let author = message.author {
+                    if author.isMe {
+                        text = "You: \(text)"
+                    } else {
+                        text = "\(author.title): \(text)"
+                    }
                 }
-            case .gif:
-                if !message.text.isEmpty {
-                    text = "\(message.text)"
-                } else {
-                    text = "Gif"
-                }
-            case let .file(file):
-                if !message.text.isEmpty {
-                    text = "📹 \(message.text)"
-                } else {
-                    text = "📎 \(file.name)"
-                }
-            case let .music(music):
-                if !music.title.isEmpty && !music.artist.isEmpty {
-                    text = "\(music.artist) — \(music.title)"
-                } else if !music.title.isEmpty {
-                    text = music.title
-                } else if !music.artist.isEmpty {
-                    text = music.artist
-                } else {
-                    text = "Music"
-                }
-            case .voiceMessage:
-                text = "🎤 Voice Message"
-            case .videoMessage:
-                text = "Video Message"
-            case let .sticker(sticker):
-                text = "\(sticker.altText) Sticker"
-            case let .call(call):
-                if call.isVideo {
-                    text = "Video Call"
-                } else {
-                    text = "Voice Call"
-                }
-            case .mapLocation:
-                text = "Location"
-            case let .game(game):
-                text = "🎮 \(game.title)"
-            case let .poll(poll):
-                text = "📊 \(poll.title)"
             }
-            
-            if let author = message.author {
-                if author.isMe {
-                    text = "You: \(text)"
-                } else {
-                    text = "\(author.title): \(text)"
-                }
+            text += "\n"
+        case let .preview(index):
+            if index == 0 {
+                text = "☀️ 23 °C\n☁️ Passing Clouds"
+            } else {
+                text = "😂 Sticker"
+                text += "\n"
             }
+        case .placeholder:
+            isPlaceholder = true
         }
         
         let textView = Text(text)
@@ -671,7 +602,7 @@ struct WidgetView: View {
             .multilineTextAlignment(.leading)
             .padding(0.0)
         
-        if peer != nil {
+        if !isPlaceholder {
             return AnyView(textView)
         } else {
             return AnyView(
@@ -709,16 +640,23 @@ struct WidgetView: View {
         }
     }
     
-    func chatContent(_ peer: ParsedPeer?) -> some View {
+    enum ChatContent {
+        case peer(ParsedPeer)
+        case preview(Int)
+        case placeholder
+    }
+    
+    func chatContent(_ content: ChatContent) -> some View {
         return VStack(alignment: .leading, spacing: 0.0, content: {
-            chatTopLine(peer)
-            chatBottomLine(peer)
+            chatTopLine(content)
+            chatBottomLine(content)
         })
     }
     
     func chatContentView(_ index: Int, size: CGSize) -> AnyView {
         let peers: ParsedPeers?
         var isPlaceholder = false
+        var isPreview = false
         switch data {
         case let .peers(peersValue):
             if peersValue.peers.count <= index {
@@ -727,6 +665,9 @@ struct WidgetView: View {
             } else {
                 peers = peersValue
             }
+        case .preview:
+            peers = nil
+            isPreview = true
         default:
             peers = nil
         }
@@ -739,6 +680,20 @@ struct WidgetView: View {
             )
         }
         
+        if isPreview {
+            return AnyView(
+                HStack(alignment: .center, spacing: 0.0, content: {
+                    Image("Widget/Avatar\(index == 0 ? "Channel" : "1")")
+                        .aspectRatio(1.0, contentMode: .fit)
+                        .clipShape(Circle())
+                        .frame(width: 54.0, height: 54.0, alignment: .leading)
+                        .padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                    chatContent(.preview(index)).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
+                })
+                .frame(width: size.width, height: itemHeight, alignment: .leading)
+            )
+        }
+        
         let url: URL
         if let peers = peers {
             url = URL(string: linkForPeer(accountId: peers.peers[index].accountId, id: peers.peers[index].peer.id))!
@@ -746,11 +701,18 @@ struct WidgetView: View {
             url = URL(string: "\(buildConfig.appSpecificUrlScheme)://")!
         }
         
+        let content: ChatContent
+        if let peer = peers?.peers[index] {
+            content = .peer(peer)
+        } else {
+            content = .placeholder
+        }
+        
         return AnyView(
             Link(destination: url, label: {
                 HStack(alignment: .center, spacing: 0.0, content: {
                     AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, placeholderColor: getPlaceholderColor()).frame(width: 54.0, height: 54.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
-                    chatContent(peers?.peers[index]).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
+                    chatContent(content).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
                 })
             })
             .frame(width: size.width, height: itemHeight, alignment: .leading)
@@ -795,13 +757,28 @@ struct WidgetView: View {
                     let formatter = DateFormatter()
                     formatter.dateStyle = .short
                     formatter.timeStyle = .none
-                    text = "updated on \(formatter.string(from: date))"
+                    text = "updated \(formatter.string(from: date))"
                 } else {
                     let formatter = DateFormatter()
                     formatter.dateStyle = .none
                     formatter.timeStyle = .short
                     text = "updated at \(formatter.string(from: date))"
                 }
+            }
+        case .preview:
+            let date = Date()
+            let calendar = Calendar.current
+            //TODO:localize
+            if !calendar.isDate(Date(), inSameDayAs: date) {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .short
+                formatter.timeStyle = .none
+                text = "updated \(formatter.string(from: date))"
+            } else {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .none
+                formatter.timeStyle = .short
+                text = "updated at \(formatter.string(from: date))"
             }
         default:
             text = "Long tap to edit widget"
@@ -902,6 +879,7 @@ struct AvatarsWidgetView: View {
     func itemView(index: Int) -> some View {
         let peers: ParsedPeers?
         var isPlaceholder = false
+        var isPreview = false
         switch data {
         case let .peers(peersValue):
             if peersValue.peers.count <= index {
@@ -910,6 +888,9 @@ struct AvatarsWidgetView: View {
             } else {
                 peers = peersValue
             }
+        case .preview:
+            peers = nil
+            isPreview = true
         default:
             peers = nil
         }
@@ -921,8 +902,9 @@ struct AvatarsWidgetView: View {
                 })
             }).aspectRatio(1.0, contentMode: .fit))
         } else if isPlaceholder {
-            //return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(.clear))
             return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
+        } else if isPreview {
+            return AnyView(Image("Widget/Avatar\(index + 1)").aspectRatio(1.0, contentMode: .fit).clipShape(Circle()))
         } else {
             return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
         }
@@ -999,6 +981,8 @@ func getWidgetData(contents: SimpleEntry.Contents) -> PeersWidgetData {
     switch contents {
     case .recent:
         return .empty
+    case .preview:
+        return .preview
     case let .peers(peers):
         return .peers(peers)
     }
@@ -1012,8 +996,8 @@ struct Static_Widget: Widget {
             WidgetView(data: getWidgetData(contents: entry.contents))
         })
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName(presentationData.widgetGalleryTitle)
-        .description(presentationData.widgetGalleryDescription)
+        .configurationDisplayName("Chats")
+        .description("Display the latest message from the most important chats.")
     }
 }
 
@@ -1025,8 +1009,8 @@ struct Static_AvatarsWidget: Widget {
             AvatarsWidgetView(data: getWidgetData(contents: entry.contents))
         })
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName(presentationData.widgetGalleryTitle)
-        .description(presentationData.widgetGalleryDescription)
+        .configurationDisplayName("Shortcuts")
+        .description("Display shortcuts of your most important chats to always have quick access to them.")
     }
 }
 
