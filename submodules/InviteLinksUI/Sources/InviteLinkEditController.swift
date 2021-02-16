@@ -40,6 +40,9 @@ private enum InviteLinksEditSection: Int32 {
 
 private let invalidAmountCharacters = CharacterSet(charactersIn: "01234567890.,").inverted
 func isValidNumberOfUsers(_ number: String) -> Bool {
+    if number.isEmpty {
+        return true
+    }
     let number = normalizeArabicNumeralString(number, type: .western)
     if number.rangeOfCharacter(from: invalidAmountCharacters) != nil || number == "0" {
         return false
@@ -233,12 +236,11 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     text = focused ? "" : presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsersUnlimited
                 }
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: nil, sectionId: self.section, textUpdated: { updatedText in
-                    guard !updatedText.isEmpty else {
-                        return
-                    }
                     arguments.updateState { state in
                         var updatedState = state
-                        if let value = Int32(updatedText) {
+                        if updatedText.isEmpty {
+                            updatedState.usage = .unlimited
+                        } else if let value = Int32(updatedText) {
                             updatedState.usage = InviteLinkUsageLimit(value: value)
                         }
                         return updatedState
