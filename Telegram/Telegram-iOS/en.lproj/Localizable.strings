@@ -6092,7 +6092,7 @@ Sorry for the inconvenience.";
 "Conversation.AlsoClearCacheTitle" = "You can use \"clear cache\" to remove unnecessary media — and re-downloaded files if you need them again.";
 "Conversation.DeleteAllMessagesInChat" = "Are you sure you want to delete all messages in %@?";
 
-"Conversation.AutoremoveTimerSetUserYou" = "You set messages to automatically delete after %2$@";
+"Conversation.AutoremoveTimerSetUserYou" = "You set messages to automatically delete after %1$@";
 "Conversation.AutoremoveTimerSetUser" = "%1$@ set messages to automatically delete after %2$@";
 "Conversation.AutoremoveTimerRemovedUserYou" = "You disabled the auto-delete timer";
 "Conversation.AutoremoveTimerRemovedUser" = "%1$@ disabled the auto-delete timer";
