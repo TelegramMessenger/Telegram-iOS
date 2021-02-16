@@ -169,7 +169,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             
             let sliderInset: CGFloat = params.leftInset + 16.0
             
-            sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + sliderInset, y: 38.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - sliderInset * 2.0, height: 44.0))
+            sliderView.frame = CGRect(origin: CGPoint(x: sliderInset, y: 38.0), size: CGSize(width: params.width - sliderInset * 2.0, height: 44.0))
         }
         self.view.insertSubview(sliderView, belowSubview: self.disabledOverlayNode.view)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -277,7 +277,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                         case 1:
                             textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - size.width) / 2.0), y: 13.0), size: size)
                         default:
-                            textNode.frame = CGRect(origin: CGPoint(x: params.width - size.width - 16.0, y: 13.0), size: size)
+                            textNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - size.width, y: 13.0), size: size)
                         }
                     }
                     
@@ -305,7 +305,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         
                         let sliderInset: CGFloat = leftInset
-                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + sliderInset, y: 38.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - sliderInset * 2.0, height: 44.0))
+                        sliderView.frame = CGRect(origin: CGPoint(x: sliderInset, y: 38.0), size: CGSize(width: params.width - sliderInset * 2.0, height: 44.0))
                     }
                 }
             })
