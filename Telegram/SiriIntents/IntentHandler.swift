@@ -10,6 +10,7 @@ import OpenSSLEncryptionProvider
 import AppLockState
 import UIKit
 import GeneratedSources
+import WidgetItems
 
 private var accountCache: Account?
 
@@ -771,8 +772,10 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
-            let error = NSError(domain: "Locked", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
+            let presentationData = WidgetPresentationData.getForExtension()
+            
+            let error = NSError(domain: presentationData.generalLockedTitle, code: 1, userInfo: [
+                NSLocalizedDescriptionKey: presentationData.generalLockedText
             ])
             
             completion(nil, error)
@@ -937,7 +940,9 @@ private final class WidgetIntentHandler {
         }
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
-            //TODO:localize
+            
+            let presentationData = WidgetPresentationData.getForExtension()
+            
             let error = NSError(domain: "Locked", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
             ])

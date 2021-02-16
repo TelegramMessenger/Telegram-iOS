@@ -19,8 +19,6 @@
 		<dict>
 			<key>INIntentCategory</key>
 			<string>information</string>
-			<key>INIntentDescription</key>
-			<string>Display the latest message from the most important chats.</string>
 			<key>INIntentDescriptionID</key>
 			<string>jmsEbj</string>
 			<key>INIntentEligibleForWidgets</key>
@@ -58,7 +56,7 @@
 					<key>INIntentParameterConfigurable</key>
 					<true/>
 					<key>INIntentParameterDisplayName</key>
-					<string>SELECT CHATS</string>
+					<string>ВЫБЕРИТЕ ЧАТЫ</string>
 					<key>INIntentParameterDisplayNameID</key>
 					<string>WIf4LD</string>
 					<key>INIntentParameterDisplayPriority</key>
@@ -126,7 +124,7 @@
 				</array>
 			</dict>
 			<key>INIntentTitle</key>
-			<string>Chats</string>
+			<string>Чаты</string>
 			<key>INIntentTitleID</key>
 			<string>lMot0c</string>
 			<key>INIntentType</key>
@@ -137,8 +135,6 @@
 		<dict>
 			<key>INIntentCategory</key>
 			<string>information</string>
-			<key>INIntentDescription</key>
-			<string>"Display shortcuts of your most important chats to always have quick access to them.</string>
 			<key>INIntentDescriptionID</key>
 			<string>DwL4WQ</string>
 			<key>INIntentEligibleForWidgets</key>
@@ -176,7 +172,7 @@
 					<key>INIntentParameterConfigurable</key>
 					<true/>
 					<key>INIntentParameterDisplayName</key>
-					<string>SELECT CHATS</string>
+					<string>ВЫБЕРИТЕ ЧАТЫ</string>
 					<key>INIntentParameterDisplayNameID</key>
 					<string>Jg5dYF</string>
 					<key>INIntentParameterDisplayPriority</key>
@@ -244,7 +240,7 @@
 				</array>
 			</dict>
 			<key>INIntentTitle</key>
-			<string>Shortcuts</string>
+			<string>Шорткаты</string>
 			<key>INIntentTitleID</key>
 			<string>3Sbb7H</string>
 			<key>INIntentType</key>

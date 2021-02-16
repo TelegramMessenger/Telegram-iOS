@@ -32,6 +32,10 @@ load(
     "telegram_team_id",
 )
 
+load("@build_bazel_rules_apple//apple:resources.bzl",
+    "swift_intent_library",
+)
+
 config_setting(
     name = "debug",
     values = {
@@ -1186,7 +1190,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SyncCore:SyncCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
-        "//:GeneratedSources",
+        "//Telegram:GeneratedSources",
     ],
 )
 
@@ -1264,15 +1268,20 @@ plist_fragment(
     )
 )
 
+swift_intent_library(
+    name = "GeneratedSources",
+    src = "SiriIntents/en.lproj/Intents.intentdefinition",
+    module_name = "GeneratedSources",
+    visibility = ["//visibility:public"],
+)
+
 swift_library(
     name = "IntentsExtensionLib",
     module_name = "IntentsExtensionLib",
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
-    data = [
-        #"SiriIntents/Intents.intentdefinition",
-    ],
+    data = glob(["SiriIntents/*.lproj/Intents.intentdefinition"]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
@@ -1282,7 +1291,8 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/AppLockState:AppLockState",
-        "//:GeneratedSources",
+        "//Telegram:GeneratedSources",
+        "//submodules/WidgetItems:WidgetItems",
     ],
 )
 

@@ -435,6 +435,7 @@ struct WidgetView: View {
     @Environment(\.widgetFamily) private var widgetFamily
     @Environment(\.colorScheme) private var colorScheme
     let data: PeersWidgetData
+    let presentationData: WidgetPresentationData
     
     private func linkForPeer(accountId: Int64, id: Int64) -> String {
         switch self.widgetFamily {
@@ -523,7 +524,6 @@ struct WidgetView: View {
         case let .peer(peer):
             if let message = peer.peer.message {
                 text = message.text
-                //TODO:localize
                 switch message.content {
                 case .text:
                     break
@@ -531,19 +531,19 @@ struct WidgetView: View {
                     if !message.text.isEmpty {
                         text = "🖼 \(message.text)"
                     } else {
-                        text = "🖼 Photo"
+                        text = "🖼 \(self.presentationData.messagePhoto)"
                     }
                 case .video:
                     if !message.text.isEmpty {
                         text = "📹 \(message.text)"
                     } else {
-                        text = "📹 Video"
+                        text = "📹 \(self.presentationData.messageVideo)"
                     }
                 case .gif:
                     if !message.text.isEmpty {
                         text = "\(message.text)"
                     } else {
-                        text = "Gif"
+                        text = "\(self.presentationData.messageAnimation)"
                     }
                 case let .file(file):
                     if !message.text.isEmpty {
@@ -559,31 +559,37 @@ struct WidgetView: View {
                     } else if !music.artist.isEmpty {
                         text = music.artist
                     } else {
-                        text = "Music"
+                        text = "Unknown Artist"
                     }
                 case .voiceMessage:
-                    text = "🎤 Voice Message"
+                    text = "🎤 \(self.presentationData.messageVoice)"
                 case .videoMessage:
-                    text = "Video Message"
+                    text = "\(self.presentationData.messageVideoMessage)"
                 case let .sticker(sticker):
-                    text = "\(sticker.altText) Sticker"
+                    text = "\(sticker.altText) \(presentationData.messageSticker)"
                 case let .call(call):
                     if call.isVideo {
-                        text = "Video Call"
+                        text = "\(self.presentationData.messageVideoCall)"
                     } else {
-                        text = "Voice Call"
+                        text = "\(self.presentationData.messageVoiceCall)"
                     }
                 case .mapLocation:
-                    text = "Location"
+                    text = "\(self.presentationData.messageLocation)"
                 case let .game(game):
                     text = "🎮 \(game.title)"
                 case let .poll(poll):
                     text = "📊 \(poll.title)"
+                case let .autodeleteTimer(value):
+                    if value.value != nil {
+                        text = self.presentationData.autodeleteTimerUpdated
+                    } else {
+                        text = self.presentationData.autodeleteTimerRemoved
+                    }
                 }
                 
                 if let author = message.author {
                     if author.isMe {
-                        text = "You: \(text)"
+                        text = "\(presentationData.messageAuthorYou): \(text)"
                     } else {
                         text = "\(author.title): \(text)"
                     }
@@ -594,7 +600,7 @@ struct WidgetView: View {
             if index == 0 {
                 text = "☀️ 23 °C\n☁️ Passing Clouds"
             } else {
-                text = "😂 Sticker"
+                text = "😂 \(presentationData.messageSticker)"
                 text += "\n"
             }
         case .placeholder:
@@ -754,45 +760,54 @@ struct WidgetView: View {
         switch data {
         case let .peers(peersValue):
             if peersValue.peers.isEmpty {
-                text = "Long tap to edit widget"
+                text = self.presentationData.widgetLongTapToEdit
             } else {
                 let date = Date(timeIntervalSince1970: Double(peersValue.updateTimestamp))
                 let calendar = Calendar.current
-                //TODO:localize
                 if !calendar.isDate(Date(), inSameDayAs: date) {
                     let formatter = DateFormatter()
                     formatter.dateStyle = .short
                     formatter.timeStyle = .none
-                    text = "updated \(formatter.string(from: date))"
+                    text = self.presentationData.widgetUpdatedAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
                 } else {
                     let formatter = DateFormatter()
                     formatter.dateStyle = .none
                     formatter.timeStyle = .short
-                    text = "updated at \(formatter.string(from: date))"
+                    text = self.presentationData.widgetUpdatedTodayAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
                 }
             }
         case .preview:
             let date = Date()
             let calendar = Calendar.current
-            //TODO:localize
             if !calendar.isDate(Date(), inSameDayAs: date) {
                 let formatter = DateFormatter()
                 formatter.dateStyle = .short
                 formatter.timeStyle = .none
-                text = "updated \(formatter.string(from: date))"
+                text = self.presentationData.widgetUpdatedAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
             } else {
                 let formatter = DateFormatter()
                 formatter.dateStyle = .none
                 formatter.timeStyle = .short
-                text = "updated at \(formatter.string(from: date))"
+                text = self.presentationData.widgetUpdatedTodayAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
             }
         default:
-            text = "Long tap to edit widget"
+            text = self.presentationData.widgetLongTapToEdit
         }
         
         return Text(text)
             .font(Font.system(size: 12.0))
             .foregroundColor(getUpdatedTextColor())
+    }
+    
+    func getBackgroundColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return .white
+        case .dark:
+            return Color(.sRGB, red: 28.0 / 255.0, green: 28.0 / 255.0, blue: 30.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
     }
     
     func getSeparatorColor() -> Color {
@@ -848,6 +863,7 @@ struct WidgetView: View {
                 chatUpdateView(size: geometry.size)
             })
         })
+        .background(Rectangle().foregroundColor(getBackgroundColor()))
         .padding(0.0)
         .unredacted()
     }
@@ -857,6 +873,7 @@ struct AvatarsWidgetView: View {
     @Environment(\.widgetFamily) private var widgetFamily
     @Environment(\.colorScheme) private var colorScheme
     let data: PeersWidgetData
+    let presentationData: WidgetPresentationData
     
     func placeholder(geometry: GeometryProxy) -> some View {
         return Spacer()
@@ -951,38 +968,6 @@ private let buildConfig: BuildConfig = {
     return buildConfig
 }()
 
-private extension WidgetPresentationData {
-    static var `default` = WidgetPresentationData(
-        applicationLockedString: "Unlock the app to use the widget",
-        applicationStartRequiredString: "Open the app to use the widget",
-        widgetGalleryTitle: "Telegram",
-        widgetGalleryDescription: ""
-    )
-}
-
-private let presentationData: WidgetPresentationData = {
-    let appBundleIdentifier = Bundle.main.bundleIdentifier!
-    guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-        return WidgetPresentationData.default
-    }
-    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-    
-    let appGroupName = "group.\(baseAppBundleId)"
-    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-    
-    guard let appGroupUrl = maybeAppGroupUrl else {
-        return WidgetPresentationData.default
-    }
-    
-    let rootPath = rootPathForBasePath(appGroupUrl.path)
-    
-    if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
-        return value
-    } else {
-        return WidgetPresentationData.default
-    }
-}()
-
 func getWidgetData(contents: SimpleEntry.Contents) -> PeersWidgetData {
     switch contents {
     case .recent:
@@ -998,12 +983,14 @@ struct Static_Widget: Widget {
     private let kind: String = "Static_Widget"
 
     public var body: some WidgetConfiguration {
+        let presentationData = WidgetPresentationData.getForExtension()
+        
         return IntentConfiguration(kind: kind, intent: SelectFriendsIntent.self, provider: Provider(), content: { entry in
-            WidgetView(data: getWidgetData(contents: entry.contents))
+            WidgetView(data: getWidgetData(contents: entry.contents), presentationData: presentationData)
         })
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName("Chats")
-        .description("Display the latest message from the most important chats.")
+        .configurationDisplayName(presentationData.widgetChatsGalleryTitle)
+        .description(presentationData.widgetChatsGalleryDescription)
     }
 }
 
@@ -1011,12 +998,14 @@ struct Static_AvatarsWidget: Widget {
     private let kind: String = "Static_AvatarsWidget"
 
     public var body: some WidgetConfiguration {
+        let presentationData = WidgetPresentationData.getForExtension()
+        
         return IntentConfiguration(kind: kind, intent: SelectAvatarFriendsIntent.self, provider: AvatarsProvider(), content: { entry in
-            AvatarsWidgetView(data: getWidgetData(contents: entry.contents))
+            AvatarsWidgetView(data: getWidgetData(contents: entry.contents), presentationData: presentationData)
         })
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName("Shortcuts")
-        .description("Display shortcuts of your most important chats to always have quick access to them.")
+        .configurationDisplayName(presentationData.widgetShortcutsGalleryTitle)
+        .description(presentationData.widgetShortcutsGalleryDescription)
     }
 }
 

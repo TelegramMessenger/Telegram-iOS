@@ -112,9 +112,8 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
     
     resolvedValue = state.changedValue ?? defaultValue
     
-    //TODO:localize
     entries.append(.header)
-    entries.append(.timeHeader("AUTO-DELETE MESSAGES"))
+    entries.append(.timeHeader(presentationData.strings.AutoremoveSetup_TimeSectionHeader))
     
     var availableValues: [Int32] = [
         Int32.max,
@@ -127,9 +126,9 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
     }
     entries.append(.timeValue(resolvedValue, availableValues))
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-        entries.append(.timeComment("Automatically delete messages sent in this channel after a certain period of time."))
+        entries.append(.timeComment(presentationData.strings.AutoremoveSetup_TimerInfoChannel))
     } else {
-        entries.append(.timeComment("Automatically delete messages sent in this chat after a certain period of time."))
+        entries.append(.timeComment(presentationData.strings.AutoremoveSetup_TimerInfoChat))
     }
     
     return entries
@@ -151,7 +150,6 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -238,8 +236,7 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
         
         let isDebug = context.account.testingEnvironment
         
-        //TODO:localize
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Auto-Deletion"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.AutoremoveSetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peerAutoremoveSetupEntries(peer: peer, presentationData: presentationData, isDebug: isDebug, defaultValue: defaultValue, state: state), style: .blocks)
         
         return (controllerState, (listState, arguments))
@@ -253,9 +250,6 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
-    }
-    pushControllerImpl = { [weak controller] c in
-        controller?.push(c)
     }
     return controller
 }
