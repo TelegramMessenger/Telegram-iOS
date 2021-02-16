@@ -289,7 +289,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     }
     entries.append(.timeExpiryDate(presentationData.theme, time, state.pickingTimeLimit))
     if state.pickingTimeLimit {
-        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time ?? currentTime))
+        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time))
     }
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     

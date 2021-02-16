@@ -6091,3 +6091,5 @@ Sorry for the inconvenience.";
 
 "Conversation.AlsoClearCacheTitle" = "You can use \"clear cache\" to remove unnecessary media — and re-downloaded files if you need them again.";
 "Conversation.DeleteAllMessagesInChat" = "Are you sure you want to delete all messages in %@?";
+
+"InviteLinks.InviteLinkExpired" = "This invite link has expired.";

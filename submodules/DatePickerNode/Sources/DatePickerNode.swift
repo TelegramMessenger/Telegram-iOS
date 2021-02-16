@@ -273,7 +273,7 @@ public final class DatePickerNode: ASDisplayNode {
     struct State {
         let minDate: Date
         let maxDate: Date
-        let date: Date
+        let date: Date?
         
         let displayingMonthSelection: Bool
         let selectedMonth: Date
@@ -349,7 +349,7 @@ public final class DatePickerNode: ASDisplayNode {
         }
     }
     
-    public var date: Date {
+    public var date: Date? {
         get {
             return self.state.date
         }
@@ -370,10 +370,10 @@ public final class DatePickerNode: ASDisplayNode {
     public init(theme: DatePickerTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         self.theme = theme
         self.strings = strings
-        self.state = State(minDate: telegramReleaseDate, maxDate: upperLimitDate, date: Date(), displayingMonthSelection: false, selectedMonth: monthForDate(Date()))
+        self.state = State(minDate: telegramReleaseDate, maxDate: upperLimitDate, date: nil, displayingMonthSelection: false, selectedMonth: monthForDate(Date()))
                 
         self.timeTitleNode = ImmediateTextNode()
-        self.timeTitleNode.attributedText = NSAttributedString(string: "Time", font: Font.regular(17.0), textColor: theme.textColor)
+        self.timeTitleNode.attributedText = NSAttributedString(string: strings.InviteLink_Create_TimeLimitExpiryTime, font: Font.regular(17.0), textColor: theme.textColor)
         
         self.timePickerNode = TimePickerNode(theme: theme, dateTimeFormat: dateTimeFormat, date: self.state.date)
     
@@ -390,7 +390,7 @@ public final class DatePickerNode: ASDisplayNode {
         self.pickerBackgroundNode.isUserInteractionEnabled = false
         
         var monthChangedImpl: ((Date) -> Void)?
-        self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date, yearRange: yearRange(for: self.state), valueChanged: { date in
+        self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date ?? monthForDate(Date()), yearRange: yearRange(for: self.state), valueChanged: { date in
             monthChangedImpl?(date)
         })
         self.pickerNode.minimumDate = self.state.minDate
@@ -503,7 +503,7 @@ public final class DatePickerNode: ASDisplayNode {
                 }
             }
         }
-        self.pickerNode.date = self.state.date
+        self.pickerNode.date = self.state.date ?? self.state.selectedMonth
         self.timePickerNode.date = self.state.date
         
         if let size = self.validLayout {
@@ -571,13 +571,23 @@ public final class DatePickerNode: ASDisplayNode {
         let location = recognizer.location(in: monthNode.view)
         if let day = monthNode.dateAtPoint(location) {
             let monthComponents = calendar.dateComponents([.month, .year], from: monthNode.month)
-            var currentComponents = calendar.dateComponents([.hour, .minute, .day, .month, .year], from: self.date)
-
-            currentComponents.year = monthComponents.year
-            currentComponents.month = monthComponents.month
-            currentComponents.day = Int(day)
             
-            if let date = calendar.date(from: currentComponents), date >= self.minimumDate && date < self.maximumDate {
+            var dateComponents: DateComponents
+            if let date = self.date {
+                dateComponents = calendar.dateComponents([.hour, .minute, .day, .month, .year], from: date)
+                dateComponents.year = monthComponents.year
+                dateComponents.month = monthComponents.month
+                dateComponents.day = Int(day)
+            } else {
+                dateComponents = DateComponents()
+                dateComponents.year = monthComponents.year
+                dateComponents.month = monthComponents.month
+                dateComponents.day = Int(day)
+                dateComponents.hour = 11
+                dateComponents.minute = 0
+            }
+            
+            if let date = calendar.date(from: dateComponents), date >= self.minimumDate && date < self.maximumDate {
                 let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: monthNode.month)
                 self.updateState(updatedState, animated: false)
                 
@@ -999,10 +1009,10 @@ private final class TimePickerNode: ASDisplayNode {
     private let inputNode: TimeInputNode
     private let amPMSelectorNode: SegmentedControlNode
     
-    var date: Date {
+    var date: Date? {
         didSet {
             if let size = self.validLayout {
-                self.updateLayout(size: size)
+                let _ = self.updateLayout(size: size)
             }
         }
     }
@@ -1013,7 +1023,7 @@ private final class TimePickerNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
-    init(theme: DatePickerTheme, dateTimeFormat: PresentationDateTimeFormat, date: Date) {
+    init(theme: DatePickerTheme, dateTimeFormat: PresentationDateTimeFormat, date: Date?) {
         self.theme = theme
         self.dateTimeFormat = dateTimeFormat
         self.date = date
@@ -1026,9 +1036,15 @@ private final class TimePickerNode: ASDisplayNode {
         self.colonNode = ImmediateTextNode()
         self.inputNode = TimeInputNode()
         
-        let hours = calendar.component(.hour, from: date)
+        let isPM: Bool
+        if let date = date {
+            let hours = calendar.component(.hour, from: date)
+            isPM = hours > 12
+        } else {
+            isPM = true
+        }
         
-        self.amPMSelectorNode = SegmentedControlNode(theme: theme.segmentedControlTheme, items: [SegmentedControlItem(title: "AM"), SegmentedControlItem(title: "PM")], selectedIndex: hours > 12 ? 1 : 0)
+        self.amPMSelectorNode = SegmentedControlNode(theme: theme.segmentedControlTheme, items: [SegmentedControlItem(title: "AM"), SegmentedControlItem(title: "PM")], selectedIndex: isPM ? 1 : 0)
         
         super.init()
         
@@ -1039,8 +1055,11 @@ private final class TimePickerNode: ASDisplayNode {
         self.addSubnode(self.amPMSelectorNode)
         
         self.amPMSelectorNode.selectedIndexChanged = { index in
+            guard let date = self.date else {
+                return
+            }
             let hours = calendar.component(.hour, from: date)
-            var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: self.date)
+            var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
             if index == 0 && hours >= 12 {
                 components.hour = hours - 12
             } else if index == 1 && hours < 12 {
@@ -1067,8 +1086,15 @@ private final class TimePickerNode: ASDisplayNode {
       
         var contentSize = CGSize()
         
-        let hours = Int32(calendar.component(.hour, from: self.date))
-        let minutes = Int32(calendar.component(.hour, from: self.date))
+        let hours: Int32
+        let minutes: Int32
+        if let date = self.date {
+            hours = Int32(calendar.component(.hour, from: date))
+            minutes = Int32(calendar.component(.hour, from: date))
+        } else {
+            hours = 11
+            minutes = 0
+        }
         let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: self.dateTimeFormat).replacingOccurrences(of: " AM", with: "").replacingOccurrences(of: " PM", with: "")
             
         self.textNode.attributedText = NSAttributedString(string: string, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: self.theme.textColor)
