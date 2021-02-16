@@ -199,7 +199,7 @@ struct Provider: IntentTimelineProvider {
                     var mappedMessage: WidgetDataPeer.Message?
                     if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
                         if let message = transaction.getMessage(index.id) {
-                            mappedMessage = WidgetDataPeer.Message(message: message)
+                            mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: message)
                         }
                     }
                     
@@ -357,7 +357,7 @@ struct AvatarsProvider: IntentTimelineProvider {
                     var mappedMessage: WidgetDataPeer.Message?
                     if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
                         if let message = transaction.getMessage(index.id) {
-                            mappedMessage = WidgetDataPeer.Message(message: message)
+                            mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: message)
                         }
                     }
                     
@@ -459,15 +459,20 @@ struct WidgetView: View {
             } else {
                 dateText = ""
             }
-            chatTitle = AnyView(Text(peer.peer.name)
+            var formattedName = peer.peer.name
+            if let lastName = peer.peer.lastName {
+                formattedName.append(" \(lastName)")
+            }
+            chatTitle = AnyView(Text(formattedName)
                 .lineLimit(1)
                 .font(Font.system(size: 16.0, weight: .medium, design: .default))
                 .foregroundColor(.primary))
             date = Text(dateText)
             .font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
         case let .preview(index):
+            let titleText = index == 0 ? "News Channel" : "Duck"
             dateText = index == 0 ? "9:00" : "8:42"
-            chatTitle = AnyView(Text("News Channel")
+            chatTitle = AnyView(Text(titleText)
                 .lineLimit(1)
                 .font(Font.system(size: 16.0, weight: .medium, design: .default))
                 .foregroundColor(.primary))
@@ -517,6 +522,7 @@ struct WidgetView: View {
         switch content {
         case let .peer(peer):
             if let message = peer.peer.message {
+                text = message.text
                 //TODO:localize
                 switch message.content {
                 case .text:
