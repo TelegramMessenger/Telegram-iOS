@@ -126,7 +126,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                 animationName = "MessageAutoRemove"
                 size = 260
                 insetDifference = 120
-                playbackMode = .count(2)
+                playbackMode = .once
                 additionalBottomInset = isHidden ? 8.0 : 16.0
             }
             

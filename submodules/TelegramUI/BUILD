@@ -211,7 +211,7 @@ swift_library(
         "//submodules/SlotMachineAnimationNode:SlotMachineAnimationNode",
         "//submodules/AnimatedNavigationStripeNode:AnimatedNavigationStripeNode",
         "//submodules/AudioBlob:AudioBlob",
-        "//:GeneratedSources",
+        "//Telegram:GeneratedSources",
         "//third-party/ZipArchive:ZipArchive",
         "//submodules/ChatImportUI:ChatImportUI",
         "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",

@@ -50,8 +50,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
                     canClear = true
                 } else if let peer = peer as? TelegramChannel {
                     if case .broadcast = peer.info {
-                        //TODO:localize
-                        title = "Clear Channel"
+                        title = strings.Conversation_ClearChannel
                     }
                     if peer.hasPermission(.changeInfo) {
                         canClear = true

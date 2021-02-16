@@ -256,7 +256,29 @@ final class WidgetDataContext {
         
         self.widgetPresentationDataDisposable = (presentationData
         |> map { presentationData -> WidgetPresentationData in
-            return WidgetPresentationData(applicationLockedString: presentationData.strings.Widget_ApplicationLocked, applicationStartRequiredString: presentationData.strings.Widget_ApplicationStartRequired, widgetGalleryTitle: presentationData.strings.Widget_GalleryTitle, widgetGalleryDescription: presentationData.strings.Widget_GalleryDescription)
+            return WidgetPresentationData(
+                widgetChatsGalleryTitle: presentationData.strings.Widget_ChatsGalleryTitle,
+                widgetChatsGalleryDescription: presentationData.strings.Widget_ChatsGalleryDescription,
+                widgetShortcutsGalleryTitle: presentationData.strings.Widget_ShortcutsGalleryTitle,
+                widgetShortcutsGalleryDescription: presentationData.strings.Widget_ShortcutsGalleryDescription,
+                widgetLongTapToEdit: presentationData.strings.Widget_LongTapToEdit,
+                widgetUpdatedTodayAt: presentationData.strings.Widget_UpdatedTodayAt,
+                widgetUpdatedAt: presentationData.strings.Widget_UpdatedAt,
+                messageAuthorYou: presentationData.strings.DialogList_You,
+                messagePhoto: presentationData.strings.Message_Photo,
+                messageVideo: presentationData.strings.Message_Video,
+                messageAnimation: presentationData.strings.Message_Animation,
+                messageVoice: presentationData.strings.Message_Audio,
+                messageVideoMessage: presentationData.strings.Message_VideoMessage,
+                messageSticker: presentationData.strings.Message_Sticker,
+                messageVoiceCall: presentationData.strings.Watch_Message_Call,
+                messageVideoCall: presentationData.strings.Watch_Message_Call,
+                messageLocation: presentationData.strings.Message_Location,
+                autodeleteTimerUpdated: presentationData.strings.Widget_MessageAutoremoveTimerUpdated,
+                autodeleteTimerRemoved: presentationData.strings.Widget_MessageAutoremoveTimerRemoved,
+                generalLockedTitle: presentationData.strings.Intents_ErrorLockedTitle,
+                generalLockedText: presentationData.strings.Intents_ErrorLockedText
+            )
         }
         |> distinctUntilChanged).start(next: { value in
             let path = widgetPresentationDataPath(rootPath: basePath)

@@ -6105,4 +6105,32 @@ Sorry for the inconvenience.";
 "Conversation.AutoremoveTimerSetChannel" = "Messages in this channel will be automatically deleted after %1$@";
 "Conversation.AutoremoveTimerRemovedChannel" = "Messages in this channel will no longer be automatically deleted";
 
+"AutoremoveSetup.Title" = "Auto-Deletion";
+"AutoremoveSetup.TimeSectionHeader" = "AUTO-DELETE MESSAGES";
+"AutoremoveSetup.TimerInfoChannel" = "Automatically delete messages sent in this channel after a certain period of time.";
+"AutoremoveSetup.TimerInfoChat" = "Automatically delete messages sent in this chat after a certain period of time.";
+"AutoremoveSetup.TimerValueNever" = "Never";
+"AutoremoveSetup.TimerValueAfter" = "After %@";
+
+"Conversation.ClearChannel" = "Clear Channel";
+
+"Conversation.AutoremoveTimerSetToastText" = "Messages in this chat are automatically\ndeleted %@ after they have been sent.";
+"Conversation.AutoremoveActionEnable" = "Enable Auto-Delete";
+"Conversation.AutoremoveActionEdit" = "Edit Auto-Delete Settings";
+
+"Widget.ChatsGalleryTitle" = "Chats";
+"Widget.ChatsGalleryDescription" = "Display the latest message from the most important chats.";
+"Widget.ShortcutsGalleryTitle" = "Shortcuts";
+"Widget.ShortcutsGalleryDescription" = "Display shortcuts of your most important chats to always have quick access to them.";
+
+"Widget.MessageAutoremoveTimerUpdated" = "Auto-delete timer updated";
+"Widget.MessageAutoremoveTimerRemoved" = "Auto-delete timer disabled";
+
+"Widget.LongTapToEdit" = "Tap or hold to edit widget.";
+"Widget.UpdatedTodayAt" = "Updated at {}";
+"Widget.UpdatedAt" = "Updated {}";
+
+"Intents.ErrorLockedTitle" = "Locked";
+"Intents.ErrorLockedText" = "Open Telegram and enter passcode to edit widget.";
+
 "Conversation.GigagroupDescription" = "Only admins can send messages in this group.";

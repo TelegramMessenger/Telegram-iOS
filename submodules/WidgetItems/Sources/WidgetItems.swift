@@ -119,6 +119,14 @@ public struct WidgetDataPeer: Codable, Equatable {
                 }
             }
             
+            public struct AutodeleteTimer: Codable, Equatable {
+                public var value: Int32?
+                
+                public init(value: Int32?) {
+                    self.value = value
+                }
+            }
+            
             enum CodingKeys: String, CodingKey {
                 case text
                 case image
@@ -133,6 +141,7 @@ public struct WidgetDataPeer: Codable, Equatable {
                 case mapLocation
                 case game
                 case poll
+                case autodeleteTimer
             }
             
             case text
@@ -148,6 +157,7 @@ public struct WidgetDataPeer: Codable, Equatable {
             case mapLocation(MapLocation)
             case game(Game)
             case poll(Poll)
+            case autodeleteTimer(AutodeleteTimer)
             
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -177,6 +187,8 @@ public struct WidgetDataPeer: Codable, Equatable {
                     self = .game(game)
                 } else if let poll = try? container.decode(Poll.self, forKey: .poll) {
                     self = .poll(poll)
+                } else if let autodeleteTimer = try? container.decode(AutodeleteTimer.self, forKey: .autodeleteTimer) {
+                    self = .autodeleteTimer(autodeleteTimer)
                 } else {
                     throw DecodingError.generic
                 }
@@ -211,6 +223,8 @@ public struct WidgetDataPeer: Codable, Equatable {
                     try container.encode(game, forKey: .game)
                 case let .poll(poll):
                     try container.encode(poll, forKey: .poll)
+                case let .autodeleteTimer(autodeleteTimer):
+                    try container.encode(autodeleteTimer, forKey: .autodeleteTimer)
                 }
             }
         }
@@ -260,17 +274,130 @@ public struct WidgetDataPeers: Codable, Equatable {
 }
 
 public struct WidgetPresentationData: Codable, Equatable {
-    public var applicationLockedString: String
-    public var applicationStartRequiredString: String
-    public var widgetGalleryTitle: String
-    public var widgetGalleryDescription: String
+    public var widgetChatsGalleryTitle: String
+    public var widgetChatsGalleryDescription: String
+    public var widgetShortcutsGalleryTitle: String
+    public var widgetShortcutsGalleryDescription: String
     
-    public init(applicationLockedString: String, applicationStartRequiredString: String, widgetGalleryTitle: String, widgetGalleryDescription: String) {
-        self.applicationLockedString = applicationLockedString
-        self.applicationStartRequiredString = applicationStartRequiredString
-        self.widgetGalleryTitle = widgetGalleryTitle
-        self.widgetGalleryDescription = widgetGalleryDescription
+    public var widgetLongTapToEdit: String
+    public var widgetUpdatedTodayAt: String
+    public var widgetUpdatedAt: String
+    
+    public var messageAuthorYou: String
+    public var messagePhoto: String
+    public var messageVideo: String
+    public var messageAnimation: String
+    public var messageVoice: String
+    public var messageVideoMessage: String
+    public var messageSticker: String
+    public var messageVoiceCall: String
+    public var messageVideoCall: String
+    public var messageLocation: String
+    
+    public var autodeleteTimerUpdated: String
+    public var autodeleteTimerRemoved: String
+    
+    public var generalLockedTitle: String
+    public var generalLockedText: String
+    
+    public init(
+        widgetChatsGalleryTitle: String,
+        widgetChatsGalleryDescription: String,
+        widgetShortcutsGalleryTitle: String,
+        widgetShortcutsGalleryDescription: String,
+        widgetLongTapToEdit: String,
+        widgetUpdatedTodayAt: String,
+        widgetUpdatedAt: String,
+        messageAuthorYou: String,
+        messagePhoto: String,
+        messageVideo: String,
+        messageAnimation: String,
+        messageVoice: String,
+        messageVideoMessage: String,
+        messageSticker: String,
+        messageVoiceCall: String,
+        messageVideoCall: String,
+        messageLocation: String,
+        autodeleteTimerUpdated: String,
+        autodeleteTimerRemoved: String,
+        generalLockedTitle: String,
+        generalLockedText: String
+    ) {
+        self.widgetChatsGalleryTitle = widgetChatsGalleryTitle
+        self.widgetChatsGalleryDescription = widgetChatsGalleryDescription
+        self.widgetShortcutsGalleryTitle = widgetShortcutsGalleryTitle
+        self.widgetShortcutsGalleryDescription = widgetShortcutsGalleryDescription
+        self.widgetLongTapToEdit = widgetLongTapToEdit
+        self.widgetUpdatedTodayAt = widgetUpdatedTodayAt
+        self.widgetUpdatedAt = widgetUpdatedAt
+        self.messageAuthorYou = messageAuthorYou
+        self.messagePhoto = messagePhoto
+        self.messageVideo = messageVideo
+        self.messageAnimation = messageAnimation
+        self.messageVoice = messageVoice
+        self.messageVideoMessage = messageVideoMessage
+        self.messageSticker = messageSticker
+        self.messageVoiceCall = messageVoiceCall
+        self.messageVideoCall = messageVideoCall
+        self.messageLocation = messageLocation
+        self.autodeleteTimerUpdated = autodeleteTimerUpdated
+        self.autodeleteTimerRemoved = autodeleteTimerRemoved
+        self.generalLockedTitle = generalLockedTitle
+        self.generalLockedText = generalLockedText
     }
+    
+    public static func getForExtension() -> WidgetPresentationData {
+        let appBundleIdentifier = Bundle.main.bundleIdentifier!
+        guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+            return WidgetPresentationData.default
+        }
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+        
+        let appGroupName = "group.\(baseAppBundleId)"
+        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        
+        guard let appGroupUrl = maybeAppGroupUrl else {
+            return WidgetPresentationData.default
+        }
+        
+        let rootPath = rootPathForBasePath(appGroupUrl.path)
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
+            return value
+        } else {
+            return WidgetPresentationData.default
+        }
+    }
+}
+
+public extension WidgetPresentationData {
+    static var `default` = WidgetPresentationData(
+        widgetChatsGalleryTitle: "Chats",
+        widgetChatsGalleryDescription: "Display the latest message from the most important chats.",
+        widgetShortcutsGalleryTitle: "Shortcuts",
+        widgetShortcutsGalleryDescription: "Display shortcuts of your most important chats to always have quick access to them.",
+        widgetLongTapToEdit: "Tap or hold to edit widget.",
+        widgetUpdatedTodayAt: "Updated at {}",
+        widgetUpdatedAt: "Updated {}",
+        messageAuthorYou: "You",
+        messagePhoto: "Photo",
+        messageVideo: "Video",
+        messageAnimation: "GIF",
+        messageVoice: "Voice Message",
+        messageVideoMessage: "Video Message",
+        messageSticker: "Sticker",
+        messageVoiceCall: "Call",
+        messageVideoCall: "Video Call",
+        messageLocation: "Map",
+        autodeleteTimerUpdated: "Auto-delete timer updated",
+        autodeleteTimerRemoved: "Auto-delete timer disabled",
+        generalLockedTitle: "Locked",
+        generalLockedText: "Open Telegram and enter passcode to edit widget."
+    )
+}
+
+private func rootPathForBasePath(_ appGroupPath: String) -> String {
+    return appGroupPath + "/telegram-data"
 }
 
 public func widgetPresentationDataPath(rootPath: String) -> String {

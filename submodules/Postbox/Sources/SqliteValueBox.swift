@@ -66,15 +66,17 @@ struct SqlitePreparedStatement {
         return res == SQLITE_ROW
     }
     
-    func tryStep(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Bool {
+    struct SqlError: Error {
+        var code: Int32
+    }
+    
+    func tryStep(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Result<Void, SqlError> {
         let res = sqlite3_step(statement)
         if res != SQLITE_ROW && res != SQLITE_DONE {
-            if res != SQLITE_MISUSE {
-                if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
-                    postboxLog("SQL error \(res): \(str) on step")
-                } else {
-                    postboxLog("SQL error \(res) on step")
-                }
+            if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
+                postboxLog("SQL error \(res): \(str) on step")
+            } else {
+                postboxLog("SQL error \(res) on step")
             }
             
             if res == SQLITE_CORRUPT {
@@ -85,7 +87,11 @@ struct SqlitePreparedStatement {
                 }
             }
         }
-        return res == SQLITE_ROW || res == SQLITE_DONE
+        if res == SQLITE_ROW || res == SQLITE_DONE {
+            return .success(Void())
+        } else {
+            return .failure(SqlError(code: res))
+        }
     }
     
     func int32At(_ index: Int) -> Int32 {
@@ -484,11 +490,20 @@ public final class SqliteValueBox: ValueBox {
     private func isEncrypted(_ database: Database) -> Bool {
         var statement: OpaquePointer? = nil
         let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
+        if statement == nil {
+            postboxLog("isEncrypted: sqlite3_prepare_v2 status = \(status) [\(self.databasePath)]")
+            return true
+        }
         if status == SQLITE_NOTADB {
+            postboxLog("isEncrypted: status = SQLITE_NOTADB [\(self.databasePath)]")
             return true
         }
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        if !preparedStatement.tryStep(handle: database.handle, path: self.databasePath) {
+        switch preparedStatement.tryStep(handle: database.handle, path: self.databasePath) {
+        case .success:
+            break
+        case let .failure(error):
+            postboxLog("isEncrypted: tryStep result is \(error.code) [\(self.databasePath)]")
             preparedStatement.destroy()
             return true
         }
@@ -602,14 +617,14 @@ public final class SqliteValueBox: ValueBox {
         switch table.keyType {
             case .binary:
                 var resultCode: Bool
-                var createStatement = "CREATE TABLE t\(table.id) (key BLOB PRIMARY KEY, value BLOB)"
+                var createStatement = "CREATE TABLE IF NOT EXISTS t\(table.id) (key BLOB PRIMARY KEY, value BLOB)"
                 if table.compactValuesOnCreation {
                     createStatement += " WITHOUT ROWID"
                 }
                 resultCode = database.execute(createStatement)
                 assert(resultCode)
             case .int64:
-                let resultCode = database.execute("CREATE TABLE t\(table.id) (key INTEGER PRIMARY KEY, value BLOB)")
+                let resultCode = database.execute("CREATE TABLE IF NOT EXISTS t\(table.id) (key INTEGER PRIMARY KEY, value BLOB)")
                 assert(resultCode)
         }
     }
@@ -618,10 +633,10 @@ public final class SqliteValueBox: ValueBox {
         precondition(self.queue.isCurrent())
         if let _ = self.fullTextTables[table.id] {
         } else {
-            var resultCode = self.database.execute("CREATE VIRTUAL TABLE ft\(table.id) USING fts5(collectionId, itemId, contents, tags)")
+            var resultCode = self.database.execute("CREATE VIRTUAL TABLE IF NOT EXISTS ft\(table.id) USING fts5(collectionId, itemId, contents, tags)")
             precondition(resultCode)
             self.fullTextTables[table.id] = table
-            resultCode = self.database.execute("INSERT INTO __meta_fulltext_tables(name) VALUES (\(table.id))")
+            resultCode = self.database.execute("INSERT OR IGNORE INTO __meta_fulltext_tables(name) VALUES (\(table.id))")
             precondition(resultCode)
         }
     }
