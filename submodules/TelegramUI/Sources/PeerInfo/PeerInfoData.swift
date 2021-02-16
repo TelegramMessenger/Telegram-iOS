@@ -765,14 +765,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             
             let membersData: Signal<PeerInfoMembersData?, NoError> = combineLatest(membersContext.state, context.account.viewTracker.peerView(groupId, updateData: false))
             |> map { state, view -> PeerInfoMembersData? in
-                if let peer = peerViewMainPeer(view) as? TelegramChannel, peer.flags.contains(.isGigagroup) {
-                    return nil
+                if state.members.count > 5 {
+                    return .longList(membersContext)
                 } else {
-                    if state.members.count > 5 {
-                        return .longList(membersContext)
-                    } else {
-                        return .shortList(membersContext: membersContext, members: state.members)
-                    }
+                    return .shortList(membersContext: membersContext, members: state.members)
                 }
             }
             |> distinctUntilChanged

@@ -154,11 +154,34 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 }
                             case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite):
                                 if !invite.link.hasSuffix("...") {
-                                    let controller = inviteLinkEditController(context: strongSelf.context, peerId: peer.id, invite: invite, completion: { [weak self] _ in
-                                        self?.eventLogContext.reload()
-                                    })
-                                    controller.navigationPresentation = .modal
-                                    strongSelf.pushController(controller)
+                                    if invite.isPermanent {
+                                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                                        
+                                        var items: [ActionSheetItem] = []
+                                        items.append(ActionSheetTextItem(title: invite.link))
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.InviteLink_ContextRevoke, color: .destructive, action: { [weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                            if let strongSelf = self {
+                                                let _ = (revokePeerExportedInvitation(account: strongSelf.context.account, peerId: peer.id, link: invite.link)
+                                                
+                                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                                    self?.eventLogContext.reload()
+                                                })
+                                            }
+                                        }))
+                                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                                actionSheet?.dismissAnimated()
+                                            })
+                                        ])])
+                                        strongSelf.presentController(actionSheet, nil)
+                                    } else {
+                                        let controller = inviteLinkEditController(context: strongSelf.context, peerId: peer.id, invite: invite, completion: { [weak self] _ in
+                                            self?.eventLogContext.reload()
+                                        })
+                                        controller.navigationPresentation = .modal
+                                        strongSelf.pushController(controller)
+                                    }
                                     return true
                                 }
                             case .changeHistoryTTL:
