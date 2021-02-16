@@ -16,6 +16,8 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     
     private var validLayoutSize: CGSize?
     
+    private var shouldBeDismissedDisposable: Disposable?
+    
     override public var group: OverlayMediaItemNodeGroup? {
         return OverlayMediaItemNodeGroup(rawValue: 0)
     }
@@ -35,7 +37,7 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     public var customClose: (() -> Void)?
     public var controlsAreShowingUpdated: ((Bool) -> Void)?
     
-    public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
+    public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, shouldBeDismissed: Signal<Bool, NoError> = .single(false), expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
         self.defaultExpand = expand
         
@@ -112,6 +114,16 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         }
         
         self.videoNode.canAttachContent = true
+        
+        self.shouldBeDismissedDisposable = (shouldBeDismissed
+        |> filter { $0 }
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.dismiss()
+            closeImpl?()
+        })
     }
     
     override public func didLoad() {

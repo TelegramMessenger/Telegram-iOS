@@ -463,7 +463,6 @@ public class GalleryController: ViewController, StandalonePresentableController 
                     }
             }
         }
-        |> take(1)
         
         let semaphore: DispatchSemaphore?
         if synchronousLoad {
@@ -487,6 +486,23 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         strongSelf.configuration = configuration
                         
                         let entries = view.entries
+                        
+                        if let centralEntryStableId = strongSelf.centralEntryStableId {
+                            var found = false
+                            for i in 0 ..< entries.count {
+                                let message = entries[i].message
+                                if message.stableId == centralEntryStableId {
+                                    found = true
+                                    break
+                                }
+                            }
+                            
+                            if !found {
+                                strongSelf.dismiss(forceAway: true)
+                                return
+                            }
+                        }
+                        
                         var centralEntryStableId: UInt32?
                         loop: for i in 0 ..< entries.count {
                             let message = entries[i].message
@@ -515,14 +531,16 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             strongSelf.entries = entries.reversed()
                             strongSelf.hasLeftEntries = view.hasLater
                             strongSelf.hasRightEntries = view.hasEarlier
-                            if let centralEntryStableId = centralEntryStableId {
+                            if strongSelf.centralEntryStableId == nil, let centralEntryStableId = centralEntryStableId {
                                 strongSelf.centralEntryStableId = centralEntryStableId
                             }
                         } else {
                             strongSelf.entries = entries
                             strongSelf.hasLeftEntries = view.hasEarlier
                             strongSelf.hasRightEntries = view.hasLater
-                            strongSelf.centralEntryStableId = centralEntryStableId
+                            if strongSelf.centralEntryStableId == nil {
+                                strongSelf.centralEntryStableId = centralEntryStableId
+                            }
                         }
                         if strongSelf.isViewLoaded {
                             var items: [GalleryItem] = []
@@ -547,13 +565,17 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
                             
                             if strongSelf.temporaryDoNotWaitForReady {
-                                strongSelf.didSetReady = true
-                                strongSelf._ready.set(.single(true))
-                            } else {
-                                let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
-                                    strongSelf?.didSetReady = true
+                                if !strongSelf.didSetReady {
+                                    strongSelf.didSetReady = true
+                                    strongSelf._ready.set(.single(true))
                                 }
-                                strongSelf._ready.set(ready |> map { true })
+                            } else {
+                                if !strongSelf.didSetReady {
+                                    let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
+                                        strongSelf?.didSetReady = true
+                                    }
+                                    strongSelf._ready.set(ready |> map { true })
+                                }
                             }
                         }
                     }
@@ -568,7 +590,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 return (true, nil)
             }
             semaphore?.signal()
-            if process {
+            if process || true {
                 Queue.mainQueue().async {
                     f()
                 }

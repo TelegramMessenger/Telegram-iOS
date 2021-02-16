@@ -1482,7 +1482,27 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let baseNavigationController = self.baseNavigationController()
             let mediaManager = self.context.sharedContext.mediaManager
             var expandImpl: (() -> Void)?
-            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, expand: {
+            
+            let shouldBeDismissed: Signal<Bool, NoError>
+            if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+                let viewKey = PostboxViewKey.messages(Set([message.id]))
+                shouldBeDismissed = context.account.postbox.combinedView(keys: [viewKey])
+                |> map { views -> Bool in
+                    guard let view = views.views[viewKey] as? MessagesView else {
+                        return false
+                    }
+                    if view.messages.isEmpty {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                |> distinctUntilChanged
+            } else {
+                shouldBeDismissed = .single(false)
+            }
+            
+            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, shouldBeDismissed: shouldBeDismissed, expand: {
                 expandImpl?()
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
