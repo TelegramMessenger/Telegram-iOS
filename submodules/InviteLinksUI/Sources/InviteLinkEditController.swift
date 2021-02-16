@@ -44,7 +44,7 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
     if number.rangeOfCharacter(from: invalidAmountCharacters) != nil || number == "0" {
         return false
     }
-    if let _ = Int32(number) {
+    if let value = Int32(number), value > 0 && value < 100000 {
         return true
     } else {
         return false

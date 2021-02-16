@@ -7069,6 +7069,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 
+                if !strongSelf.traceVisibility() || strongSelf.navigationController?.topViewController != strongSelf {
+                    return
+                }
+                
                 if values.contains(.convertToGigagroup) && !strongSelf.displayedConvertToGigagroupSuggestion {
                     strongSelf.displayedConvertToGigagroupSuggestion = true
                     

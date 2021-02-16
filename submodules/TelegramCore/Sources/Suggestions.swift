@@ -65,6 +65,18 @@ public func dismissPeerSpecificServerProvidedSuggestion(account: Account, peerId
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }
-        |> ignoreValues
+        |> mapToSignal { a -> Signal<Never, NoError> in
+            return account.postbox.transaction { transaction in
+                transaction.updatePeerCachedData(peerIds: [peerId]) { (_, current) -> CachedPeerData? in
+                    var updated = current
+                    if let cachedData = current as? CachedChannelData {
+                        var pendingSuggestions = cachedData.pendingSuggestions
+                        pendingSuggestions.removeAll(where: { $0 == suggestion.rawValue })
+                        updated = cachedData.withUpdatedPendingSuggestions(pendingSuggestions)
+                    }
+                    return updated
+                }
+            } |> ignoreValues
+        }
     }
 }

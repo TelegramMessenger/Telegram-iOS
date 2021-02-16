@@ -295,9 +295,14 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             let titleColor: UIColor
             titleColor = item.presentationData.theme.list.itemInputField.primaryColor
             
+            let alignCentrally = !(item.invite?.link.contains("joinchat") ?? true)
+            
+            let addressFont = Font.regular(!alignCentrally && params.width == 320 ? floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0) : item.presentationData.fontSize.itemListBaseFontSize)
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
-            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link.replacingOccurrences(of: "https://", with: "") }) ?? "", font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 90.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let constrainedWidth = alignCentrally ? params.width - leftInset - rightInset - 90.0 : params.width - leftInset - rightInset - 60.0
+            
+            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link.replacingOccurrences(of: "https://", with: "") }) ?? "", font: addressFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let subtitle: String
             let subtitleColor: UIColor
@@ -424,7 +429,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     strongSelf.fieldNode.frame = fieldFrame
                     strongSelf.fieldButtonNode.frame = fieldFrame
                     
-                    strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
+                    strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + (alignCentrally ? floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0) : 14.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
                     
                     strongSelf.addressButtonNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0 - 14.0, y: verticalInset), size: CGSize(width: 52.0, height: 52.0))
                     strongSelf.extractedContainerNode.frame = strongSelf.addressButtonNode.bounds

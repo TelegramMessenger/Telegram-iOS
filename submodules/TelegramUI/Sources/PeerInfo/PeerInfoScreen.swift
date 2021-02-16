@@ -1264,9 +1264,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 }
             case .group:
                 let ItemUsername = 101
-                let ItemLinkedChannel = 102
-                let ItemPreHistory = 103
-                let ItemInviteLinks = 104
+                let ItemInviteLinks = 102
+                let ItemLinkedChannel = 103
+                let ItemPreHistory = 104
                 let ItemStickerPack = 105
                 let ItemPermissions = 106
                 let ItemMembers = 107
@@ -1320,25 +1320,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
                             }
-                                                         
-                            if cachedData.flags.contains(.canChangeUsername) {
-                                if let linkedDiscussionPeer = data.linkedDiscussionPeer {
-                                    let peerTitle: String
-                                    if let addressName = linkedDiscussionPeer.addressName, !addressName.isEmpty {
-                                        peerTitle = "@\(addressName)"
-                                    } else {
-                                        peerTitle = linkedDiscussionPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    }
-                                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemLinkedChannel, label: .text(peerTitle), text: presentationData.strings.Group_LinkedChannel, icon: UIImage(bundleImageName: "Chat/Info/GroupLinkedChannelIcon"), action: {
-                                        interaction.editingOpenDiscussionGroupSetup()
-                                    }))
-                                }
-                            }
-                            if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
-                                    interaction.editingOpenPreHistorySetup()
-                                }))
-                            }
                         }
                     }
                     
@@ -1350,9 +1331,30 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             invitesText = ""
                         }
                         
-                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
                             interaction.editingOpenInviteLinksSetup()
                         }))
+                    }
+                            
+                    if (isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages))) && cachedData.peerGeoLocation != nil {
+                        if cachedData.flags.contains(.canChangeUsername) {
+                            if let linkedDiscussionPeer = data.linkedDiscussionPeer {
+                                let peerTitle: String
+                                if let addressName = linkedDiscussionPeer.addressName, !addressName.isEmpty {
+                                    peerTitle = "@\(addressName)"
+                                } else {
+                                    peerTitle = linkedDiscussionPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                }
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemLinkedChannel, label: .text(peerTitle), text: presentationData.strings.Group_LinkedChannel, icon: UIImage(bundleImageName: "Chat/Info/GroupLinkedChannelIcon"), action: {
+                                    interaction.editingOpenDiscussionGroupSetup()
+                                }))
+                            }
+                        }
+                        if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
+                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
+                                interaction.editingOpenPreHistorySetup()
+                            }))
+                        }
                     }
                     
                     if cachedData.flags.contains(.canSetStickerSet) && canEditPeerInfo(context: context, peer: channel) {
@@ -1418,6 +1420,19 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }))
                     }
                 }
+                
+                if (group.addressName?.isEmpty ?? true) {
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
+                    } else {
+                        invitesText = ""
+                    }
+                    
+                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
+                }
                                 
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                     interaction.editingOpenPreHistorySetup()
@@ -1450,19 +1465,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }
                     }
                     activePermissionCount = count
-                }
-                
-                if (group.addressName?.isEmpty ?? true) {
-                    let invitesText: String
-                    if let count = data.invitations?.count, count > 0 {
-                        invitesText = "\(count)"
-                    } else {
-                        invitesText = ""
-                    }
-                    
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
-                        interaction.editingOpenInviteLinksSetup()
-                    }))
                 }
                 
                 items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
