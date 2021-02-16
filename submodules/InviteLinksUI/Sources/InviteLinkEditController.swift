@@ -54,7 +54,7 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
 private enum InviteLinksEditEntry: ItemListNodeEntry {
     case timeHeader(PresentationTheme, String)
     case timePicker(PresentationTheme, InviteLinkTimeLimit)
-    case timeExpiryDate(PresentationTheme, Int32?, Bool)
+    case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
     case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?)
     case timeInfo(PresentationTheme, String)
     
@@ -115,8 +115,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .timeExpiryDate(lhsTheme, lhsDate, lhsActive):
-                if case let .timeExpiryDate(rhsTheme, rhsDate, rhsActive) = rhs, lhsTheme === rhsTheme, lhsDate == rhsDate, lhsActive == rhsActive {
+            case let .timeExpiryDate(lhsTheme, lhsDateTimeFormat, lhsDate, lhsActive):
+                if case let .timeExpiryDate(rhsTheme, rhsDateTimeFormat, rhsDate, rhsActive) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsActive == rhsActive {
                     return true
                 } else {
                     return false
@@ -186,10 +186,10 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     })
                 })
-            case let .timeExpiryDate(theme, value, active):
+            case let .timeExpiryDate(theme, dateTimeFormat, value, active):
                 let text: String
                 if let value = value {
-                    text = stringForFullDate(timestamp: value, strings: presentationData.strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."))
+                    text = stringForMediumDate(timestamp: value, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 } else {
                     text = presentationData.strings.InviteLink_Create_TimeLimitExpiryDateNever
                 }
@@ -287,7 +287,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     } else if let value = state.time.value {
         time = currentTime + value
     }
-    entries.append(.timeExpiryDate(presentationData.theme, time, state.pickingTimeLimit))
+    entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingTimeLimit))
     if state.pickingTimeLimit {
         entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time))
     }
@@ -484,6 +484,9 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.beganInteractiveDragging = {
+        dismissInputImpl?()
+    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

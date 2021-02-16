@@ -1087,6 +1087,8 @@
 "Time.PreciseDate_m11" = "Nov %1$@, %2$@ at %3$@";
 "Time.PreciseDate_m12" = "Dec %1$@, %2$@ at %3$@";
 
+"Time.MediumDate" = "%1$@ at %2$@";
+
 "MuteFor.Hours_1" = "Mute for 1 hour";
 "MuteFor.Hours_2" = "Mute for 2 hours";
 "MuteFor.Hours_3_10" = "Mute for %@ hours";
@@ -6130,3 +6132,5 @@ Sorry for the inconvenience.";
 
 "Intents.ErrorLockedTitle" = "Locked";
 "Intents.ErrorLockedText" = "Open Telegram and enter passcode to edit widget.";
+
+"Conversation.GigagroupDescription" = "Only admins can send messages in this group.";

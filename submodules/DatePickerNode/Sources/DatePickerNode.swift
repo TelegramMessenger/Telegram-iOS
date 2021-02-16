@@ -917,33 +917,79 @@ private class TimeInputView: UIView, UIKeyInput {
         return !self.text.isEmpty
     }
     
+    var focusUpdated: ((Bool) -> Void)?
     var textUpdated: ((String) -> Void)?
+    
+    override func becomeFirstResponder() -> Bool {
+        if self.isFirstResponder {
+            self.didReset = false
+        }
+        let result = super.becomeFirstResponder()
+        self.focusUpdated?(true)
+        return result
+    }
+    
+    override func resignFirstResponder() -> Bool {
+        let result = super.resignFirstResponder()
+        self.focusUpdated?(false)
+        return result
+    }
+    
+    var didReset = false
     
     private let nonDigits = CharacterSet.decimalDigits.inverted
     func insertText(_ text: String) {
         if text.rangeOfCharacter(from: nonDigits) != nil {
             return
         }
+        if !self.didReset {
+            self.text = ""
+            self.didReset = true
+        }
         var updatedText = self.text
-        updatedText.append(updatedText)
-        updatedText = String(updatedText.suffix(4))
+        updatedText.append(text)
         self.text = updatedText
         self.textUpdated?(self.text)
     }
     
     func deleteBackward() {
+        self.didReset = true
         var updatedText = self.text
-        updatedText.removeLast()
+        if !updatedText.isEmpty {
+            updatedText.removeLast()
+        }
         self.text = updatedText
         self.textUpdated?(self.text)
     }
 }
 
 private class TimeInputNode: ASDisplayNode {
+    var text: String {
+        get {
+            if let view = self.view as? TimeInputView {
+                return view.text
+            } else {
+                return ""
+            }
+        }
+        set {
+            if let view = self.view as? TimeInputView {
+                view.text = newValue
+            }
+        }
+    }
     var textUpdated: ((String) -> Void)? {
         didSet {
             if let view = self.view as? TimeInputView {
                 view.textUpdated = self.textUpdated
+            }
+        }
+    }
+    
+    var focusUpdated: ((Bool) -> Void)? {
+        didSet {
+            if let view = self.view as? TimeInputView {
+                view.focusUpdated = self.focusUpdated
             }
         }
     }
@@ -958,56 +1004,43 @@ private class TimeInputNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
-        
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap)))
-       
+               
         if let view = self.view as? TimeInputView {
             view.textUpdated = self.textUpdated
         }
     }
-    
-    @objc private func handleTap() {
-        self.view.becomeFirstResponder()
-    }
-}
-
-public func stringTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
-    switch dateTimeFormat.timeFormat {
-    case .regular:
-        let hourString: String
-        if hours == 0 {
-            hourString = "12"
-        } else if hours > 12 {
-            hourString = "\(hours - 12)"
-        } else {
-            hourString = "\(hours)"
-        }
-        
-        let periodString: String
-        if hours >= 12 {
-            periodString = "PM"
-        } else {
-            periodString = "AM"
-        }
-        if minutes >= 10 {
-            return "\(hourString) \(minutes) \(periodString)"
-        } else {
-            return "\(hourString):0\(minutes) \(periodString)"
-        }
-    case .military:
-        return String(format: "%02d %02d", arguments: [Int(hours), Int(minutes)])
-    }
 }
 
 private final class TimePickerNode: ASDisplayNode {
+    enum Selection {
+        case none
+        case hours
+        case minutes
+        case all
+    }
+    
     private var theme: DatePickerTheme
     private let dateTimeFormat: PresentationDateTimeFormat
     
     private let backgroundNode: ASDisplayNode
-    private let textNode: ImmediateTextNode
+    private let hoursNode: TapeNode
+    private let minutesNode: TapeNode
+    private let hoursTopMaskNode: ASDisplayNode
+    private let hoursBottomMaskNode: ASDisplayNode
+    private let minutesTopMaskNode: ASDisplayNode
+    private let minutesBottomMaskNode: ASDisplayNode
     private let colonNode: ImmediateTextNode
+    private let borderNode: ASDisplayNode
     private let inputNode: TimeInputNode
     private let amPMSelectorNode: SegmentedControlNode
+    
+    private var typing = false
+    private var typingString = ""
+    
+    private var typingHours: Int?
+    private var typingMinutes: Int?
+    private let hoursTypingNode: ImmediateTextNode
+    private let minutesTypingNode: ImmediateTextNode
     
     var date: Date? {
         didSet {
@@ -1027,14 +1060,41 @@ private final class TimePickerNode: ASDisplayNode {
         self.theme = theme
         self.dateTimeFormat = dateTimeFormat
         self.date = date
+        self.selection = .none
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
         self.backgroundNode.cornerRadius = 9.0
         
-        self.textNode = ImmediateTextNode()
+        self.borderNode = ASDisplayNode()
+        self.borderNode.cornerRadius = 9.0
+        self.borderNode.isUserInteractionEnabled = false
+        self.borderNode.isHidden = true
+        self.borderNode.borderWidth = 2.0
+        self.borderNode.borderColor = theme.accentColor.cgColor
+        
         self.colonNode = ImmediateTextNode()
+        self.hoursNode = TapeNode()
+        self.minutesNode = TapeNode()
+        
+        self.hoursTypingNode = ImmediateTextNode()
+        self.hoursTypingNode.isHidden = true
+        self.hoursTypingNode.textAlignment = .right
+        self.minutesTypingNode = ImmediateTextNode()
+        self.minutesTypingNode.isHidden = true
+        self.minutesTypingNode.textAlignment = .right
+        
         self.inputNode = TimeInputNode()
+        
+        self.hoursTopMaskNode = ASDisplayNode()
+        self.hoursTopMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.hoursBottomMaskNode = ASDisplayNode()
+        self.hoursBottomMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        
+        self.minutesTopMaskNode = ASDisplayNode()
+        self.minutesTopMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.minutesBottomMaskNode = ASDisplayNode()
+        self.minutesBottomMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
         
         let isPM: Bool
         if let date = date {
@@ -1049,13 +1109,21 @@ private final class TimePickerNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.textNode)
-//        self.addSubnode(self.colonNode)
-//        self.addSubnode(self.inputNode)
+        self.addSubnode(self.colonNode)
+        self.addSubnode(self.hoursNode)
+        self.addSubnode(self.minutesNode)
+        self.addSubnode(self.hoursTopMaskNode)
+        self.addSubnode(self.hoursBottomMaskNode)
+        self.addSubnode(self.minutesTopMaskNode)
+        self.addSubnode(self.minutesBottomMaskNode)
+        self.addSubnode(self.hoursTypingNode)
+        self.addSubnode(self.minutesTypingNode)
+        self.addSubnode(self.borderNode)
+        self.addSubnode(self.inputNode)
         self.addSubnode(self.amPMSelectorNode)
         
-        self.amPMSelectorNode.selectedIndexChanged = { index in
-            guard let date = self.date else {
+        self.amPMSelectorNode.selectedIndexChanged = { [weak self] index in
+            guard let strongSelf = self, let date = strongSelf.date else {
                 return
             }
             let hours = calendar.component(.hour, from: date)
@@ -1066,12 +1134,376 @@ private final class TimePickerNode: ASDisplayNode {
                 components.hour = hours + 12
             }
             if let newDate = calendar.date(from: components) {
-                self.valueChanged?(newDate)
+                strongSelf.date = newDate
+                strongSelf.valueChanged?(newDate)
             }
         }
         
-        self.inputNode.textUpdated = { text in
+        self.inputNode.textUpdated = { [weak self] text in
+            self?.handleTextInput(text)
+        }
+        
+        self.inputNode.focusUpdated = { [weak self] focus in
+            if focus {
+                self?.selection = .all
+            } else {
+                self?.selection = .none
+            }
+        }
+        
+        self.hoursNode.count = {
+            switch dateTimeFormat.timeFormat {
+                case .military:
+                    return 24
+                case .regular:
+                    return 12
+            }
+        }
+        self.hoursNode.titleAt = { i in
+            switch dateTimeFormat.timeFormat {
+                case .military:
+                    if i < 10 {
+                        return "0\(i)"
+                    } else {
+                        return "\(i)"
+                    }
+                case .regular:
+                    if i < 10 {
+                        return "0\(i)"
+                    } else {
+                        return "\(1 + i)"
+                    }
+            }
+        }
+        self.hoursNode.isScrollingUpdated = { [weak self] scrolling in
+            if let strongSelf = self {
+                if scrolling {
+                    strongSelf.typing = false
+                    strongSelf.selection = .hours
+                } else {
+                    if strongSelf.inputNode.view.isFirstResponder {
+                        strongSelf.selection = .all
+                    } else {
+                        strongSelf.selection = .none
+                    }
+                }
+            }
+        }
+        self.hoursNode.selected = { [weak self] index in
+            guard let strongSelf = self else {
+                return
+            }
+            switch dateTimeFormat.timeFormat {
+                case .military:
+                    let hour = index
+                    if let date = strongSelf.date {
+                        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+                        components.hour =  hour
+                        if let newDate = calendar.date(from: components) {
+                            strongSelf.date = newDate
+                            strongSelf.valueChanged?(newDate)
+                        }
+                    }
+                case .regular:
+                   break
+            }
+        }
+        
+        self.minutesNode.count = {
+            return 60
+        }
+        self.minutesNode.titleAt = { i in
+            if i < 10 {
+                return "0\(i)"
+            } else {
+                return "\(i)"
+            }
+        }
+        self.minutesNode.isScrollingUpdated = { [weak self] scrolling in
+            if let strongSelf = self {
+                if scrolling {
+                    strongSelf.typing = false
+                    strongSelf.selection = .minutes
+                } else {
+                    if strongSelf.inputNode.view.isFirstResponder {
+                        strongSelf.selection = .all
+                    } else {
+                        strongSelf.selection = .none
+                    }
+                }
+            }
+        }
+        self.minutesNode.selected = { [weak self] index in
+            guard let strongSelf = self else {
+                return
+            }
+            switch dateTimeFormat.timeFormat {
+                case .military:
+                    let minute = index
+                    if let date = strongSelf.date {
+                        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+                        components.minute = minute
+                        if let newDate = calendar.date(from: components) {
+                            strongSelf.date = newDate
+                            strongSelf.valueChanged?(newDate)
+                        }
+                    }
+                case .regular:
+                   break
+            }
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+                
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.view.disablesInteractiveModalDismiss = true
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:))))
+    }
+    
+    private func handleTextInput(_ input: String) {
+        self.typing = true
+        
+        var text = input
+        var typingHours: Int?
+        var typingMinutes: Int?
+        if self.selection == .all {
+            text = String(text.suffix(4))
+            if text.count < 2 {
+                typingHours = nil
+            } else {
+                if var value = Int(String(text.prefix(2))) {
+                    if value > 24 {
+                        value = value % 10
+                    }
+                    typingHours = value
+                }
+            }
+            if var value = Int(String(text.suffix(2))) {
+                if value >= 60 {
+                    value = value % 10
+                }
+                typingMinutes = value
+            }
+        } else if self.selection == .hours {
+            text = String(text.suffix(2))
+            if var value = Int(text) {
+                if value > 24 {
+                    value = value % 10
+                }
+                typingHours = value
+            } else {
+                typingHours = nil
+            }
+        } else if self.selection == .minutes {
+            text = String(text.suffix(2))
+            if var value = Int(text) {
+                if value >= 60 {
+                    value = value % 10
+                }
+                typingMinutes = value
+            } else {
+                typingMinutes = nil
+            }
+        }
+        self.typingHours = typingHours
+        self.typingMinutes = typingMinutes
+        
+        if let date = self.date {
+            var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+            if let typingHours = typingHours {
+                components.hour = typingHours
+            }
+            if let typingMinutes = typingMinutes {
+                components.minute = typingMinutes
+            }
+            if let newDate = calendar.date(from: components) {
+                self.date = newDate
+                self.valueChanged?(newDate)
+                self.updateTapes()
+            }
+        }
+        
+        self.update()
+    }
+    
+    private var selection: Selection {
+        didSet {
+            self.update()
+        }
+    }
+    
+    private func update() {
+        if case .none = self.selection {
+            self.borderNode.isHidden = true
+        } else {
+            self.borderNode.isHidden = false
+        }
+        
+        let colonColor: UIColor
+        switch self.selection {
+            case .none:
+                colonColor = self.theme.textColor
+                self.colonNode.alpha = 1.0
+                
+                self.hoursNode.textColor = self.theme.textColor
+                self.minutesNode.textColor = self.theme.textColor
+                self.hoursNode.alpha = 1.0
+                self.minutesNode.alpha = 1.0
+                
+                self.hoursTopMaskNode.alpha = 1.0
+                self.hoursBottomMaskNode.alpha = 1.0
+                self.minutesTopMaskNode.alpha = 1.0
+                self.minutesBottomMaskNode.alpha = 1.0
+                
+                self.typing = false
+                self.typingHours = nil
+                self.typingMinutes = nil
+                self.hoursTypingNode.isHidden = true
+                self.minutesTypingNode.isHidden = true
+                
+                self.hoursNode.isHidden = false
+                self.minutesNode.isHidden = false
+            case .hours:
+                colonColor = self.theme.textColor
+                self.colonNode.alpha = 0.35
+                
+                self.hoursNode.textColor = self.theme.accentColor
+                self.minutesNode.textColor = self.theme.textColor
+                self.hoursNode.alpha = 1.0
+                self.minutesNode.alpha = 0.35
+                
+                self.hoursTopMaskNode.alpha = 0.5
+                self.hoursBottomMaskNode.alpha = 0.5
+                self.minutesTopMaskNode.alpha = 1.0
+                self.minutesBottomMaskNode.alpha = 1.0
+                
+                if self.typing {
+                    self.hoursTypingNode.isHidden = false
+                    self.minutesTypingNode.isHidden = true
+                    
+                    self.hoursNode.isHidden = true
+                    self.minutesNode.isHidden = false
+                } else {
+                    self.hoursTypingNode.isHidden = true
+                    self.minutesTypingNode.isHidden = true
+                    
+                    self.hoursNode.isHidden = false
+                    self.minutesNode.isHidden = false
+                }
+            case .minutes:
+                colonColor = self.theme.textColor
+                self.colonNode.alpha = 0.35
+                
+                self.hoursNode.textColor = self.theme.textColor
+                self.minutesNode.textColor = self.theme.accentColor
+                self.hoursNode.alpha = 0.35
+                self.minutesNode.alpha = 1.0
+                
+                self.hoursTopMaskNode.alpha = 1.0
+                self.hoursBottomMaskNode.alpha = 1.0
+                self.minutesTopMaskNode.alpha = 0.5
+                self.minutesBottomMaskNode.alpha = 0.5
+                
+                if self.typing {
+                    self.hoursTypingNode.isHidden = true
+                    self.minutesTypingNode.isHidden = false
+                    
+                    self.hoursNode.isHidden = false
+                    self.minutesNode.isHidden = true
+                } else {
+                    self.hoursTypingNode.isHidden = true
+                    self.minutesTypingNode.isHidden = true
+                    
+                    self.hoursNode.isHidden = false
+                    self.minutesNode.isHidden = false
+                }
+            case .all:
+                colonColor = self.theme.accentColor
+                self.colonNode.alpha = 1.0
+                
+                self.hoursNode.textColor = self.theme.accentColor
+                self.minutesNode.textColor = self.theme.accentColor
+                self.hoursNode.alpha = 1.0
+                self.minutesNode.alpha = 1.0
+                
+                self.hoursTopMaskNode.alpha = 0.5
+                self.hoursBottomMaskNode.alpha = 0.5
+                self.minutesTopMaskNode.alpha = 0.5
+                self.minutesBottomMaskNode.alpha = 0.5
+                
+                if self.typing {
+                    self.hoursTypingNode.isHidden = false
+                    self.minutesTypingNode.isHidden = false
+                    
+                    self.hoursNode.isHidden = true
+                    self.minutesNode.isHidden = true
+                } else {
+                    self.hoursTypingNode.isHidden = true
+                    self.minutesTypingNode.isHidden = true
+                    
+                    self.hoursNode.isHidden = false
+                    self.minutesNode.isHidden = false
+                }
+        }
+        
+        if let size = self.validLayout {
+            let hoursString: String
+            if let typingHours = self.typingHours {
+                if typingHours < 10 {
+                    hoursString = "0\(typingHours)"
+                } else {
+                    hoursString = "\(typingHours)"
+                }
+            } else {
+                hoursString = ""
+            }
+            let minutesString: String
+            if let typingMinutes = self.typingMinutes {
+                if typingMinutes < 10 {
+                    minutesString = "0\(typingMinutes)"
+                } else {
+                    minutesString = "\(typingMinutes)"
+                }
+            } else {
+                minutesString = ""
+            }
+            self.hoursTypingNode.attributedText = NSAttributedString(string: hoursString, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: theme.textColor)
             
+            let hoursSize = self.hoursTypingNode.updateLayout(size)
+            self.hoursTypingNode.frame = CGRect(origin: CGPoint(x: 37.0 - hoursSize.width - 3.0 + UIScreenPixel, y: 6.0), size: hoursSize)
+            
+            self.minutesTypingNode.attributedText = NSAttributedString(string: minutesString, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: theme.textColor)
+            
+            let minutesSize = self.minutesTypingNode.updateLayout(size)
+            self.minutesTypingNode.frame = CGRect(origin: CGPoint(x: 75.0 - minutesSize.width - 9.0 + UIScreenPixel, y: 6.0), size: minutesSize)
+            
+            self.colonNode.attributedText = NSAttributedString(string: ":", font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: colonColor)
+            let _ = self.colonNode.updateLayout(size)
+        }
+    }
+    
+    @objc func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        if !self.inputNode.view.isFirstResponder {
+            self.inputNode.view.becomeFirstResponder()
+            self.selection = .all
+        } else {
+            let location = gestureRecognizer.location(in: self.view)
+            if location.x < 37.0 {
+                if self.selection == .hours {
+                    self.selection = .all
+                } else {
+                    self.selection = .hours
+                }
+            } else if location.x > 37.0 && location.x < 75.0 {
+                if self.selection == .minutes {
+                    self.selection = .all
+                } else {
+                    self.selection = .minutes
+                }
+            }
         }
     }
     
@@ -1079,35 +1511,60 @@ private final class TimePickerNode: ASDisplayNode {
         self.theme = theme
         
         self.backgroundNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.borderNode.borderColor = theme.accentColor.cgColor
     }
     
-    func updateLayout(size: CGSize) -> CGSize {
-        self.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: 75.0, height: 36.0)
-      
-        var contentSize = CGSize()
-        
+    func updateTapes() {
         let hours: Int32
         let minutes: Int32
         if let date = self.date {
             hours = Int32(calendar.component(.hour, from: date))
-            minutes = Int32(calendar.component(.hour, from: date))
+            minutes = Int32(calendar.component(.minute, from: date))
         } else {
             hours = 11
             minutes = 0
         }
-        let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: self.dateTimeFormat).replacingOccurrences(of: " AM", with: "").replacingOccurrences(of: " PM", with: "")
-            
-        self.textNode.attributedText = NSAttributedString(string: string, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: self.theme.textColor)
+        
+        switch self.dateTimeFormat.timeFormat {
+            case .military:
+                self.hoursNode.selectRow(Int(hours), animated: false)
+                self.minutesNode.selectRow(Int(minutes), animated: false)
+            case .regular:
+                var h12Hours = hours
+                if hours == 0 {
+                    h12Hours = 12
+                } else if hours > 12 {
+                    h12Hours = hours - 12
+                }
+                self.hoursNode.selectRow(Int(h12Hours - 1), animated: false)
+                self.minutesNode.selectRow(Int(minutes), animated: false)
+        }
+    }
+    
+    func updateLayout(size: CGSize) -> CGSize {
+        self.validLayout = size
+        
+        self.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: 75.0, height: 36.0)
+        self.borderNode.frame = self.backgroundNode.frame
+        
+        var contentSize = CGSize()
+        
+        self.updateTapes()
+    
+        self.hoursNode.frame = CGRect(x: 3.0, y: 0.0, width: 36.0, height: 36.0)
+        self.minutesNode.frame = CGRect(x: 35.0, y: 0.0, width: 36.0, height: 36.0)
+
+        self.hoursTopMaskNode.frame = CGRect(x: 9.0, y: 0.0, width: 28.0, height: 5.0)
+        self.hoursBottomMaskNode.frame = CGRect(x: 9.0, y: 36.0 - 5.0, width: 28.0, height: 5.0)
+        self.minutesTopMaskNode.frame = CGRect(x: 37.0, y: 0.0, width: 28.0, height: 5.0)
+        self.minutesBottomMaskNode.frame = CGRect(x: 37.0, y: 36.0 - 5.0, width: 28.0, height: 5.0)
         
         self.colonNode.attributedText = NSAttributedString(string: ":", font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: self.theme.textColor)
         
-        let textSize = self.textNode.updateLayout(size)
-        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - textSize.width) / 2.0), y: floorToScreenPixels((self.backgroundNode.frame.height - textSize.height) / 2.0)), size: textSize)
-        
         let colonSize = self.colonNode.updateLayout(size)
-        self.colonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - colonSize.width) / 2.0) - 7.0, y: floorToScreenPixels((self.backgroundNode.frame.height - colonSize.height) / 2.0) - 2.0), size: colonSize)
+        self.colonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - colonSize.width) / 2.0), y: floorToScreenPixels((self.backgroundNode.frame.height - colonSize.height) / 2.0) - 2.0), size: colonSize)
         
-        self.inputNode.frame = self.backgroundNode.frame
+        self.inputNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0))
         
         if self.dateTimeFormat.timeFormat == .military {
             contentSize = self.backgroundNode.frame.size

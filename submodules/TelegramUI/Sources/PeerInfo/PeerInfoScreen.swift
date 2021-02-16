@@ -446,6 +446,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, activatePinnedListPreview: { _, _ in
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
+        }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
         }, statuses: nil)
         

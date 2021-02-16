@@ -104,6 +104,8 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
+        
+        self.allowsGroupOpacity = true
     }
     
     public func asyncLayout() -> (_ item: ItemListDatePickerItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {

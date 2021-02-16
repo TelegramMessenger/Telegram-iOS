@@ -497,7 +497,12 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             if currentParent == nil {
                 break
             }
-            if let scrollView = currentParent as? UIScrollView {
+            if currentParent is UIKeyInput {
+                if currentParent?.disablesInteractiveModalDismiss == true {
+                    enableScrolling = false
+                    break
+                }
+            } else if let scrollView = currentParent as? UIScrollView {
                 if scrollView === self.scrollNode.view {
                     break
                 }
