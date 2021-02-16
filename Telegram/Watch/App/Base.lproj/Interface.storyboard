@@ -1574,8 +1574,12 @@ contacts found.</string>
             <objects>
                 <notificationController backgroundImage="BubbleNotification" spacing="0.0" id="JcB-1W-jcv" userLabel="Static M">
                     <items>
-                        <group width="1" alignment="left" radius="0.0" id="11B-ry-7nl">
+                        <group width="1" alignment="left" layout="vertical" radius="0.0" spacing="0.0" id="11B-ry-7nl">
                             <items>
+                                <label alignment="left" text="Name" id="TZ0-FP-E5f">
+                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                </label>
                                 <label alignment="left" text="Text" numberOfLines="0" id="RMV-rW-0qs">
                                     <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     <fontDescription key="font" style="UICTFontTextStyleBody"/>
@@ -1593,6 +1597,7 @@ contacts found.</string>
                     <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="4"/>
                     <connections>
                         <outlet property="notificationAlertLabel" destination="RMV-rW-0qs" id="buR-qh-N93"/>
+                        <outlet property="notificationTitleLabel" destination="TZ0-FP-E5f" id="5d7-td-uBA"/>
                         <segue destination="RQh-4n-Jyy" kind="relationship" relationship="dynamicNotificationInterface" id="wDy-DD-bRl"/>
                         <segue destination="RQh-4n-Jyy" kind="relationship" relationship="dynamicInteractiveNotificationInterface" id="MKi-5u-rhv"/>
                     </connections>
@@ -1787,8 +1792,12 @@ contacts found.</string>
             <objects>
                 <notificationController backgroundImage="BubbleNotification" spacing="0.0" id="crw-Qo-dti" userLabel="Static R">
                     <items>
-                        <group width="1" alignment="left" layout="vertical" radius="0.0" id="RTo-Ed-NsD">
+                        <group width="1" alignment="left" layout="vertical" radius="0.0" spacing="0.0" id="RTo-Ed-NsD">
                             <items>
+                                <label alignment="left" text="Name" id="pKp-eS-3LS">
+                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                </label>
                                 <label alignment="left" text="Text" numberOfLines="0" id="6f0-WK-Add">
                                     <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     <fontDescription key="font" style="UICTFontTextStyleBody"/>
@@ -1806,6 +1815,7 @@ contacts found.</string>
                     <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="4"/>
                     <connections>
                         <outlet property="notificationAlertLabel" destination="6f0-WK-Add" id="ioT-Xv-KJp"/>
+                        <outlet property="notificationTitleLabel" destination="pKp-eS-3LS" id="Jbj-qy-H83"/>
                         <segue destination="79a-X2-tmF" kind="relationship" relationship="dynamicNotificationInterface" id="dmG-n7-HwD"/>
                         <segue destination="79a-X2-tmF" kind="relationship" relationship="dynamicInteractiveNotificationInterface" id="UyA-Ra-UVy"/>
                     </connections>
