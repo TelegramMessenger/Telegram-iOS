@@ -7089,7 +7089,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let controller = PermissionController(context: context, splashScreen: true)
                         controller.navigationPresentation = .modal
                         controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
-                        controller.proceed = { result in
+                        controller.proceed = { [weak controller] result in
                             let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.medium(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
                             let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
                             let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
@@ -7108,7 +7108,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .gigagroupConversion(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                                 })
                             })])
-                            strongSelf.present(alertController, in: .window(.root))
+                            controller?.present(alertController, in: .window(.root))
                         }
                         strongSelf.push(controller)
                     })])

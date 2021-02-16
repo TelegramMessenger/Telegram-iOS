@@ -223,7 +223,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                     }
                 
                     datePickerNode.minimumDate = Date()
-                    datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date()
+                    datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) }
                    
                     let datePickerSize = CGSize(width: width, height: contentSize.height)
                     datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 0.0), size: datePickerSize)
