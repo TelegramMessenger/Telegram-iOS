@@ -487,6 +487,10 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                 var text = textField.text ?? ""
                 text.replaceSubrange(text.index(text.startIndex, offsetBy: range.lowerBound) ..< text.index(text.startIndex, offsetBy: range.upperBound), with: result)
                 textField.text = text
+                if case .username = item.type {
+                    text = text.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "_")
+                    textField.text = text
+                }
                 if let startPosition = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound + result.count) {
                     let selectionRange = textField.textRange(from: startPosition, to: startPosition)
                     DispatchQueue.main.async {
@@ -497,6 +501,24 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                 return false
             }
         }
+        
+        if let item = self.item, case .username = item.type {
+            let cleanString = string.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "_")
+            if cleanString != string {
+                var text = textField.text ?? ""
+                text.replaceSubrange(text.index(text.startIndex, offsetBy: range.lowerBound) ..< text.index(text.startIndex, offsetBy: range.upperBound), with: cleanString)
+                textField.text = text
+                if let startPosition = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound + cleanString.count) {
+                    let selectionRange = textField.textRange(from: startPosition, to: startPosition)
+                    DispatchQueue.main.async {
+                        textField.selectedTextRange = selectionRange
+                    }
+                }
+                self.textFieldTextChanged(textField)
+                return false
+            }
+        }
+        
         return true
     }
     

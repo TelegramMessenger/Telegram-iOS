@@ -935,8 +935,9 @@ private class TimeInputView: UIView, UIKeyInput {
         return result
     }
     
-    var didReset = false
+    var length: Int = 4
     
+    private var didReset = false
     private let nonDigits = CharacterSet.decimalDigits.inverted
     func insertText(_ text: String) {
         if text.rangeOfCharacter(from: nonDigits) != nil {
@@ -948,7 +949,7 @@ private class TimeInputView: UIView, UIKeyInput {
         }
         var updatedText = self.text
         updatedText.append(text)
-        self.text = updatedText
+        self.text = String(updatedText.suffix(length))
         self.textUpdated?(self.text)
     }
     
@@ -964,6 +965,20 @@ private class TimeInputView: UIView, UIKeyInput {
 }
 
 private class TimeInputNode: ASDisplayNode {
+    var length: Int {
+        get {
+            if let view = self.view as? TimeInputView {
+                return view.length
+            } else {
+                return 4
+            }
+        }
+        set {
+            if let view = self.view as? TimeInputView {
+                view.length = newValue
+            }
+        }
+    }
     var text: String {
         get {
             if let view = self.view as? TimeInputView {
@@ -1395,6 +1410,8 @@ private final class TimePickerNode: ASDisplayNode {
                     self.hoursNode.isHidden = false
                     self.minutesNode.isHidden = false
                 }
+                
+                self.inputNode.length = 2
             case .minutes:
                 colonColor = self.theme.textColor
                 self.colonNode.alpha = 0.35
@@ -1422,6 +1439,8 @@ private final class TimePickerNode: ASDisplayNode {
                     self.hoursNode.isHidden = false
                     self.minutesNode.isHidden = false
                 }
+                
+                self.inputNode.length = 2
             case .all:
                 colonColor = self.theme.accentColor
                 self.colonNode.alpha = 1.0
@@ -1449,6 +1468,8 @@ private final class TimePickerNode: ASDisplayNode {
                     self.hoursNode.isHidden = false
                     self.minutesNode.isHidden = false
                 }
+                
+                self.inputNode.length = 4
         }
         
         if let size = self.validLayout {
