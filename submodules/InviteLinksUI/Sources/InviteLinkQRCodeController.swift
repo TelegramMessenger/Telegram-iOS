@@ -290,7 +290,7 @@ public final class InviteLinkQRCodeController: ViewController {
         }
         
         @objc private func qrPressed() {
-            shareQrCode(context: self.context, link: self.invite.link)
+            shareQrCode(context: self.context, link: self.invite.link, view: self.view)
         }
         
         func updatePresentationData(_ presentationData: PresentationData) {
