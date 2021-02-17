@@ -378,7 +378,7 @@ public final class InviteLinkQRCodeController: ViewController {
             self.containerLayout = (layout, navigationBarHeight)
             
             var insets = layout.insets(options: [.statusBar, .input])
-            insets.top = 48.0
+            insets.top = 32.0
             
             let makeImageLayout = self.qrImageNode.asyncLayout()
             let imageSide: CGFloat = 240.0
@@ -387,7 +387,9 @@ public final class InviteLinkQRCodeController: ViewController {
             
             let _ = imageApply()
             
-            let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: insets.top + 16.0), size: imageSize)
+            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+            
+            let imageFrame = CGRect(origin: CGPoint(x: floor((width - imageSize.width) / 2.0), y: insets.top + 16.0), size: imageSize)
             transition.updateFrame(node: self.qrImageNode, frame: imageFrame)
             transition.updateFrame(node: self.qrButtonNode, frame: imageFrame)
             
@@ -398,26 +400,32 @@ public final class InviteLinkQRCodeController: ViewController {
                 transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
             }
             
-            let inset: CGFloat = 22.0
-            let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-            let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
+            let inset: CGFloat = 32.0
+            var textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let textFrame = CGRect(origin: CGPoint(x: floor((width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
+            
+            var textSpacing: CGFloat = 111.0
+            if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
+                textSize = CGSize()
+                self.textNode.isHidden = true
+                textSpacing = 52.0
+            } else {
+                self.textNode.isHidden = false
+            }
             
             let buttonSideInset: CGFloat = 16.0
             let bottomInset = insets.bottom + 10.0
             let buttonWidth = layout.size.width - buttonSideInset * 2.0
             let buttonHeight: CGFloat = 50.0
             
-            let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
+            let buttonFrame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
             transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
             let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
             
-            
             let titleHeight: CGFloat = 54.0
-            let contentHeight = titleHeight + textSize.height + imageSize.height + bottomInset + 121.0
-            
-            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
-            
+            let contentHeight = titleHeight + textSize.height + imageSize.height + bottomInset + textSpacing
+                        
             let sideInset = floor((layout.size.width - width) / 2.0)
             let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
             let contentFrame = contentContainerFrame
