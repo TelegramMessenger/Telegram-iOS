@@ -32,6 +32,7 @@ load(
     "telegram_team_id",
     "telegram_enable_icloud",
     "telegram_enable_siri",
+    "telegram_enable_watch",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -1134,6 +1135,25 @@ swift_library(
     ],
 )
 
+genrule(
+    name = "SetMinOsVersionNotificationContentExtension",
+    cmd_bash =
+"""
+    name=NotificationContentExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/10\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionNotificationContentExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionNotificationContentExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
 ios_extension(
     name = "NotificationContentExtension",
     bundle_id = "{telegram_bundle_id}.NotificationContent".format(
@@ -1149,7 +1169,8 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "10.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionNotificationContentExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:NotificationContent.mobileprovision",
@@ -1216,6 +1237,25 @@ swift_library(
     ],
 )
 
+genrule(
+    name = "SetMinOsVersionWidgetExtension",
+    cmd_bash =
+"""
+    name=WidgetExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/14\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionWidgetExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionWidgetExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
 ios_extension(
     name = "WidgetExtension",
     bundle_id = "{telegram_bundle_id}.Widget".format(
@@ -1231,26 +1271,16 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "14.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionWidgetExtension",
     provides_main = True,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
     }),
-    deps = select({
-        "@build_bazel_rules_apple//apple:ios_arm64": [
-            ":WidgetExtensionLib",
-        ],
-        "//build-system:ios_sim_arm64": [
-            ":WidgetExtensionLib",
-        ],
-        "@build_bazel_rules_apple//apple:ios_x86_64": [
-            ":WidgetExtensionLib",
-        ],
-        "@build_bazel_rules_apple//apple:ios_armv7": [
-            ":WidgetExtensionLib",
-        ],
-    }),
+    deps = [
+        ":WidgetExtensionLib",
+    ],
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
@@ -1329,6 +1359,25 @@ swift_library(
     ],
 )
 
+genrule(
+    name = "SetMinOsVersionIntentsExtension",
+    cmd_bash =
+"""
+    name=IntentsExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/10\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionIntentsExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionIntentsExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
 ios_extension(
     name = "IntentsExtension",
     bundle_id = "{telegram_bundle_id}.SiriIntents".format(
@@ -1344,7 +1393,8 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "10.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionIntentsExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Intents.mobileprovision",
@@ -1383,6 +1433,25 @@ plist_fragment(
     )
 )
 
+genrule(
+    name = "SetMinOsVersionNotificationServiceExtension",
+    cmd_bash =
+"""
+    name=NotificationServiceExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/10\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionNotificationServiceExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionNotificationServiceExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
 ios_extension(
     name = "NotificationServiceExtension",
     bundle_id = "{telegram_bundle_id}.NotificationService".format(
@@ -1398,7 +1467,8 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "10.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionNotificationServiceExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:NotificationService.mobileprovision",
@@ -1631,7 +1701,7 @@ ios_application(
     watch_application = select({
         ":disableExtensionsSetting": None,
         "//conditions:default": ":TelegramWatchApp",
-    }),
+    }) if telegram_enable_watch else None,
     deps = [
         ":Main",
         ":Lib",

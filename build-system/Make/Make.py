@@ -114,7 +114,18 @@ class BazelCommandLine:
         self.configuration_path = path
 
     def set_configuration(self, configuration):
-        if configuration == 'debug_arm64':
+        if configuration == 'debug_universal':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                # Build universal binaries.
+                '--ios_multi_cpus=armv7,arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32'
+            ] + self.common_debug_args
+        elif configuration == 'debug_arm64':
             self.configuration_args = [
                 # bazel debug build configuration
                 '-c', 'dbg',
@@ -528,6 +539,7 @@ if __name__ == '__main__':
     buildParser.add_argument(
         '--configuration',
         choices=[
+            'debug_universal',
             'debug_arm64',
             'debug_armv7',
             'release_arm64',
