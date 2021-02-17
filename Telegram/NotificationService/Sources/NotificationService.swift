@@ -5,7 +5,7 @@ import NotificationServiceObjC
 
 private let queue = Queue()
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(NotificationService)
 final class NotificationService: UNNotificationServiceExtension {
     private let impl: QueueLocalObject<NotificationServiceImpl>

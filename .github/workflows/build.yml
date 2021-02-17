@@ -84,6 +84,7 @@ jobs:
             --bazel="$HOME/bazel-dist/bazel" \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
+            --disableParallelSwiftmoduleGeneration \
             --configurationPath="$HOME/telegram-configuration" \
             --buildNumber=$BUILD_NUMBER \
             --configuration=release_universal
