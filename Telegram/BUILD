@@ -1237,9 +1237,20 @@ ios_extension(
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
     }),
-    deps = [
-        ":WidgetExtensionLib",
-    ],
+    deps = select({
+        "@build_bazel_rules_apple//apple:ios_arm64": [
+            ":WidgetExtensionLib",
+        ],
+        "//build-system:ios_sim_arm64": [
+            ":WidgetExtensionLib",
+        ],
+        "@build_bazel_rules_apple//apple:ios_x86_64": [
+            ":WidgetExtensionLib",
+        ],
+        "@build_bazel_rules_apple//apple:ios_armv7": [
+            ":WidgetExtensionLib",
+        ],
+    }),
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",

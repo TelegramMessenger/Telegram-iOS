@@ -1,3 +1,5 @@
+#if arch(arm64) || arch(x86_64)
+
 import UIKit
 import NotificationCenter
 import BuildConfig
@@ -1000,3 +1002,5 @@ struct AllWidgets: WidgetBundle {
         Static_AvatarsWidget()
    }
 }
+
+#endif
