@@ -320,8 +320,8 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     }
     
     var hasLinks = false
-    if let additionalInvites = additionalInvites, !additionalInvites.isEmpty {
-        hasLinks = true
+    if let additionalInvites = additionalInvites {
+        hasLinks = !additionalInvites.isEmpty
     } else if let admin = admin, admin.count > 1 {
         hasLinks = true
     }
