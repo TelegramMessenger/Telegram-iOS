@@ -11,7 +11,7 @@ import AccountContext
 import SolidRoundedButtonNode
 import AnimatedStickerNode
 
-private func shareQrCode(context: AccountContext, link: String) {
+private func shareQrCode(context: AccountContext, link: String, view: UIView) {
     let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")))
     |> map { _, generator -> UIImage? in
         let imageSize = CGSize(width: 768.0, height: 768.0)
@@ -24,6 +24,11 @@ private func shareQrCode(context: AccountContext, link: String) {
         }
         
         let activityController = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        if let window = view.window, let rootViewController = window.rootViewController {
+            activityController.popoverPresentationController?.sourceView = window
+            activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+            rootViewController.present(activityController, animated: true, completion: nil)
+        }
         context.sharedContext.applicationBindings.presentNativeController(activityController)
     })
 }
@@ -253,7 +258,7 @@ public final class InviteLinkQRCodeController: ViewController {
             self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
             self.buttonNode.pressed = { [weak self] in
                 if let strongSelf = self{
-                    shareQrCode(context: strongSelf.context, link: strongSelf.invite.link)
+                    shareQrCode(context: strongSelf.context, link: strongSelf.invite.link, view: strongSelf.view)
                 }
             }
             
