@@ -51,6 +51,12 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & (1 << 5)) != 0 {
             groupFlags.insert(.deactivated)
         }
+        if (flags & Int32(1 << 23)) != 0 {
+            groupFlags.insert(.hasVoiceChat)
+        }
+        if (flags & Int32(1 << 24)) != 0 {
+            groupFlags.insert(.hasActiveVoiceChat)
+        }
         return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:)), migrationReference: migrationReference, creationDate: date, version: Int(version))
     case let .chatEmpty(id):
         return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)

@@ -3012,7 +3012,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .videoCall:
             self.requestCall(isVideo: true)
         case .voiceChat:
-            if let cachedData = self.data?.cachedData as? CachedChannelData, let activeCall = cachedData.activeCall {
+            if let cachedData = self.data?.cachedData as? CachedGroupData, let activeCall = cachedData.activeCall {
+                self.context.joinGroupCall(peerId: self.peerId, activeCall: activeCall)
+            } else if let cachedData = self.data?.cachedData as? CachedChannelData, let activeCall = cachedData.activeCall {
                 self.context.joinGroupCall(peerId: self.peerId, activeCall: activeCall)
             }
         case .mute:
@@ -3257,7 +3259,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         canManageGroupCalls = true
                     }
                 }
-                if canManageGroupCalls {
+                if canManageGroupCalls, !group.flags.contains(.hasVoiceChat) {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_CreateVoiceChat, color: .accent, action: { [weak self] in
                         dismissAction()
                         
