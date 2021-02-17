@@ -522,7 +522,10 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
         let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
         
         var url = url
-        if let urlValue = URL(string: url), let host = urlValue.host, urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
+        if !(url.hasPrefix("http") || url.hasPrefix("https")) {
+            url = "http://\(url)"
+        }
+        if let urlValue = URL(string: url), let host = urlValue.host, urlHandlingConfiguration.domains.contains(host.lowercased()), var components = URLComponents(string: url) {
             components.scheme = "https"
             var queryItems = components.queryItems ?? []
             queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))

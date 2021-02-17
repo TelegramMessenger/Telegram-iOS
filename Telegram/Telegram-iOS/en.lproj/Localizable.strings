@@ -5933,6 +5933,8 @@ Sorry for the inconvenience.";
 "InviteLink.InviteLinks_many" = "%@ invite links";
 "InviteLink.InviteLinks_any" = "%@ invite links";
 
+"InviteLink.InviteLinkRevoked" = "The invite link has been revoked.";
+
 "Conversation.ChecksTooltip.Delivered" = "Delivered";
 "Conversation.ChecksTooltip.Read" = "Read";
 

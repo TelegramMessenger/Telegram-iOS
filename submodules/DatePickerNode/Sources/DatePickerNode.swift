@@ -1252,6 +1252,8 @@ private final class TimePickerNode: ASDisplayNode {
                    break
             }
         }
+        
+        self.update()
     }
     
     override func didLoad() {

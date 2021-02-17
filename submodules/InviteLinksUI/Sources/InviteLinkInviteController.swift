@@ -396,6 +396,9 @@ public final class InviteLinkInviteController: ViewController {
                                                 mainInvitePromise.set(invite)
                                             }
                                         })
+
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                                     }
                                 })
                             ]),

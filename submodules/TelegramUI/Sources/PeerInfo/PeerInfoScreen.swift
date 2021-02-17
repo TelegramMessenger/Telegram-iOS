@@ -6252,7 +6252,7 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             default:
                 break
             }
-        } else if let channel = groupPeer as? TelegramChannel {
+        } else if let channel = groupPeer as? TelegramChannel, (channel.addressName?.isEmpty ?? true) {
             if channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
                 canCreateInviteLink = true
             }
