@@ -1055,6 +1055,11 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var canAddMembers = false
         var isPublic = false
         var isCreator = false
+        var hasVoiceChat = false
+        
+        if group.flags.contains(.hasVoiceChat) {
+            hasVoiceChat = true
+        }
         
         if case .creator = group.role {
             isCreator = true
@@ -1079,6 +1084,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         }
         
         result.append(.mute)
+        if hasVoiceChat {
+            result.append(.voiceChat)
+        }
         result.append(.search)
         result.append(.more)
     }
