@@ -542,7 +542,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     override open func accessibilityElementDidBecomeFocused() {
-        (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0)
+        (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0, allowIntersection: true)
     }
     
     public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {

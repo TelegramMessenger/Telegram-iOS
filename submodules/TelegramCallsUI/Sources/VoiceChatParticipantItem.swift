@@ -62,30 +62,34 @@ final class VoiceChatParticipantItem: ListViewItem {
     let nameDisplayOrder: PresentationPersonNameOrder
     let context: AccountContext
     let peer: Peer
+    let ssrc: UInt32?
     let presence: PeerPresence?
     let text: ParticipantText
     let icon: Icon
     let enabled: Bool
     public let selectable: Bool
     let getAudioLevel: (() -> Signal<Float, NoError>)?
+    let getVideo: () -> GroupVideoNode?
     let revealOptions: [RevealOption]
     let revealed: Bool?
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let action: ((ASDisplayNode) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.context = context
         self.peer = peer
+        self.ssrc = ssrc
         self.presence = presence
         self.text = text
         self.icon = icon
         self.enabled = enabled
         self.selectable = selectable
         self.getAudioLevel = getAudioLevel
+        self.getVideo = getVideo
         self.revealOptions = revealOptions
         self.revealed = revealed
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -171,6 +175,12 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private var layoutParams: (VoiceChatParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
     private var wavesColor: UIColor?
     
+    private var videoNode: GroupVideoNode?
+    
+    var item: VoiceChatParticipantItem? {
+        return self.layoutParams?.0
+    }
+    
     init() {
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -188,7 +198,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.offsetContainerNode = ASDisplayNode()
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 40.0))
         
         self.titleNode = TextNode()
@@ -667,11 +676,31 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         })
                     }
                     
+                    let videoSize = CGSize(width: avatarSize, height: avatarSize)
+                    
+                    let videoNode = item.getVideo()
+                    if let current = strongSelf.videoNode, current !== videoNode {
+                        current.removeFromSupernode()
+                    }
+                    let actionOffset: CGFloat = 0.0
+                    strongSelf.videoNode = videoNode
+                    if let videoNode = videoNode {
+                        
+                        videoNode.updateLayout(size: videoSize, transition: .immediate)
+                        if videoNode.supernode !== strongSelf.avatarNode {
+                            videoNode.clipsToBounds = true
+                            videoNode.cornerRadius = avatarSize / 2.0
+                            strongSelf.avatarNode.addSubnode(videoNode)
+                        }
+                        
+                        videoNode.frame = CGRect(origin: CGPoint(), size: videoSize)
+                    }
+                    
                     let animationSize = CGSize(width: 36.0, height: 36.0)
                     strongSelf.iconNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     strongSelf.animationNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     
-                    strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
+                    strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset + actionOffset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     
                     if let presence = item.presence as? TelegramUserPresence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)

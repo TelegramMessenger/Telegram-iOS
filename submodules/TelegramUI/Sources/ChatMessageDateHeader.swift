@@ -94,6 +94,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let labelNode: TextNode
     let backgroundNode: ASImageNode
     let stickBackgroundNode: ASImageNode
+    let activateArea: AccessibilityAreaNode
     
     private let localTimestamp: Int32
     private var presentationData: ChatPresentationData
@@ -157,6 +158,9 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         self.text = text
         
+        self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = .staticText
+        
         super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
@@ -170,10 +174,14 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         
+        self.addSubnode(self.activateArea)
+        
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)
+        
+        self.activateArea.accessibilityLabel = text
         
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
@@ -230,6 +238,8 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.stickBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
         self.backgroundNode.frame = backgroundFrame
         self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
+        
+        self.activateArea.frame = backgroundFrame
     }
     
     override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {

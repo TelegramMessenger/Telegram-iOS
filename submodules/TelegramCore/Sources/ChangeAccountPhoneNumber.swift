@@ -37,7 +37,7 @@ public enum RequestChangeAccountPhoneNumberVerificationError {
 }
 
 public func requestChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
-    return account.network.request(Api.functions.account.sendChangePhoneCode(flags: 0, phoneNumber: phoneNumber, currentNumber: nil), automaticFloodWait: false)
+    return account.network.request(Api.functions.account.sendChangePhoneCode(phoneNumber: phoneNumber, settings: .codeSettings(flags: 0)), automaticFloodWait: false)
         |> mapError { error -> RequestChangeAccountPhoneNumberVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                 return .limitExceeded

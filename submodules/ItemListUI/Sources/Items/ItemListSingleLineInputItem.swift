@@ -343,7 +343,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                         strongSelf.textNode.textField.text = item.text
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: 1.0), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset + titleLayout.size.width + item.spacing)), height: layout.contentSize.height - 2.0))
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: 0.0), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset + titleLayout.size.width + item.spacing)), height: layout.contentSize.height - 2.0))
                     
                     switch item.alignment {
                         case .default:

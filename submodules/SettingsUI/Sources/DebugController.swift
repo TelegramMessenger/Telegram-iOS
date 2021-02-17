@@ -748,6 +748,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .voiceConference:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
+                guard let _ = arguments.context else {
+                    return
+                }
             })
         case let .preferredVideoCodec(_, title, value, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {

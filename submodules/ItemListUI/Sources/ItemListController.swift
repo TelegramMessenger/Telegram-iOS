@@ -164,6 +164,14 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
+    public var beganInteractiveDragging: (() -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode).beganInteractiveDragging = self.beganInteractiveDragging
+            }
+        }
+    }
+    
     public var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)? {
         didSet {
             if self.isNodeLoaded {
@@ -447,6 +455,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         displayNode.enableInteractiveDismiss = self.enableInteractiveDismiss
         displayNode.alwaysSynchronous = self.alwaysSynchronous
         displayNode.visibleEntriesUpdated = self.visibleEntriesUpdated
+        displayNode.beganInteractiveDragging = self.beganInteractiveDragging
         displayNode.visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
         displayNode.contentOffsetChanged = self.contentOffsetChanged
         displayNode.contentScrollingEnded = self.contentScrollingEnded

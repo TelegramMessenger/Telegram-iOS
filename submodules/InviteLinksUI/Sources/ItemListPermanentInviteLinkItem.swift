@@ -10,6 +10,7 @@ import TelegramPresentationData
 import ItemListUI
 import SolidRoundedButtonNode
 import AnimatedAvatarSetNode
+import ShimmerEffect
 
 private func actionButtonImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 24.0, height: 24.0), contextGenerator: { size, context in
@@ -125,6 +126,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private let containerNode: ContextControllerSourceNode
     private let addressButtonNode: HighlightTrackingButtonNode
     private let addressButtonIconNode: ASImageNode
+    private var addressShimmerNode: ShimmerEffectNode?
     private var shareButtonNode: SolidRoundedButtonNode?
     
     private let avatarsButtonNode: HighlightTrackingButtonNode
@@ -132,6 +134,8 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private var avatarsContent: AnimatedAvatarSetContext.Content?
     private let avatarsNode: AnimatedAvatarSetNode
     private let invitedPeersNode: TextNode
+    private var shimmerNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
     
     private let activateArea: AccessibilityAreaNode
     
@@ -180,7 +184,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
         self.invitedPeersNode = TextNode()
-        
+                
         self.activateArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -291,9 +295,14 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             let titleColor: UIColor
             titleColor = item.presentationData.theme.list.itemInputField.primaryColor
             
+            let alignCentrally = !(item.invite?.link.contains("joinchat") ?? true)
+            
+            let addressFont = Font.regular(!alignCentrally && params.width == 320 ? floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0) : item.presentationData.fontSize.itemListBaseFontSize)
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
-            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link.replacingOccurrences(of: "https://", with: "") }) ?? "", font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 90.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let constrainedWidth = alignCentrally ? params.width - leftInset - rightInset - 90.0 : params.width - leftInset - rightInset - 60.0
+            
+            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link.replacingOccurrences(of: "https://", with: "") }) ?? "", font: addressFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let subtitle: String
             let subtitleColor: UIColor
@@ -355,7 +364,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         strongSelf.fieldNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: item.presentationData.theme.list.itemInputField.backgroundColor)
                         strongSelf.addressButtonIconNode.image = actionButtonImage(color: item.presentationData.theme.list.itemInputField.controlColor)
                     }
-                    
+                                        
                     let _ = addressApply()
                     let _ = invitedPeersApply()
                     
@@ -420,7 +429,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     strongSelf.fieldNode.frame = fieldFrame
                     strongSelf.fieldButtonNode.frame = fieldFrame
                     
-                    strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
+                    strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + (alignCentrally ? floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0) : 14.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
                     
                     strongSelf.addressButtonNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0 - 14.0, y: verticalInset), size: CGSize(width: 52.0, height: 52.0))
                     strongSelf.extractedContainerNode.frame = strongSelf.addressButtonNode.bounds
@@ -438,9 +447,13 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                             buttonTheme = SolidRoundedButtonTheme(theme: item.presentationData.theme)
                         }
                         shareButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: 50.0, cornerRadius: 10.0)
-                        shareButtonNode.title = item.presentationData.strings.InviteLink_Share
-                        shareButtonNode.pressed = {
-                            item.shareAction?()
+                        if let invite = item.invite, invitationAvailability(invite).isZero {
+                            shareButtonNode.title = item.presentationData.strings.InviteLink_ReactivateLink
+                        } else {
+                            shareButtonNode.title = item.presentationData.strings.InviteLink_Share
+                        }
+                        shareButtonNode.pressed = { [weak self] in
+                            self?.item?.shareAction?()
                         }
                         strongSelf.addSubnode(shareButtonNode)
                         strongSelf.shareButtonNode = shareButtonNode
@@ -470,12 +483,69 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     strongSelf.invitedPeersNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: fieldFrame.maxY + 92.0), size: invitedPeersLayout.size)
                     
                     strongSelf.avatarsButtonNode.frame = CGRect(x: floorToScreenPixels((params.width - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0, width: totalWidth, height: 32.0)
-                    strongSelf.avatarsButtonNode.isUserInteractionEnabled = !item.peers.isEmpty
+                    strongSelf.avatarsButtonNode.isUserInteractionEnabled = !item.peers.isEmpty && item.invite != nil
                     
+                    strongSelf.addressButtonNode.isUserInteractionEnabled = item.invite != nil
+                    strongSelf.fieldButtonNode.isUserInteractionEnabled = item.invite != nil
+                    strongSelf.addressButtonIconNode.alpha = item.invite != nil ? 1.0 : 0.0
+                    
+                    strongSelf.shareButtonNode?.isUserInteractionEnabled = item.invite != nil
+                    strongSelf.shareButtonNode?.alpha = item.invite != nil ? 1.0 : 0.4
                     strongSelf.shareButtonNode?.isHidden = !item.displayButton
                     strongSelf.avatarsButtonNode.isHidden = !item.displayImporters
-                    strongSelf.avatarsNode.isHidden = !item.displayImporters
-                    strongSelf.invitedPeersNode.isHidden = !item.displayImporters
+                    strongSelf.avatarsNode.isHidden = !item.displayImporters || item.invite == nil
+                    strongSelf.invitedPeersNode.isHidden = !item.displayImporters || item.invite == nil
+                    
+                    if item.invite == nil {
+                        let shimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.shimmerNode {
+                            shimmerNode = current
+                        } else {
+                            shimmerNode = ShimmerEffectNode()
+                            strongSelf.shimmerNode = shimmerNode
+                            strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.fieldNode)
+                        }
+                        shimmerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            shimmerNode.updateAbsoluteRect(rect, within: size)
+                        }
+                        
+                        let lineWidth: CGFloat = 180.0
+                        let lineDiameter: CGFloat = 12.0
+                        let titleFrame = strongSelf.invitedPeersNode.frame
+                        
+                        var shapes: [ShimmerEffectNode.Shape] = []
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: floor(titleFrame.center.x - lineWidth / 2.0), y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: lineWidth, diameter: lineDiameter))
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
+                        
+                        let addressShimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.addressShimmerNode {
+                            addressShimmerNode = current
+                        } else {
+                            addressShimmerNode = ShimmerEffectNode()
+                            strongSelf.addressShimmerNode = addressShimmerNode
+                            strongSelf.insertSubnode(addressShimmerNode, aboveSubnode: strongSelf.fieldNode)
+                        }
+                        addressShimmerNode.frame = strongSelf.fieldNode.frame.insetBy(dx: 18.0, dy: 0.0)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            addressShimmerNode.updateAbsoluteRect(CGRect(x: rect.minX + strongSelf.fieldNode.frame.minX + 18.0, y: rect.minY + strongSelf.fieldNode.frame.minY, width: strongSelf.fieldNode.frame.width - 18.0 * 2.0, height: strongSelf.fieldNode.frame.height), within: size)
+                        }
+                        
+                        let addressLineWidth: CGFloat = strongSelf.fieldNode.frame.width - 100.0
+                        var addressShapes: [ShimmerEffectNode.Shape] = []
+                        addressShapes.append(.roundedRectLine(startPoint: CGPoint(x: floor(addressShimmerNode.frame.width / 2.0 - addressLineWidth / 2.0), y: 16.0 + floor((22.0 - lineDiameter) / 2.0)), width: addressLineWidth, diameter: lineDiameter))
+                        addressShimmerNode.update(backgroundColor: item.presentationData.theme.list.itemInputField.backgroundColor, foregroundColor: item.presentationData.theme.list.itemInputField.controlColor.mixedWith(item.presentationData.theme.list.itemInputField.backgroundColor, alpha: 0.7), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: addressShapes, size: addressShimmerNode.frame.size)
+
+                    } else {
+                        if let shimmerNode = strongSelf.shimmerNode {
+                            strongSelf.shimmerNode = nil
+                            shimmerNode.removeFromSupernode()
+                        }
+                        if let shimmerNode = strongSelf.addressShimmerNode {
+                            strongSelf.shimmerNode = nil
+                            shimmerNode.removeFromSupernode()
+                        }
+                    }
                 }
             })
         }
@@ -491,5 +561,17 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.addressShimmerNode {
+            shimmerNode.updateAbsoluteRect(CGRect(x: rect.minX + self.fieldNode.frame.minX + 18.0, y: rect.minY + self.fieldNode.frame.minY, width: self.fieldNode.frame.width - 18.0 * 2.0, height: self.fieldNode.frame.height), within: containerSize)
+        }
+        if let shimmerNode = self.shimmerNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
     }
 }

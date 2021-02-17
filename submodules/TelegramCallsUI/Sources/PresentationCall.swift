@@ -928,6 +928,7 @@ public final class PresentationCallImpl: PresentationCall {
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
                 completion(PresentationCallVideoView(
+                    holder: view,
                     view: view.view,
                     setOnFirstFrameReceived: { f in
                         setOnFirstFrameReceived(f)
@@ -997,6 +998,7 @@ public final class PresentationCallImpl: PresentationCall {
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
                 completion(PresentationCallVideoView(
+                    holder: view,
                     view: view.view,
                     setOnFirstFrameReceived: { f in
                         setOnFirstFrameReceived(f)

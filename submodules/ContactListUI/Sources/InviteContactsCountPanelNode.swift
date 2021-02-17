@@ -12,15 +12,15 @@ final class InviteContactsCountPanelNode: ASDisplayNode {
     private let separatorNode: ASDisplayNode
     private let button: SolidRoundedButtonNode
     
-    private var validLayout: (CGFloat, CGFloat)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat)?
     
     var count: Int = 0 {
         didSet {
             if self.count != oldValue && self.count > 0 {
                 self.button.title = self.strings.Contacts_InviteContacts(Int32(self.count))
                 
-                if let (width, bottomInset) = self.validLayout {
-                    let _ = self.updateLayout(width: width, bottomInset: bottomInset, transition: .immediate)
+                if let (width, sideInset, bottomInset) = self.validLayout {
+                    let _ = self.updateLayout(width: width, sideInset: sideInset, bottomInset: bottomInset, transition: .immediate)
                 }
             }
         }
@@ -47,13 +47,13 @@ final class InviteContactsCountPanelNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(width: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.validLayout = (width, bottomInset)
+    func updateLayout(width: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (width, sideInset, bottomInset)
         let topInset: CGFloat = 9.0
         var bottomInset = bottomInset
         bottomInset += topInset - (bottomInset.isZero ? 0.0 : 4.0)
         
-        let buttonInset: CGFloat = 16.0
+        let buttonInset: CGFloat = 16.0 + sideInset
         let buttonWidth = width - buttonInset * 2.0
         let buttonHeight = self.button.updateLayout(width: buttonWidth, transition: transition)
         transition.updateFrame(node: self.button, frame: CGRect(x: buttonInset, y: topInset, width: buttonWidth, height: buttonHeight))

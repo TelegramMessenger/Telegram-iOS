@@ -138,7 +138,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
-        }, openPeerContextMenu: { _, _, _, _ in
+        }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
         }, openMessageStats: { _ in

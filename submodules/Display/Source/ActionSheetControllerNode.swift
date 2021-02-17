@@ -11,6 +11,8 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    private var allowInputInset: Bool
+    
     private let dismissTapView: UIView
     
     private let leftDimView: UIView
@@ -27,8 +29,9 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var validLayout: ContainerViewLayout?
     
-    init(theme: ActionSheetControllerTheme) {
+    init(theme: ActionSheetControllerTheme, allowInputInset: Bool) {
         self.theme = theme
+        self.allowInputInset = allowInputInset
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true
@@ -58,7 +61,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.itemGroupsContainerNode = ActionSheetItemGroupsContainerNode(theme: self.theme)
         
         super.init()
-        
+                
         self.scrollView.delegate = self
         
         self.addSubnode(self.scrollNode)
@@ -75,6 +78,12 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.addSubnode(self.itemGroupsContainerNode)
         
         self.updateTheme()
+        
+        self.itemGroupsContainerNode.requestLayout = { [weak self] in
+            if let strongSelf = self, let layout = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+            }
+        }
     }
     
     func updateTheme() {
@@ -95,16 +104,28 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
             insets.bottom -= 12.0
         }
         
+        if self.allowInputInset, let inputInset = layout.inputHeight, inputInset > 0.0 {
+            insets.bottom = inputInset
+        }
+        
         self.validLayout = layout
         
         self.scrollView.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.dismissTapView.frame = CGRect(origin: CGPoint(), size: layout.size)
+                
+        let itemGroupsContainerSize = self.itemGroupsContainerNode.updateLayout(constrainedSize: CGSize(width: layout.size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: layout.size.height - containerInsets.top - containerInsets.bottom - insets.top - insets.bottom), transition: transition)
         
-        self.itemGroupsContainerNode.measure(CGSize(width: layout.size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: layout.size.height - containerInsets.top - containerInsets.bottom - insets.top - insets.bottom))
-        self.itemGroupsContainerNode.frame = CGRect(origin: CGPoint(x: insets.left + containerInsets.left, y: layout.size.height - insets.bottom - containerInsets.bottom - self.itemGroupsContainerNode.calculatedSize.height), size: self.itemGroupsContainerNode.calculatedSize)
-        self.itemGroupsContainerNode.layout()
+        if self.allowInputInset, let inputHeight = layout.inputHeight, inputHeight > 0.0, self.itemGroupsContainerNode.groupNodes.count > 1, let lastGroupHeight = self.itemGroupsContainerNode.groupNodes.last?.frame.height {
+            insets.bottom -= lastGroupHeight + containerInsets.bottom
+        }
         
-        self.updateScrollDimViews(size: layout.size, insets: insets)
+        var transition = transition
+        if !self.allowInputInset {
+            transition = .immediate
+        }
+        transition.updateFrame(node: self.itemGroupsContainerNode, frame: CGRect(origin: CGPoint(x: insets.left + containerInsets.left, y: layout.size.height - insets.bottom - containerInsets.bottom - itemGroupsContainerSize.height), size: itemGroupsContainerSize))
+        
+        self.updateScrollDimViews(size: layout.size, insets: insets, transition: transition)
     }
     
     func animateIn(completion: @escaping () -> Void) {
@@ -150,6 +171,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     @objc func dimNodeTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
+            self.view.window?.endEditing(true)
             self.animateOut(cancelled: true)
         }
     }
@@ -163,7 +185,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
             insets.left = floor((layout.size.width - containerWidth) / 2.0)
             insets.right = insets.left
             
-            self.updateScrollDimViews(size: layout.size, insets: insets)
+            self.updateScrollDimViews(size: layout.size, insets: insets, transition: .immediate)
         }
     }
     
@@ -176,15 +198,14 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func updateScrollDimViews(size: CGSize, insets: UIEdgeInsets) {
+    func updateScrollDimViews(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         let additionalTopHeight = max(0.0, -self.scrollView.contentOffset.y)
         let additionalBottomHeight = -min(0.0, -self.scrollView.contentOffset.y)
         
-        self.topDimView.frame = CGRect(x: containerInsets.left + insets.left, y: -additionalTopHeight, width: size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: max(0.0, self.itemGroupsContainerNode.frame.minY + additionalTopHeight))
-        self.bottomDimView.frame = CGRect(x: containerInsets.left + insets.left, y: self.itemGroupsContainerNode.frame.maxY, width: size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: max(0.0, size.height - self.itemGroupsContainerNode.frame.maxY + additionalBottomHeight))
-        
-        self.leftDimView.frame = CGRect(x: 0.0, y: -additionalTopHeight, width: containerInsets.left + insets.left, height: size.height + additionalTopHeight + additionalBottomHeight)
-        self.rightDimView.frame = CGRect(x: size.width - containerInsets.right - insets.right, y: -additionalTopHeight, width: containerInsets.right + insets.right, height: size.height + additionalTopHeight + additionalBottomHeight)
+        transition.updateFrame(view: self.topDimView, frame: CGRect(x: containerInsets.left + insets.left, y: -additionalTopHeight, width: size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: max(0.0, self.itemGroupsContainerNode.frame.minY + additionalTopHeight)))
+        transition.updateFrame(view: self.bottomDimView, frame: CGRect(x: containerInsets.left + insets.left, y: self.itemGroupsContainerNode.frame.maxY, width: size.width - containerInsets.left - containerInsets.right - insets.left - insets.right, height: max(0.0, size.height - self.itemGroupsContainerNode.frame.maxY + additionalBottomHeight)))
+        transition.updateFrame(view: self.leftDimView, frame: CGRect(x: 0.0, y: -additionalTopHeight, width: containerInsets.left + insets.left, height: size.height + additionalTopHeight + additionalBottomHeight))
+        transition.updateFrame(view: self.rightDimView, frame: CGRect(x: size.width - containerInsets.right - insets.right, y: -additionalTopHeight, width: containerInsets.right + insets.right, height: size.height + additionalTopHeight + additionalBottomHeight))
     }
     
     func setGroups(_ groups: [ActionSheetItemGroup]) {

@@ -23,6 +23,7 @@ import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
 import LocationUI
+import AppLock
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -739,10 +740,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.updateNotificationTokensRegistration()
         
         if applicationBindings.isMainApp {
-            self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
-            |> map { primary, _, _ in
-                return primary
-            }, presentationData: self.presentationData)
+            self.widgetDataContext = WidgetDataContext(basePath: self.basePath, inForeground: self.applicationBindings.applicationInForeground, activeAccounts: self.activeAccounts
+            |> map { _, accounts, _ in
+                return accounts.map { $0.1 }
+            }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl)
             
             let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))
             |> map { sharedData -> Bool in
@@ -1256,7 +1257,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, animateDiceSuccess: { _ in
             }, greetingStickerNode: {
                 return nil
-            }, openPeerContextMenu: { _, _, _, _ in
+            }, openPeerContextMenu: { _, _, _, _, _ in
             }, openMessageReplies: { _, _, _ in
             }, openReplyThreadOriginalMessage: { _ in
             }, openMessageStats: { _ in
@@ -1394,9 +1395,9 @@ private let defaultChatControllerInteraction = ChatControllerInteraction.default
 
 private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool) -> ViewController? {
     if let _ = peer as? TelegramGroup {
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
-    } else if let channel = peer as? TelegramChannel {
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+    } else if let _ = peer as? TelegramChannel {
+        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
         var callMessages: [Message] = []
@@ -1411,9 +1412,9 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
         case let .group(id):
             ignoreGroupInCommon = id
         }
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, ignoreGroupInCommon: ignoreGroupInCommon)
+        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, ignoreGroupInCommon: ignoreGroupInCommon)
     } else if peer is TelegramSecretChat {
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     }
     return nil
 }

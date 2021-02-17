@@ -138,7 +138,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var didCompleteAnimationIn = false
     private var initialContinueGesturePoint: CGPoint?
     private var didMoveFromInitialGesturePoint = false
-    private var highlightedActionNode: ContextActionNode?
+    private var highlightedActionNode: ContextActionNodeProtocol?
     private var highlightedReaction: ReactionContextItem.Reaction?
     
     private let hapticFeedback = HapticFeedback()
@@ -578,7 +578,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
                 propertyAnimator?.stopAnimation(true)
             }
-            self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
+            self.effectView.effect = makeCustomZoomBlurEffect(isLight: presentationData.theme.rootController.keyboardColor == .light)
             self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: {
             })
@@ -596,7 +596,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         } else {
             UIView.animate(withDuration: 0.2 * animationDurationFactor, animations: {
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
+                self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
             }, completion: { [weak self] _ in
                 self?.didCompleteAnimationIn = true
                 self?.actionsContainerNode.animateIn()
@@ -1106,7 +1106,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         propertyAnimator?.stopAnimation(true)
                     }
                 }
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
+                self.effectView.effect = makeCustomZoomBlurEffect(isLight: presentationData.theme.rootController.keyboardColor == .light)
                 self.dimNode.alpha = 1.0
             }
             self.dimNode.isHidden = false

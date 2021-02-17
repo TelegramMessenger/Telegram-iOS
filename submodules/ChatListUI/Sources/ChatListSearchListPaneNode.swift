@@ -206,7 +206,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     }
                 }, deletePeer: deletePeer, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        if let chatPeer = peer.peer.peers[peer.peer.peerId], chatPeer.id.namespace != Namespaces.Peer.SecretChat {
+                        if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                             peerContextAction(chatPeer, .recentSearch, node, gesture)
                         } else {
                             gesture?.cancel()

@@ -210,6 +210,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries) -> Void)?
     public var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
+    public var beganInteractiveDragging: (() -> Void)?
     public var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     public var searchActivated: ((Bool) -> Void)?
@@ -289,6 +290,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 inVoiceOver = validLayout.0.inVoiceOver
             }
             self?.contentOffsetChanged?(offset, inVoiceOver)
+        }
+        
+        self.listNode.beganInteractiveDragging = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.beganInteractiveDragging?()
+            }
         }
         
         self.listNode.didEndScrolling = { [weak self] in

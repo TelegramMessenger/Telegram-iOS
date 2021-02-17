@@ -290,7 +290,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
             |> mapToSignal { globalSettings, ids -> Signal<Never, NoError> in
                 var importSignal: Signal<Never, NoError> = .complete()
                 for id in ids {
-                    let importInfoAccounttSignal = accountTransaction(rootPath: rootPath, id: id, encryptionParameters: encryptionParameters, transaction: { _, transaction -> Void in
+                    let importInfoAccounttSignal = accountTransaction(rootPath: rootPath, id: id, encryptionParameters: encryptionParameters, isReadOnly: false, transaction: { _, transaction -> Void in
                         transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
                             var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
                             settings.synchronizeContacts = globalSettings._legacySynchronizeDeviceContacts
@@ -298,6 +298,9 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
                         })
                     })
                     |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, NoError> in
+                        return .complete()
+                    }
                     importSignal = importSignal |> then(importInfoAccounttSignal)
                 }
                 return importSignal

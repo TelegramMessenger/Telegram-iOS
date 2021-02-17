@@ -7,105 +7,41 @@ import MtProtoKit
 import SyncCore
 
 
-public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId, revokeExisted: Bool = false) -> Signal<ExportedInvitation?, NoError> {
-    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            if let _ = peer as? TelegramChannel {
-                if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, cachedData.exportedInvitation != nil && !revokeExisted {
-                    return .single(cachedData.exportedInvitation)
-                } else {
-                    return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
-                    |> retryRequest
-                    |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
-                        return account.postbox.transaction { transaction -> ExportedInvitation? in
-                            if let invitation = ExportedInvitation(apiExportedInvite: result) {
-                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                    if let current = current as? CachedChannelData {
-                                        return current.withUpdatedExportedInvitation(invitation)
-                                    } else {
-                                        return CachedChannelData().withUpdatedExportedInvitation(invitation)
-                                    }
-                                })
-                                return invitation
-                            } else {
-                                return nil
-                            }
-                        }
-                    }
-                }
-            } else if let _ = peer as? TelegramGroup {
-                if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedGroupData, cachedData.exportedInvitation != nil && !revokeExisted {
-                    return .single(cachedData.exportedInvitation)
-                } else {
-                    return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
-                    |> retryRequest
-                    |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
-                        return account.postbox.transaction { transaction -> ExportedInvitation? in
-                            if let invitation = ExportedInvitation(apiExportedInvite: result) {
-                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                    if let current = current as? CachedGroupData {
-                                        return current.withUpdatedExportedInvitation(invitation)
-                                    } else {
-                                        return current
-                                    }
-                                })
-                                return invitation
-                            } else {
-                                return nil
-                            }
-                        }
-                    }
-                }
-            } else {
-                return .complete()
-            }
-        } else {
-            return .complete()
-        }
-    } |> switchToLatest
-}
-
-
 public func revokePersistentPeerExportedInvitation(account: Account, peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             if let _ = peer as? TelegramChannel {
-                return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
-                        if let invitation = ExportedInvitation(apiExportedInvite: result) {
-                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                if let current = current as? CachedChannelData {
-                                    return current.withUpdatedExportedInvitation(invitation)
-                                } else {
-                                    return CachedChannelData().withUpdatedExportedInvitation(invitation)
-                                }
-                            })
-                            return invitation
-                        } else {
-                            return nil
-                        }
+                        let invitation = ExportedInvitation(apiExportedInvite: result)
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedChannelData {
+                                return current.withUpdatedExportedInvitation(invitation)
+                            } else {
+                                return CachedChannelData().withUpdatedExportedInvitation(invitation)
+                            }
+                        })
+                        return invitation
+
                     }
                 }
             } else if let _ = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.exportChatInvite(peer: inputPeer))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
-                        if let invitation = ExportedInvitation(apiExportedInvite: result) {
-                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                if let current = current as? CachedGroupData {
-                                    return current.withUpdatedExportedInvitation(invitation)
-                                } else {
-                                    return current
-                                }
-                            })
-                            return invitation
-                        } else {
-                            return nil
-                        }
+                        let invitation = ExportedInvitation(apiExportedInvite: result)
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedGroupData {
+                                return current.withUpdatedExportedInvitation(invitation)
+                            } else {
+                                return current
+                            }
+                        })
+                        return invitation
                     }
                 }
             } else {
@@ -116,14 +52,14 @@ public func revokePersistentPeerExportedInvitation(account: Account, peerId: Pee
         }
     } |> switchToLatest
 }
+
 
 public enum CreatePeerExportedInvitationError {
     case generic
 }
 
 public func createPeerExportedInvitation(account: Account, peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
-    return .fail(.generic)
-    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
+    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
             if let _ = expireDate {
@@ -135,18 +71,14 @@ public func createPeerExportedInvitation(account: Account, peerId: PeerId, expir
             return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit))
             |> mapError { _ in return CreatePeerExportedInvitationError.generic }
             |> map { result -> ExportedInvitation? in
-                if let invitation = ExportedInvitation(apiExportedInvite: result) {
-                    return invitation
-                } else {
-                    return nil
-                }
+                return ExportedInvitation(apiExportedInvite: result)
             }
         } else {
             return .complete()
         }
     }
     |> castError(CreatePeerExportedInvitationError.self)
-    |> switchToLatest*/
+    |> switchToLatest
 }
 
 public enum EditPeerExportedInvitationError {
@@ -154,8 +86,7 @@ public enum EditPeerExportedInvitationError {
 }
 
 public func editPeerExportedInvitation(account: Account, peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
-    return .fail(.generic)
-    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
+    return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
             if let _ = expireDate {
@@ -188,21 +119,25 @@ public func editPeerExportedInvitation(account: Account, peerId: PeerId, link: S
         }
     }
     |> castError(EditPeerExportedInvitationError.self)
-    |> switchToLatest*/
+    |> switchToLatest
 }
 
 public enum RevokePeerExportedInvitationError {
     case generic
 }
 
-public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> {
-    return .fail(.generic)
-    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
+public enum RevokeExportedInvitationResult {
+    case update(ExportedInvitation)
+    case replace(ExportedInvitation, ExportedInvitation)
+}
+
+public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
+    return account.postbox.transaction { transaction -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil))
             |> mapError { _ in return RevokePeerExportedInvitationError.generic }
-            |> mapToSignal { result -> Signal<ExportedInvitation?, RevokePeerExportedInvitationError> in
+            |> mapToSignal { result -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
                 return account.postbox.transaction { transaction in
                     if case let .exportedChatInvite(invite, users) = result {
                         var peers: [Peer] = []
@@ -213,7 +148,37 @@ public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link:
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        return ExportedInvitation(apiExportedInvite: invite)
+                        return .update(ExportedInvitation(apiExportedInvite: invite))
+                    } else if case let .exportedChatInviteReplaced(invite, newInvite, users) = result {
+                        var peers: [Peer] = []
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                        }
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        
+                        let previous = ExportedInvitation(apiExportedInvite: invite)
+                        let new = ExportedInvitation(apiExportedInvite: newInvite)
+                        
+                        if previous.isPermanent && new.isPermanent {
+                            transaction.updatePeerCachedData(peerIds: [peerId]) { peerId, current -> CachedPeerData? in
+                                if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                    var current = current as? CachedGroupData ?? CachedGroupData()
+                                    current = current.withUpdatedExportedInvitation(new)
+                                    return current
+                                } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                    var current = current as? CachedChannelData ?? CachedChannelData()
+                                    current = current.withUpdatedExportedInvitation(new)
+                                    return current
+                                } else {
+                                    return current
+                                }
+                            }
+                        }
+                        
+                        return .replace(previous, new)
                     } else {
                         return nil
                     }
@@ -224,7 +189,7 @@ public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link:
         }
     }
     |> castError(RevokePeerExportedInvitationError.self)
-    |> switchToLatest*/
+    |> switchToLatest
 }
 
 public struct ExportedInvitations : Equatable {
@@ -232,10 +197,9 @@ public struct ExportedInvitations : Equatable {
     public let totalCount: Int32
 }
 
-public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
-    return .single(nil)
-    /*return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, adminId: PeerId? = nil, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
+    return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let adminPeer = transaction.getPeer(adminId ?? account.peerId), let adminId = apiInputUser(adminPeer) {
             var flags: Int32 = 0
             if let _ = offsetLink {
                 flags |= (1 << 2)
@@ -243,7 +207,7 @@ public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: B
             if revoked {
                 flags |= (1 << 3)
             }
-            return account.network.request(Api.functions.messages.getExportedChatInvites(flags: flags, peer: inputPeer, adminId: nil, offsetDate: offsetLink?.date, offsetLink: offsetLink?.link, limit: 50))
+            return account.network.request(Api.functions.messages.getExportedChatInvites(flags: flags, peer: inputPeer, adminId: adminId, offsetDate: offsetLink?.date, offsetLink: offsetLink?.link, limit: 50))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.ExportedChatInvites?, NoError> in
                 return .single(nil)
@@ -262,12 +226,7 @@ public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: B
                             return updated
                         })
                         
-                        var invites: [ExportedInvitation] = []
-                        for apiInvite in apiInvites {
-                            if let invite = ExportedInvitation(apiExportedInvite: apiInvite) {
-                                invites.append(invite)
-                            }
-                        }
+                        let invites = apiInvites.map { ExportedInvitation(apiExportedInvite: $0) }
                         return ExportedInvitations(list: invites, totalCount: count)
                     } else {
                         return nil
@@ -277,7 +236,7 @@ public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: B
         } else {
             return .single(nil)
         }
-    } |> switchToLatest*/
+    } |> switchToLatest
 }
 
 
@@ -286,8 +245,7 @@ public enum DeletePeerExportedInvitationError {
 }
 
 public func deletePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<Never, DeletePeerExportedInvitationError> {
-    return .fail(.generic)
-    /*return account.postbox.transaction { transaction -> Signal<Never, DeletePeerExportedInvitationError> in
+    return account.postbox.transaction { transaction -> Signal<Never, DeletePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.deleteExportedChatInvite(peer: inputPeer, link: link))
             |> mapError { _ in return DeletePeerExportedInvitationError.generic }
@@ -297,14 +255,13 @@ public func deletePeerExportedInvitation(account: Account, peerId: PeerId, link:
         }
     }
     |> castError(DeletePeerExportedInvitationError.self)
-    |> switchToLatest*/
+    |> switchToLatest
 }
 
-public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
-    return .complete()
-    /*return account.postbox.transaction { transaction -> Signal<Never, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.deleteRevokedExportedChatInvites(peer: inputPeer))
+public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let adminPeer = transaction.getPeer(adminId), let inputAdminId = apiInputUser(adminPeer) {
+            return account.network.request(Api.functions.messages.deleteRevokedExportedChatInvites(peer: inputPeer, adminId: inputAdminId))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }
@@ -313,7 +270,7 @@ public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: Pe
             return .complete()
         }
     }
-    |> switchToLatest*/
+    |> switchToLatest
 }
 
 private let cachedPeerExportedInvitationsCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20)
@@ -377,6 +334,7 @@ private final class PeerExportedInvitationsContextImpl {
     private let queue: Queue
     private let account: Account
     private let peerId: PeerId
+    private let adminId: PeerId
     private let revoked: Bool
     private var forceUpdate: Bool
     private let disposable = MetaDisposable()
@@ -388,36 +346,41 @@ private final class PeerExportedInvitationsContextImpl {
     private var results: [ExportedInvitation] = []
     private var count: Int32
     private var populateCache: Bool = true
+    private var isMainList: Bool
     
     let state = Promise<PeerExportedInvitationsState>()
     
-    init(queue: Queue, account: Account, peerId: PeerId, revoked: Bool, forceUpdate: Bool) {
+    init(queue: Queue, account: Account, peerId: PeerId, adminId: PeerId?, revoked: Bool, forceUpdate: Bool) {
         self.queue = queue
         self.account = account
         self.peerId = peerId
+        self.adminId = adminId ?? account.peerId
         self.revoked = revoked
         self.forceUpdate = forceUpdate
+        self.isMainList = adminId == nil
         
         self.count = 0
         
-        self.isLoadingMore = true
-        self.disposable.set((account.postbox.transaction { transaction -> CachedPeerExportedInvitations? in
-            return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked))) as? CachedPeerExportedInvitations
+        if adminId == nil {
+            self.isLoadingMore = true
+            self.disposable.set((account.postbox.transaction { transaction -> CachedPeerExportedInvitations? in
+                return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked))) as? CachedPeerExportedInvitations
+            }
+            |> deliverOn(self.queue)).start(next: { [weak self] cachedResult in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.isLoadingMore = false
+                if let cachedResult = cachedResult {
+                    strongSelf.results = cachedResult.invitations
+                    strongSelf.count = cachedResult.count
+                    strongSelf.hasLoadedOnce = true
+                    strongSelf.canLoadMore = cachedResult.canLoadMore
+                    strongSelf.loadedFromCache = true
+                }
+                strongSelf.loadMore()
+            }))
         }
-        |> deliverOn(self.queue)).start(next: { [weak self] cachedResult in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.isLoadingMore = false
-            if let cachedResult = cachedResult {
-                strongSelf.results = cachedResult.invitations
-                strongSelf.count = cachedResult.count
-                strongSelf.hasLoadedOnce = true
-                strongSelf.canLoadMore = cachedResult.canLoadMore
-                strongSelf.loadedFromCache = true
-            }
-            strongSelf.loadMore()
-        }))
                 
         self.loadMore()
     }
@@ -433,17 +396,18 @@ private final class PeerExportedInvitationsContextImpl {
     }
     
     func loadMore() {
-        /*if self.isLoadingMore {
+        if self.isLoadingMore {
             return
         }
         self.isLoadingMore = true
         let account = self.account
         let peerId = self.peerId
+        let adminId = self.adminId
         let revoked = self.revoked
         var lastResult = self.results.last
         
         if self.forceUpdate {
-            self.populateCache = true
+            self.populateCache = self.isMainList
             self.forceUpdate = false
             lastResult = nil
         } else if self.loadedFromCache {
@@ -452,11 +416,11 @@ private final class PeerExportedInvitationsContextImpl {
         }
         let populateCache = self.populateCache
         
-        self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
-            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        self.disposable.set((self.account.postbox.transaction { transaction -> (peerId: Api.InputPeer?, adminId: Api.InputUser?) in
+            return (transaction.getPeer(peerId).flatMap(apiInputPeer), transaction.getPeer(adminId).flatMap(apiInputUser))
         }
-        |> mapToSignal { inputPeer -> Signal<([ExportedInvitation], Int32), NoError> in
-            if let inputPeer = inputPeer {
+        |> mapToSignal { inputPeer, adminId -> Signal<([ExportedInvitation], Int32), NoError> in
+            if let inputPeer = inputPeer, let adminId = adminId {
                 let offsetLink = lastResult?.link
                 let offsetDate = lastResult?.date
                 var flags: Int32 = 0
@@ -466,7 +430,7 @@ private final class PeerExportedInvitationsContextImpl {
                 if revoked {
                     flags |= (1 << 3)
                 }
-                let signal = account.network.request(Api.functions.messages.getExportedChatInvites(flags: flags, peer: inputPeer, adminId: nil, offsetDate: offsetDate, offsetLink: offsetLink, limit: lastResult == nil ? 50 : 100))
+                let signal = account.network.request(Api.functions.messages.getExportedChatInvites(flags: flags, peer: inputPeer, adminId: adminId, offsetDate: offsetDate, offsetLink: offsetLink, limit: lastResult == nil ? 50 : 100))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.ExportedChatInvites?, NoError> in
                     return .single(nil)
@@ -527,7 +491,7 @@ private final class PeerExportedInvitationsContextImpl {
                 strongSelf.loadMore()
             }
         }))
-        self.updateState()*/
+        self.updateState()
     }
     
     public func add(_ invite: ExportedInvitation) {
@@ -600,10 +564,10 @@ public final class PeerExportedInvitationsContext {
         }
     }
     
-    public init(account: Account, peerId: PeerId, revoked: Bool, forceUpdate: Bool) {
+    public init(account: Account, peerId: PeerId, adminId: PeerId?, revoked: Bool, forceUpdate: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return PeerExportedInvitationsContextImpl(queue: queue, account: account, peerId: peerId, revoked: revoked, forceUpdate: forceUpdate)
+            return PeerExportedInvitationsContextImpl(queue: queue, account: account, peerId: peerId, adminId: adminId, revoked: revoked, forceUpdate: forceUpdate)
         })
     }
     
@@ -783,7 +747,7 @@ private final class PeerInvitationImportersContextImpl {
         if self.isLoadingMore {
             return
         }
-        /*self.isLoadingMore = true
+        self.isLoadingMore = true
         let account = self.account
         let peerId = self.peerId
         let link = self.link
@@ -871,7 +835,7 @@ private final class PeerInvitationImportersContextImpl {
             }
             strongSelf.updateState()
         }))
-        self.updateState()*/
+        self.updateState()
     }
     
     private func updateState() {
@@ -908,3 +872,66 @@ public final class PeerInvitationImportersContext {
         }
     }
 }
+
+public struct ExportedInvitationCreator : Equatable {
+    public let peer: RenderedPeer
+    public let count: Int32
+    public let revokedCount: Int32
+}
+
+public func peerExportedInvitationsCreators(account: Account, peerId: PeerId) -> Signal<[ExportedInvitationCreator], NoError> {
+    return account.postbox.transaction { transaction -> Signal<[ExportedInvitationCreator], NoError> in
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            var isCreator = false
+            if let peer = peer as? TelegramGroup, case .creator = peer.role {
+                isCreator = true
+            } else if let peer = peer as? TelegramChannel, peer.flags.contains(.isCreator) {
+                isCreator = true
+            }
+            if !isCreator {
+                return .single([])
+            } else {
+                return account.network.request(Api.functions.messages.getAdminsWithInvites(peer: inputPeer))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.ChatAdminsWithInvites?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<[ExportedInvitationCreator], NoError> in
+                    return account.postbox.transaction { transaction -> [ExportedInvitationCreator] in
+                        if let result = result, case let .chatAdminsWithInvites(admins, users) = result {
+                            var creators: [ExportedInvitationCreator] = []
+                            var peers: [Peer] = []
+                            var peersMap: [PeerId: Peer] = [:]
+                            for user in users {
+                                let telegramUser = TelegramUser(user: user)
+                                peers.append(telegramUser)
+                                peersMap[telegramUser.id] = telegramUser
+                            }
+                            
+                            for admin in admins {
+                                switch admin {
+                                case let .chatAdminWithInvites(adminId, invitesCount, revokedInvitesCount):
+                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId)
+                                    if let peer = peersMap[peerId], peerId != account.peerId {
+                                        creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount, revokedCount: revokedInvitesCount))
+                                    }
+                                }
+                            }
+                            
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                return updated
+                            })
+                            
+                            return creators
+                        } else {
+                            return []
+                        }
+                    }
+                }
+            }
+        } else {
+            return .single([])
+        }
+    } |> switchToLatest
+}
+

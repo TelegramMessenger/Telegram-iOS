@@ -305,9 +305,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         var effectiveLevel: Float = 0.0
                         var audioLevels = audioLevels
                         if !strongSelf.currentIsMuted {
-                            audioLevels.append((PeerId(0), myAudioLevel, true))
+                            audioLevels.append((PeerId(0), 0, myAudioLevel, true))
                         }
-                        effectiveLevel = audioLevels.map { $0.1 }.max() ?? 0.0
+                        effectiveLevel = audioLevels.map { $0.2 }.max() ?? 0.0
                         strongSelf.backgroundNode.audioLevel = effectiveLevel
                     }))
             }

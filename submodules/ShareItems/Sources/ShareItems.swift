@@ -144,7 +144,12 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         let fileName = value["fileName"] as? String
         let mimeType = (value["mimeType"] as? String) ?? "application/octet-stream"
         
-        if let image = UIImage(data: data) {
+        var treatAsFile = false
+        if let boolValue = value["treatAsFile"] as? Bool, boolValue {
+            treatAsFile = true
+        }
+        
+        if !treatAsFile, let image = UIImage(data: data) {
             var isGif = false
             if data.count > 4 {
                 data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in

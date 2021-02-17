@@ -113,6 +113,8 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
     private let locationNode: TextNode
     private let labelNode: TextNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var layoutParams: (ItemListRecentSessionItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
     private var editableControlNode: ItemListEditableControlNode?
@@ -152,12 +154,16 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.appNode)
         self.addSubnode(self.locationNode)
         self.addSubnode(self.labelNode)
+        
+        self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: ItemListRecentSessionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -267,6 +273,33 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, neighbors)
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    
+                    var label = ""
+                    if item.session.isCurrent {
+                        label = item.presentationData.strings.VoiceOver_AuthSessions_CurrentSession
+                        label += ", "
+                    }
+                    label += titleAttributedString?.string ?? ""
+                    strongSelf.activateArea.accessibilityLabel = label
+                    
+                    var value = ""
+                    if let string = appAttributedString?.string {
+                        value += string
+                    }
+                    if let string = locationAttributedString?.string {
+                        if !value.isEmpty {
+                            value += "\n"
+                        }
+                        value += string
+                    }
+                    
+                    if item.enabled {
+                        strongSelf.activateArea.accessibilityTraits = []
+                    } else {
+                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                    }
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor

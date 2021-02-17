@@ -873,6 +873,12 @@ extension PresentationThemeDecoding {
             } else if number === kCFBooleanFalse as NSNumber {
                 return false
             }
+        } else if let string = value as? String {
+            if string.lowercased() == "true" {
+                return true
+            } else if string.lowercased() == "false" {
+                return false
+            }
         }
 
         throw PresentationThemeDecodingError.typeMismatch

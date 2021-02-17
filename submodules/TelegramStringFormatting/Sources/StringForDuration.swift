@@ -16,6 +16,3 @@ public func stringForDuration(_ duration: Int32, position: Int32? = nil) -> Stri
     }
     return durationString
 }
-
-
-

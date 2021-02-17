@@ -39,11 +39,29 @@ private final class ManagedAutoremoveMessageOperationsHelper {
     }
 }
 
-func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoError> {
+func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRemove: Bool) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic(value: ManagedAutoremoveMessageOperationsHelper())
         
-        let disposable = postbox.timestampBasedMessageAttributesView(tag: 0).start(next: { view in
+        let timeOffsetOnce = Signal<Double, NoError> { subscriber in
+            subscriber.putNext(network.globalTimeDifference)
+            return EmptyDisposable
+        }
+        
+        let timeOffset = (
+            timeOffsetOnce
+            |> then(
+                Signal<Double, NoError>.complete()
+                |> delay(1.0, queue: .mainQueue())
+            )
+        )
+        |> restart
+        |> map { value -> Double in
+            round(value)
+        }
+        |> distinctUntilChanged
+        
+        let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: isRemove ? 0 : 1)).start(next: { timeOffset, view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)]) in
                 return helper.update(view.head)
             }
@@ -53,12 +71,12 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
             }
             
             for (entry, disposable) in beginOperations {
-                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + timeOffset
                 let signal = Signal<Void, NoError>.complete()
                 |> suspendAwareDelay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in
                     if let message = transaction.getMessage(entry.messageId) {
-                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
                             deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
                         } else {
                             transaction.updateMessage(message.id, update: { currentMessage in
@@ -74,11 +92,17 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
                                         updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
                                     }
                                 }
-                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                                var updatedAttributes = currentMessage.attributes
+                                for i in 0 ..< updatedAttributes.count {
+                                    if let _ = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
+                                        updatedAttributes.remove(at: i)
+                                        break
+                                    }
+                                }
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: updatedMedia))
                             })
                         }
                     }
-                    transaction.removeTimestampBasedMessageAttribute(tag: 0, messageId: entry.messageId)
                 })
                 disposable.set(signal.start())
             }

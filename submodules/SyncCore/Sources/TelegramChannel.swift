@@ -144,6 +144,7 @@ public struct TelegramChannelFlags: OptionSet {
     public static let hasVoiceChat = TelegramChannelFlags(rawValue: 1 << 4)
     public static let hasActiveVoiceChat = TelegramChannelFlags(rawValue: 1 << 5)
     public static let isFake = TelegramChannelFlags(rawValue: 1 << 6)
+    public static let isGigagroup = TelegramChannelFlags(rawValue: 1 << 7)
 }
 
 public final class TelegramChannel: Peer {

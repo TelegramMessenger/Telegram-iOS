@@ -12,7 +12,9 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
     }
     
     private var groups: [ActionSheetItemGroup] = []
-    private var groupNodes: [ActionSheetItemGroupNode] = []
+    var groupNodes: [ActionSheetItemGroupNode] = []
+    
+    var requestLayout: (() -> Void)?
     
     init(theme: ActionSheetControllerTheme) {
         self.theme = theme
@@ -30,44 +32,49 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         
         for group in groups {
             let groupNode = ActionSheetItemGroupNode(theme: self.theme)
-            groupNode.updateItemNodes(group.items.map({ $0.node(theme: self.theme) }), leadingVisibleNodeCount: group.leadingVisibleNodeCount ?? 1000.0)
+            let itemNodes = group.items.map({ $0.node(theme: self.theme) })
+                
+            for node in itemNodes {
+                node.requestLayout = { [weak self] in
+                    self?.requestLayout?()
+                }
+            }
+            groupNode.updateItemNodes(itemNodes, leadingVisibleNodeCount: group.leadingVisibleNodeCount ?? 1000.0)
             self.groupNodes.append(groupNode)
             self.addSubnode(groupNode)
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var groupsHeight: CGFloat = 0.0
         
+        var calculatedSizes: [CGSize] = []
         for groupNode in self.groupNodes.reversed() {
             if CGFloat(0.0).isLess(than: groupsHeight) {
                 groupsHeight += groupSpacing
             }
             
-            let size = groupNode.measure(CGSize(width: constrainedSize.width, height: max(0.0, constrainedSize.height - groupsHeight)))
+            let size = groupNode.updateLayout(constrainedSize: CGSize(width: constrainedSize.width, height: max(0.0, constrainedSize.height - groupsHeight)), transition: transition)
+            calculatedSizes.insert(size, at: 0)
+            
             groupsHeight += size.height
         }
         
-        return CGSize(width: constrainedSize.width, height: min(groupsHeight, constrainedSize.height))
-    }
-    
-    override func layout() {
-        var groupsHeight: CGFloat = 0.0
+        var itemGroupsHeight: CGFloat = 0.0
         for i in 0 ..< self.groupNodes.count {
             let groupNode = self.groupNodes[i]
-            
-            let size = groupNode.calculatedSize
-            
+                        
+            let size = calculatedSizes[i]
             if i != 0 {
-                groupsHeight += groupSpacing
-                self.groupNodes[i - 1].trailingDimView.frame = CGRect(x: 0.0, y: groupNodes[i - 1].bounds.size.height, width: size.width, height: groupSpacing)
+                itemGroupsHeight += groupSpacing
+                transition.updateFrame(view: self.groupNodes[i - 1].trailingDimView, frame: CGRect(x: 0.0, y: groupNodes[i - 1].bounds.size.height, width: size.width, height: groupSpacing))
             }
+            transition.updateFrame(node: groupNode, frame: CGRect(origin: CGPoint(x: 0.0, y: itemGroupsHeight), size: size))
+            transition.updateFrame(view: groupNode.trailingDimView, frame: CGRect())
             
-            groupNode.frame = CGRect(origin: CGPoint(x: 0.0, y: groupsHeight), size: size)
-            groupNode.trailingDimView.frame = CGRect()
-            
-            groupsHeight += size.height
+            itemGroupsHeight += size.height
         }
+        return CGSize(width: constrainedSize.width, height: min(groupsHeight, constrainedSize.height))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

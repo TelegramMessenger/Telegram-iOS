@@ -4,12 +4,12 @@ final class MutableTimestampBasedMessageAttributesView {
     let tag: UInt16
     var head: TimestampBasedMessageAttributesEntry?
     
-    init(tag: UInt16, getHead: (UInt16) -> TimestampBasedMessageAttributesEntry?) {
+    init(postbox: Postbox, tag: UInt16) {
         self.tag = tag
-        self.head = getHead(tag)
+        self.head = postbox.timestampBasedMessageAttributesTable.head(tag: tag)
     }
     
-    func replay(operations: [TimestampBasedMessageAttributesOperation], getHead: (UInt16) -> TimestampBasedMessageAttributesEntry?) -> Bool {
+    func replay(postbox: Postbox, operations: [TimestampBasedMessageAttributesOperation]) -> Bool {
         var updated = false
         var invalidatedHead = false
         for operation in operations {
@@ -37,7 +37,7 @@ final class MutableTimestampBasedMessageAttributesView {
             }
         }
         if invalidatedHead {
-            self.head = getHead(self.tag)
+            self.head = postbox.timestampBasedMessageAttributesTable.head(tag: self.tag)
         }
         return updated
     }

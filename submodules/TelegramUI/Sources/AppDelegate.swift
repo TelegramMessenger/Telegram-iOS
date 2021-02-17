@@ -22,7 +22,6 @@ import UndoUI
 import LegacyUI
 import PassportUI
 import WatchBridge
-import LegacyDataImport
 import SettingsUI
 import AppBundle
 import UrlHandling
@@ -665,7 +664,7 @@ final class SharedApplicationContext {
         })
         
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -906,68 +905,7 @@ final class SharedApplicationContext {
             Logger.shared.logToConsole = loggingSettings.logToConsole
             Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
             
-            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: sharedApplicationContext.sharedContext.accountManager, encryptionParameters: encryptionParameters, present: { controller in
-                self.window?.rootViewController?.present(controller, animated: true, completion: nil)
-            })
-            |> `catch` { _ -> Signal<ImportedLegacyAccountEvent, NoError> in
-                return Signal { subscriber in
-                    let alertView = UIAlertView(title: "", message: "An error occured while trying to upgrade application data. Would you like to logout?", delegate: self, cancelButtonTitle: "No", otherButtonTitles: "Yes")
-                    self.alertActions = (primary: {
-                        let statusPath = appGroupUrl.path + "/Documents/importcompleted"
-                        let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
-                        let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
-                        subscriber.putNext(.result(nil))
-                        subscriber.putCompletion()
-                    }, other: {
-                        exit(0)
-                    })
-                    alertView.show()
-                    
-                    return EmptyDisposable
-                } |> runOn(Queue.mainQueue())
-            }
-            |> mapToSignal { event -> Signal<SharedApplicationContext, NoError> in
-                switch event {
-                    case let .progress(type, value):
-                        Queue.mainQueue().async {
-                            if self.dataImportSplash == nil {
-                                self.dataImportSplash = makeLegacyDataImportSplash(theme: nil, strings: nil)
-                                self.dataImportSplash?.serviceAction = {
-                                    self.debugPressed()
-                                }
-                                self.mainWindow.coveringView = self.dataImportSplash
-                            }
-                            self.dataImportSplash?.progress = (type, value)
-                        }
-                        return .complete()
-                    case let .result(temporaryId):
-                        Queue.mainQueue().async {
-                            if let _ = self.dataImportSplash {
-                                self.dataImportSplash = nil
-                                self.mainWindow.coveringView = nil
-                            }
-                        }
-                        if let temporaryId = temporaryId {
-                            Queue.mainQueue().after(1.0, {
-                                let statusPath = appGroupUrl.path + "/Documents/importcompleted"
-                                let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
-                                let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
-                            })
-                            return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> SharedApplicationContext in
-                                transaction.setCurrentId(temporaryId)
-                                transaction.updateRecord(temporaryId, { record in
-                                    if let record = record {
-                                        return AccountRecord(id: record.id, attributes: record.attributes, temporarySessionId: nil)
-                                    }
-                                    return record
-                                })
-                                return sharedApplicationContext
-                            }
-                        } else {
-                            return .single(sharedApplicationContext)
-                        }
-                }
-            }
+            return .single(sharedApplicationContext)
         })
         
         let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()

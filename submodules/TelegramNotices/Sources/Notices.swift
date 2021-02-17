@@ -167,6 +167,7 @@ private struct ApplicationSpecificNoticeKeys {
     private static let peerReportNamespace: Int32 = 4
     private static let inlineBotLocationRequestNamespace: Int32 = 5
     private static let psaAcknowledgementNamespace: Int32 = 6
+    private static let botGameNoticeNamespace: Int32 = 7
     
     static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -174,6 +175,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func botPaymentLiabilityNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: botPaymentLiabilityNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+    
+    static func botGameNotice(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: botGameNoticeNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
     
     static func irrelevantPeerGeoNotice(peerId: PeerId) -> NoticeEntryKey {
@@ -289,6 +294,22 @@ public struct ApplicationSpecificNotice {
     public static func setBotPaymentLiability(accountManager: AccountManager, peerId: PeerId) -> Signal<Void, NoError> {
         return accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId), ApplicationSpecificBoolNotice())
+        }
+    }
+    
+    public static func getBotGameNotice(accountManager: AccountManager, peerId: PeerId) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.botGameNotice(peerId: peerId)) as? ApplicationSpecificBoolNotice {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func setBotGameNotice(accountManager: AccountManager, peerId: PeerId) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.botGameNotice(peerId: peerId), ApplicationSpecificBoolNotice())
         }
     }
     

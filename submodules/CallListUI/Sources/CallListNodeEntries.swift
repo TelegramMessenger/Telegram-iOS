@@ -81,7 +81,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     case displayTab(PresentationTheme, String, Bool)
     case displayTabInfo(PresentationTheme, String)
     case groupCall(peer: Peer, editing: Bool, isActive: Bool)
-    case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool, displayHeader: Bool)
+    case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool, displayHeader: Bool, missed: Bool)
     case holeEntry(index: MessageIndex, theme: PresentationTheme)
     
     var sortIndex: SortIndex {
@@ -92,7 +92,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .displayTabInfo
         case let .groupCall(peer, _, _):
             return .groupCall(peer.id, peer.compactDisplayTitle)
-        case let .messageEntry(message, _, _, _, _, _, _, _):
+        case let .messageEntry(message, _, _, _, _, _, _, _, _):
             return .message(message.index)
         case let .holeEntry(index, _):
             return .hole(index)
@@ -107,7 +107,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .setting(1)
         case let .groupCall(peer, _, _):
             return .groupCall(peer.id)
-        case let .messageEntry(message, _, _, _, _, _, _, _):
+        case let .messageEntry(message, _, _, _, _, _, _, _, _):
             return .message(message.index)
         case let .holeEntry(index, _):
             return .hole(index)
@@ -147,8 +147,8 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsEditing, lhsHasRevealControls, lhsDisplayHeader):
-                if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsEditing, rhsHasRevealControls, rhsDisplayHeader) = rhs {
+            case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsEditing, lhsHasRevealControls, lhsDisplayHeader, lhsMissed):
+                if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsEditing, rhsHasRevealControls, rhsDisplayHeader, rhsMissed) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -156,6 +156,9 @@ enum CallListNodeEntry: Comparable, Identifiable {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsMissed != rhsMissed {
                         return false
                     }
                     if lhsEditing != rhsEditing {
@@ -197,28 +200,30 @@ func callListNodeEntriesForView(view: CallListView, groupCalls: [Peer], state: C
     for entry in view.entries {
         switch entry {
             case let .message(topMessage, messages):
-                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.presentationData.theme, strings: state.presentationData.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id, displayHeader: !showSettings && isRecentCalls))
+                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.presentationData.theme, strings: state.presentationData.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id, displayHeader: !showSettings && isRecentCalls, missed: !isRecentCalls))
             case let .hole(index):
                 result.append(.holeEntry(index: index, theme: state.presentationData.theme))
         }
     }
     
-    if !showSettings && isRecentCalls {
-        for peer in groupCalls.sorted(by: { lhs, rhs in
-            let lhsTitle = lhs.compactDisplayTitle
-            let rhsTitle = rhs.compactDisplayTitle
-            if lhsTitle != rhsTitle {
-                return lhsTitle < rhsTitle
+    if view.later == nil {
+        if !showSettings && isRecentCalls {
+            for peer in groupCalls.sorted(by: { lhs, rhs in
+                let lhsTitle = lhs.compactDisplayTitle
+                let rhsTitle = rhs.compactDisplayTitle
+                if lhsTitle != rhsTitle {
+                    return lhsTitle < rhsTitle
+                }
+                return lhs.id < rhs.id
+            }).reversed() {
+                result.append(.groupCall(peer: peer, editing: state.editing, isActive: currentGroupCallPeerId == peer.id))
             }
-            return lhs.id < rhs.id
-        }).reversed() {
-            result.append(.groupCall(peer: peer, editing: state.editing, isActive: currentGroupCallPeerId == peer.id))
         }
-    }
-    
-    if showSettings {
-        result.append(.displayTabInfo(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIconDescription))
-        result.append(.displayTab(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIcon, showCallsTab))
+        
+        if showSettings {
+            result.append(.displayTabInfo(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIconDescription))
+            result.append(.displayTab(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIcon, showCallsTab))
+        }
     }
     return result
 }

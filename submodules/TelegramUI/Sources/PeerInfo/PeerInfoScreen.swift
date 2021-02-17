@@ -446,6 +446,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, activatePinnedListPreview: { _, _ in
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
+        }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
         }, statuses: nil)
         
@@ -544,6 +545,7 @@ private final class PeerInfoInteraction {
     let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let editingOpenPreHistorySetup: () -> Void
+    let editingOpenAutoremoveMesages: () -> Void
     let openPermissions: () -> Void
     let editingOpenStickerPackSetup: () -> Void
     let openLocation: () -> Void
@@ -580,6 +582,7 @@ private final class PeerInfoInteraction {
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
+        editingOpenAutoremoveMesages: @escaping () -> Void,
         openPermissions: @escaping () -> Void,
         editingOpenStickerPackSetup: @escaping () -> Void,
         openLocation: @escaping () -> Void,
@@ -615,6 +618,7 @@ private final class PeerInfoInteraction {
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
         self.openParticipantsSection = openParticipantsSection
         self.editingOpenPreHistorySetup = editingOpenPreHistorySetup
+        self.editingOpenAutoremoveMesages = editingOpenAutoremoveMesages
         self.openPermissions = openPermissions
         self.editingOpenStickerPackSetup = editingOpenStickerPackSetup
         self.openLocation = openLocation
@@ -1067,13 +1071,13 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         let memberCount = cachedData.participantsSummary.memberCount ?? 0
                         let bannedCount = cachedData.participantsSummary.kickedCount ?? 0
                         
-                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, action: {
+                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                             interaction.openParticipantsSection(.admins)
                         }))
-                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, action: {
+                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
                             interaction.openParticipantsSection(.members)
                         }))
-                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, action: {
+                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
                             interaction.openParticipantsSection(.banned)
                         }))
                     }
@@ -1141,32 +1145,32 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
         items[section] = []
     }
     
-    if let data = data, let notificationSettings = data.notificationSettings {
-        let notificationsLabel: String
-        let soundLabel: String
-        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-            if until < Int32.max - 1 {
-                notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
-            } else {
-                notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
-            }
-        } else {
-            notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
-        }
-    
-        let globalNotificationSettings: GlobalNotificationSettings = data.globalNotificationSettings ?? GlobalNotificationSettings.defaultSettings
-        soundLabel = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.privateChats.sound)
-        
-        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .text(notificationsLabel), text: presentationData.strings.GroupInfo_Notifications, action: {
-            interaction.editingOpenNotificationSettings()
-        }))
-        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 1, label: .text(soundLabel), text: presentationData.strings.GroupInfo_Sound, action: {
-            interaction.editingOpenSoundSettings()
-        }))
-        items[.notifications]!.append(PeerInfoScreenSwitchItem(id: 2, text: presentationData.strings.Notification_Exceptions_PreviewAlwaysOn, value: notificationSettings.displayPreviews != .hide, toggled: { value in
-            interaction.editingToggleShowMessageText(value)
-        }))
-    }
+//    if let data = data, let notificationSettings = data.notificationSettings {
+//        let notificationsLabel: String
+//        let soundLabel: String
+//        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+//            if until < Int32.max - 1 {
+//                notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
+//            } else {
+//                notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
+//            }
+//        } else {
+//            notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
+//        }
+//
+//        let globalNotificationSettings: GlobalNotificationSettings = data.globalNotificationSettings ?? GlobalNotificationSettings.defaultSettings
+//        soundLabel = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.privateChats.sound)
+//
+//        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .text(notificationsLabel), text: presentationData.strings.GroupInfo_Notifications, action: {
+//            interaction.editingOpenNotificationSettings()
+//        }))
+//        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 1, label: .text(soundLabel), text: presentationData.strings.GroupInfo_Sound, action: {
+//            interaction.editingOpenSoundSettings()
+//        }))
+//        items[.notifications]!.append(PeerInfoScreenSwitchItem(id: 2, text: presentationData.strings.Notification_Exceptions_PreviewAlwaysOn, value: notificationSettings.displayPreviews != .hide, toggled: { value in
+//            interaction.editingToggleShowMessageText(value)
+//        }))
+//    }
     
     if let data = data {
         if let _ = data.peer as? TelegramUser {
@@ -1177,14 +1181,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 }))
             }
         } else if let channel = data.peer as? TelegramChannel {
-            let ItemUsername = 1
-            let ItemInviteLinks = 2
-            let ItemDiscussionGroup = 3
-            let ItemSignMessages = 4
-            let ItemSignMessagesHelp = 5
-            
             switch channel.info {
             case .broadcast:
+                let ItemUsername = 1
+                let ItemInviteLinks = 2
+                let ItemDiscussionGroup = 3
+                let ItemSignMessages = 4
+                let ItemSignMessagesHelp = 5
+                let ItemAutoremove = 6
+                
                 if channel.flags.contains(.isCreator) {
                     let linkText: String
                     if let username = channel.username {
@@ -1192,11 +1197,23 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     } else {
                         linkText = presentationData.strings.Channel_Setup_TypePrivate
                     }
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(linkText), text: presentationData.strings.Channel_TypeSetup_Title, action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(linkText), text: presentationData.strings.Channel_TypeSetup_Title, icon: UIImage(bundleImageName: "Chat/Info/GroupChannelIcon"), action: {
                         interaction.editingOpenPublicLinkSetup()
                     }))
                 }
                  
+                if  (channel.flags.contains(.isCreator) && (channel.username?.isEmpty ?? true)) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
+                    } else {
+                        invitesText = ""
+                    }
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
+                }
+                
                 if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
                     let discussionGroupTitle: String
                     if let _ = data.cachedData as? CachedChannelData {
@@ -1213,20 +1230,26 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         discussionGroupTitle = "..."
                     }
                     
-                    let invitesText: String
-                    if let count = data.invitations?.count, count > 0 {
-                        invitesText = "\(count)"
-                    } else {
-                        invitesText = ""
-                    }
-                    
-//                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                        interaction.editingOpenInviteLinksSetup()
-//                    }))
-                    
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
+                    
+                    /*if channel.hasPermission(.changeInfo) {
+                        let timeoutString: String
+                        if case let .known(value) = (data.cachedData as? CachedChannelData)?.autoremoveTimeout {
+                            if let value = value?.effectiveValue {
+                                timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
+                            } else {
+                                timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
+                            }
+                        } else {
+                            timeoutString = ""
+                        }
+                        
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
+                            interaction.editingOpenAutoremoveMesages()
+                        }))
+                    }*/
                     
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
@@ -1235,21 +1258,25 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     default:
                         messagesShouldHaveSignatures = false
                     }
-                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemSignMessages, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures, toggled: { value in
+                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemSignMessages, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
                         interaction.editingToggleMessageSignatures(value)
                     }))
                     items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
                 }
             case .group:
-                let ItemUsername = 1
-                let ItemLinkedChannel = 2
-                let ItemPreHistory = 3
-                let ItemStickerPack = 4
-                let ItemPermissions = 5
-                let ItemAdmins = 6
-                let ItemLocationHeader = 7
-                let ItemLocation = 8
-                let ItemLocationSetup = 9
+                let ItemUsername = 101
+                let ItemInviteLinks = 102
+                let ItemLinkedChannel = 103
+                let ItemPreHistory = 104
+                let ItemStickerPack = 105
+                let ItemPermissions = 106
+                let ItemMembers = 107
+                let ItemAdmins = 108
+                let ItemRemovedUsers = 109
+                let ItemLocationHeader = 110
+                let ItemLocation = 111
+                let ItemLocationSetup = 112
+                let ItemAutoremove = 113
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.username != nil
@@ -1284,54 +1311,55 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                 } else {
                                     linkText = presentationData.strings.GroupInfo_PublicLinkAdd
                                 }
-                                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(linkText), text: presentationData.strings.GroupInfo_PublicLink, action: {
+                                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(linkText), text: presentationData.strings.GroupInfo_PublicLink, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
                             }
                         } else {
                             if cachedData.flags.contains(.canChangeUsername) {
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, action: {
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
                                     interaction.editingOpenPublicLinkSetup()
-                                }))
-                                
-                            }
-                             
-                            if channel.hasPermission(.inviteMembers) {
-                                let invitesText: String
-                                if let count = data.invitations?.count, count > 0 {
-                                    invitesText = "\(count)"
-                                } else {
-                                    invitesText = ""
-                                }
-                                
-//                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                                    interaction.editingOpenInviteLinksSetup()
-//                                }))
-                            }
-                            
-                            if cachedData.flags.contains(.canChangeUsername) {
-                                if let linkedDiscussionPeer = data.linkedDiscussionPeer {
-                                    let peerTitle: String
-                                    if let addressName = linkedDiscussionPeer.addressName, !addressName.isEmpty {
-                                        peerTitle = "@\(addressName)"
-                                    } else {
-                                        peerTitle = linkedDiscussionPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    }
-                                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemLinkedChannel, label: .text(peerTitle), text: presentationData.strings.Group_LinkedChannel, action: {
-                                        interaction.editingOpenDiscussionGroupSetup()
-                                    }))
-                                }
-                            }
-                            if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
-                                    interaction.editingOpenPreHistorySetup()
                                 }))
                             }
                         }
                     }
                     
+                    if (isCreator && (channel.username?.isEmpty ?? true) && cachedData.peerGeoLocation == nil) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                        let invitesText: String
+                        if let count = data.invitations?.count, count > 0 {
+                            invitesText = "\(count)"
+                        } else {
+                            invitesText = ""
+                        }
+                        
+                        items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                            interaction.editingOpenInviteLinksSetup()
+                        }))
+                    }
+                            
+                    if (isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages))) && cachedData.peerGeoLocation != nil {
+                        if cachedData.flags.contains(.canChangeUsername) {
+                            if let linkedDiscussionPeer = data.linkedDiscussionPeer {
+                                let peerTitle: String
+                                if let addressName = linkedDiscussionPeer.addressName, !addressName.isEmpty {
+                                    peerTitle = "@\(addressName)"
+                                } else {
+                                    peerTitle = linkedDiscussionPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                }
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemLinkedChannel, label: .text(peerTitle), text: presentationData.strings.Group_LinkedChannel, icon: UIImage(bundleImageName: "Chat/Info/GroupLinkedChannelIcon"), action: {
+                                    interaction.editingOpenDiscussionGroupSetup()
+                                }))
+                            }
+                        }
+                        if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
+                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
+                                interaction.editingOpenPreHistorySetup()
+                            }))
+                        }
+                    }
+                    
                     if cachedData.flags.contains(.canSetStickerSet) && canEditPeerInfo(context: context, peer: channel) {
-                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStickerPack, label: .text(cachedData.stickerPack?.title ?? presentationData.strings.GroupInfo_SharedMediaNone), text: presentationData.strings.Stickers_GroupStickers, action: {
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStickerPack, label: .text(cachedData.stickerPack?.title ?? presentationData.strings.GroupInfo_SharedMediaNone), text: presentationData.strings.Stickers_GroupStickers, icon: UIImage(bundleImageName: "Settings/MenuIcons/Stickers"), action: {
                             interaction.editingOpenStickerPackSetup()
                         }))
                     }
@@ -1355,46 +1383,80 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             activePermissionCount = count
                         }
                         
-                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, action: {
-                            interaction.openPermissions()
-                        }))
+                        if !channel.flags.contains(.isGigagroup) {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
+                                interaction.openPermissions()
+                            }))
+                        } else {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text(cachedData.participantsSummary.memberCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.Group_Info_Members, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                                interaction.openParticipantsSection(.members)
+                            }))
+                        }
                         
-                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text(cachedData.participantsSummary.adminCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.GroupInfo_Administrators, action: {
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text(cachedData.participantsSummary.adminCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                             interaction.openParticipantsSection(.admins)
                         }))
+                        
+                        if channel.flags.contains(.isGigagroup) {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
+                                interaction.openParticipantsSection(.banned)
+                            }))
+                        }
                     }
                 }
             }
         } else if let group = data.peer as? TelegramGroup {
-            let ItemUsername = 1
-            let ItemInviteLinks = 2
-            let ItemPreHistory = 3
-            let ItemPermissions = 4
-            let ItemAdmins = 5
+            let ItemUsername = 101
+            let ItemInviteLinks = 102
+            let ItemPreHistory = 103
+            let ItemPermissions = 104
+            let ItemAdmins = 105
+            let ItemAutoremove = 106
             
             if case .creator = group.role {
                 if let cachedData = data.cachedData as? CachedGroupData {
                     if cachedData.flags.contains(.canChangeUsername) {
-                        items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(presentationData.strings.Group_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, action: {
+                        items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(presentationData.strings.Group_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
                             interaction.editingOpenPublicLinkSetup()
                         }))
                     }
                 }
                 
-                let invitesText: String
-                if let count = data.invitations?.count, count > 0 {
-                    invitesText = "\(count)"
-                } else {
-                    invitesText = ""
+                if (group.addressName?.isEmpty ?? true) {
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
+                    } else {
+                        invitesText = ""
+                    }
+                    
+                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
                 }
-                
-//                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, action: {
-//                    interaction.editingOpenInviteLinksSetup()
-//                }))
-                
-                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
+                                
+                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                     interaction.editingOpenPreHistorySetup()
                 }))
+                
+                /*let canChangeInfo = true
+                if canChangeInfo {
+                    let timeoutString: String
+                    if case let .known(value) = (data.cachedData as? CachedGroupData)?.autoremoveTimeout {
+                        if let value = value?.value {
+                            timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
+                        } else {
+                            timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
+                        }
+                    } else {
+                        timeoutString = ""
+                    }
+                    
+                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
+                        interaction.editingOpenAutoremoveMesages()
+                    }))
+                }*/
+                
                 var activePermissionCount: Int?
                 if let defaultBannedRights = group.defaultBannedRights {
                     var count = 0
@@ -1406,15 +1468,26 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     activePermissionCount = count
                 }
                 
-                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, action: {
+                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
                     interaction.openPermissions()
                 }))
                 
-                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, text: presentationData.strings.GroupInfo_Administrators, action: {
+                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                     interaction.openParticipantsSection(.admins)
                 }))
-            } else if case .admin = group.role {
-                
+            } else if case let .admin(rights, _) = group.role {
+                if rights.flags.contains(.canInviteUsers) {
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
+                    } else {
+                        invitesText = ""
+                    }
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        interaction.editingOpenInviteLinksSetup()
+                    }))
+                }
             }
         }
     }
@@ -1429,7 +1502,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
 }
 
 private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private weak var controller: PeerInfoScreen?
+    private weak var controller: PeerInfoScreenImpl?
     
     private let context: AccountContext
     let peerId: PeerId
@@ -1510,7 +1583,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?) {
+    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
@@ -1590,6 +1663,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             },
             editingOpenPreHistorySetup: { [weak self] in
                 self?.editingOpenPreHistorySetup()
+            },
+            editingOpenAutoremoveMesages: { [weak self] in
+                self?.editingOpenAutoremoveMesages()
             },
             openPermissions: { [weak self] in
                 self?.openPermissions()
@@ -1691,13 +1767,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     })))
                 }
                 
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
-                    c.dismiss(completion: {
-                        if let strongSelf = self {
-                            strongSelf.forwardMessages(messageIds: Set([message.id]))
-                        }
-                    })
-                })))
+                if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        c.dismiss(completion: {
+                            if let strongSelf = self {
+                                strongSelf.forwardMessages(messageIds: Set([message.id]))
+                            }
+                        })
+                    })))
+                }
                 if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
                     let context = strongSelf.context
                     let presentationData = strongSelf.presentationData
@@ -1802,13 +1880,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             })
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                            c.dismiss(completion: {
-                                if let strongSelf = self {
-                                    strongSelf.forwardMessages(messageIds: [message.id])
-                                }
-                            })
-                        })))
+                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                            items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                                c.dismiss(completion: {
+                                    if let strongSelf = self {
+                                        strongSelf.forwardMessages(messageIds: [message.id])
+                                    }
+                                })
+                            })))
+                        }
                         
                         if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
                             items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
@@ -2054,7 +2134,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
-        }, openPeerContextMenu: { _, _, _, _ in
+        }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
         }, openMessageStats: { _ in
@@ -2946,7 +3026,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 var items: [ActionSheetItem] = []
                 let muteValues: [Int32] = [
                     1 * 60 * 60,
-                    24 * 60 * 60,
                     2 * 24 * 60 * 60,
                     Int32.max
                 ]
@@ -2963,6 +3042,49 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: delay).start()
                     }))
                 }
+                
+                items.insert(ActionSheetButtonItem(title: self.presentationData.strings.PeerInfo_CustomizeNotifications, action: {
+                    guard let peer = self.data?.peer else {
+                        return
+                    }
+                    dismissAction()
+                    
+                    let context = self.context
+                    let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+                        return updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound) |> deliverOnMainQueue
+                    }
+                    
+                    let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
+                        return updatePeerMuteSetting(account: context.account, peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
+                    }
+                    
+                    let updatePeerDisplayPreviews:(PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
+                        peerId, displayPreviews in
+                        return updatePeerDisplayPreviewsSetting(account: context.account, peerId: peerId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+                    }
+                    
+                    let exceptionController = notificationPeerExceptionController(context: context, peer: peer, mode: .users([:]), edit: true, updatePeerSound: { peerId, sound in
+                        let _ = (updatePeerSound(peer.id, sound)
+                        |> deliverOnMainQueue).start(next: { _ in
+                          
+                        })
+                    }, updatePeerNotificationInterval: { peerId, muteInterval in
+                        let _ = (updatePeerNotificationInterval(peerId, muteInterval)
+                        |> deliverOnMainQueue).start(next: { _ in
+
+                        })
+                    }, updatePeerDisplayPreviews: { peerId, displayPreviews in
+                        let _ = (updatePeerDisplayPreviews(peerId, displayPreviews)
+                        |> deliverOnMainQueue).start(next: { _ in
+
+                        })
+                    }, removePeerFromExceptions: {
+                      
+                    }, modifiedPeer: {
+                    })
+                    exceptionController.navigationPresentation = .modal
+                    controller.push(exceptionController)
+                }), at: items.count - 1)
                 
                 actionSheet.setItemGroups([
                     ActionSheetItemGroup(items: items),
@@ -3175,7 +3297,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] sticker in
                 if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData:  strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
                         if strongSelf.nearbyPeerDistance != nil {
                             var viewControllers = navigationController.viewControllers
                             viewControllers = viewControllers.filter { controller in
@@ -3189,6 +3311,21 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }))
                 }
             })
+        }
+    }
+    
+    private func openChatForReporting(_ reason: ReportReason) {
+        if let navigationController = (self.controller?.navigationController as? NavigationController) {
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), keepStack: .default, reportReason: reason, completion: { _ in
+//                    var viewControllers = navigationController.viewControllers
+//                    viewControllers = viewControllers.filter { controller in
+//                        if controller is PeerInfoScreen {
+//                            return false
+//                        }
+//                        return true
+//                    }
+//                    navigationController.setViewControllers(viewControllers, animated: false)
+            }))
         }
     }
     
@@ -3621,7 +3758,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     let _ = removePeerChat(account: strongSelf.context.account, peerId: strongSelf.peerId, reportChatSpam: reportSpam).start()
                                     (strongSelf.controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
                                 } else if reportSpam {
-                                    let _ = reportPeer(account: strongSelf.context.account, peerId: strongSelf.peerId, reason: .spam).start()
+                                    let _ = reportPeer(account: strongSelf.context.account, peerId: strongSelf.peerId, reason: .spam, message: "").start()
                                 }
                                 
                                 deleteSendMessageIntents(peerId: strongSelf.peerId)
@@ -3676,11 +3813,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         } else {
             options = [.spam, .fake, .violence, .pornography, .childAbuse, .copyright, .other]
         }
-        controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), options: options, present: { [weak controller] c, a in
+        controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), options: options, passthrough: true, present: { [weak controller] c, a in
             controller?.present(c, in: .window(.root), with: a)
         }, push: { [weak controller] c in
             controller?.push(c)
-        }, completion: { _ in }), in: .window(.root))
+        }, completion: { [weak self] reason, _ in
+            if let reason = reason {
+                DispatchQueue.main.async {
+                    self?.openChatForReporting(reason)
+                }
+            }
+        }), in: .window(.root))
     }
     
     private func openEncryptionKey() {
@@ -3746,7 +3889,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func editingOpenInviteLinksSetup() {
-        self.controller?.push(inviteLinkListController(context: self.context, peerId: self.peerId))
+        
+        self.controller?.push(inviteLinkListController(context: self.context, peerId: self.peerId, admin: nil))
     }
     
     private func editingOpenDiscussionGroupSetup() {
@@ -3794,6 +3938,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
             }
         }
+    }
+    
+    private func editingOpenAutoremoveMesages() {
+        guard let data = self.data, let peer = data.peer else {
+            return
+        }
+        
+        let controller = peerAutoremoveSetupScreen(context: self.context, peerId: peer.id)
+        self.controller?.push(controller)
     }
     
     private func openPermissions() {
@@ -5051,11 +5204,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         return
                     }
                     strongSelf.view.endEditing(true)
-                    strongSelf.controller?.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), present: { c, a in
+                    strongSelf.controller?.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), passthrough: false, present: { c, a in
                         self?.controller?.present(c, in: .window(.root), with: a)
                     }, push: { c in
                         self?.controller?.push(c)
-                    }, completion: { _ in }), in: .window(.root))
+                    }, completion: { _, _ in }), in: .window(.root))
                 })
                 self.paneContainerNode.selectionPanelNode = selectionPanelNode
                 self.paneContainerNode.addSubnode(selectionPanelNode)
@@ -5169,7 +5322,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 if self.isSettings {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
-                } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData) {
+                } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
                 if self.state.selectedMessageIds == nil {
@@ -5400,7 +5553,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
 }
 
-public final class PeerInfoScreen: ViewController {
+public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     private let context: AccountContext
     private let peerId: PeerId
     private let avatarInitiallyExpanded: Bool
@@ -5634,6 +5787,8 @@ public final class PeerInfoScreen: ViewController {
                     strongSelf.tabBarItem.badgeValue = badgeValue
                 }
             })
+            
+            self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         }
                 
         self.navigationBar?.makeCustomTransitionNode = { [weak self] other, isInteractive in
@@ -5680,6 +5835,10 @@ public final class PeerInfoScreen: ViewController {
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.controllerNode.updatePresentationData(strongSelf.presentationData)
+                    
+                    if strongSelf.navigationItem.backBarButtonItem != nil {
+                        strongSelf.navigationItem.backBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+                    }
                 }
             }
         })
@@ -6086,16 +6245,16 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
         var canCreateInviteLink = false
         if let group = groupPeer as? TelegramGroup {
             switch group.role {
-            case .creator, .admin:
+            case .creator:
                 canCreateInviteLink = true
+            case let .admin(rights, _):
+                canCreateInviteLink = rights.flags.contains(.canInviteUsers)
             default:
                 break
             }
-        } else if let channel = groupPeer as? TelegramChannel {
-            if channel.hasPermission(.inviteMembers) {
-                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.username == nil) {
-                    canCreateInviteLink = true
-                }
+        } else if let channel = groupPeer as? TelegramChannel, (channel.addressName?.isEmpty ?? true) {
+            if channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                canCreateInviteLink = true
             }
         }
         

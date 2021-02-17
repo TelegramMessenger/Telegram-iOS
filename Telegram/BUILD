@@ -8,6 +8,10 @@ load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_framework",
 )
 
+load("@build_bazel_rules_apple//apple:resources.bzl",
+    "swift_intent_library",
+)
+
 load("@build_bazel_rules_apple//apple:watchos.bzl",
     "watchos_application",
     "watchos_extension",
@@ -27,6 +31,10 @@ load(
     "telegram_aps_environment",
     "telegram_team_id",
     "telegram_enable_icloud",
+)
+
+load("@build_bazel_rules_apple//apple:resources.bzl",
+    "swift_intent_library",
 )
 
 config_setting(
@@ -1176,12 +1184,9 @@ plist_fragment(
     )
 )
 
-swift_library(
-    name = "GeneratedSources",
-    module_name = "GeneratedSources",
-    srcs = glob([
-        "Generated/**/*.swift",
-    ]),
+filegroup(
+    name = "WidgetAssets",
+    srcs = glob(["WidgetKitWidget/WidgetImages.xcassets/**"]),
     visibility = ["//visibility:public"],
 )
 
@@ -1192,7 +1197,7 @@ swift_library(
         "WidgetKitWidget/**/*.swift",
     ]),
     data = [
-        "SiriIntents/Intents.intentdefinition",
+        ":WidgetAssets",
     ],
     deps = [
         "//submodules/BuildConfig:BuildConfig",
@@ -1204,7 +1209,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SyncCore:SyncCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
-        ":GeneratedSources",
+        "//Telegram:GeneratedSources",
     ],
 )
 
@@ -1229,7 +1234,9 @@ ios_extension(
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
     }),
-    deps = [":WidgetExtensionLib"],
+    deps = [
+        ":WidgetExtensionLib",
+    ],
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
@@ -1267,6 +1274,7 @@ plist_fragment(
                 <string>INSetMessageAttributeIntent</string>
                 <string>INSearchCallHistoryIntent</string>
                 <string>SelectFriendsIntent</string>
+                <string>SelectAvatarFriendsIntent</string>
             </array>
         </dict>
         <key>NSExtensionPointIdentifier</key>
@@ -1279,15 +1287,20 @@ plist_fragment(
     )
 )
 
+swift_intent_library(
+    name = "GeneratedSources",
+    src = "SiriIntents/en.lproj/Intents.intentdefinition",
+    module_name = "GeneratedSources",
+    visibility = ["//visibility:public"],
+)
+
 swift_library(
     name = "IntentsExtensionLib",
     module_name = "IntentsExtensionLib",
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
-    data = [
-        "SiriIntents/Intents.intentdefinition",
-    ],
+    data = glob(["SiriIntents/*.lproj/Intents.intentdefinition"]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
@@ -1297,7 +1310,8 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/AppLockState:AppLockState",
-        ":GeneratedSources",
+        "//Telegram:GeneratedSources",
+        "//submodules/WidgetItems:WidgetItems",
     ],
 )
 
@@ -1597,7 +1611,7 @@ ios_application(
             ":NotificationContentExtension",
             ":NotificationServiceExtension",
             ":IntentsExtension",
-#            ":WidgetExtension",
+            ":WidgetExtension",
         ],
     }),
     watch_application = select({

@@ -49,6 +49,7 @@ swift_library(
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/SectionHeaderItem:SectionHeaderItem",
         "//submodules/DirectionalPanGesture:DirectionalPanGesture",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

@@ -17,12 +17,12 @@ url=https://github.com/ali-fareed/rules_swift.git
 [submodule "build-system/tulsi"]
 	path = build-system/tulsi
 url=https://github.com/bazelbuild/tulsi.git
-[submodule "third-party/webrtc/webrtc-ios"]
-	path = third-party/webrtc/webrtc-ios
-url=https://github.com/ali-fareed/webrtc-ios.git
 [submodule "submodules/TgVoipWebrtc/tgcalls"]
 	path = submodules/TgVoipWebrtc/tgcalls
 url=../tgcalls.git
 [submodule "third-party/libvpx/libvpx"]
 	path = third-party/libvpx/libvpx
 	url = https://github.com/webmproject/libvpx.git
+[submodule "third-party/webrtc/webrtc"]
+	path = third-party/webrtc/webrtc
+	url = https://github.com/ali-fareed/webrtc.git

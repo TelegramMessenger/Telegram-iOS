@@ -522,7 +522,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
             if available {
                 let controller = PermissionController(context: context, splashScreen: true)
                 controller.navigationPresentation = .modalInLargeLayout
-                controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Location/LocalGroupLightIcon"), dark: UIImage(bundleImageName: "Location/LocalGroupDarkIcon")), title: presentationData.strings.LocalGroup_Title, subtitle: address, text: presentationData.strings.LocalGroup_Text, buttonTitle: presentationData.strings.LocalGroup_ButtonTitle, footerText: presentationData.strings.LocalGroup_IrrelevantWarning), animated: false)
+                controller.setState(.custom(icon: .icon(PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Location/LocalGroupLightIcon"), dark: UIImage(bundleImageName: "Location/LocalGroupDarkIcon"))), title: presentationData.strings.LocalGroup_Title, subtitle: address, text: presentationData.strings.LocalGroup_Text, buttonTitle: presentationData.strings.LocalGroup_ButtonTitle, secondaryButtonTitle: nil, footerText: presentationData.strings.LocalGroup_IrrelevantWarning), animated: false)
                 controller.proceed = { result in
                     let controller = context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: nil, mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address), completion: nil)
                     controller.navigationPresentation = .modalInLargeLayout

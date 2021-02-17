@@ -37,6 +37,8 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 migrationReference = TelegramGroupToChannelMigrationReference(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), accessHash: accessHash)
             case .inputChannelEmpty:
                 break
+            case .inputChannelFromMessage:
+                break
             }
         }
         var groupFlags = TelegramGroupFlags()
@@ -105,6 +107,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         }
         if (flags & Int32(1 << 25)) != 0 {
             channelFlags.insert(.isFake)
+        }
+        if (flags & Int32(1 << 26)) != 0 {
+            channelFlags.insert(.isGigagroup)
         }
 
         let restrictionInfo: PeerAccessRestrictionInfo?
