@@ -31,6 +31,7 @@ load(
     "telegram_aps_environment",
     "telegram_team_id",
     "telegram_enable_icloud",
+    "telegram_enable_siri",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -347,7 +348,10 @@ app_groups_fragment = """
     </array>
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
-"""
+""".format(
+    telegram_team_id=telegram_team_id,
+    telegram_bundle_id=telegram_bundle_id
+)
 
 plist_fragment(
     name = "TelegramEntitlements",
@@ -549,7 +553,6 @@ watchos_extension(
 
 watchos_application(
     name = "TelegramWatchApp",
-    #app_icons = ,
     bundle_id = "{telegram_bundle_id}.watchkitapp".format(
         telegram_bundle_id = telegram_bundle_id,
     ),
