@@ -519,6 +519,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             if cleanString != filteredString {
                 cleanString = filteredString
                 
+                self.textNode.layer.addShakeAnimation()
                 let hapticFeedback = HapticFeedback()
                 hapticFeedback.error()
                 DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {

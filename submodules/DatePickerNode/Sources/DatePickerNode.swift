@@ -1283,16 +1283,23 @@ private final class TimePickerNode: ASDisplayNode {
     private func handleTextInput(_ input: String) {
         self.typing = true
         
+        let maxHoursValue: Int
+        switch self.dateTimeFormat.timeFormat {
+            case .military:
+                maxHoursValue = 23
+            case .regular:
+                maxHoursValue = 12
+        }
+        
         var text = input
         var typingHours: Int?
         var typingMinutes: Int?
         if self.selection == .all {
-            text = String(text.suffix(4))
             if text.count < 2 {
                 typingHours = nil
             } else {
                 if var value = Int(String(text.prefix(2))) {
-                    if value > 24 {
+                    if value > maxHoursValue {
                         value = value % 10
                     }
                     typingHours = value
@@ -1307,7 +1314,7 @@ private final class TimePickerNode: ASDisplayNode {
         } else if self.selection == .hours {
             text = String(text.suffix(2))
             if var value = Int(text) {
-                if value > 24 {
+                if value > maxHoursValue {
                     value = value % 10
                 }
                 typingHours = value
