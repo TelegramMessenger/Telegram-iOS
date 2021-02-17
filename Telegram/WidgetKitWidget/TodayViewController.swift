@@ -1,3 +1,5 @@
+#if arch(arm64) || arch(x86_64)
+
 import UIKit
 import NotificationCenter
 import BuildConfig
@@ -63,6 +65,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct Provider: IntentTimelineProvider {
     public typealias Entry = SimpleEntry
     
@@ -221,6 +224,7 @@ struct Provider: IntentTimelineProvider {
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct AvatarsProvider: IntentTimelineProvider {
     public typealias Entry = SimpleEntry
     
@@ -379,6 +383,7 @@ struct AvatarsProvider: IntentTimelineProvider {
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct SimpleEntry: TimelineEntry {
     enum Contents {
         case recent
@@ -396,6 +401,7 @@ enum PeersWidgetData {
     case peers(ParsedPeers)
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct AvatarItemView: View {
     var peer: ParsedPeer?
     var itemSize: CGFloat
@@ -415,6 +421,7 @@ struct AvatarItemView: View {
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct WidgetView: View {
     @Environment(\.widgetFamily) private var widgetFamily
     @Environment(\.colorScheme) private var colorScheme
@@ -853,6 +860,7 @@ struct WidgetView: View {
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct AvatarsWidgetView: View {
     @Environment(\.widgetFamily) private var widgetFamily
     @Environment(\.colorScheme) private var colorScheme
@@ -952,6 +960,7 @@ private let buildConfig: BuildConfig = {
     return buildConfig
 }()
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 func getWidgetData(contents: SimpleEntry.Contents) -> PeersWidgetData {
     switch contents {
     case .recent:
@@ -963,6 +972,7 @@ func getWidgetData(contents: SimpleEntry.Contents) -> PeersWidgetData {
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct Static_Widget: Widget {
     private let kind: String = "Static_Widget"
 
@@ -978,6 +988,7 @@ struct Static_Widget: Widget {
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct Static_AvatarsWidget: Widget {
     private let kind: String = "Static_AvatarsWidget"
 
@@ -994,9 +1005,31 @@ struct Static_AvatarsWidget: Widget {
 }
 
 @main
+struct AllWidgetsEntryPoint {
+    static func main() {
+        if #available(iOS 14.0, *) {
+            AllWidgets.main()
+        } else {
+            preconditionFailure()
+        }
+    }
+}
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct AllWidgets: WidgetBundle {
    var body: some Widget {
         Static_Widget()
         Static_AvatarsWidget()
    }
 }
+
+#else
+
+@main
+class MyApp {
+    static func main() {
+        preconditionFailure("Not supported")
+    }
+}
+
+#endif

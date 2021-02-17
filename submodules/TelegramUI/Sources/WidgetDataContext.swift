@@ -104,7 +104,7 @@ final class WidgetDataContext {
         let queue = Queue()
         let updatedAdditionalPeerIds: Signal<[AccountRecordId: Set<PeerId>], NoError> = Signal { subscriber in
             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
-                #if arch(arm64) || arch(i386) || arch(x86_64)
+                #if arch(arm64) || arch(x86_64)
                 WidgetCenter.shared.getCurrentConfigurations { result in
                     var peerIds: [AccountRecordId: Set<PeerId>] = [:]
                     

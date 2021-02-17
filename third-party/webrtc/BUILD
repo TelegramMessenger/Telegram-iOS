@@ -3174,6 +3174,7 @@ common_arm_specific_sources = [webrtc_source_dir + "/" + path for path in [
 armv7_specific_sources = [webrtc_source_dir + "/" + path for path in [
     "common_audio/signal_processing/filter_ar_fast_q12.c",
     "common_audio/signal_processing/complex_bit_reverse.c",
+    "common_audio/third_party/ooura/fft_size_128/ooura_fft_neon.cc",
 ]]
 
 arm64_specific_sources = [webrtc_source_dir + "/" + path for path in [
