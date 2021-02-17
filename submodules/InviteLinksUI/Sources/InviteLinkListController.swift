@@ -529,6 +529,9 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                                                     invitesContext.add(newInvite)
                                             }
                                         }
+                                        
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                                     }))
                                 }
                             })
@@ -688,6 +691,9 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                                 
                                 invitesContext.remove(invite)
                                 revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
+                                
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                             })
                         ]),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])

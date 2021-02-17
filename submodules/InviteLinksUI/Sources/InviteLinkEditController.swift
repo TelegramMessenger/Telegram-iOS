@@ -17,6 +17,7 @@ import PresentationDataUtils
 import AppBundle
 import ContextUI
 import TelegramStringFormatting
+import UndoUI
 
 private final class InviteLinkEditControllerArguments {
     let context: AccountContext
@@ -397,6 +398,9 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
                             case let .replace(_, invitation):
                                 completion?(invitation)
                             }
+                            
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                         }, error: { _ in
                             updateState { state in
                                 var updatedState = state

@@ -31,6 +31,7 @@ public enum UndoOverlayContent {
     case forward(savedMessages: Bool, text: String)
     case autoDelete(isOn: Bool, title: String?, text: String)
     case gigagroupConversion(text: String)
+    case linkRevoked(text: String)
 }
 
 public enum UndoOverlayAction {
