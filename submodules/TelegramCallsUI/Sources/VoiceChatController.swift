@@ -599,6 +599,7 @@ public final class VoiceChatController: ViewController {
         private var didSetContentsReady: Bool = false
         private var didSetDataReady: Bool = false
         
+        private var peer: Peer?
         private var currentTitle: String = ""
         private var currentSubtitle: String = ""
         private var currentCallMembers: ([GroupCallParticipantsContext.Participant], String?)?
@@ -1298,6 +1299,7 @@ public final class VoiceChatController: ViewController {
                 }
                     
                 if let peer = peerViewMainPeer(view) {
+                    strongSelf.peer = peer
                     strongSelf.currentTitle = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
                 }
                 if !strongSelf.didSetDataReady {
@@ -2466,8 +2468,17 @@ public final class VoiceChatController: ViewController {
             
             var processedPeerIds = Set<PeerId>()
             
-            entries.append(.invite(self.presentationData.theme, self.presentationData.strings, self.presentationData.strings.VoiceChat_InviteMember))
-
+            var canInvite = true
+            if let peer = self.peer as? TelegramChannel, peer.flags.contains(.isGigagroup) {
+                if peer.flags.contains(.isCreator) || peer.adminRights != nil {
+                } else {
+                    canInvite = false
+                }
+            }
+            if canInvite {
+                entries.append(.invite(self.presentationData.theme, self.presentationData.strings, self.presentationData.strings.VoiceChat_InviteMember))
+            }
+            
             for member in callMembers.0 {
                 if processedPeerIds.contains(member.peer.id) {
                     continue

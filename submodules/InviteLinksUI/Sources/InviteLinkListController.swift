@@ -422,6 +422,10 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
     
     let arguments = InviteLinkListControllerArguments(context: context, shareMainLink: { invite in
         let shareController = ShareController(context: context, subject: .url(invite.link))
+        shareController.actionCompleted = {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        }
         presentControllerImpl?(shareController, nil)
     }, openMainLink: { invite in
         let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: nil, revokedInvitationsContext: revokedInvitesContext, importersContext: nil)
@@ -580,6 +584,10 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                     f(.default)
                 
                     let shareController = ShareController(context: context, subject: .url(invite.link))
+                    shareController.actionCompleted = {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
                     presentControllerImpl?(shareController, nil)
                 })))
                 

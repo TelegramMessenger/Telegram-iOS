@@ -918,6 +918,10 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, shareLink: { invite in
         let shareController = ShareController(context: context, subject: .url(invite.link))
+        shareController.actionCompleted = {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        }
         presentControllerImpl?(shareController, nil)
     }, linkContextAction: { node in
         guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?() else {

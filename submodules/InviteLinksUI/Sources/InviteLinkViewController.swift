@@ -435,6 +435,10 @@ public final class InviteLinkViewController: ViewController {
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
+                shareController.actionCompleted = { [weak self] in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                }
                 self?.controller?.present(shareController, in: .window(.root))
             }, editLink: { [weak self] invite in
                 self?.editButtonPressed()
