@@ -191,7 +191,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                                 latestIndex = range.upperBound
                                 
-                                let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.upperBound)])
+                                let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: min(rawText.count, range.upperBound))])
                                 if index == 0 {
                                     segments.append(.number(count, NSAttributedString(string: part, font: textFont, textColor: textColor)))
                                 } else {

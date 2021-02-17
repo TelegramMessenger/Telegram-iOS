@@ -61,7 +61,7 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
         _eyedropperButton.exclusiveTouch = true;
         [_eyedropperButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/Eyedropper"], [UIColor whiteColor]) forState:UIControlStateNormal];
         [_eyedropperButton addTarget:self action:@selector(eyedropperButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-//        [self addSubview:_eyedropperButton];
+        [self addSubview:_eyedropperButton];
         
         _settingsButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 44.0f, 44.0f)];
         _settingsButton.exclusiveTouch = true;
@@ -211,8 +211,7 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
 
 - (void)layoutSubviews
 {
-    CGFloat leftInset = 23.0f;
-    CGFloat rightInset = 66.0f;
+    CGFloat inset = 66.0f;
     CGFloat colorPickerHeight = 10.0f;
     if (self.frame.size.width > self.frame.size.height)
     {
@@ -223,14 +222,14 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
         }
         else
         {
-            _colorPicker.frame = CGRectMake(leftInset, ceil((self.frame.size.height - colorPickerHeight) / 2.0f), self.frame.size.width - leftInset - rightInset, colorPickerHeight);
+            _colorPicker.frame = CGRectMake(inset, ceil((self.frame.size.height - colorPickerHeight) / 2.0f), self.frame.size.width - inset - inset, colorPickerHeight);
             _eyedropperButton.frame = CGRectMake(10.0f, floor((self.frame.size.height - _eyedropperButton.frame.size.height) / 2.0f) + 1.0f, _eyedropperButton.frame.size.width, _eyedropperButton.frame.size.height);
             _settingsButton.frame = CGRectMake(self.frame.size.width - _settingsButton.frame.size.width - 10.0f, floor((self.frame.size.height - _settingsButton.frame.size.height) / 2.0f) + 1.0f, _settingsButton.frame.size.width, _settingsButton.frame.size.height);
         }
     }
     else
     {
-        _colorPicker.frame = CGRectMake(ceil((self.frame.size.width - colorPickerHeight) / 2.0f), rightInset, colorPickerHeight, self.frame.size.height - leftInset - rightInset);
+        _colorPicker.frame = CGRectMake(ceil((self.frame.size.width - colorPickerHeight) / 2.0f), inset, colorPickerHeight, self.frame.size.height - inset - inset);
         _eyedropperButton.frame = CGRectMake(floor((self.frame.size.width - _eyedropperButton.frame.size.width) / 2.0f), self.frame.size.height -  _eyedropperButton.frame.size.height - 10.0, _eyedropperButton.frame.size.width, _eyedropperButton.frame.size.height);
         _settingsButton.frame = CGRectMake(floor((self.frame.size.width - _settingsButton.frame.size.width) / 2.0f), 10.0f, _settingsButton.frame.size.width, _settingsButton.frame.size.height);
     }

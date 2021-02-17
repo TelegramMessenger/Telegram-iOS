@@ -5,6 +5,14 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
+private let validIdentifierSet: CharacterSet = {
+    var set = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
+    set.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
+    set.insert(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
+    set.insert("_")
+    return set
+}()
+
 public enum ItemListSingleLineInputItemType: Equatable {
     case regular(capitalization: Bool, autocorrection: Bool)
     case password
@@ -503,7 +511,21 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         }
         
         if let item = self.item, case .username = item.type {
-            let cleanString = string.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "_")
+            var cleanString = string.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "_")
+            
+            let filtered = cleanString.unicodeScalars.filter { validIdentifierSet.contains($0) }
+            let filteredString = String(String.UnicodeScalarView(filtered))
+            
+            if cleanString != filteredString {
+                cleanString = filteredString
+                
+                let hapticFeedback = HapticFeedback()
+                hapticFeedback.error()
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+                    let _ = hapticFeedback
+                })
+            }
+            
             if cleanString != string {
                 var text = textField.text ?? ""
                 text.replaceSubrange(text.index(text.startIndex, offsetBy: range.lowerBound) ..< text.index(text.startIndex, offsetBy: range.upperBound), with: cleanString)
