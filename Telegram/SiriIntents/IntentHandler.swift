@@ -55,7 +55,25 @@ enum IntentHandlingError {
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
-class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
+class IntentHandler: INExtension {
+    override public func handler(for intent: INIntent) -> Any {
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+            if intent is SelectAvatarFriendsIntent {
+                return AvatarsIntentHandler()
+            } else if intent is SelectFriendsIntent {
+                return FriendsIntentHandler()
+            } else {
+                return DefaultIntentHandler()
+            }
+        } else {
+            return DefaultIntentHandler()
+        }
+    }
+}
+
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
+@objc(IntentHandler)
+class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
     private let accountPromise = Promise<Account?>()
     private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
     
@@ -106,7 +124,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         initializeAccountManagement()
-        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true)
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
         self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
@@ -193,20 +211,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         self.resolvePersonsDisposable.dispose()
         self.actionDisposable.dispose()
         self.searchDisposable.dispose()
-    }
-    
-    override public func handler(for intent: INIntent) -> Any {
-        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
-            if intent is SelectAvatarFriendsIntent {
-                return AvatarsIntentHandler()
-            } else if intent is SelectFriendsIntent {
-                return FriendsIntentHandler()
-            } else {
-                return self
-            }
-        } else {
-            return self
-        }
     }
     
     enum ResolveResult {
@@ -789,7 +793,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
             for (accountId, accountPeerId, _) in accounts {
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
                         if let username = peer.username, !username.isEmpty {
@@ -958,7 +962,7 @@ private final class WidgetIntentHandler {
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
             for (accountId, accountPeerId, _) in accounts {
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
                         if let username = peer.username, !username.isEmpty {
@@ -1041,7 +1045,7 @@ private final class WidgetIntentHandler {
                 if !isActive {
                     continue
                 }
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> [Friend] in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, transaction: { postbox, transaction -> [Friend] in
                     var peers: [Peer] = []
                     
                     for id in getRecentPeers(transaction: transaction) {

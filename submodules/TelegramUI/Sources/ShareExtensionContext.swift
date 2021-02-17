@@ -202,7 +202,7 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true)
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext

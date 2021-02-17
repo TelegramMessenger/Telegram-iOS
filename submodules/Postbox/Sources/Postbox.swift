@@ -1125,7 +1125,7 @@ func debugRestoreState(basePath:String, name: String) {
 
 private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool) -> Signal<PostboxResult, NoError> {
     let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
@@ -1138,7 +1138,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             
             let startTime = CFAbsoluteTimeGetCurrent()
             
-            guard var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+            guard var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                 subscriber.putNext(.upgrading(progress))
             }) else {
                 subscriber.putNext(.error)
@@ -1161,7 +1161,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                 postboxLog("Version \(userVersion) is newer than supported")
                                 assertionFailure("Version \(userVersion) is newer than supported")
                                 valueBox.drop()
-                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                     subscriber.putNext(.upgrading(progress))
                                 }) else {
                                     subscriber.putNext(.error)
@@ -1185,7 +1185,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                                 valueBox.internalClose()
                                                 let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
                                                 let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
-                                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                                     subscriber.putNext(.upgrading(progress))
                                                 }) else {
                                                     subscriber.putNext(.error)
@@ -1199,7 +1199,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                     assertionFailure("Couldn't find any upgrade for \(userVersion)")
                                     postboxLog("Couldn't find any upgrade for \(userVersion)")
                                     valueBox.drop()
-                                    guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                    guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                         subscriber.putNext(.upgrading(progress))
                                     }) else {
                                         subscriber.putNext(.error)
@@ -1538,10 +1538,12 @@ public final class Postbox {
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCountsState(value: reindexUnreadVersion)
             }
             //#if DEBUG
-            self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
+            if !isTemporary {
+                self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
+            }
             //#endif
             
-            if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
+            if !isTemporary && self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
                 let startTime = CFAbsoluteTimeGetCurrent()
                 let (totalStates, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)

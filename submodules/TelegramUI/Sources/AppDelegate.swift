@@ -664,7 +664,7 @@ final class SharedApplicationContext {
         })
         
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false)
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
