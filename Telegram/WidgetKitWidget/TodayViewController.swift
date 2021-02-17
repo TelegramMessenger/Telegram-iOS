@@ -59,22 +59,6 @@ private let accountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInpu
     return nil
 })
 
-private struct ApplicationSettings {
-    let logging: LoggingSettings
-}
-
-private func applicationSettings(accountManager: AccountManager) -> Signal<ApplicationSettings, NoError> {
-    return accountManager.transaction { transaction -> ApplicationSettings in
-        let loggingSettings: LoggingSettings
-        if let value = transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings {
-            loggingSettings = value
-        } else {
-            loggingSettings = LoggingSettings.defaultSettings
-        }
-        return ApplicationSettings(logging: loggingSettings)
-    }
-}
-
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
 }
@@ -155,7 +139,7 @@ struct Provider: IntentTimelineProvider {
         
         var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
         for (accountId, items) in itemsByAccount {
-            friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> [ParsedPeer] in
+            friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, transaction: { postbox, transaction -> [ParsedPeer] in
                 guard let state = transaction.getState() as? AuthorizedAccountState else {
                     return []
                 }
@@ -313,7 +297,7 @@ struct AvatarsProvider: IntentTimelineProvider {
         
         var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
         for (accountId, items) in itemsByAccount {
-            friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> [ParsedPeer] in
+            friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, transaction: { postbox, transaction -> [ParsedPeer] in
                 guard let state = transaction.getState() as? AuthorizedAccountState else {
                     return []
                 }
