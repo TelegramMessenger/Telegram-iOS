@@ -55,6 +55,8 @@ import ChatInterfaceState
 import TelegramVoip
 import InviteLinksUI
 import UndoUI
+import MediaResources
+import HashtagSearchUI
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -1538,6 +1540,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private var hiddenMediaDisposable: Disposable?
     private let hiddenAvatarRepresentationDisposable = MetaDisposable()
     
+    private var resolvePeerByNameDisposable: MetaDisposable?
+    private let navigationActionDisposable = MetaDisposable()
+    private let enqueueMediaMessageDisposable = MetaDisposable()
+    
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     private(set) var data: PeerInfoScreenData?
     private(set) var state = PeerInfoState(
@@ -2796,6 +2802,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.addMemberDisposable.dispose()
         self.preloadHistoryDisposable.dispose()
         self.preloadStickerDisposable.dispose()
+        self.resolvePeerByNameDisposable?.dispose()
+        self.navigationActionDisposable.dispose()
+        self.enqueueMediaMessageDisposable.dispose()
     }
     
     override func didLoad() {
@@ -2923,7 +2932,129 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, callPeer: { peerId, isVideo in
             //self?.controllerInteraction?.callPeer(peerId)
         }, enqueueMessage: { _ in
-        }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
+        }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
+            if let strongSelf = self {
+                strongSelf.openUrl(url: url, concealed: false, external: false)
+            }
+        }, openUrlIn: { [weak self] url in
+            if let strongSelf = self {
+                strongSelf.openUrlIn(url)
+            }
+        }, openPeerMention: { [weak self] mention in
+            if let strongSelf = self {
+                strongSelf.openPeerMention(mention)
+            }
+        }, openPeer: { [weak self] peerId in
+            if let strongSelf = self {
+                strongSelf.openPeer(peerId: peerId, navigation: .default)
+            }
+        }, openHashtag: { [weak self] peerName, hashtag in
+            if let strongSelf = self {
+                strongSelf.openHashtag(hashtag, peerName: peerName)
+            }
+        }, openBotCommand: { _ in
+        }, addContact: { [weak self] phoneNumber in
+            if let strongSelf = self {
+                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
+                    self?.controller?.present(controller, in: .window(.root), with: arguments)
+                }, pushController: { [weak self] controller in
+                    if let strongSelf = self {
+                        strongSelf.controller?.push(controller)
+                    }
+                }, completed: {})
+            }
+        }, storeMediaPlaybackState: { [weak self] messageId, timestamp in
+            guard let strongSelf = self else {
+                return
+            }
+            var storedState: MediaPlaybackStoredState?
+            if let timestamp = timestamp {
+                storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
+            }
+            let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
+        }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
+                return transaction.getMessage(messageId)
+            } |> deliverOnMainQueue).start(next: { [weak self] message in
+                guard let strongSelf = self, let message = message else {
+                    return
+                }
+                
+                var mediaReference: AnyMediaReference?
+                for m in message.media {
+                    if let image = m as? TelegramMediaImage {
+                        mediaReference = AnyMediaReference.standalone(media: image)
+                    }
+                }
+                
+                if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
+                    legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: "", snapshots: snapshots, transitionCompletion: {
+                        transitionCompletion()
+                    }, presentStickers: { [weak self] completion in
+                        if let strongSelf = self {
+                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                return true
+                            })
+                            strongSelf.controller?.present(controller, in: .window(.root))
+                            return controller
+                        } else {
+                            return nil
+                        }
+                    }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                        if let strongSelf = self {
+                            strongSelf.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: strongSelf.context.account, signals: signals!)
+                            |> deliverOnMainQueue).start(next: { [weak self] messages in
+                                if let strongSelf = self {
+                                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.peerId, messages: messages).start()
+                                }
+                            }))
+                        }
+                    }, present: { [weak self] c, a in
+                        self?.controller?.present(c, in: .window(.root), with: a)
+                    })
+                }
+            })
+        })))
+    }
+    private func openResolved(_ result: ResolvedUrl) {
+        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+            return
+        }
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat, navigationController: navigationController, openPeer: { [weak self] peerId, navigation in
+            guard let strongSelf = self else {
+                return
+            }
+            switch navigation {
+                case let .chat(_, subject, peekData):
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData))
+                case .info:
+                    strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                                strongSelf.controller?.push(infoController)
+                            }
+                        }
+                    }))
+                case let .withBotStartPayload(startPayload):
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload))
+                default:
+                    break
+                }
+            }, sendFile: nil,
+            sendSticker: { [weak self] f, sourceNode, sourceRect in
+            return false
+        }, present: { [weak self] c, a in
+            self?.controller?.present(c, in: .window(.root), with: a)
+        }, dismissInput: { [weak self] in
+            
+        }, contentContext: nil)
     }
     
     private func openUrl(url: String, concealed: Bool, external: Bool) {
@@ -2946,6 +3077,16 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self?.view.endEditing(true)
             }, contentContext: nil)
         })
+    }
+    
+    private func openUrlIn(_ url: String) {
+        let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: url), openUrl: { [weak self] url in
+            if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
+                })
+            }
+        })
+        self.controller?.present(actionSheet, in: .window(.root))
     }
     
     private func openPeer(peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer) {
@@ -2973,6 +3114,126 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peerId), botStart: startPayload))
             }
         }
+    }
+    
+    private func openPeerMention(_ name: String, navigation: ChatControllerInteractionNavigateToPeer = .default) {
+        let disposable: MetaDisposable
+        if let resolvePeerByNameDisposable = self.resolvePeerByNameDisposable {
+            disposable = resolvePeerByNameDisposable
+        } else {
+            disposable = MetaDisposable()
+            self.resolvePeerByNameDisposable = disposable
+        }
+        var resolveSignal = resolvePeerByName(account: self.context.account, name: name, ageLimit: 10)
+        
+        var cancelImpl: (() -> Void)?
+        let presentationData = self.presentationData
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            self?.controller?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        resolveSignal = resolveSignal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = { [weak self] in
+            self?.resolvePeerByNameDisposable?.set(nil)
+        }
+        let account = self.context.account
+        disposable.set((resolveSignal
+        |> take(1)
+        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+            return account.postbox.transaction { transaction -> Peer? in
+                if let peerId = peerId {
+                    return transaction.getPeer(peerId)
+                } else {
+                    return nil
+                }
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            if let strongSelf = self {
+                if let peer = peer {
+                    var navigation = navigation
+                    if case .default = navigation {
+                        if let peer = peer as? TelegramUser, peer.botInfo != nil {
+                            navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
+                        }
+                    }
+                    strongSelf.openResolved(.peer(peer.id, navigation))
+                } else {
+                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }
+            }
+        }))
+    }
+    
+    private func openHashtag(_ hashtag: String, peerName: String?) {
+        if self.resolvePeerByNameDisposable == nil {
+            self.resolvePeerByNameDisposable = MetaDisposable()
+        }
+        let account = self.context.account
+        var resolveSignal: Signal<Peer?, NoError>
+        if let peerName = peerName {
+            resolveSignal = resolvePeerByName(account: self.context.account, name: peerName)
+            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                if let peerId = peerId {
+                    return account.postbox.loadedPeerWithId(peerId)
+                    |> map(Optional.init)
+                } else {
+                    return .single(nil)
+                }
+            }
+        } else {
+            resolveSignal = self.context.account.postbox.loadedPeerWithId(self.peerId)
+            |> map(Optional.init)
+        }
+        var cancelImpl: (() -> Void)?
+        let presentationData = self.presentationData
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            self?.controller?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        resolveSignal = resolveSignal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = { [weak self] in
+            self?.resolvePeerByNameDisposable?.set(nil)
+        }
+        self.resolvePeerByNameDisposable?.set((resolveSignal
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            if let strongSelf = self, !hashtag.isEmpty {
+                let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
+                strongSelf.controller?.push(searchController)
+            }
+        }))
     }
     
     private func performButtonAction(key: PeerInfoHeaderButtonKey) {

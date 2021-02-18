@@ -1401,60 +1401,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                if strongSelf.resolvePeerByNameDisposable == nil {
-                    strongSelf.resolvePeerByNameDisposable = MetaDisposable()
-                }
-                let account = strongSelf.context.account
-                var resolveSignal: Signal<Peer?, NoError>
-                if let peerName = peerName {
-                    resolveSignal = resolvePeerByName(account: strongSelf.context.account, name: peerName)
-                    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                        if let peerId = peerId {
-                            return account.postbox.loadedPeerWithId(peerId)
-                            |> map(Optional.init)
-                        } else {
-                            return .single(nil)
-                        }
-                    }
-                } else {
-                    resolveSignal = context.account.postbox.loadedPeerWithId(strongSelf.chatLocation.peerId)
-                    |> map(Optional.init)
-                }
-                var cancelImpl: (() -> Void)?
-                let presentationData = strongSelf.presentationData
-                let progressSignal = Signal<Never, NoError> { subscriber in
-                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
-                        cancelImpl?()
-                    }))
-                    self?.present(controller, in: .window(.root))
-                    return ActionDisposable { [weak controller] in
-                        Queue.mainQueue().async() {
-                            controller?.dismiss()
-                        }
-                    }
-                }
-                |> runOn(Queue.mainQueue())
-                |> delay(0.15, queue: Queue.mainQueue())
-                let progressDisposable = progressSignal.start()
-                
-                resolveSignal = resolveSignal
-                |> afterDisposed {
-                    Queue.mainQueue().async {
-                        progressDisposable.dispose()
-                    }
-                }
-                cancelImpl = {
-                    self?.resolvePeerByNameDisposable?.set(nil)
-                }
-                strongSelf.resolvePeerByNameDisposable?.set((resolveSignal
-                |> deliverOnMainQueue).start(next: { peer in
-                    if let strongSelf = self, !hashtag.isEmpty {
-                        let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
-                        strongSelf.effectiveNavigationController?.pushViewController(searchController)
-                    }
-                }))
-            })
+            strongSelf.openHashtag(hashtag, peerName: peerName)
         }, updateInputState: { [weak self] f in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -10789,6 +10736,63 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
+                }
+            }))
+        })
+    }
+    
+    private func openHashtag(_ hashtag: String, peerName: String?) {
+        let _ = self.presentVoiceMessageDiscardAlert(action: {
+            if self.resolvePeerByNameDisposable == nil {
+                self.resolvePeerByNameDisposable = MetaDisposable()
+            }
+            let account = self.context.account
+            var resolveSignal: Signal<Peer?, NoError>
+            if let peerName = peerName {
+                resolveSignal = resolvePeerByName(account: self.context.account, name: peerName)
+                |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                    if let peerId = peerId {
+                        return account.postbox.loadedPeerWithId(peerId)
+                        |> map(Optional.init)
+                    } else {
+                        return .single(nil)
+                    }
+                }
+            } else {
+                resolveSignal = self.context.account.postbox.loadedPeerWithId(self.chatLocation.peerId)
+                |> map(Optional.init)
+            }
+            var cancelImpl: (() -> Void)?
+            let presentationData = self.presentationData
+            let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                self?.present(controller, in: .window(.root))
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            resolveSignal = resolveSignal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            cancelImpl = { [weak self] in
+                self?.resolvePeerByNameDisposable?.set(nil)
+            }
+            self.resolvePeerByNameDisposable?.set((resolveSignal
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if let strongSelf = self, !hashtag.isEmpty {
+                    let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
+                    strongSelf.effectiveNavigationController?.pushViewController(searchController)
                 }
             }))
         })
