@@ -200,6 +200,9 @@ func mergeChannel(lhs: TelegramChannel?, rhs: TelegramChannel) -> TelegramChanne
     }
     
     var channelFlags = lhs.flags
+    if rhs.flags.contains(.isGigagroup) {
+        channelFlags.insert(.isGigagroup)
+    }
     if rhs.flags.contains(.isVerified) {
         channelFlags.insert(.isVerified)
     } else {

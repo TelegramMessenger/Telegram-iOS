@@ -575,7 +575,7 @@ public final class InviteLinkViewController: ViewController {
                         let subtitle: String
                         let subtitleExpired: Bool
                         if let usageLimit = invite.usageLimit {
-                            let remaining = usageLimit - state.count
+                            let remaining = max(0, usageLimit - state.count)
                             subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
                             subtitleExpired = remaining <= 0
                         } else {
