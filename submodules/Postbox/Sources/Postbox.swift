@@ -1125,11 +1125,37 @@ func debugRestoreState(basePath:String, name: String) {
 
 private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool, useCopy: Bool) -> Signal<PostboxResult, NoError> {
     let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+            
+            var tempDir: TempBoxDirectory?
+            let dbBasePath: String
+            if useCopy {
+                let directory = TempBox.shared.tempDirectory()
+                tempDir = directory
+                
+                let originalBasePath = basePath + "/db"
+                if let originalFiles = try? FileManager.default.contentsOfDirectory(atPath: originalBasePath) {
+                    do {
+                        for fileName in originalFiles {
+                            try FileManager.default.copyItem(atPath: originalBasePath + "/" + fileName, toPath: directory.path + "/" + fileName)
+                        }
+                    } catch let e {
+                        postboxLog("openPostbox useCopy error: \(e)")
+                        subscriber.putNext(.error)
+                        return
+                    }
+                } else {
+                    subscriber.putNext(.error)
+                    return
+                }
+                dbBasePath = directory.path
+            } else {
+                dbBasePath = basePath + "/db"
+            }
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
@@ -1138,7 +1164,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             
             let startTime = CFAbsoluteTimeGetCurrent()
             
-            guard var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+            guard var valueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                 subscriber.putNext(.upgrading(progress))
             }) else {
                 subscriber.putNext(.error)
@@ -1161,7 +1187,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                 postboxLog("Version \(userVersion) is newer than supported")
                                 assertionFailure("Version \(userVersion) is newer than supported")
                                 valueBox.drop()
-                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                     subscriber.putNext(.upgrading(progress))
                                 }) else {
                                     subscriber.putNext(.error)
@@ -1183,9 +1209,9 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                             })
                                             if let updatedPath = updatedPath {
                                                 valueBox.internalClose()
-                                                let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
-                                                let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
-                                                guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                                let _ = try? FileManager.default.removeItem(atPath: dbBasePath)
+                                                let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: dbBasePath)
+                                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                                     subscriber.putNext(.upgrading(progress))
                                                 }) else {
                                                     subscriber.putNext(.error)
@@ -1199,7 +1225,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                     assertionFailure("Couldn't find any upgrade for \(userVersion)")
                                     postboxLog("Couldn't find any upgrade for \(userVersion)")
                                     valueBox.drop()
-                                    guard let updatedValueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                    guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                         subscriber.putNext(.upgrading(progress))
                                     }) else {
                                         subscriber.putNext(.error)
@@ -1217,7 +1243,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 let endTime = CFAbsoluteTimeGetCurrent()
                 print("Postbox load took \((endTime - startTime) * 1000.0) ms")
                 
-                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations, isTemporary: isTemporary)))
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations, isTemporary: isTemporary, tempDir: tempDir)))
                 subscriber.putCompletion()
                 break
             }
@@ -1232,6 +1258,7 @@ public final class Postbox {
     public let seedConfiguration: SeedConfiguration
     private let basePath: String
     let valueBox: SqliteValueBox
+    private let tempDir: TempBoxDirectory?
     
     private let ipcNotificationsDisposable = MetaDisposable()
     
@@ -1370,7 +1397,7 @@ public final class Postbox {
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool) {
+    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, tempDir: TempBoxDirectory?) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1378,6 +1405,7 @@ public final class Postbox {
         self.queue = queue
         self.basePath = basePath
         self.seedConfiguration = seedConfiguration
+        self.tempDir = tempDir
         
         print("MediaBox path: \(self.basePath + "/media")")
         
@@ -1585,7 +1613,9 @@ public final class Postbox {
     }
     
     deinit {
-        assert(true)
+        if let tempDir = self.tempDir {
+            TempBox.shared.dispose(tempDir)
+        }
     }
     
     private func takeNextViewId() -> Int {

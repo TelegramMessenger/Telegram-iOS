@@ -842,13 +842,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             }
         }
-        if !isReplyThreadHead, !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
+        /*if !isReplyThreadHead, !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { controller, f in
                 interfaceInteraction.deleteMessages(messages, controller, f)
             })))
-        }
+        }*/
         
         if data.messageActions.options.contains(.viewStickerPack) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.StickerPack_ViewPack, icon: { theme in
@@ -904,7 +904,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             clearCacheAsDelete = true
         }
         
-        if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
+        if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) {
             var autoremoveDeadline: Int32?
             for attribute in message.attributes {
                 if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
