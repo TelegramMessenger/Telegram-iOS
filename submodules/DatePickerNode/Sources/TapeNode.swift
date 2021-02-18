@@ -63,7 +63,9 @@ open class TapeNode: ASDisplayNode {
         return UITableView()
     }()
     
-    private var infinityRowsMultiplier: Int = 1
+    private var infinityRowsMultiplier: Int {
+        return generateInfinityRowsMultiplier()
+    }
     
     var currentSelectedRow: Int?
     var currentSelectedIndex: Int {
@@ -86,8 +88,6 @@ open class TapeNode: ASDisplayNode {
     }
     
     fileprivate func setup() {
-        self.infinityRowsMultiplier = self.generateInfinityRowsMultiplier()
-        
         if #available(iOS 11.0, *) {
             self.tableView.contentInsetAdjustmentBehavior = .never
         }
@@ -162,22 +162,40 @@ open class TapeNode: ASDisplayNode {
         if self.currentSelectedIndex == self.indexForRow(row) {
             return
         }
-        var finalRow = row
         
+        var finalRow = row
         if row <= self.numberOfRows {
-            let middleMultiplier = (self.infinityRowsMultiplier / 2)
+            let middleMultiplier = self.infinityRowsMultiplier / 2
             let middleIndex = self.numberOfRows * middleMultiplier
             finalRow = middleIndex - (self.numberOfRows - finalRow)
         }
-        
         self.currentSelectedRow = finalRow
+        
         if let currentSelectedRow = self.currentSelectedRow {
             self.tableView.setContentOffset(CGPoint(x: 0.0, y: CGFloat(currentSelectedRow) * self.rowHeight), animated: animated)
         }
     }
     
+    func selectMiddleRow() {
+        var finalRow = self.currentSelectedIndex
+        let middleMultiplier = self.infinityRowsMultiplier / 2
+        let middleIndex = self.numberOfRows * middleMultiplier
+        finalRow = middleIndex - (self.numberOfRows - finalRow)
+        
+        self.currentSelectedRow = finalRow
+        
+        if let currentSelectedRow = self.currentSelectedRow {
+            self.tableView.setContentOffset(CGPoint(x: 0.0, y: CGFloat(currentSelectedRow) * self.rowHeight), animated: false)
+        }
+    }
+    
     open func reloadPickerView() {
         self.tableView.reloadData()
+    }
+    
+    private func hapticTap() {
+        self.hapticFeedback.impact(.light)
+        AudioServicesPlaySystemSound(1157)
     }
 }
 
@@ -248,15 +266,18 @@ extension TapeNode: UIScrollViewDelegate {
         if !decelerate {
             self.isScrolling = false
             self.isScrollingUpdated?(false)
+            
+            self.selectMiddleRow()
         }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.isScrolling = false
         self.isScrollingUpdated?(false)
+        
+        self.selectMiddleRow()
     }
     
-
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let partialRow = Float(scrollView.contentOffset.y / self.rowHeight)
         let roundedRow = Int(lroundf(partialRow))
@@ -264,8 +285,7 @@ extension TapeNode: UIScrollViewDelegate {
         if self.previousRoundedRow != roundedRow && self.isScrolling {
             self.previousRoundedRow = roundedRow
             
-            self.hapticFeedback.impact()
-            AudioServicesPlaySystemSound(1157)
+            self.hapticTap()
         }
     }
 }
