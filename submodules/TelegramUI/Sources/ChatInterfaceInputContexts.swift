@@ -242,7 +242,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         if case .creator = group.role {
             canSetupAutoremoveTimeout = true
         } else if case let .admin(rights, _) = group.role {
-            if rights.flags.contains(.canDeleteMessages) {
+            if rights.rights.contains(.canDeleteMessages) {
                 canSetupAutoremoveTimeout = true
             }
         }

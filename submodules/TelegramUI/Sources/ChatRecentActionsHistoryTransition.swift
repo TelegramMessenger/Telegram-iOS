@@ -649,7 +649,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 } else {
                     var appendedRightsHeader = false
                     
-                    if case let .creator(_, prevAdminInfo, prevRank) = prev.participant, case let .creator(_, newAdminInfo, newRank) = new.participant, (prevRank != newRank || prevAdminInfo?.rights.flags.contains(.canBeAnonymous) != newAdminInfo?.rights.flags.contains(.canBeAnonymous)) {
+                    if case let .creator(_, prevAdminInfo, prevRank) = prev.participant, case let .creator(_, newAdminInfo, newRank) = new.participant, (prevRank != newRank || prevAdminInfo?.rights.rights.contains(.canBeAnonymous) != newAdminInfo?.rights.rights.contains(.canBeAnonymous)) {
                         if prevRank != newRank {
                             appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRankName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), newRank ?? "") : self.presentationData.strings.Channel_AdminLog_MessageRankUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!, newRank ?? ""), generateEntities: { index in
                                 var result: [MessageTextEntityType] = []
@@ -663,7 +663,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 return result
                             }, to: &text, entities: &entities)
                         }
-                        if prevAdminInfo?.rights.flags.contains(.canBeAnonymous) != newAdminInfo?.rights.flags.contains(.canBeAnonymous) {
+                        if prevAdminInfo?.rights.rights.contains(.canBeAnonymous) != newAdminInfo?.rights.rights.contains(.canBeAnonymous) {
                             let order: [(TelegramChatAdminRightsFlags, String)]
                             
                             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
@@ -676,7 +676,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             
                             var appendedRightsHeader = false
                             for (flag, string) in order {
-                                if prevAdminInfo?.rights.flags.contains(flag) != newAdminInfo?.rights.flags.contains(flag) {
+                                if prevAdminInfo?.rights.rights.contains(flag) != newAdminInfo?.rights.rights.contains(flag) {
                                     if !appendedRightsHeader {
                                         appendedRightsHeader = true
                                         appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessagePromotedName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessagePromotedNameUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
@@ -694,7 +694,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     }
                                     
                                     text += "\n"
-                                    if prevAdminInfo?.rights.flags.contains(flag) != true {
+                                    if prevAdminInfo?.rights.rights.contains(flag) != true {
                                         text += "+"
                                     } else {
                                         text += "-"
@@ -705,8 +705,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         }
                     } else if case let .member(_, _, prevAdminRights, _, prevRank) = prev.participant {
                         if case let .member(_, _, newAdminRights, _, newRank) = new.participant {
-                            let prevFlags = prevAdminRights?.rights.flags ?? []
-                            let newFlags = newAdminRights?.rights.flags ?? []
+                            let prevFlags = prevAdminRights?.rights.rights ?? []
+                            let newFlags = newAdminRights?.rights.rights ?? []
                             
                             let order: [(TelegramChatAdminRightsFlags, String)]
                             
@@ -732,6 +732,37 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
+                            }
+                            
+                            if prevFlags.isEmpty && newFlags.isEmpty && (prevAdminRights != nil) != (newAdminRights != nil) {
+                                if !appendedRightsHeader {
+                                    appendedRightsHeader = true
+                                    if prevAdminRights == nil {
+                                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageAddedAdminName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessageAddedAdminNameUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
+                                            var result: [MessageTextEntityType] = []
+                                            if index == 0 {
+                                                result.append(.TextMention(peerId: new.peer.id))
+                                            } else if index == 1 {
+                                                result.append(.Mention)
+                                            } else if index == 2 {
+                                                result.append(.Bold)
+                                            }
+                                            return result
+                                        }, to: &text, entities: &entities)
+                                    } else {
+                                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRemovedAdminName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessageRemovedAdminNameUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
+                                            var result: [MessageTextEntityType] = []
+                                            if index == 0 {
+                                                result.append(.TextMention(peerId: new.peer.id))
+                                            } else if index == 1 {
+                                                result.append(.Mention)
+                                            } else if index == 2 {
+                                                result.append(.Bold)
+                                            }
+                                            return result
+                                        }, to: &text, entities: &entities)
+                                    }
+                                }
                             }
                             
                             for (flag, string) in order {

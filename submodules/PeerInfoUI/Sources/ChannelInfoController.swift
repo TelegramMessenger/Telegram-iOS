@@ -529,7 +529,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                 }
             }
             
-            if let _ = state.editingState, let adminRights = peer.adminRights, !adminRights.isEmpty {
+            if let _ = state.editingState, let adminRights = peer.adminRights {
                 let discussionGroupTitle: String?
                 if let cachedData = view.cachedData as? CachedChannelData {
                     if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
@@ -939,7 +939,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             if let peer = peer as? TelegramChannel {
                 if peer.flags.contains(.isCreator) {
                     canManageChannel = true
-                } else if let adminRights = peer.adminRights, !adminRights.isEmpty {
+                } else if let adminRights = peer.adminRights {
                     canManageChannel = true
                 }
             }
@@ -950,7 +950,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 canEditChannel = peer.hasPermission(.changeInfo)
                 if canEditChannel {
                     hasSomethingToEdit = true
-                } else if let adminRights = peer.adminRights, !adminRights.isEmpty {
+                } else if let adminRights = peer.adminRights {
                     if let cachedData = view.cachedData as? CachedChannelData, case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let _ = maybeLinkedDiscussionPeerId {
                         hasSomethingToEdit = true
                     }

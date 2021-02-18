@@ -6136,3 +6136,8 @@ Sorry for the inconvenience.";
 "Intents.ErrorLockedText" = "Open Telegram and enter passcode to edit widget.";
 
 "Conversation.GigagroupDescription" = "Only admins can send messages in this group.";
+
+"Channel.AdminLog.MessageAddedAdminName" = "promoted %1$@";
+"Channel.AdminLog.MessageAddedAdminNameUsername" = "promoted %1$@ (%2$@)";
+"Channel.AdminLog.MessageRemovedAdminName" = "demoted %1$@";
+"Channel.AdminLog.MessageRemovedAdminNameUsername" = "demoted %1$@ (%2$@)";

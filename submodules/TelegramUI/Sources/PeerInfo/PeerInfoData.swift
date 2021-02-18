@@ -656,7 +656,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 if currentInvitationsContext == nil {
                     var canManageInvitations = false
-                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                         canManageInvitations = true
                     }
                     if canManageInvitations {
@@ -816,10 +816,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     if let group = peerViewMainPeer(peerView) as? TelegramGroup {
                         if case .creator = group.role {
                             canManageInvitations = true
-                        } else if case let .admin(rights, _) = group.role, rights.flags.contains(.canInviteUsers) {
+                        } else if case let .admin(rights, _) = group.role, rights.rights.contains(.canInviteUsers) {
                             canManageInvitations = true
                         }
-                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                         canManageInvitations = true
                     }
                     if canManageInvitations {
@@ -1035,7 +1035,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         }
         var displayMore = true
         if displayLeave && !channel.flags.contains(.isCreator) {
-            if let adminRights = channel.adminRights, !adminRights.isEmpty {
+            if let _ = channel.adminRights {
                 displayMore = false
             }
         }
@@ -1107,7 +1107,7 @@ func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?)
             return true
         } else if peer.hasPermission(.changeInfo) {
             return true
-        } else if let adminRights = peer.adminRights, adminRights.flags.contains(.canAddAdmins) || adminRights.flags.contains(.canBanUsers) || adminRights.flags.contains(.canChangeInfo) || adminRights.flags.contains(.canInviteUsers) {
+        } else if let _ = peer.adminRights {
             return true
         }
         return false
@@ -1115,7 +1115,7 @@ func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?)
         if case .creator = peer.role {
             return true
         } else if case let .admin(rights, _) = peer.role {
-            if rights.flags.contains(.canAddAdmins) || rights.flags.contains(.canBanUsers) || rights.flags.contains(.canChangeInfo) || rights.flags.contains(.canInviteUsers) {
+            if rights.rights.contains(.canAddAdmins) || rights.rights.contains(.canBanUsers) || rights.rights.contains(.canChangeInfo) || rights.rights.contains(.canInviteUsers) {
                 return true
             }
             return false

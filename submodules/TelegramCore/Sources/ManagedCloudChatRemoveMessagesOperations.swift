@@ -384,14 +384,7 @@ private func clearHistory(transaction: Transaction, postbox: Postbox, network: N
             return .complete()
         }
     } else if peer.id.namespace == Namespaces.Peer.CloudChannel, let inputChannel = apiInputChannel(peer) {
-        var flags: Int32 = 0
-        switch operation.type {
-        case .forEveryone:
-            flags |= 1 << 0
-        default:
-            break
-        }
-        return network.request(Api.functions.channels.deleteHistory(flags: flags, channel: inputChannel, maxId: operation.topMessageId.id))
+        return network.request(Api.functions.channels.deleteHistory(channel: inputChannel, maxId: operation.topMessageId.id))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

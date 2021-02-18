@@ -268,13 +268,13 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     if !(peer.addressName?.isEmpty ?? true) {
                         canInviteByLink = true
                     } else if let peer = peer as? TelegramChannel {
-                        if peer.flags.contains(.isCreator) || (peer.adminRights?.flags.contains(.canInviteUsers) == true) {
+                        if peer.flags.contains(.isCreator) || (peer.adminRights?.rights.contains(.canInviteUsers) == true) {
                             canInviteByLink = true
                         }
                     } else if let peer = peer as? TelegramGroup {
                         if case .creator = peer.role {
                             canInviteByLink = true
-                        } else if case let .admin(rights, _) = peer.role, rights.flags.contains(.canInviteUsers) {
+                        } else if case let .admin(rights, _) = peer.role, rights.rights.contains(.canInviteUsers) {
                             canInviteByLink = true
                         }
                     }
@@ -384,7 +384,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
                         case .member:
                             var peers: [PeerId: Peer] = [:]
                             peers[peer.id] = peer

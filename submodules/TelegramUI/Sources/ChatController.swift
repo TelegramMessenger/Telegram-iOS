@@ -536,7 +536,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     if case .creator = group.role {
                                         canManageGroupCalls = true
                                     } else if case let .admin(rights, _) = group.role {
-                                        if rights.flags.contains(.canManageCalls) {
+                                        if rights.rights.contains(.canManageCalls) {
                                             canManageGroupCalls = true
                                         }
                                     }
@@ -592,7 +592,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case .creator = group.role {
                                     canSetupAutoremoveTimeout = true
                                 } else if case let .admin(rights, _) = group.role {
-                                    if rights.flags.contains(.canDeleteMessages) {
+                                    if rights.rights.contains(.canDeleteMessages) {
                                         canSetupAutoremoveTimeout = true
                                     }
                                 }
@@ -5608,7 +5608,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if case .creator = group.role {
                         canSetupAutoremoveTimeout = true
                     } else if case let .admin(rights, _) = group.role {
-                        if rights.flags.contains(.canDeleteMessages) {
+                        if rights.rights.contains(.canDeleteMessages) {
                             canSetupAutoremoveTimeout = true
                         }
                     }
@@ -7795,7 +7795,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         switch group.role {
                         case .creator:
                             canClearForMyself = .group
-                            canClearForEveryone = .group
+                            canClearForEveryone = nil
                         case .admin, .member:
                             canClearForMyself = .group
                             canClearForEveryone = nil
@@ -7813,13 +7813,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 switch channel.info {
                                 case .broadcast:
                                     if channel.flags.contains(.isCreator) {
-                                        canClearForEveryone = .channel
+                                        canClearForEveryone = nil
                                     } else {
                                         canClearForEveryone = nil
                                     }
                                 case .group:
                                     if channel.flags.contains(.isCreator) {
-                                        canClearForEveryone = .group
+                                        canClearForEveryone = nil
                                     } else {
                                         canClearForEveryone = nil
                                     }
@@ -7846,7 +7846,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     
                                     if channel.flags.contains(.isCreator) {
                                         canClearForMyself = .channel
-                                        canClearForEveryone = .channel
+                                        canClearForEveryone = nil
                                     } else {
                                         canClearForMyself = .channel
                                         canClearForEveryone = nil
@@ -7856,7 +7856,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     
                                     if channel.flags.contains(.isCreator) {
                                         canClearForMyself = .group
-                                        canClearForEveryone = .group
+                                        canClearForEveryone = nil
                                     } else {
                                         canClearForMyself = .group
                                         canClearForEveryone = nil
@@ -12220,7 +12220,7 @@ extension Peer {
             if case .creator = group.role {
                 return true
             } else if case let .admin(rights, _) = group.role {
-                if rights.flags.contains(.canDeleteMessages) {
+                if rights.rights.contains(.canDeleteMessages) {
                     return true
                 }
             }

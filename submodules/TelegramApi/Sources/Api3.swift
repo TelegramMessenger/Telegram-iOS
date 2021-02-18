@@ -4553,13 +4553,12 @@ public extension Api {
                     })
                 }
             
-                public static func deleteHistory(flags: Int32, channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func deleteHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1113317569)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(-1355375294)
                     channel.serialize(buffer, true)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "channels.deleteHistory", parameters: [("flags", flags), ("channel", channel), ("maxId", maxId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "channels.deleteHistory", parameters: [("channel", channel), ("maxId", maxId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
