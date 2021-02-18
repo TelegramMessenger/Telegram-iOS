@@ -6141,3 +6141,6 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageAddedAdminNameUsername" = "promoted %1$@ (%2$@)";
 "Channel.AdminLog.MessageRemovedAdminName" = "demoted %1$@";
 "Channel.AdminLog.MessageRemovedAdminNameUsername" = "demoted %1$@ (%2$@)";
+
+"Notification.Exceptions.MessagePreviewAlwaysOn" = "Always On";
+"Notification.Exceptions.MessagePreviewAlwaysOff" = "Always Off";

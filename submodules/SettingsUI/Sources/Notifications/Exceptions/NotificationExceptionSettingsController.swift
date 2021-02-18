@@ -180,9 +180,9 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             let title: String
             switch value {
             case .alwaysOn:
-                title = strings.Notification_Exceptions_AlwaysOn
+                title = strings.Notification_Exceptions_MessagePreviewAlwaysOn
             case .alwaysOff:
-                title = strings.Notification_Exceptions_AlwaysOff
+                title = strings.Notification_Exceptions_MessagePreviewAlwaysOff
             }
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectDisplayPreviews(value)
