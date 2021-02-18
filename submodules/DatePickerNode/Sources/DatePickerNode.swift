@@ -209,6 +209,9 @@ public final class DatePickerNode: ASDisplayNode {
                     started = true
                 }
                 weekday += 1
+                if weekday > 7 {
+                    weekday = 1
+                }
                 
                 let textNode = self.dateNodes[i]
                 if started && !ended {
