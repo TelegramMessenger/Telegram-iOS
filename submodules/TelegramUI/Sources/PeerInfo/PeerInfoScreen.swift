@@ -1337,7 +1337,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }))
                     }
                             
-                    if (isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages))) && cachedData.peerGeoLocation != nil {
+                    if (isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages))) && cachedData.peerGeoLocation == nil {
                         if cachedData.flags.contains(.canChangeUsername) {
                             if let linkedDiscussionPeer = data.linkedDiscussionPeer {
                                 let peerTitle: String

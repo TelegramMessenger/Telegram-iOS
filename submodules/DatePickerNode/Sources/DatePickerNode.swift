@@ -209,6 +209,9 @@ public final class DatePickerNode: ASDisplayNode {
                     started = true
                 }
                 weekday += 1
+                if weekday > 7 {
+                    weekday = 1
+                }
                 
                 let textNode = self.dateNodes[i]
                 if started && !ended {
@@ -322,6 +325,7 @@ public final class DatePickerNode: ASDisplayNode {
             self.updateState(updatedState, animated: false)
             
             self.pickerNode.minimumDate = newValue
+            self.timePickerNode.minimumDate = newValue
             
             if let size = self.validLayout {
                 let _ = self.updateLayout(size: size, transition: .immediate)
@@ -342,6 +346,7 @@ public final class DatePickerNode: ASDisplayNode {
             self.updateState(updatedState, animated: false)
             
             self.pickerNode.maximumDate = newValue
+            self.timePickerNode.maximumDate = newValue
             
             if let size = self.validLayout {
                 let _ = self.updateLayout(size: size, transition: .immediate)
@@ -395,6 +400,9 @@ public final class DatePickerNode: ASDisplayNode {
         })
         self.pickerNode.minimumDate = self.state.minDate
         self.pickerNode.maximumDate = self.state.maxDate
+        
+        self.timePickerNode.minimumDate = self.state.minDate
+        self.timePickerNode.maximumDate = self.state.maxDate
         
         self.monthButtonNode = HighlightTrackingButtonNode()
         self.monthTextNode = ImmediateTextNode()
@@ -921,9 +929,7 @@ private class TimeInputView: UIView, UIKeyInput {
     var textUpdated: ((String) -> Void)?
     
     override func becomeFirstResponder() -> Bool {
-        if self.isFirstResponder {
-            self.didReset = false
-        }
+        self.didReset = false
         let result = super.becomeFirstResponder()
         self.focusUpdated?(true)
         return result
@@ -937,7 +943,7 @@ private class TimeInputView: UIView, UIKeyInput {
     
     var length: Int = 4
     
-    private var didReset = false
+    var didReset = false
     private let nonDigits = CharacterSet.decimalDigits.inverted
     func insertText(_ text: String) {
         if text.rangeOfCharacter(from: nonDigits) != nil {
@@ -1024,6 +1030,12 @@ private class TimeInputNode: ASDisplayNode {
             view.textUpdated = self.textUpdated
         }
     }
+    
+    func reset() {
+        if let view = self.view as? TimeInputView {
+            view.didReset = false
+        }
+    }
 }
 
 private final class TimePickerNode: ASDisplayNode {
@@ -1064,8 +1076,9 @@ private final class TimePickerNode: ASDisplayNode {
             }
         }
     }
-    var minDate: Date?
-    var maxDate: Date?
+        
+    var minimumDate: Date?
+    var maximumDate: Date?
     
     var valueChanged: ((Date) -> Void)?
     
@@ -1205,23 +1218,7 @@ private final class TimePickerNode: ASDisplayNode {
             }
         }
         self.hoursNode.selected = { [weak self] index in
-            guard let strongSelf = self else {
-                return
-            }
-            switch dateTimeFormat.timeFormat {
-                case .military:
-                    let hour = index
-                    if let date = strongSelf.date {
-                        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-                        components.hour =  hour
-                        if let newDate = calendar.date(from: components) {
-                            strongSelf.date = newDate
-                            strongSelf.valueChanged?(newDate)
-                        }
-                    }
-                case .regular:
-                   break
-            }
+            self?.updateTime()
         }
         
         self.minutesNode.count = {
@@ -1248,27 +1245,57 @@ private final class TimePickerNode: ASDisplayNode {
                 }
             }
         }
-        self.minutesNode.selected = { [weak self] index in
-            guard let strongSelf = self else {
-                return
-            }
-            switch dateTimeFormat.timeFormat {
-                case .military:
-                    let minute = index
-                    if let date = strongSelf.date {
-                        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-                        components.minute = minute
-                        if let newDate = calendar.date(from: components) {
-                            strongSelf.date = newDate
-                            strongSelf.valueChanged?(newDate)
-                        }
-                    }
-                case .regular:
-                   break
-            }
+        self.minutesNode.selected = { [weak self] _ in
+            self?.updateTime()
         }
         
         self.update()
+    }
+    
+    private func updateTime() {
+        switch self.dateTimeFormat.timeFormat {
+            case .military:
+                let hour = self.hoursNode.currentSelectedIndex
+                let minute = self.minutesNode.currentSelectedIndex
+                
+                let date = self.date ?? Date()
+                
+                var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+                components.hour =  hour
+                components.minute = minute
+                if var newDate = calendar.date(from: components) {
+                    if let minDate = self.minimumDate, newDate <= minDate {
+                        if let nextDate = calendar.date(byAdding: .day, value: 1, to: newDate) {
+                            newDate = nextDate
+                        }
+                    }
+                    self.date = newDate
+                    self.valueChanged?(newDate)
+                }
+                
+            case .regular:
+                let hour = self.hoursNode.currentSelectedIndex
+                let minute = self.minutesNode.currentSelectedIndex
+                
+                let date = self.date ?? Date()
+                
+                var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+                if self.amPMSelectorNode.selectedIndex == 0 {
+                    components.hour = hour >= 12 ? hour - 12 : hour
+                } else if self.amPMSelectorNode.selectedIndex == 1 {
+                    components.hour = hour < 12 ? hour + 12 : hour
+                }
+                components.minute = minute
+                if var newDate = calendar.date(from: components) {
+                    if let minDate = self.minimumDate, newDate <= minDate {
+                        if let nextDate = calendar.date(byAdding: .day, value: 1, to: newDate) {
+                            newDate = nextDate
+                        }
+                    }
+                    self.date = newDate
+                    self.valueChanged?(newDate)
+                }
+        }
     }
     
     override func didLoad() {
@@ -1355,6 +1382,23 @@ private final class TimePickerNode: ASDisplayNode {
     
     private var selection: Selection {
         didSet {
+            self.typing = false
+            self.inputNode.reset()
+            switch self.selection {
+                case .none:
+                    break
+                case .hours:
+                    self.inputNode.text = self.hoursNode.titleAt?(self.hoursNode.currentSelectedIndex) ?? ""
+                    self.inputNode.length = 2
+                case .minutes:
+                    self.inputNode.text = self.minutesNode.titleAt?(self.minutesNode.currentSelectedIndex) ?? ""
+                    self.inputNode.length = 2
+                case .all:
+                    let hours = self.minutesNode.titleAt?(self.hoursNode.currentSelectedIndex) ?? ""
+                    let minutes = self.minutesNode.titleAt?(self.minutesNode.currentSelectedIndex) ?? ""
+                    self.inputNode.text = "\(hours)\(minutes)"
+                    self.inputNode.length = 4
+            }
             self.update()
         }
     }
@@ -1417,8 +1461,6 @@ private final class TimePickerNode: ASDisplayNode {
                     self.hoursNode.isHidden = false
                     self.minutesNode.isHidden = false
                 }
-                
-                self.inputNode.length = 2
             case .minutes:
                 colonColor = self.theme.textColor
                 self.colonNode.alpha = 0.35
@@ -1446,8 +1488,6 @@ private final class TimePickerNode: ASDisplayNode {
                     self.hoursNode.isHidden = false
                     self.minutesNode.isHidden = false
                 }
-                
-                self.inputNode.length = 2
             case .all:
                 colonColor = self.theme.accentColor
                 self.colonNode.alpha = 1.0
@@ -1475,8 +1515,6 @@ private final class TimePickerNode: ASDisplayNode {
                     self.hoursNode.isHidden = false
                     self.minutesNode.isHidden = false
                 }
-                
-                self.inputNode.length = 4
         }
         
         if let size = self.validLayout {

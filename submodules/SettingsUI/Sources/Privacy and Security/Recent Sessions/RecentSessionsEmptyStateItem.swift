@@ -78,7 +78,7 @@ final class RecentSessionsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         var insets = layout.insets(options: [])
-        insets.top += navigationBarHeight + 128.0
+        insets.top += navigationBarHeight + 200.0
         
         let imageSpacing: CGFloat = 8.0
         let textSpacing: CGFloat = 8.0
@@ -86,15 +86,32 @@ final class RecentSessionsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         let imageSize = self.imageNode.image?.size ?? CGSize()
         let imageHeight = layout.size.width < layout.size.height ? imageSize.height + imageSpacing : 0.0
         
+        var textVisible = true
+        if layout.size.width == 320 {
+            textVisible = false
+        }
+        
+        self.backgroundColor = .red
+        
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right - 50.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         let textSize = self.textNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right - 50.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         
-        let totalHeight = imageHeight + titleSize.height + textSpacing + textSize.height
+        var totalHeight = imageHeight + titleSize.height
+        if textVisible {
+            totalHeight += textSpacing + textSize.height
+        }
         let topOffset = insets.top + floor((layout.size.height - insets.top - insets.bottom - totalHeight) / 2.0)
         
-        transition.updateAlpha(node: self.imageNode, alpha: imageHeight > 0.0 ? 1.0 : 0.0)
+        var visible = true
+        if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
+            visible = false
+        }
+
+        transition.updateAlpha(node: self.imageNode, alpha: visible ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.titleNode, alpha: visible ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.textNode, alpha: visible && textVisible ? 1.0 : 0.0)
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: topOffset), size: imageSize))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right) / 2.0), y: topOffset + imageHeight), size: titleSize))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right) / 2.0), y: self.titleNode.frame.maxY + textSpacing), size: textSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: topOffset + imageHeight), size: titleSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: self.titleNode.frame.maxY + textSpacing), size: textSize))
     }
 }
