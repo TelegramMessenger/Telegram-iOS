@@ -358,6 +358,7 @@ plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
     template = "".join([
+        aps_fragment,
         app_groups_fragment,
         siri_fragment,
         associated_domains_fragment,
