@@ -382,12 +382,12 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
 }
 
 public let allGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
-    (.banSendMessages, .sendMessages),
-    (.banSendMedia, .sendMessages),
-    (.banSendGifs, .sendMessages),
-    (.banEmbedLinks, .sendMessages),
-    (.banSendPolls, .sendMessages),
-    (.banAddMembers, .inviteMembers),
+    (.banSendMessages, .banMembers),
+    (.banSendMedia, .banMembers),
+    (.banSendGifs, .banMembers),
+    (.banEmbedLinks, .banMembers),
+    (.banSendPolls, .banMembers),
+    (.banAddMembers, .banMembers),
     (.banPinMessages, .pinMessages),
     (.banChangeInfo, .changeInfo)
 ]

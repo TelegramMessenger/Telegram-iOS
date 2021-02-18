@@ -6861,7 +6861,6 @@ public extension Api {
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
         case updatePhoneCallSignalingData(phoneCallId: Int64, data: Buffer)
-        case updateChannelParticipant(flags: Int32, channelId: Int32, date: Int32, userId: Int32, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, qts: Int32)
         case updateChannelMessageForwards(channelId: Int32, id: Int32, forwards: Int32)
         case updateReadChannelDiscussionInbox(flags: Int32, channelId: Int32, topMsgId: Int32, readMaxId: Int32, broadcastId: Int32?, broadcastPost: Int32?)
         case updateReadChannelDiscussionOutbox(channelId: Int32, topMsgId: Int32, readMaxId: Int32)
@@ -6873,6 +6872,9 @@ public extension Api {
         case updateGroupCallParticipants(call: Api.InputGroupCall, participants: [Api.GroupCallParticipant], version: Int32)
         case updateGroupCall(chatId: Int32, call: Api.GroupCall)
         case updatePeerHistoryTTL(flags: Int32, peer: Api.Peer, ttlPeriod: Int32?)
+        case updateChatParticipant(flags: Int32, chatId: Int32, date: Int32, userId: Int32, prevParticipant: Api.ChatParticipant?, newParticipant: Api.ChatParticipant?, qts: Int32)
+        case updateChannelParticipant(flags: Int32, channelId: Int32, date: Int32, userId: Int32, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, qts: Int32)
+        case updateBotStopped(userId: Int32, stopped: Api.Bool, qts: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -7525,18 +7527,6 @@ public extension Api {
                     serializeInt64(phoneCallId, buffer: buffer, boxed: false)
                     serializeBytes(data, buffer: buffer, boxed: false)
                     break
-                case .updateChannelParticipant(let flags, let channelId, let date, let userId, let prevParticipant, let newParticipant, let qts):
-                    if boxed {
-                        buffer.appendInt32(1708307556)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(channelId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {prevParticipant!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {newParticipant!.serialize(buffer, true)}
-                    serializeInt32(qts, buffer: buffer, boxed: false)
-                    break
                 case .updateChannelMessageForwards(let channelId, let id, let forwards):
                     if boxed {
                         buffer.appendInt32(1854571743)
@@ -7641,6 +7631,38 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
+                    break
+                case .updateChatParticipant(let flags, let chatId, let date, let userId, let prevParticipant, let newParticipant, let qts):
+                    if boxed {
+                        buffer.appendInt32(1620733652)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {prevParticipant!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {newParticipant!.serialize(buffer, true)}
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
+                case .updateChannelParticipant(let flags, let channelId, let date, let userId, let prevParticipant, let newParticipant, let qts):
+                    if boxed {
+                        buffer.appendInt32(1708307556)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(channelId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {prevParticipant!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {newParticipant!.serialize(buffer, true)}
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
+                case .updateBotStopped(let userId, let stopped, let qts):
+                    if boxed {
+                        buffer.appendInt32(820801212)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    stopped.serialize(buffer, true)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -7801,8 +7823,6 @@ public extension Api {
                 return ("updateDialogFilters", [])
                 case .updatePhoneCallSignalingData(let phoneCallId, let data):
                 return ("updatePhoneCallSignalingData", [("phoneCallId", phoneCallId), ("data", data)])
-                case .updateChannelParticipant(let flags, let channelId, let date, let userId, let prevParticipant, let newParticipant, let qts):
-                return ("updateChannelParticipant", [("flags", flags), ("channelId", channelId), ("date", date), ("userId", userId), ("prevParticipant", prevParticipant), ("newParticipant", newParticipant), ("qts", qts)])
                 case .updateChannelMessageForwards(let channelId, let id, let forwards):
                 return ("updateChannelMessageForwards", [("channelId", channelId), ("id", id), ("forwards", forwards)])
                 case .updateReadChannelDiscussionInbox(let flags, let channelId, let topMsgId, let readMaxId, let broadcastId, let broadcastPost):
@@ -7825,6 +7845,12 @@ public extension Api {
                 return ("updateGroupCall", [("chatId", chatId), ("call", call)])
                 case .updatePeerHistoryTTL(let flags, let peer, let ttlPeriod):
                 return ("updatePeerHistoryTTL", [("flags", flags), ("peer", peer), ("ttlPeriod", ttlPeriod)])
+                case .updateChatParticipant(let flags, let chatId, let date, let userId, let prevParticipant, let newParticipant, let qts):
+                return ("updateChatParticipant", [("flags", flags), ("chatId", chatId), ("date", date), ("userId", userId), ("prevParticipant", prevParticipant), ("newParticipant", newParticipant), ("qts", qts)])
+                case .updateChannelParticipant(let flags, let channelId, let date, let userId, let prevParticipant, let newParticipant, let qts):
+                return ("updateChannelParticipant", [("flags", flags), ("channelId", channelId), ("date", date), ("userId", userId), ("prevParticipant", prevParticipant), ("newParticipant", newParticipant), ("qts", qts)])
+                case .updateBotStopped(let userId, let stopped, let qts):
+                return ("updateBotStopped", [("userId", userId), ("stopped", stopped), ("qts", qts)])
     }
     }
     
@@ -9114,39 +9140,6 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_updateChannelParticipant(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Api.ChannelParticipant?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
-            } }
-            var _6: Api.ChannelParticipant?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
-            } }
-            var _7: Int32?
-            _7 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.Update.updateChannelParticipant(flags: _1!, channelId: _2!, date: _3!, userId: _4!, prevParticipant: _5, newParticipant: _6, qts: _7!)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_updateChannelMessageForwards(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -9364,6 +9357,91 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updatePeerHistoryTTL(flags: _1!, peer: _2!, ttlPeriod: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateChatParticipant(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Api.ChatParticipant?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.ChatParticipant
+            } }
+            var _6: Api.ChatParticipant?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ChatParticipant
+            } }
+            var _7: Int32?
+            _7 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Update.updateChatParticipant(flags: _1!, chatId: _2!, date: _3!, userId: _4!, prevParticipant: _5, newParticipant: _6, qts: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateChannelParticipant(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Api.ChannelParticipant?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            } }
+            var _6: Api.ChannelParticipant?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            } }
+            var _7: Int32?
+            _7 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Update.updateChannelParticipant(flags: _1!, channelId: _2!, date: _3!, userId: _4!, prevParticipant: _5, newParticipant: _6, qts: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotStopped(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Bool?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateBotStopped(userId: _1!, stopped: _2!, qts: _3!)
             }
             else {
                 return nil

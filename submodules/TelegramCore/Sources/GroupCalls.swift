@@ -342,7 +342,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
                         case .creator:
                             adminIds.insert(parsedParticipant.peerId)
                         case let .member(_, _, adminInfo, _, _):
-                            if let adminInfo = adminInfo, adminInfo.rights.flags.contains(.canManageCalls) {
+                            if let adminInfo = adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
                                 adminIds.insert(parsedParticipant.peerId)
                             }
                         }

@@ -1202,7 +1202,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                  
-                if  (channel.flags.contains(.isCreator) && (channel.username?.isEmpty ?? true)) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                if  (channel.flags.contains(.isCreator) && (channel.username?.isEmpty ?? true)) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
                         invitesText = "\(count)"
@@ -1324,7 +1324,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }
                     }
                     
-                    if (isCreator && (channel.username?.isEmpty ?? true) && cachedData.peerGeoLocation == nil) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+                    if (isCreator && (channel.username?.isEmpty ?? true) && cachedData.peerGeoLocation == nil) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                         let invitesText: String
                         if let count = data.invitations?.count, count > 0 {
                             invitesText = "\(count)"
@@ -1365,7 +1365,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }
                     
                     var canViewAdminsAndBanned = false
-                    if let adminRights = channel.adminRights, !adminRights.isEmpty {
+                    if let _ = channel.adminRights {
                         canViewAdminsAndBanned = true
                     } else if channel.flags.contains(.isCreator) {
                         canViewAdminsAndBanned = true
@@ -1476,7 +1476,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     interaction.openParticipantsSection(.admins)
                 }))
             } else if case let .admin(rights, _) = group.role {
-                if rights.flags.contains(.canInviteUsers) {
+                if rights.rights.contains(.canInviteUsers) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
                         invitesText = "\(count)"
@@ -3255,7 +3255,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 if case .creator = group.role {
                     canManageGroupCalls = true
                 } else if case let .admin(rights, _) = group.role {
-                    if rights.flags.contains(.canManageCalls) {
+                    if rights.rights.contains(.canManageCalls) {
                         canManageGroupCalls = true
                     }
                 }
@@ -6250,12 +6250,12 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             case .creator:
                 canCreateInviteLink = true
             case let .admin(rights, _):
-                canCreateInviteLink = rights.flags.contains(.canInviteUsers)
+                canCreateInviteLink = rights.rights.contains(.canInviteUsers)
             default:
                 break
             }
         } else if let channel = groupPeer as? TelegramChannel, (channel.addressName?.isEmpty ?? true) {
-            if channel.flags.contains(.isCreator) || (channel.adminRights?.flags.contains(.canInviteUsers) == true) {
+            if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                 canCreateInviteLink = true
             }
         }
