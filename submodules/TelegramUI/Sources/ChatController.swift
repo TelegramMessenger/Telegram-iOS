@@ -1,4 +1,3 @@
-
 import Foundation
 import UIKit
 import Postbox
@@ -64,6 +63,7 @@ import InviteLinksUI
 import ChatHistoryImportTasks
 import Markdown
 import TelegramPermissionsUI
+import Speak
 
 extension ChatLocation {
     var peerId: PeerId {
@@ -2286,7 +2286,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     window.rootViewController?.present(controller, animated: true)
                 }
             case .speak:
-                strongSelf.speakText(text.string)
+                speakText(text.string)
             }
         }, updateMessageLike: { [weak self] messageId, isLiked in
             guard let strongSelf = self else {
@@ -12180,15 +12180,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             return false
         }
-    }
-    
-    private func speakText(_ text: String) {
-        let speechSynthesizer = AVSpeechSynthesizer()
-        let utterance = AVSpeechUtterance(string: text)
-        if #available(iOS 11.0, *), let language = NSLinguisticTagger.dominantLanguage(for: text) {
-            utterance.voice = AVSpeechSynthesisVoice(language: language)
-        }
-        speechSynthesizer.speak(utterance)
     }
 }
 

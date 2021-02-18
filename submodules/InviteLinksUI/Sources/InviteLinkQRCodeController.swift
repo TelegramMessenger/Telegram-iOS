@@ -24,10 +24,9 @@ private func shareQrCode(context: AccountContext, link: String, view: UIView) {
         }
         
         let activityController = UIActivityViewController(activityItems: [image], applicationActivities: nil)
-        if let window = view.window, let rootViewController = window.rootViewController {
+        if let window = view.window {
             activityController.popoverPresentationController?.sourceView = window
             activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-            rootViewController.present(activityController, animated: true, completion: nil)
         }
         context.sharedContext.applicationBindings.presentNativeController(activityController)
     })

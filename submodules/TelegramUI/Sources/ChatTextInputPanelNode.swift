@@ -14,6 +14,7 @@ import TouchDownGesture
 import ImageTransparency
 import ActivityIndicator
 import AnimationUI
+import Speak
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -1775,7 +1776,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
-       if action == Selector(("_showTextStyleOptions:")) {
+        if action == Selector(("_accessibilitySpeak:")) {
+            if let textInputNode = self.textInputNode, textInputNode.selectedRange.length > 0 {
+                return ASEditableTextNodeTargetForAction(target: self)
+            } else {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            }
+        } else if action == Selector("_accessibilitySpeakLanguageSelection:") {
+            return ASEditableTextNodeTargetForAction(target: nil)
+        } else if action == Selector("_accessibilityPauseSpeaking:") {
+            return ASEditableTextNodeTargetForAction(target: nil)
+        }
+        else if action == Selector(("_showTextStyleOptions:")) {
             if case .general = self.inputMenu.state {
                 if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)
@@ -1795,6 +1807,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             return ASEditableTextNodeTargetForAction(target: nil)
         }
         return nil
+    }
+    
+    @objc func _accessibilitySpeak(_ sender: Any) {
+        var text = ""
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
+            return (current, inputMode)
+        }
+        speakText(text)
     }
     
     @objc func _showTextStyleOptions(_ sender: Any) {
