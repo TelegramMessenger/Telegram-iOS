@@ -1339,13 +1339,23 @@ swift_intent_library(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "IntentsAssets",
+    srcs = glob(["SiriIntents/IntentsImages.xcassets/**"]),
+    visibility = ["//visibility:public"],
+)
+
 swift_library(
     name = "IntentsExtensionLib",
     module_name = "IntentsExtensionLib",
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
-    data = glob(["SiriIntents/*.lproj/Intents.intentdefinition"]),
+    data = glob([
+        "SiriIntents/*.lproj/Intents.intentdefinition"
+    ]) + [
+        ":IntentsAssets"
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",

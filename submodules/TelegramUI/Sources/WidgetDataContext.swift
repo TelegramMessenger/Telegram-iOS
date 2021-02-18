@@ -277,7 +277,8 @@ final class WidgetDataContext {
                 autodeleteTimerUpdated: presentationData.strings.Widget_MessageAutoremoveTimerUpdated,
                 autodeleteTimerRemoved: presentationData.strings.Widget_MessageAutoremoveTimerRemoved,
                 generalLockedTitle: presentationData.strings.Intents_ErrorLockedTitle,
-                generalLockedText: presentationData.strings.Intents_ErrorLockedText
+                generalLockedText: presentationData.strings.Intents_ErrorLockedText,
+                chatSavedMessages: presentationData.strings.DialogList_SavedMessages
             )
         }
         |> distinctUntilChanged).start(next: { value in

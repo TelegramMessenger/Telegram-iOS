@@ -300,6 +300,8 @@ public struct WidgetPresentationData: Codable, Equatable {
     public var generalLockedTitle: String
     public var generalLockedText: String
     
+    public var chatSavedMessages: String
+    
     public init(
         widgetChatsGalleryTitle: String,
         widgetChatsGalleryDescription: String,
@@ -321,7 +323,8 @@ public struct WidgetPresentationData: Codable, Equatable {
         autodeleteTimerUpdated: String,
         autodeleteTimerRemoved: String,
         generalLockedTitle: String,
-        generalLockedText: String
+        generalLockedText: String,
+        chatSavedMessages: String
     ) {
         self.widgetChatsGalleryTitle = widgetChatsGalleryTitle
         self.widgetChatsGalleryDescription = widgetChatsGalleryDescription
@@ -344,6 +347,7 @@ public struct WidgetPresentationData: Codable, Equatable {
         self.autodeleteTimerRemoved = autodeleteTimerRemoved
         self.generalLockedTitle = generalLockedTitle
         self.generalLockedText = generalLockedText
+        self.chatSavedMessages = chatSavedMessages
     }
     
     public static func getForExtension() -> WidgetPresentationData {
@@ -392,7 +396,8 @@ public extension WidgetPresentationData {
         autodeleteTimerUpdated: "Auto-delete timer updated",
         autodeleteTimerRemoved: "Auto-delete timer disabled",
         generalLockedTitle: "Locked",
-        generalLockedText: "Open Telegram and enter passcode to edit widget."
+        generalLockedText: "Open Telegram and enter passcode to edit widget.",
+        chatSavedMessages: "Saved Messages"
     )
 }
 
