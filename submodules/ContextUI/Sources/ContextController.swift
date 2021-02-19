@@ -1510,9 +1510,16 @@ public protocol ContextExtractedContentSource: class {
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
     var blurBackground: Bool { get }
+    var shouldBeDismissed: Signal<Bool, NoError> { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
     func putBack() -> ContextControllerPutBackViewInfo?
+}
+
+public extension ContextExtractedContentSource {
+    var shouldBeDismissed: Signal<Bool, NoError> {
+        return .single(false)
+    }
 }
 
 public protocol ContextControllerContentSource: class {
@@ -1555,6 +1562,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((ReactionContextItem.Reaction) -> Void)?
     
+    private var shouldBeDismissedDisposable: Disposable?
+    
     public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, displayTextSelectionTip: Bool = false) {
         self.account = account
         self.presentationData = presentationData
@@ -1567,8 +1576,19 @@ public final class ContextController: ViewController, StandalonePresentableContr
         
         super.init(navigationBarPresentationData: nil)
         
-        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
-            self.statusBar.statusBarStyle = .Ignore
+        if case let .extracted(extractedSource) = source {
+            if !extractedSource.blurBackground {
+                self.statusBar.statusBarStyle = .Ignore
+            }
+            self.shouldBeDismissedDisposable = (extractedSource.shouldBeDismissed
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.dismiss(result: .default, completion: {})
+            })
         } else {
             self.statusBar.statusBarStyle = .Hide
         }
@@ -1577,6 +1597,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.shouldBeDismissedDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {

@@ -1224,6 +1224,74 @@ private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, let
     }
 }
 
+private func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil) -> UIImage? {
+    guard let image = image else {
+        return nil
+    }
+    
+    let imageSize = image.size
+
+    UIGraphicsBeginImageContextWithOptions(imageSize, backgroundColor != nil, image.scale)
+    if let context = UIGraphicsGetCurrentContext() {
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: imageSize))
+        }
+        
+        let imageRect = CGRect(origin: CGPoint(), size: imageSize)
+        context.saveGState()
+        context.translateBy(x: imageRect.midX, y: imageRect.midY)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+        context.clip(to: imageRect, mask: image.cgImage!)
+        context.setFillColor(color.cgColor)
+        context.fill(imageRect)
+        context.restoreGState()
+    }
+    
+    let tintedImage = UIGraphicsGetImageFromCurrentImageContext()!
+    UIGraphicsEndImageContext()
+    
+    return tintedImage
+}
+
+private let savedMessagesColors: NSArray = [
+    UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor
+]
+
+private func savedMessagesImage(size: CGSize) -> UIImage? {
+    guard let icon = generateTintedImage(image: UIImage(named: "Intents/SavedMessages"), color: .white) else {
+        return nil
+    }
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    let context = UIGraphicsGetCurrentContext()
+    
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+    
+    let colorsArray = savedMessagesColors
+    var locations: [CGFloat] = [1.0, 0.0]
+    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+    
+    context?.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    
+    context?.setBlendMode(.normal)
+    
+    let factor = size.width / 60.0
+    context?.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context?.scaleBy(x: factor, y: -factor)
+    context?.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    if let context = context {
+        context.draw(icon.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - icon.size.width) / 2.0), y: floor((size.height - icon.size.height) / 2.0)), size: icon.size))
+    }
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
 @available(iOSApplicationExtension 14.0, iOS 14.0, *)
 private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId, mediaBox: MediaBox, peers: [Peer]) -> [Friend] {
     var items: [Friend] = []
@@ -1231,7 +1299,26 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
         autoreleasepool {
             var profileImage: INImage?
             
-            if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
+            if peer.id == accountPeerId {
+                let cachedPath = mediaBox.cachedRepresentationPathForId("savedMessagesAvatar50x50", representationId: "intents.png", keepDuration: .shortLived)
+                if let _ = fileSize(cachedPath) {
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                } else {
+                    let image = savedMessagesImage(size: CGSize(width: 50.0, height: 50.0))
+                    if let data = image?.pngData() {
+                        let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+                    }
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                }
+            } else if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
                 let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.uniqueId, representationId: "intents.png", keepDuration: .shortLived)
                 if let _ = fileSize(cachedPath) {
                     do {
@@ -1272,7 +1359,12 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
                 }
             }
             
-            items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: profileImage))
+            var displayTitle = peer.debugDisplayTitle
+            if peer.id == accountPeerId {
+                displayTitle = WidgetPresentationData.getForExtension().chatSavedMessages
+            }
+            
+            items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: displayTitle, subtitle: nil, image: profileImage))
         }
     }
     return items

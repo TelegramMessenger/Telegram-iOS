@@ -298,6 +298,8 @@ public final class SqliteValueBox: ValueBox {
             preconditionFailure("Couldn't open database")
         }
         
+        sqlite3_busy_timeout(database.handle, 1000 * 10000)
+        
         var resultCode: Bool = true
         
         resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
@@ -407,8 +409,6 @@ public final class SqliteValueBox: ValueBox {
                 }
             }
         }
-        
-        sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")

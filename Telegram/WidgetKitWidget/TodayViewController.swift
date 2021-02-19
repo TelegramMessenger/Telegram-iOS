@@ -316,7 +316,9 @@ struct WidgetView: View {
                 dateText = ""
             }
             var formattedName = peer.peer.name
-            if let lastName = peer.peer.lastName {
+            if peer.accountPeerId == peer.peer.id {
+                formattedName = self.presentationData.chatSavedMessages
+            } else if let lastName = peer.peer.lastName {
                 formattedName.append(" \(lastName)")
             }
             chatTitle = AnyView(Text(formattedName)
@@ -575,10 +577,15 @@ struct WidgetView: View {
             content = .placeholder
         }
         
+        let avatarView: AvatarItemView
+        avatarView = AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, placeholderColor: getPlaceholderColor())
+        
         return AnyView(
             Link(destination: url, label: {
                 HStack(alignment: .center, spacing: 0.0, content: {
-                    AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, placeholderColor: getPlaceholderColor()).frame(width: 54.0, height: 54.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                    avatarView
+                        .frame(width: 54.0, height: 54.0, alignment: .leading)
+                        .padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
                     chatContent(content).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
                 })
             })
