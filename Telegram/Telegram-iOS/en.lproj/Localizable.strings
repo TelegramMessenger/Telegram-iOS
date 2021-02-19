@@ -6144,3 +6144,6 @@ Sorry for the inconvenience.";
 
 "Notification.Exceptions.MessagePreviewAlwaysOn" = "Always On";
 "Notification.Exceptions.MessagePreviewAlwaysOff" = "Always Off";
+
+"Channel.Setup.LinkTypePublic" = "Public";
+"Channel.Setup.LinkTypePrivate" = "Private";
