@@ -365,31 +365,31 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
 public func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShareItemContent]) -> Signal<Float, Void> {
     var messages: [EnqueueMessage] = []
     var groupingKey: Int64?
-    var mediaTypes: (photo: Bool, video: Bool, music: Bool, other: Bool) = (false, false, false, false)
+    var mediaTypes: (photo: Int, video: Int, music: Int, other: Int) = (0, 0, 0, 0)
     if items.count > 1 {
         for item in items {
             if case let .media(result) = item, case let .media(media) = result {
                 if media.media is TelegramMediaImage {
-                    mediaTypes.photo = true
+                    mediaTypes.photo += 1
                 } else if let media = media.media as? TelegramMediaFile {
                     if media.isVideo {
-                        mediaTypes.video = true
+                        mediaTypes.video += 1
                     } else if let fileName = media.fileName, fileName.hasPrefix("mp3") || fileName.hasPrefix("m4a") {
-                        mediaTypes.music = true
+                        mediaTypes.music += 1
                     } else {
-                        mediaTypes.other = true
+                        mediaTypes.other += 1
                     }
                 } else {
-                    mediaTypes = (false, false, false, false)
+                    mediaTypes = (0, 0, 0, 0)
                     break
                 }
             }
         }
     }
     
-    if (mediaTypes.photo || mediaTypes.video) && !(mediaTypes.music || mediaTypes.other) {
+    if (mediaTypes.photo > 0 || mediaTypes.video > 0) && !(mediaTypes.music > 0 || mediaTypes.other > 0) {
         groupingKey = arc4random64()
-    } else if !(mediaTypes.photo || mediaTypes.video) && (mediaTypes.music != mediaTypes.other) {
+    } else if !(mediaTypes.photo > 0 || mediaTypes.video > 0) && ((mediaTypes.music > 0) != (mediaTypes.other > 0)) {
         groupingKey = arc4random64()
     }
     
