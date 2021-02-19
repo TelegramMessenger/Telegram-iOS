@@ -120,7 +120,7 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
         24 * 60 * 60,
         24 * 60 * 60 * 7
     ]
-    if isDebug || true {
+    if isDebug {
         availableValues[1] = 5
         availableValues[2] = 5 * 60
     }

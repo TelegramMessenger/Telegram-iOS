@@ -116,10 +116,12 @@
 
 @implementation AccountDatacenterInfo
 
-- (instancetype)initWithMasterKey:(AccountDatacenterKey *)masterKey addressList:(NSArray<AccountDatacenterAddress *> *)addressList {
+- (instancetype)initWithMasterKey:(AccountDatacenterKey *)masterKey ephemeralMainKey:(AccountDatacenterKey * _Nullable)ephemeralMainKey ephemeralMediaKey:(AccountDatacenterKey * _Nullable)ephemeralMediaKey addressList:(NSArray<AccountDatacenterAddress *> *)addressList {
     self = [super init];
     if (self != nil) {
         _masterKey = masterKey;
+        _ephemeralMainKey = ephemeralMainKey;
+        _ephemeralMediaKey = ephemeralMediaKey;
         _addressList = addressList;
     }
     return self;
@@ -133,6 +135,18 @@
     AccountDatacenterKey *masterKey = [AccountDatacenterKey parse:masterKeyDict];
     if (masterKey == nil) {
         return nil;
+    }
+    
+    NSDictionary *ephemeralMainKeyDict = dict[@"ephemeralMainKey"];
+    AccountDatacenterKey *ephemeralMainKey = nil;
+    if ([ephemeralMainKeyDict isKindOfClass:[NSDictionary class]]) {
+        ephemeralMainKey = [AccountDatacenterKey parse:ephemeralMainKeyDict];
+    }
+    
+    NSDictionary *ephemeralMediaKeyDict = dict[@"ephemeralMediaKey"];
+    AccountDatacenterKey *ephemeralMediaKey = nil;
+    if ([ephemeralMediaKeyDict isKindOfClass:[NSDictionary class]]) {
+        ephemeralMediaKey = [AccountDatacenterKey parse:ephemeralMediaKeyDict];
     }
     
     NSArray *addressListArray = dict[@"addressList"];
@@ -152,7 +166,7 @@
         [addressList addObject:address];
     }
     
-    return [[AccountDatacenterInfo alloc] initWithMasterKey:masterKey addressList:addressList];
+    return [[AccountDatacenterInfo alloc] initWithMasterKey:masterKey ephemeralMainKey:ephemeralMainKey ephemeralMediaKey:ephemeralMediaKey addressList:addressList];
 }
 
 @end

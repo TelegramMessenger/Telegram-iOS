@@ -646,6 +646,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     private func checkTimer() {
+        let previousRemainingSeconds = Int(self.remainingSeconds)
         if self.timer != nil {
             self.remainingSeconds -= 0.5
         }
@@ -653,19 +654,21 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let _ = self.action(.commit)
             self.dismiss()
         } else {
-            if !self.timerTextNode.bounds.size.width.isZero, let snapshot = self.timerTextNode.view.snapshotContentTree() {
-                self.panelNode.view.insertSubview(snapshot, aboveSubview: self.timerTextNode.view)
-                snapshot.frame = self.timerTextNode.frame
-                self.timerTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
-                self.timerTextNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -10.0), to: CGPoint(), duration: 0.12, removeOnCompletion: false, additive: true)
-                snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false)
-                snapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 10.0), duration: 0.12, removeOnCompletion: false, additive: true, completion: { [weak snapshot] _ in
-                    snapshot?.removeFromSuperview()
-                })
-            }
-            self.timerTextNode.attributedText = NSAttributedString(string: "\(Int(self.remainingSeconds))", font: Font.regular(16.0), textColor: .white)
-            if let validLayout = self.validLayout {
-                self.containerLayoutUpdated(layout: validLayout, transition: .immediate)
+            if Int(self.remainingSeconds) != previousRemainingSeconds || (self.timerTextNode.attributedText?.string ?? "").isEmpty {
+                if !self.timerTextNode.bounds.size.width.isZero, let snapshot = self.timerTextNode.view.snapshotContentTree() {
+                    self.panelNode.view.insertSubview(snapshot, aboveSubview: self.timerTextNode.view)
+                    snapshot.frame = self.timerTextNode.frame
+                    self.timerTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                    self.timerTextNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -10.0), to: CGPoint(), duration: 0.12, removeOnCompletion: false, additive: true)
+                    snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false)
+                    snapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 10.0), duration: 0.12, removeOnCompletion: false, additive: true, completion: { [weak snapshot] _ in
+                        snapshot?.removeFromSuperview()
+                    })
+                }
+                self.timerTextNode.attributedText = NSAttributedString(string: "\(Int(self.remainingSeconds))", font: Font.regular(16.0), textColor: .white)
+                if let validLayout = self.validLayout {
+                    self.containerLayoutUpdated(layout: validLayout, transition: .immediate)
+                }
             }
             let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: false, completion: { [weak self] in
                 self?.checkTimer()
