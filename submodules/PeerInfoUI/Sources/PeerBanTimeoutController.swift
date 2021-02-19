@@ -116,7 +116,7 @@ private final class PeerBanTimeoutActionSheetItemNode: ActionSheetItemNode {
         
         self.pickerView.frame = CGRect(origin: CGPoint(), size: size)
   
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
     

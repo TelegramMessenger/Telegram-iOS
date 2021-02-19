@@ -42,6 +42,7 @@ public class LocationBroadcastActionSheetItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -108,8 +109,6 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         self.avatarNode.setPeer(context: item.context, theme: (item.context.sharedContext.currentPresentationData.with { $0 }).theme, peer: item.peer)
         
         self.timerNode.update(backgroundColor: self.theme.controlAccentColor.withAlphaComponent(0.4), foregroundColor: self.theme.controlAccentColor, textColor: self.theme.controlAccentColor, beginTimestamp: item.beginTimestamp, timeout: item.timeout, strings: item.strings)
-        
-        self.setNeedsLayout()
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -128,7 +127,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         let timerSize = CGSize(width: 28.0, height: 28.0)
         self.timerNode.frame = CGRect(origin: CGPoint(x: size.width - 16.0 - timerSize.width, y: floorToScreenPixels((size.height - timerSize.height) / 2.0)), size: timerSize)
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
     

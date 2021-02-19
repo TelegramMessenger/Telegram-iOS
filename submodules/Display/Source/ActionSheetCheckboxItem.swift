@@ -35,6 +35,7 @@ public class ActionSheetCheckboxItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -132,8 +133,6 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
             accessibilityTraits.insert(.selected)
         }
         self.accessibilityArea.accessibilityTraits = accessibilityTraits
-        
-        self.setNeedsLayout()
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -159,7 +158,7 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
     

@@ -41,6 +41,7 @@ public class ActionSheetPeerItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -132,8 +133,6 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         }
         self.accessibilityArea.accessibilityTraits = accessibilityTraits
         self.accessibilityArea.accessibilityLabel = item.title
-        
-        self.setNeedsLayout()
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -155,7 +154,7 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
     

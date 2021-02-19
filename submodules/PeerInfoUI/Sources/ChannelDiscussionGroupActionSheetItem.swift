@@ -107,7 +107,7 @@ private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNo
         
         let size = CGSize(width: constrainedSize.width, height: topInset + avatarSize + textSpacing + textSize.height + bottomInset)
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 }

@@ -7,7 +7,9 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
     var theme: ActionSheetControllerTheme {
         didSet {
             self.setGroups(self.groups)
-            self.setNeedsLayout()
+            if let size = self.validSize {
+                let _ = self.updateLayout(constrainedSize: size, transition: .immediate)
+            }
         }
     }
     
@@ -15,6 +17,8 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
     var groupNodes: [ActionSheetItemGroupNode] = []
     
     var requestLayout: (() -> Void)?
+    
+    private var validSize: CGSize?
     
     init(theme: ActionSheetControllerTheme) {
         self.theme = theme
@@ -46,6 +50,8 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
     }
     
     func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        self.validSize = constrainedSize
+        
         var groupsHeight: CGFloat = 0.0
         
         var calculatedSizes: [CGSize] = []

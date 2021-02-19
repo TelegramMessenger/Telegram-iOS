@@ -29,6 +29,7 @@ public class CallRouteActionSheetItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -132,8 +133,6 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
         }
         self.accessibilityArea.accessibilityTraits = accessibilityTraits
         self.accessibilityArea.accessibilityLabel = item.title
-        
-        self.setNeedsLayout()
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -152,7 +151,7 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
             self.checkNode.frame = CGRect(origin: CGPoint(x: size.width - image.size.width - 13.0, y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
     
