@@ -500,9 +500,9 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 case .privateLink:
                     break
                 case .initialSetup, .generic:
-                    entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader : presentationData.strings.Channel_Edit_LinkItem))
-                    entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
-                    entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
+                    entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader.uppercased() : presentationData.strings.Channel_Edit_LinkItem.uppercased()))
+                    entries.append(.typePublic(presentationData.theme, isGroup ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_LinkTypePublic, selectedType == .publicChannel))
+                    entries.append(.typePrivate(presentationData.theme, isGroup ? presentationData.strings.Channel_Setup_TypePrivate : presentationData.strings.Channel_Setup_LinkTypePrivate, selectedType == .privateChannel))
             
                     switch selectedType {
                         case .publicChannel:
@@ -653,7 +653,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     currentAddressName = ""
                 }
                 
-                entries.append(.typeHeader(presentationData.theme, presentationData.strings.Group_Setup_TypeHeader))
+                entries.append(.typeHeader(presentationData.theme, presentationData.strings.Group_Setup_TypeHeader.uppercased()))
                 entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
                 entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
                 

@@ -5867,7 +5867,6 @@ Sorry for the inconvenience.";
 "InviteLink.Expired" = "expired";
 "InviteLink.UsageLimitReached" = "limit reached";
 "InviteLink.Revoked" = "revoked";
-"InviteLink.TapToCopy" = "tap to copy";
 
 "InviteLink.AdditionalLinks" = "Additional Links";
 "InviteLink.Create" = "Create a New Link";
@@ -6058,6 +6057,7 @@ Sorry for the inconvenience.";
 "PeerInfo.AutoremoveMessagesDisabled" = "Never";
 
 "Conversation.AutoremoveChanged" = "Auto-Delete timer set to %@";
+"Conversation.AutoremoveOff" = "Auto-Delete is now off.";
 
 "PeerInfo.ReportProfilePhoto" = "Report Profile Photo";
 "PeerInfo.ReportProfileVideo" = "Report Profile Video";
@@ -6144,3 +6144,6 @@ Sorry for the inconvenience.";
 
 "Notification.Exceptions.MessagePreviewAlwaysOn" = "Always On";
 "Notification.Exceptions.MessagePreviewAlwaysOff" = "Always Off";
+
+"Channel.Setup.LinkTypePublic" = "Public";
+"Channel.Setup.LinkTypePrivate" = "Private";

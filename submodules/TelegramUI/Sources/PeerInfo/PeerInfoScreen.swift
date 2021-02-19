@@ -6664,7 +6664,7 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
         }
         
         createInviteLinkImpl = { [weak contactsController] in
-            parentController?.view.endEditing(true)
+            contactsController?.view.window?.endEditing(true)
             contactsController?.present(InviteLinkInviteController(context: context, peerId: groupPeer.id, parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
         }
 

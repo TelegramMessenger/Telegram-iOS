@@ -12141,7 +12141,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
                 } else {
                     isOn = false
-                    text = "Auto-Delete is now off."
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
                 }
                 if let text = text {
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
