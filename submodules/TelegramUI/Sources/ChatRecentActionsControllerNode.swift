@@ -921,7 +921,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
                 } else {
                     isOn = false
-                    text = "Auto-Delete is now off."
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
                 }
                 if let text = text {
                     strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), nil)
