@@ -220,6 +220,10 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.leftOverlayNode = ASDisplayNode()
         self.leftOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode = ASDisplayNode()

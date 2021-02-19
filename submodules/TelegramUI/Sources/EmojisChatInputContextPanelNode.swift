@@ -130,6 +130,9 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.isOpaque = false
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+        self.listView.accessibilityPageScrolledString = { row, count in
+            return strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         

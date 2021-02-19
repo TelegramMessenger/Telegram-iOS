@@ -363,16 +363,23 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
     private let presentationDataPromise: Promise<PresentationData>
     
     public init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, resolvedFaqUrl: Signal<ResolvedUrl?, NoError>, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasTwoStepAuth: Signal<Bool?, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.listNode = ListView()
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.recentListNode = ListView()
         self.recentListNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.recentListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         

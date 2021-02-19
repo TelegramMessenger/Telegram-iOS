@@ -4249,6 +4249,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         return false
     }
     
+    public var accessibilityPageScrolledString: ((String, String) -> String)?
+    
     public func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
         var accessibilityFocusedNode: (ASDisplayNode, CGRect)?
         for itemNode in self.itemNodes {
@@ -4289,7 +4291,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if frame.intersects(itemNode.frame) {
                     UIAccessibility.post(notification: UIAccessibility.Notification.layoutChanged, argument: itemNode.view)
                     if let index = itemNode.index {
-                        let scrollStatus = "Row \(index + 1) of \(self.items.count)"
+                        let scrollStatus: String
+                        if let accessibilityPageScrolledString = self.accessibilityPageScrolledString {
+                            scrollStatus = accessibilityPageScrolledString("\(index + 1)", "\(self.items.count)")
+                        } else {
+                            scrollStatus = "Row \(index + 1) of \(self.items.count)"
+                        }
                         UIAccessibility.post(notification: UIAccessibility.Notification.pageScrolled, argument: scrollStatus)
                     }
                     break

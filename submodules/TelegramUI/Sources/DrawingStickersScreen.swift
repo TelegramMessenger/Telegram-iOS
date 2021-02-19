@@ -100,7 +100,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     
     init(context: AccountContext, selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.selectSticker = selectSticker
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
@@ -179,9 +180,15 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         self.stickerListView = ListView()
         self.stickerListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
+        self.stickerListView.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.maskListView = ListView()
         self.maskListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
+        self.maskListView.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.topSeparatorNode = ASDisplayNode()
         self.topSeparatorNode.backgroundColor = UIColor(rgb: 0x2c2d2d)
