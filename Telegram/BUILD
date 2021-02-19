@@ -1125,6 +1125,16 @@ plist_fragment(
     )
 )
 
+objc_library(
+    name = "NotificationContentExtensionLink",
+    srcs = [
+        "NotificationContent/main.m",
+    ],
+    sdk_frameworks = [
+        "UserNotificationsUI",
+    ],
+)
+
 swift_library(
     name = "NotificationContentExtensionLib",
     module_name = "NotificationContentExtensionLib",
@@ -1132,7 +1142,8 @@ swift_library(
         "NotificationContent/**/*.swift",
     ]),
     deps = [
-        "//submodules/TelegramUI:TelegramUI"
+        "//submodules/TelegramUI:TelegramUI",
+        ":NotificationContentExtensionLink",
     ],
 )
 
