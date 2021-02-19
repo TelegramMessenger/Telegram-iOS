@@ -1319,7 +1319,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             }
                         } else {
                             if cachedData.flags.contains(.canChangeUsername) {
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupTypeIcon"), action: {
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
                             }
@@ -1418,7 +1418,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             if case .creator = group.role {
                 if let cachedData = data.cachedData as? CachedGroupData {
                     if cachedData.flags.contains(.canChangeUsername) {
-                        items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(presentationData.strings.Group_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                        items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(presentationData.strings.Group_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupTypeIcon"), action: {
                             interaction.editingOpenPublicLinkSetup()
                         }))
                     }
