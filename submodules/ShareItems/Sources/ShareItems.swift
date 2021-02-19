@@ -390,9 +390,9 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
         }
     }
     
-    if (mediaTypes.photo > 0 || mediaTypes.video > 0) && !(mediaTypes.music > 0 || mediaTypes.other > 0) {
+    if ((mediaTypes.photo + mediaTypes.video) > 1) && (mediaTypes.music == 0 && mediaTypes.other == 0) {
         groupingKey = arc4random64()
-    } else if !(mediaTypes.photo > 0 || mediaTypes.video > 0) && ((mediaTypes.music > 0) != (mediaTypes.other > 0)) {
+    } else if ((mediaTypes.photo + mediaTypes.video) == 0) && ((mediaTypes.music > 1 && mediaTypes.other == 0) || (mediaTypes.music == 0 && mediaTypes.other > 1)) {
         groupingKey = arc4random64()
     }
     
