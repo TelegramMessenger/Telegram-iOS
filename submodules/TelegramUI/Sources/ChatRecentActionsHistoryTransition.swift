@@ -705,8 +705,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         }
                     } else if case let .member(_, _, prevAdminRights, _, prevRank) = prev.participant {
                         if case let .member(_, _, newAdminRights, _, newRank) = new.participant {
-                            let prevFlags = prevAdminRights?.rights.rights ?? []
-                            let newFlags = newAdminRights?.rights.rights ?? []
+                            var prevFlags = prevAdminRights?.rights.rights ?? []
+                            var newFlags = newAdminRights?.rights.rights ?? []
                             
                             let order: [(TelegramChatAdminRightsFlags, String)]
                             
@@ -721,6 +721,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
+                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
+                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
                             } else {
                                 order = [
                                     (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
@@ -732,6 +734,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
+                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.groupSpecific)
+                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.groupSpecific)
                             }
                             
                             if prevFlags.isEmpty && newFlags.isEmpty && (prevAdminRights != nil) != (newAdminRights != nil) {
