@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
@@ -14,16 +15,19 @@ import AccountContext
 import PresentationDataUtils
 import AppBundle
 import GraphUI
+import ContextUI
 
 private final class ChannelStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
     let openMessageStats: (MessageId) -> Void
+    let contextAction: (MessageId, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessageStats = openMessage
+        self.contextAction = contextAction
     }
 }
 
@@ -330,6 +334,8 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .post(_, _, _, _, message, interactions):
                 return StatsMessageItem(context: arguments.context, presentationData: presentationData, message: message, views: interactions.views, forwards: interactions.forwards, sectionId: self.section, style: .blocks, action: {
                     arguments.openMessageStats(message.id)
+                }, contextAction: { node, gesture in
+                    arguments.contextAction(message.id, node, gesture)
                 })
         }
     }
@@ -407,6 +413,7 @@ private func channelStatsControllerEntries(data: ChannelStats?, messages: [Messa
 
 public func channelStatsController(context: AccountContext, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
     var openMessageStatsImpl: ((MessageId) -> Void)?
+    var contextActionImpl: ((MessageId, ASDisplayNode, ContextGesture?) -> Void)?
     
     let actionsDisposable = DisposableSet()    
     let dataPromise = Promise<ChannelStats?>(nil)
@@ -440,6 +447,8 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         return statsContext.loadDetailedGraph(graph, x: x)
     }, openMessage: { messageId in
         openMessageStatsImpl?(messageId)
+    }, contextAction: { messageId, node, gesture in
+        contextActionImpl?(messageId, node, gesture)
     })
     
     let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
@@ -496,9 +505,49 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         controller?.clearItemNodesHighlight(animated: true)
     }
     openMessageStatsImpl = { [weak controller] messageId in
-        if let navigationController = controller?.navigationController as? NavigationController {
-            controller?.push(messageStatsController(context: context, messageId: messageId, cachedPeerData: cachedPeerData))
+        controller?.push(messageStatsController(context: context, messageId: messageId, cachedPeerData: cachedPeerData))
+    }
+    contextActionImpl = { [weak controller] messageId, sourceNode, gesture in
+        guard let controller = controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
+            return
         }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        var items: [ContextMenuItem] = []
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak controller] c, _ in
+            c.dismiss(completion: {
+                if let navigationController = controller?.navigationController as? NavigationController {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true)))
+                }
+            })
+        })))
+        
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(ChannelStatsContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(items), reactionItems: [], gesture: gesture)
+        controller.presentInGlobalOverlay(contextController)
     }
     return controller
+}
+
+private final class ChannelStatsContextExtractedContentSource: ContextExtractedContentSource {
+    var keepInPlace: Bool
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    
+    private let controller: ViewController
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.keepInPlace = keepInPlace
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
 }

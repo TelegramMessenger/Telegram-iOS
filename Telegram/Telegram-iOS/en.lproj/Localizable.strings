@@ -6147,3 +6147,5 @@ Sorry for the inconvenience.";
 
 "Channel.Setup.LinkTypePublic" = "Public";
 "Channel.Setup.LinkTypePrivate" = "Private";
+
+"VoiceOver.ScrollStatus" = "Row %1$@ of %2$@";

@@ -321,7 +321,9 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.openPeer = openPeer
         self.mode = mode
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
+        
         self.forceTheme = forceTheme
         if let forceTheme = self.forceTheme {
             self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
@@ -329,7 +331,14 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.emptyQueryListNode = ListView()
+        self.emptyQueryListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         

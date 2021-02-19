@@ -659,7 +659,9 @@ public final class VoiceChatController: ViewController {
             self.context = call.accountContext
             self.call = call
             
-            self.presentationData = sharedContext.currentPresentationData.with { $0 }
+            let presentationData = sharedContext.currentPresentationData.with { $0 }
+            self.presentationData = presentationData
+            
             self.darkTheme = defaultDarkColorPresentationTheme
             self.currentSubtitle = self.presentationData.strings.SocksProxySetup_ProxyStatusConnecting
             
@@ -681,6 +683,9 @@ public final class VoiceChatController: ViewController {
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
             self.listNode.clipsToBounds = true
             self.listNode.scroller.bounces = false
+            self.listNode.accessibilityPageScrolledString = { row, count in
+                return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            }
             
             self.topPanelNode = ASDisplayNode()
             self.topPanelNode.clipsToBounds = false
