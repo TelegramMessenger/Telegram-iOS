@@ -133,6 +133,7 @@ public class BotCheckoutPaymentMethodItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -209,8 +210,6 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
         } else {
             self.checkNode.isHidden = true
         }
-        
-        self.setNeedsLayout()
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -237,7 +236,7 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
             self.checkNode.frame = CGRect(origin: CGPoint(x: floor((44.0 - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
     

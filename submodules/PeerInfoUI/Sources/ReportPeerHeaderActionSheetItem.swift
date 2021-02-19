@@ -85,7 +85,7 @@ private final class ReportPeerHeaderActionSheetItemNode: ActionSheetItemNode {
         let size = CGSize(width: constrainedSize.width, height: topInset + iconSize.height + textSpacing + textSize.height + bottomInset)
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
                
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 }

@@ -10,8 +10,6 @@ extension TelegramTheme {
         switch apiTheme {
             case let .theme(flags, id, accessHash, slug, title, document, settings, installCount):
                 self.init(id: id, accessHash: accessHash, slug: slug, title: title, file: document.flatMap(telegramMediaFileFromApiDocument), settings: settings.flatMap(TelegramThemeSettings.init(apiThemeSettings:)), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, installCount: installCount)
-            default:
-                return nil
         }
     }
 }
@@ -49,14 +47,12 @@ extension TelegramBaseTheme {
 extension TelegramThemeSettings {
     convenience init?(apiThemeSettings: Api.ThemeSettings) {
         switch apiThemeSettings {
-            case let .themeSettings(flags, baseTheme, accentColor, messageTopColor, messageBottomColor, wallpaper):
+            case let .themeSettings(_, baseTheme, accentColor, messageTopColor, messageBottomColor, wallpaper):
                 var messageColors: (UInt32, UInt32)?
                 if let messageTopColor = messageTopColor, let messageBottomColor = messageBottomColor {
                     messageColors = (UInt32(bitPattern: messageTopColor), UInt32(bitPattern: messageBottomColor))
                 }
-                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme) ?? .classic, accentColor: UInt32(bitPattern: accentColor), messageColors: messageColors, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
-            default:
-                return nil
+                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme), accentColor: UInt32(bitPattern: accentColor), messageColors: messageColors, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
         }
     }
     

@@ -99,7 +99,7 @@ public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: 
                     if let result = result {
                         return postbox.transaction { transaction -> Void in
                             if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
-                                var items = result.items.map({ $0 as? StickerPackItem }).flatMap({ $0 })
+                                var items = result.items.map({ $0 as? StickerPackItem }).compactMap({ $0 })
                                 if items.count > 5 {
                                     items.removeSubrange(5 ..< items.count)
                                 }

@@ -211,7 +211,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! GroupStickerPackSetupControllerArguments
         switch self {
-            case let .search(theme, strings, prefix, placeholder, value):
+            case let .search(theme, _, prefix, placeholder, value):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { value in
                     arguments.updateSearchText(value)
                 }, processPaste: { text in
@@ -223,11 +223,11 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                     }
                     return text
                 }, action: {})
-            case let .searchInfo(theme, text):
+            case let .searchInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, linkAction: nil)
-            case let .packsTitle(theme, text):
+            case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .pack(_, theme, strings, info, topItem, count, playAnimatedStickers, selected):
+            case let .pack(_, _, _, info, topItem, count, playAnimatedStickers, selected):
                 return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     if selected {
                         arguments.openStickerPack(info)

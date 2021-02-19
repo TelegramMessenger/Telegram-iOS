@@ -179,7 +179,7 @@ private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPi
         
         self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 180.0))
        
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 }

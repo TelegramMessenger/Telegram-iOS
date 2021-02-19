@@ -22,6 +22,7 @@ public class ActionSheetTextItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -65,8 +66,6 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         
         self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
         self.accessibilityArea.accessibilityLabel = item.title
-        
-        self.setNeedsLayout()
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -77,7 +76,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 }

@@ -256,7 +256,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
             offset += 36.0
         }
   
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 }
@@ -368,7 +368,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         self.titleNode.frame = titleFrame
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: 14.0, y: titleFrame.minY - 0.0), size: activitySize)
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 

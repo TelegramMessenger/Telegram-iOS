@@ -64,7 +64,7 @@ private final class ReportPeerDetailsActionSheetItemNode: ActionSheetItemNode {
         
         let size = CGSize(width: constrainedSize.width, height: inputHeight)
        
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 }

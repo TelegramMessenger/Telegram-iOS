@@ -187,7 +187,7 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
             }
         }
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
 }

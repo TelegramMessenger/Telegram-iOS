@@ -133,7 +133,7 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
       
         self.pickerView.frame = CGRect(origin: CGPoint(), size: size)
         
-        self.updateInternalLayout(size)
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
     }
     
