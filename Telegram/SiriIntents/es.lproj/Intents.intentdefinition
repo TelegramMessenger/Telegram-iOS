@@ -56,7 +56,7 @@
 					<key>INIntentParameterConfigurable</key>
 					<true/>
 					<key>INIntentParameterDisplayName</key>
-					<string>Выберите чаты</string>
+					<string>Elige los chats</string>
 					<key>INIntentParameterDisplayNameID</key>
 					<string>WIf4LD</string>
 					<key>INIntentParameterDisplayPriority</key>
@@ -172,7 +172,7 @@
 					<key>INIntentParameterConfigurable</key>
 					<true/>
 					<key>INIntentParameterDisplayName</key>
-					<string>Выберите чаты</string>
+					<string>Elige los chats</string>
 					<key>INIntentParameterDisplayNameID</key>
 					<string>Jg5dYF</string>
 					<key>INIntentParameterDisplayPriority</key>
