@@ -395,7 +395,14 @@ public final class DatePickerNode: ASDisplayNode {
         self.pickerBackgroundNode.isUserInteractionEnabled = false
         
         var monthChangedImpl: ((Date) -> Void)?
-        self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date ?? monthForDate(Date()), yearRange: yearRange(for: self.state), valueChanged: { date in
+        
+        let initialDate: Date
+        if let date = calendar.date(byAdding: .hour, value: 11, to: monthForDate(Date())) {
+            initialDate = date
+        } else {
+            initialDate = monthForDate(Date())
+        }
+        self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date ?? initialDate, yearRange: yearRange(for: self.state), valueChanged: { date in
             monthChangedImpl?(date)
         })
         self.pickerNode.minimumDate = self.state.minDate
@@ -511,7 +518,14 @@ public final class DatePickerNode: ASDisplayNode {
                 }
             }
         }
-        self.pickerNode.date = self.state.date ?? self.state.selectedMonth
+        
+        let initialDate: Date
+        if let date = calendar.date(byAdding: .hour, value: 11, to: self.state.selectedMonth) {
+            initialDate = date
+        } else {
+            initialDate = self.state.selectedMonth
+        }
+        self.pickerNode.date = self.state.date ?? initialDate
         self.timePickerNode.date = self.state.date
         
         if let size = self.validLayout {
@@ -593,6 +607,13 @@ public final class DatePickerNode: ASDisplayNode {
                 dateComponents.day = Int(day)
                 dateComponents.hour = 11
                 dateComponents.minute = 0
+            }
+            
+            if let date = calendar.date(from: dateComponents), date <= self.minimumDate {
+                let minimumDateComponents = calendar.dateComponents([.hour, .minute, .day, .month, .year], from: self.minimumDate)
+                if let hour = minimumDateComponents.hour {
+                    dateComponents.hour = hour + 3
+                }
             }
             
             if let date = calendar.date(from: dateComponents), date >= self.minimumDate && date < self.maximumDate {
@@ -833,8 +854,15 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         
         let month = calendar.component(.month, from: date)
         let year = calendar.component(.year, from: date)
-        self.pickerView.selectRow(month - 1, inComponent: 0, animated: false)
-        self.pickerView.selectRow(year - yearRange.startIndex, inComponent: 1, animated: false)
+        
+        let monthIndex = month - 1
+        if self.pickerView.selectedRow(inComponent: 0) != monthIndex {
+            self.pickerView.selectRow(monthIndex, inComponent: 0, animated: false)
+        }
+        let yearIndex = year - self.yearRange.startIndex
+        if self.pickerView.selectedRow(inComponent: 1) != yearIndex {
+            self.pickerView.selectRow(yearIndex, inComponent: 1, animated: false)
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -883,17 +911,17 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         
         var date = calendar.date(from: components)!
         
+        var invalid = false
         if let minimumDate = self.minimumDate, let maximumDate = self.maximumDate {
-            var changed = false
             if date < minimumDate {
                 date = minimumDate
-                changed = true
+                invalid = true
             }
             if date > maximumDate {
                 date = maximumDate
-                changed = true
+                invalid = true
             }
-            if changed {
+            if invalid {
                 let month = calendar.component(.month, from: date)
                 let year = calendar.component(.year, from: date)
                 self.pickerView.selectRow(month - 1, inComponent: 0, animated: true)
@@ -901,9 +929,10 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
             }
         }
         
-        self.date = date
-        
-        self.valueChanged(date)
+        if !invalid {
+            self.date = date
+            self.valueChanged(date)
+        }
     }
     
     override func layout() {
