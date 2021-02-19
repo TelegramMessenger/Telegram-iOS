@@ -119,6 +119,7 @@ public final class ItemListNodeState {
         self.style = style
         self.emptyStateItem = emptyStateItem
         self.searchItem = searchItem
+        self.toolbarItem = toolbarItem
         self.crossfadeState = crossfadeState
         self.animateChanges = animateChanges
         self.focusItemTag = focusItemTag
