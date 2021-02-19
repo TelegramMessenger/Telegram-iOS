@@ -31,6 +31,7 @@ import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
 import CoreSpotlight
+import LightweightAccountData
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -809,8 +810,13 @@ final class SharedApplicationContext {
             |> map { _, accounts, _ -> [Account] in
                 return accounts.map({ $0.1 })
             }
-            let _ = (sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
-            |> deliverOn(Queue())).start(next: { infos in
+            let storeQueue = Queue()
+            let _ = (
+                sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
+                |> then(Signal<StoredAccountInfos, NoError>.complete() |> delay(10.0, queue: storeQueue))
+                |> restart
+                |> deliverOn(storeQueue)
+            ).start(next: { infos in
                 storeAccountsData(rootPath: rootPath, accounts: infos)
             })
             

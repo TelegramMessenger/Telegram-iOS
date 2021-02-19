@@ -157,7 +157,7 @@ static void reportMemory() {
 
 - (void)didReceiveNotificationRequest:(UNNotificationRequest *)request withContentHandler:(void (^)(UNNotificationContent * _Nonnull))contentHandler {
     if (_rootPath == nil) {
-        _bestAttemptContent = request.content;
+        _bestAttemptContent = (UNMutableNotificationContent *)[request.content mutableCopy];
         [self completeWithBestAttemptContent];
         return;
     }

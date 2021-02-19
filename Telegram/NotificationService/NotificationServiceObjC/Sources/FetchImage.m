@@ -154,7 +154,19 @@ dispatch_block_t fetchImage(BuildConfig *buildConfig, AccountProxyConnection * _
     
     for (NSNumber *datacenterId in account.datacenters) {
         AccountDatacenterInfo *info = account.datacenters[datacenterId];
-        [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:[[MTDatacenterAuthInfo alloc] initWithAuthKey:info.masterKey.data authKeyId:info.masterKey.keyId saltSet:@[] authKeyAttributes:@{}] selector:MTDatacenterAuthInfoSelectorPersistent];
+        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:info.masterKey.data authKeyId:info.masterKey.keyId saltSet:@[] authKeyAttributes:@{}];
+        
+        [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:authInfo selector:MTDatacenterAuthInfoSelectorPersistent];
+        
+        if (info.ephemeralMainKey != nil) {
+            MTDatacenterAuthInfo *ephemeralMainAuthInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:info.ephemeralMainKey.data authKeyId:info.ephemeralMainKey.keyId saltSet:@[] authKeyAttributes:@{}];
+            [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:ephemeralMainAuthInfo selector:MTDatacenterAuthInfoSelectorEphemeralMain];
+        }
+        
+        if (info.ephemeralMediaKey != nil) {
+            MTDatacenterAuthInfo *ephemeralMediaAuthInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:info.ephemeralMediaKey.data authKeyId:info.ephemeralMediaKey.keyId saltSet:@[] authKeyAttributes:@{}];
+            [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:ephemeralMediaAuthInfo selector:MTDatacenterAuthInfoSelectorEphemeralMedia];
+        }
     }
     
     MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
