@@ -6,6 +6,7 @@ import UIKit
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import UIKitRuntimeUtils
 
 final class ChatDateSelectionSheet: ActionSheetController {
     private let strings: PresentationStrings
@@ -83,6 +84,8 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.strings = strings
         self.valueChanged = valueChanged
         
+        UILabel.setDateLabel(theme.primaryTextColor)
+        
         self.pickerView = UIDatePicker()
         self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .date
@@ -96,6 +99,7 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         }
         
         self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "highlightColor")
         
         super.init(theme: theme)
         

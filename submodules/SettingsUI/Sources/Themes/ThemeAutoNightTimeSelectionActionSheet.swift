@@ -8,6 +8,7 @@ import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
+import UIKitRuntimeUtils
 
 final class ThemeAutoNightTimeSelectionActionSheet: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -97,6 +98,8 @@ private final class ThemeAutoNightTimeSelectionActionSheetItemNode: ActionSheetI
         self.theme = theme
         self.strings = strings
         self.valueChanged = valueChanged
+        
+        UILabel.setDateLabel(theme.primaryTextColor)
         
         self.pickerView = UIDatePicker()
         self.pickerView.datePickerMode = .countDownTimer

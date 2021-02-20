@@ -6,6 +6,7 @@ import TelegramPresentationData
 import TelegramStringFormatting
 import SwiftSignalKit
 import AccountContext
+import UIKitRuntimeUtils
 
 public final class DateSelectionActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -17,7 +18,6 @@ public final class DateSelectionActionSheetController: ActionSheetController {
     
     public init(context: AccountContext, title: String?, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
@@ -102,6 +102,8 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         self.theme = theme
         self.strings = strings
         self.valueChanged = valueChanged
+        
+        UILabel.setDateLabel(theme.primaryTextColor)
         
         self.pickerView = UIDatePicker()
         self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)

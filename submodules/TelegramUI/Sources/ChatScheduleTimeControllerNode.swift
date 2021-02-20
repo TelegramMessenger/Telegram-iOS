@@ -10,6 +10,7 @@ import TelegramStringFormatting
 import AccountContext
 import SolidRoundedButtonNode
 import PresentationDataUtils
+import UIKitRuntimeUtils
 
 class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -177,6 +178,8 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
             case .media:
                 textColor = UIColor.white
         }
+        
+        UILabel.setDateLabel(textColor)
         
         let pickerView = UIDatePicker()
         pickerView.timeZone = TimeZone(secondsFromGMT: 0)

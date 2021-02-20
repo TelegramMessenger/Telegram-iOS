@@ -9,6 +9,7 @@ import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
+import UIKitRuntimeUtils
 
 final class PeerBanTimeoutController: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -92,6 +93,8 @@ private final class PeerBanTimeoutActionSheetItemNode: ActionSheetItemNode {
         self.theme = theme
         self.strings = strings
         self.valueChanged = valueChanged
+        
+        UILabel.setDateLabel(theme.primaryTextColor)
         
         self.pickerView = UIDatePicker()
         self.pickerView.datePickerMode = .countDownTimer
