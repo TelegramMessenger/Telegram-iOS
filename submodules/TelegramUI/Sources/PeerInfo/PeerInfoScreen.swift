@@ -1399,6 +1399,8 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             let ItemAdmins = 105
             let ItemAutoremove = 106
             
+            var canViewAdminsAndBanned = false
+            
             if case .creator = group.role {
                 if let cachedData = data.cachedData as? CachedGroupData {
                     if cachedData.flags.contains(.canChangeUsername) {
@@ -1425,24 +1427,25 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     interaction.editingOpenPreHistorySetup()
                 }))
                 
-                /*let canChangeInfo = true
-                if canChangeInfo {
-                    let timeoutString: String
-                    if case let .known(value) = (data.cachedData as? CachedGroupData)?.autoremoveTimeout {
-                        if let value = value?.value {
-                            timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
-                        } else {
-                            timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
-                        }
+                canViewAdminsAndBanned = true
+            } else if case let .admin(rights, _) = group.role {
+                if rights.rights.contains(.canInviteUsers) {
+                    let invitesText: String
+                    if let count = data.invitations?.count, count > 0 {
+                        invitesText = "\(count)"
                     } else {
-                        timeoutString = ""
+                        invitesText = ""
                     }
                     
-                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
-                        interaction.editingOpenAutoremoveMesages()
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
+                        interaction.editingOpenInviteLinksSetup()
                     }))
-                }*/
+                }
                 
+                canViewAdminsAndBanned = true
+            }
+            
+            if canViewAdminsAndBanned {
                 var activePermissionCount: Int?
                 if let defaultBannedRights = group.defaultBannedRights {
                     var count = 0
@@ -1461,19 +1464,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                     interaction.openParticipantsSection(.admins)
                 }))
-            } else if case let .admin(rights, _) = group.role {
-                if rights.rights.contains(.canInviteUsers) {
-                    let invitesText: String
-                    if let count = data.invitations?.count, count > 0 {
-                        invitesText = "\(count)"
-                    } else {
-                        invitesText = ""
-                    }
-                    
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemInviteLinks, label: .text(invitesText), text: presentationData.strings.GroupInfo_InviteLinks, icon: UIImage(bundleImageName: "Chat/Info/GroupLinksIcon"), action: {
-                        interaction.editingOpenInviteLinksSetup()
-                    }))
-                }
             }
         }
     }
