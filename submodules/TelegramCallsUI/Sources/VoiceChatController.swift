@@ -289,6 +289,7 @@ public final class VoiceChatController: ViewController {
             let updates: [ListViewUpdateItem]
             let isLoading: Bool
             let isEmpty: Bool
+            let canInvite: Bool
             let crossFade: Bool
             let count: Int
             let animated: Bool
@@ -550,14 +551,14 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
+        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, canInvite: Bool, crossFade: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
             let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
             
             let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
             let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
             
-            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade, count: toEntries.count, animated: animated)
+            return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, canInvite: canInvite, crossFade: crossFade, count: toEntries.count, animated: animated)
         }
         
         private weak var controller: VoiceChatController?
@@ -2371,7 +2372,13 @@ public final class VoiceChatController: ViewController {
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
             
-            let itemsHeight: CGFloat = 46.0 + CGFloat(transition.count - 1) * 56.0
+            var itemsHeight: CGFloat = 0.0
+            var itemsCount = transition.count
+            if transition.canInvite {
+                itemsHeight += 46.0
+                itemsCount -= 1
+            }
+            itemsHeight += CGFloat(itemsCount) * 56.0
            
             let bottomAreaHeight: CGFloat = 268.0
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
@@ -2552,7 +2559,7 @@ public final class VoiceChatController: ViewController {
             self.currentEntries = entries
             
             let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
-            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
+            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, canInvite: canInvite, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
             self.enqueueTransition(transition)
         }
         

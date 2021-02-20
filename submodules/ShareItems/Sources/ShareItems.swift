@@ -377,6 +377,8 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
                     } else if media.isVoice || media.isAnimated || media.isSticker {
                         mediaTypes = (0, 0, 0, 0)
                         break
+                    } else if media.isMusic {
+                        mediaTypes.music += 1
                     } else if let fileName = media.fileName?.lowercased(), fileName.hasPrefix(".mp3") || fileName.hasPrefix("m4a") {
                         mediaTypes.music += 1
                     } else {
