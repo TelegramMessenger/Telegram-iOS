@@ -456,7 +456,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.currentMessage = message
         
         let canDelete: Bool
-        var canShare = !message.containsSecretMedia && !Namespaces.Message.allScheduled.contains(message.id.namespace)
+        var canShare = !message.containsSecretMedia
         
         var canEdit = false
         for media in message.media {

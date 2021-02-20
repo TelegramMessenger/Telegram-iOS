@@ -218,6 +218,8 @@ public final class InviteLinkQRCodeController: ViewController {
             
             self.qrButtonNode = HighlightTrackingButtonNode()
             self.qrImageNode = TransformImageNode()
+            self.qrImageNode.clipsToBounds = true
+            self.qrImageNode.cornerRadius = 16.0
             
             self.qrIconNode = AnimatedStickerNode()
             if let path = getAppBundle().path(forResource: "PlaneLogo", ofType: "tgs") {
