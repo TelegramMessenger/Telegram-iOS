@@ -787,11 +787,16 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             } else {
                 currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
             }
+            
+            var accountIsCreator = false
+            if case .creator = group.role {
+                accountIsCreator = true
+            }
         
             var index = 0
             for right in rightsOrder {
                 if accountUserRightsFlags.contains(right) {
-                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: group.defaultBannedRights), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating))
+                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: group.defaultBannedRights), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating && accountIsCreator))
                     index += 1
                 }
             }
@@ -1101,9 +1106,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             }
                             
                             if channel.flags.contains(.isCreator) {
-                                updateFlags = maskRightsFlags.subtracting(.canAddAdmins)
+                                updateFlags = maskRightsFlags.subtracting([.canAddAdmins, .canBeAnonymous])
                             } else if let adminRights = channel.adminRights {
-                                updateFlags = maskRightsFlags.intersection(adminRights.rights).subtracting(.canAddAdmins)
+                                updateFlags = maskRightsFlags.intersection(adminRights.rights).subtracting([.canAddAdmins, .canBeAnonymous])
                             } else {
                                 updateFlags = []
                             }
