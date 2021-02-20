@@ -279,7 +279,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1147422299] = { return Api.Update.parse_updatePeerHistoryTTL($0) }
     dict[1620733652] = { return Api.Update.parse_updateChatParticipant($0) }
     dict[1708307556] = { return Api.Update.parse_updateChannelParticipant($0) }
-    dict[820801212] = { return Api.Update.parse_updateBotStopped($0) }
+    dict[133777546] = { return Api.Update.parse_updateBotStopped($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
@@ -620,6 +620,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1272375192] = { return Api.MessageMedia.parse_messageMediaPoll($0) }
     dict[1065280907] = { return Api.MessageMedia.parse_messageMediaDice($0) }
     dict[-842892769] = { return Api.PaymentSavedCredentials.parse_paymentSavedCredentialsCard($0) }
+    dict[-1571952873] = { return Api.messages.CheckedHistoryImportPeer.parse_checkedHistoryImportPeer($0) }
     dict[1923290508] = { return Api.auth.CodeType.parse_codeTypeSms($0) }
     dict[1948046307] = { return Api.auth.CodeType.parse_codeTypeCall($0) }
     dict[577556219] = { return Api.auth.CodeType.parse_codeTypeFlashCall($0) }
@@ -1363,6 +1364,8 @@ public struct Api {
             case let _1 as Api.MessageMedia:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentSavedCredentials:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.CheckedHistoryImportPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.auth.CodeType:
                 _1.serialize(buffer, boxed)
