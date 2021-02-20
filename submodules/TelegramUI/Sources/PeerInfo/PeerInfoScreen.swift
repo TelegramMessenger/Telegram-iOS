@@ -1216,7 +1216,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                 
-                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
+                if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                     let discussionGroupTitle: String
                     if let _ = data.cachedData as? CachedChannelData {
                         if let peer = data.linkedDiscussionPeer {
@@ -1235,24 +1235,9 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
-                    
-                    /*if channel.hasPermission(.changeInfo) {
-                        let timeoutString: String
-                        if case let .known(value) = (data.cachedData as? CachedChannelData)?.autoremoveTimeout {
-                            if let value = value?.effectiveValue {
-                                timeoutString = timeIntervalString(strings: presentationData.strings, value: value)
-                            } else {
-                                timeoutString = presentationData.strings.PeerInfo_AutoremoveMessagesDisabled
-                            }
-                        } else {
-                            timeoutString = ""
-                        }
-                        
-                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAutoremove, label: .text(timeoutString), text: presentationData.strings.PeerInfo_AutoremoveMessages, action: {
-                            interaction.editingOpenAutoremoveMesages()
-                        }))
-                    }*/
-                    
+                }
+                
+                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
                     case let .broadcast(info):
@@ -1340,19 +1325,18 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }
                             
                     if (isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages))) && cachedData.peerGeoLocation == nil {
-                        if cachedData.flags.contains(.canChangeUsername) {
-                            if let linkedDiscussionPeer = data.linkedDiscussionPeer {
-                                let peerTitle: String
-                                if let addressName = linkedDiscussionPeer.addressName, !addressName.isEmpty {
-                                    peerTitle = "@\(addressName)"
-                                } else {
-                                    peerTitle = linkedDiscussionPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                }
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemLinkedChannel, label: .text(peerTitle), text: presentationData.strings.Group_LinkedChannel, icon: UIImage(bundleImageName: "Chat/Info/GroupLinkedChannelIcon"), action: {
-                                    interaction.editingOpenDiscussionGroupSetup()
-                                }))
+                        if let linkedDiscussionPeer = data.linkedDiscussionPeer {
+                            let peerTitle: String
+                            if let addressName = linkedDiscussionPeer.addressName, !addressName.isEmpty {
+                                peerTitle = "@\(addressName)"
+                            } else {
+                                peerTitle = linkedDiscussionPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             }
+                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemLinkedChannel, label: .text(peerTitle), text: presentationData.strings.Group_LinkedChannel, icon: UIImage(bundleImageName: "Chat/Info/GroupLinkedChannelIcon"), action: {
+                                interaction.editingOpenDiscussionGroupSetup()
+                            }))
                         }
+                        
                         if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
                             items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                                 interaction.editingOpenPreHistorySetup()
