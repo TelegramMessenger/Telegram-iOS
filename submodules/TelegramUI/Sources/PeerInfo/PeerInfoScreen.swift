@@ -1311,7 +1311,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }
                     }
                     
-                    if (isCreator && (channel.username?.isEmpty ?? true) && cachedData.peerGeoLocation == nil) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+                    if (isCreator && (channel.username?.isEmpty ?? true) && cachedData.peerGeoLocation == nil) || (!isCreator && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                         let invitesText: String
                         if let count = data.invitations?.count, count > 0 {
                             invitesText = "\(count)"
