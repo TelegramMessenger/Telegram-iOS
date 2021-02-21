@@ -163,6 +163,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private var editableControlNode: ItemListEditableControlNode?
     private var reorderControlNode: ItemListEditableReorderControlNode?
     
+    private let activateArea: AccessibilityAreaNode
+    
     private let fetchDisposable = MetaDisposable()
     
     override var canBeSelected: Bool {
@@ -234,6 +236,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         if let placeholderNode = self.placeholderNode {
@@ -247,6 +251,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.installationActionImageNode)
         self.addSubnode(self.installationActionNode)
         self.addSubnode(self.selectionIconNode)
+        self.addSubnode(self.activateArea)
         
         self.installationActionNode.addTarget(self, action: #selector(self.installationActionPressed), forControlEvents: .touchUpInside)
         self.installationActionNode.highligthedChanged = { [weak self] highlighted in
@@ -465,7 +470,16 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, neighbors)
-            
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = titleAttributedString?.string ?? ""
+                    strongSelf.activateArea.accessibilityValue = statusAttributedString?.string ?? ""
+                    if item.enabled {
+                        strongSelf.activateArea.accessibilityTraits = []
+                    } else {
+                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                    }
+                    
                     if fileUpdated {
                         strongSelf.currentThumbnailItem = thumbnailItem
                     }

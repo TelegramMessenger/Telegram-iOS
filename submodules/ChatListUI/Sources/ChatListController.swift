@@ -24,6 +24,7 @@ import LocalizedPeerData
 import TelegramIntents
 import TooltipUI
 import TelegramCallsUI
+import StickerResources
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -142,6 +143,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let filterDisposable = MetaDisposable()
     private let featuredFiltersDisposable = MetaDisposable()
     private var processedFeaturedFilters = false
+    
+    private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
+    private let preloadStickerDisposable = MetaDisposable()
     
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
@@ -591,43 +595,53 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         scrollToEndIfExists = true
                     }
                     
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
-                        self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
-                        if let promoInfo = promoInfo {
-                            switch promoInfo {
-                            case .proxy:
-                                let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
-                                |> deliverOnMainQueue).start(next: { value in
-                                    guard let strongSelf = self else {
-                                        return
+                    let _ = (strongSelf.preloadedSticker.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] greetingSticker in
+                        if let strongSelf = self {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput, scrollToEndIfExists: scrollToEndIfExists, greetingData: greetingSticker.flatMap({ ChatGreetingData(sticker: $0) }), animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
+                                self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
+                                if let promoInfo = promoInfo {
+                                    switch promoInfo {
+                                    case .proxy:
+                                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
+                                        |> deliverOnMainQueue).start(next: { value in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            if !value {
+                                                controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
+                                                let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                            }
+                                        })
+                                    case let .psa(type, _):
+                                        let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
+                                        |> deliverOnMainQueue).start(next: { value in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            if !value {
+                                                var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
+                                                let key = "ChatList.PsaAlert.\(type)"
+                                                if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
+                                                    text = string
+                                                } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
+                                                    text = string
+                                                }
+                                                
+                                                controller.displayPromoAnnouncement(text: text)
+                                                let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                                            }
+                                        })
                                     }
-                                    if !value {
-                                        controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
-                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
-                                    }
-                                })
-                            case let .psa(type, _):
-                                let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
-                                |> deliverOnMainQueue).start(next: { value in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    if !value {
-                                        var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
-                                        let key = "ChatList.PsaAlert.\(type)"
-                                        if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
-                                            text = string
-                                        } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
-                                            text = string
-                                        }
-                                        
-                                        controller.displayPromoAnnouncement(text: text)
-                                        let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
-                                    }
-                                })
+                                }
+                            }))
+                            
+                            if activateInput {
+                                strongSelf.prepareRandomGreetingSticker()
                             }
                         }
-                    }))
+                    })
                 }
             }
         }
@@ -834,13 +848,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            var subject: ChatControllerSubject?
-            if case let .search(messageId) = source, let id = messageId {
-                subject = .message(id: id, highlight: false)
+            let contextContentSource: ContextContentSource
+            if peer.id.namespace == Namespaces.Peer.SecretChat, let node = node.subnodes?.first as? ContextExtractedContentContainingNode {
+                contextContentSource = .extracted(ChatListHeaderBarContextExtractedContentSource(controller: strongSelf, sourceNode: node, keepInPlace: false))
+            } else {
+                var subject: ChatControllerSubject?
+                if case let .search(messageId) = source, let id = messageId {
+                    subject = .message(id: id, highlight: false)
+                }
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: subject, botStart: nil, mode: .standard(previewing: true))
+                chatController.canReadHistory.set(false)
+                contextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
             }
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: subject, botStart: nil, mode: .standard(previewing: true))
-            chatController.canReadHistory.set(false)
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, promoInfo: nil, source: .search(source), chatListController: strongSelf, joined: false), reactionItems: [], gesture: gesture)
+            
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: contextContentSource, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, promoInfo: nil, source: .search(source), chatListController: strongSelf, joined: false), reactionItems: [], gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
         }
         
@@ -1075,6 +1096,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.ready.set(self.chatListDisplayNode.containerNode.ready)
         
         self.displayNodeDidLoad()
+    }
+    
+    public override func displayNodeDidLoad() {
+        super.displayNodeDidLoad()
+        
+        Queue.mainQueue().after(1.0) {
+            self.prepareRandomGreetingSticker()
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -1960,7 +1989,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
                             for peerId in peerIds {
-                                removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
+                                removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: peerId.namespace == Namespaces.Peer.SecretChat)
                             }
                         }
                         |> afterDisposed {
@@ -2278,7 +2307,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                                     var items: [ActionSheetItem] = []
                                                                 
-                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory(canClearCache: false), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                                     
                                     if joined || mainPeer.isDeleted {
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
@@ -2707,6 +2736,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self?.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
             }))
         }
+    }
+    
+    private func prepareRandomGreetingSticker() {
+        let context = self.context
+        self.preloadedSticker.set(.single(nil)
+        |> then(randomGreetingSticker(account: context.account)
+        |> map { item in
+            return item?.file
+        }))
+        
+        self.preloadStickerDisposable.set((self.preloadedSticker.get()
+        |> mapToSignal { sticker -> Signal<Void, NoError> in
+            if let sticker = sticker {
+                let _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: sticker)).start()
+                return chatMessageAnimationData(postbox: context.account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+            } else {
+                return .complete()
+            }
+        }).start())
     }
     
     override public func tabBarDisabledAction() {

@@ -230,7 +230,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     if (_inputField.internalTextView.isFirstResponder)
         [TGHacks applyCurrentKeyboardAutocorrectionVariant];
     
-    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithAttributedString:_inputField.text == nil ? [[NSAttributedString alloc] initWithString:@""] : _inputField.attributedText]; //[[NSMutableAttributedString alloc] initWithString:_inputField.text == nil ? @"" : _inputField.text];
+    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithAttributedString:_inputField.text == nil ? [[NSAttributedString alloc] initWithString:@""] : _inputField.attributedText];
     NSMutableString *usualString = [text.string mutableCopy];
     int textLength = (int)text.length;
     for (int i = 0; i < textLength; i++)
@@ -247,21 +247,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         else
             break;
     }
-    
-    for (int i = textLength - 1; i >= 0; i--)
-    {
-        unichar c = [usualString characterAtIndex:i];
         
-        if (c == ' ' || c == '\t' || c == '\n')
-        {
-            [text deleteCharactersInRange:NSMakeRange(i, 1)];
-            [usualString deleteCharactersInRange:NSMakeRange(i, 1)];
-            textLength--;
-        }
-        else
-            break;
-    }
-    
     _inputField.internalTextView.attributedText = text;
     
     __autoreleasing NSArray *entities = nil;

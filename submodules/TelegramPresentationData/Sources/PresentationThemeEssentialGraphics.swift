@@ -176,6 +176,10 @@ public final class PrincipalThemeEssentialGraphics {
     public let outgoingDateAndStatusPinnedIcon: UIImage
     public let mediaPinnedIcon: UIImage
     public let freePinnedIcon: UIImage
+    public let incomingDateAndStatusSelfExpiringIcon: UIImage
+    public let outgoingDateAndStatusSelfExpiringIcon: UIImage
+    public let mediaSelfExpiringIcon: UIImage
+    public let freeSelfExpiringIcon: UIImage
     
     public let dateStaticBackground: UIImage
     public let dateFloatingBackground: UIImage
@@ -350,6 +354,12 @@ public final class PrincipalThemeEssentialGraphics {
             self.mediaPinnedIcon = generateTintedImage(image: pinnedImage, color: .white)!
             self.freePinnedIcon = generateTintedImage(image: pinnedImage, color: serviceColor.primaryText)!
             
+            let selfExpiringImage = UIImage(bundleImageName: "Chat/Message/SelfExpiring")!
+            self.incomingDateAndStatusSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: .white)!
+            self.freeSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: serviceColor.primaryText)!
+            
             self.radialIndicatorFileIconIncoming = emptyImage
             self.radialIndicatorFileIconOutgoing = emptyImage
         } else {
@@ -462,6 +472,12 @@ public final class PrincipalThemeEssentialGraphics {
             self.outgoingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.outgoing.secondaryTextColor)!
             self.mediaPinnedIcon = generateTintedImage(image: pinnedImage, color: .white)!
             self.freePinnedIcon = generateTintedImage(image: pinnedImage, color: serviceColor.primaryText)!
+            
+            let selfExpiringImage = UIImage(bundleImageName: "Chat/Message/SelfExpiring")!
+            self.incomingDateAndStatusSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: .white)!
+            self.freeSelfExpiringIcon = generateTintedImage(image: selfExpiringImage, color: serviceColor.primaryText)!
             
             self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
             self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!

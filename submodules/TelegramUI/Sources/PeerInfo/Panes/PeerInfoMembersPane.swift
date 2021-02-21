@@ -104,6 +104,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let membersContext: PeerInfoMembersContext
     private let action: (PeerInfoMember, PeerMembersListAction) -> Void
     
+    weak var parentController: ViewController?
+    
     private let listNode: ListView
     private var currentEntries: [PeerMembersListEntry] = []
     private var enclosingPeer: Peer?
@@ -127,7 +129,11 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.membersContext = membersContext
         self.action = action
         
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         

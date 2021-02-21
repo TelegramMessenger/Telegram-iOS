@@ -50,4 +50,42 @@
     return (retCode == Z_STREAM_END ? result : nil);
 }
 
++ (NSData * _Nullable)compress:(NSData *)data {
+    if (data.length == 0) {
+        return data;
+    }
+
+    z_stream stream;
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
+    stream.avail_in = (uint)data.length;
+    stream.next_in = (Bytef *)(void *)data.bytes;
+    stream.total_out = 0;
+    stream.avail_out = 0;
+
+    static const NSUInteger ChunkSize = 16384;
+
+    NSMutableData *output = nil;
+    int compression = Z_BEST_COMPRESSION;
+    if (deflateInit2(&stream, compression, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) == Z_OK)
+    {
+        output = [NSMutableData dataWithLength:ChunkSize];
+        while (stream.avail_out == 0)
+        {
+            if (stream.total_out >= output.length)
+            {
+                output.length += ChunkSize;
+            }
+            stream.next_out = (uint8_t *)output.mutableBytes + stream.total_out;
+            stream.avail_out = (uInt)(output.length - stream.total_out);
+            deflate(&stream, Z_FINISH);
+        }
+        deflateEnd(&stream);
+        output.length = stream.total_out;
+    }
+
+    return output;
+}
+
 @end

@@ -17,6 +17,7 @@ objc_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/NotificationsPresentationData:NotificationsPresentationData",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
     sdk_frameworks = [
         "Foundation",

@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 
 private func generateShadowImage(mirror: Bool) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 30.0, height: 45.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         if mirror {
@@ -12,7 +12,7 @@ private func generateShadowImage(mirror: Bool) -> UIImage? {
             context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         }
         
-        context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 10.0, color: UIColor(white: 0.0, alpha: 0.4).cgColor)
+        context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 18.0, color: UIColor(white: 0.0, alpha: 0.35).cgColor)
         context.setFillColor(UIColor(white: 0.0, alpha: 1.0).cgColor)
         for _ in 0 ..< 1 {
             context.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: 15.0)))
@@ -67,10 +67,10 @@ final class ListViewReorderingItemNode: ASDisplayNode {
         self.view.addSubview(self.copyView)
         self.copyView.frame = CGRect(origin: CGPoint(x: initialLocation.x, y: initialLocation.y), size: itemNode.bounds.size)
         
-        self.copyView.topShadow.frame = CGRect(origin: CGPoint(x: 0.0, y: -15.0), size: CGSize(width: copyView.bounds.size.width, height: 30.0))
+        self.copyView.topShadow.frame = CGRect(origin: CGPoint(x: 0.0, y: -30.0), size: CGSize(width: copyView.bounds.size.width, height: 45.0))
         
         self.copyView.bottomShadow.image = generateShadowImage(mirror: false)
-        self.copyView.bottomShadow.frame = CGRect(origin: CGPoint(x: 0.0, y: self.copyView.bounds.size.height - 15.0), size: CGSize(width: self.copyView.bounds.size.width, height: 30.0))
+        self.copyView.bottomShadow.frame = CGRect(origin: CGPoint(x: 0.0, y: self.copyView.bounds.size.height - 15.0), size: CGSize(width: self.copyView.bounds.size.width, height: 45.0))
         
         self.copyView.topShadow.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         self.copyView.bottomShadow.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)

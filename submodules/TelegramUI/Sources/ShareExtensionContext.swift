@@ -21,7 +21,7 @@ import MobileCoreServices
 import OverlayStatusController
 import PresentationDataUtils
 import ChatImportUI
-import ZIPFoundation
+import ZipArchive
 import ActivityIndicator
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -71,6 +71,32 @@ public struct ShareRootControllerInitializationData {
         self.appVersion = appVersion
         self.bundleData = bundleData
     }
+}
+
+private func extractTextFileHeader(path: String) -> String? {
+    guard let file = ManagedFile(queue: nil, path: path, mode: .read) else {
+        return nil
+    }
+    guard let size = file.getSize() else {
+        return nil
+    }
+    
+    let limit = 3000
+    
+    var data = file.readData(count: min(size, limit))
+    let additionalCapacity = min(10, max(0, size - data.count))
+    
+    for alignment in 0 ... additionalCapacity {
+        if alignment != 0 {
+            data.append(file.readData(count: 1))
+        }
+        if let text = String(data: data, encoding: .utf8) {
+            return text
+        } else {
+            continue
+        }
+    }
+    return nil
 }
 
 public class ShareRootControllerImpl {
@@ -176,7 +202,7 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
@@ -223,7 +249,7 @@ public class ShareRootControllerImpl {
             }
             |> castError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
-                Logger.shared.logToFile = loggingSettings.logToFile
+                Logger.shared.logToFile = true//loggingSettings.logToFile
                 Logger.shared.logToConsole = loggingSettings.logToConsole
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
@@ -387,18 +413,12 @@ public class ShareRootControllerImpl {
                         context.account.resetStateManagement()
                     }
                     
-                    /*if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
-                        let selector = NSSelectorFromString("openURL:")
-                        let url = URL(string: "tg://open")!
-                        application.perform(selector, with: url)
-                    }*/
-                    
                     if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, inputItems.count == 1, let item = inputItems[0] as? NSExtensionItem, let attachments = item.attachments {
                         for attachment in attachments {
                             if attachment.hasItemConformingToTypeIdentifier(kUTTypeFileURL as String) {
                                 attachment.loadItem(forTypeIdentifier: kUTTypeFileURL as String, completionHandler: { result, error in
                                     Queue.mainQueue().async {
-                                        guard let url = result as? URL else {
+                                        guard let url = result as? URL, url.isFileURL else {
                                             beginShare()
                                             return
                                         }
@@ -407,87 +427,156 @@ public class ShareRootControllerImpl {
                                             return
                                         }
                                         let fileExtension = (fileName as NSString).pathExtension
-                                        guard fileExtension.lowercased() == "zip" else {
-                                            beginShare()
-                                            return
-                                        }
-                                        guard let archive = Archive(url: url, accessMode: .read) else {
-                                            beginShare()
-                                            return
-                                        }
                                         
-                                        let mainFileNames: [NSRegularExpression] = [
-                                            try! NSRegularExpression(pattern: "_chat\\.txt"),
-                                            try! NSRegularExpression(pattern: "KakaoTalkChats\\.txt"),
-                                            try! NSRegularExpression(pattern: "Talk_.*?\\.txt"),
-                                        ]
-                                        
-                                        var maybeMainFileName: String?
-                                        mainFileLoop: for entry in archive {
-                                            let entryFileName = entry.path(using: .utf8).replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
-                                            let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
-                                            for expression in mainFileNames {
-                                                if expression.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                    maybeMainFileName = entryFileName
-                                                    break mainFileLoop
-                                                }
-                                            }
-                                        }
-                                        
-                                        guard let mainFileName = maybeMainFileName else {
-                                            beginShare()
-                                            return
-                                        }
-                                        
-                                        let photoRegex = try! NSRegularExpression(pattern: ".*?\\.jpg")
-                                        let videoRegex = try! NSRegularExpression(pattern: "[\\d]+-VIDEO-.*?\\.mp4")
-                                        let stickerRegex = try! NSRegularExpression(pattern: "[\\d]+-STICKER-.*?\\.webp")
-                                        let voiceRegex = try! NSRegularExpression(pattern: "[\\d]+-AUDIO-.*?\\.opus")
-                                        
-                                        var otherEntries: [(Entry, String, ChatHistoryImport.MediaType)] = []
-                                        
+                                        var archivePathValue: String?
+                                        var otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)] = []
                                         var mainFile: TempBoxFile?
-                                        do {
-                                            for entry in archive {
-                                                let entryPath = entry.path(using: .utf8).replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
-                                                if entryPath.isEmpty {
-                                                    continue
-                                                }
-                                                let tempFile = TempBox.shared.tempFile(fileName: entryPath)
-                                                if entryPath == mainFileName {
-                                                    let _ = try archive.extract(entry, to: URL(fileURLWithPath: tempFile.path))
-                                                    mainFile = tempFile
-                                                } else {
-                                                    let entryFileName = (entryPath as NSString).lastPathComponent
-                                                    if !entryFileName.isEmpty {
-                                                        let mediaType: ChatHistoryImport.MediaType
-                                                        let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
-                                                        if photoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .photo
-                                                        } else if videoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .video
-                                                        } else if stickerRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .sticker
-                                                        } else if voiceRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
-                                                            mediaType = .voice
-                                                        } else {
-                                                            mediaType = .file
-                                                        }
-                                                        otherEntries.append((entry, entryFileName, mediaType))
+                                        
+                                        let appConfiguration = context.currentAppConfiguration.with({ $0 })
+                                        
+                                        /*
+                                         history_import_filters: {
+                                             "zip": {
+                                                 "main_file_patterns": [
+                                                     "_chat\\.txt",
+                                                     "KakaoTalkChats\\.txt",
+                                                     "Talk_.*?\\.txt"
+                                                 ]
+                                             },
+                                             "txt": {
+                                                 "patterns": [
+                                                     "^\\[LINE\\]"
+                                                 ]
+                                             }
+                                         }
+                                         */
+                                        
+                                        if fileExtension.lowercased() == "zip" {
+                                            let archivePath = url.path
+                                            archivePathValue = archivePath
+                                            
+                                            guard let entries = SSZipArchive.getEntriesForFile(atPath: archivePath) else {
+                                                beginShare()
+                                                return
+                                            }
+                                            
+                                            var mainFileNameExpressions: [String] = [
+                                                "_chat\\.txt",
+                                                "KakaoTalkChats\\.txt",
+                                                "Talk_.*?\\.txt",
+                                            ]
+                                            
+                                            if let data = appConfiguration.data, let dict = data["history_import_filters"] as? [String: Any] {
+                                                if let zip = dict["zip"] as? [String: Any] {
+                                                    if let patterns = zip["main_file_patterns"] as? [String] {
+                                                        mainFileNameExpressions = patterns
                                                     }
                                                 }
                                             }
-                                        } catch {
-                                        }
-                                        
-                                        if let mainFile = mainFile, let mainFileText = try? String(contentsOf: URL(fileURLWithPath: mainFile.path)) {
-                                            let mainFileHeader: String
-                                            if mainFileText.count < 2000 {
-                                                mainFileHeader = mainFileText
-                                            } else {
-                                                mainFileHeader = String(mainFileText[mainFileText.startIndex ..< mainFileText.index(mainFileText.startIndex, offsetBy: 2000)])
+                                            
+                                            let mainFileNames: [NSRegularExpression] = mainFileNameExpressions.compactMap { string -> NSRegularExpression? in
+                                                return try? NSRegularExpression(pattern: string)
                                             }
                                             
+                                            var maybeMainFileName: String?
+                                            mainFileLoop: for entry in entries {
+                                                let entryFileName = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
+                                                let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
+                                                for expression in mainFileNames {
+                                                    if expression.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                        maybeMainFileName = entryFileName
+                                                        break mainFileLoop
+                                                    }
+                                                }
+                                            }
+                                            
+                                            guard let mainFileName = maybeMainFileName else {
+                                                beginShare()
+                                                return
+                                            }
+                                            
+                                            let photoRegex = try! NSRegularExpression(pattern: ".*?\\.jpg")
+                                            let videoRegex = try! NSRegularExpression(pattern: "[\\d]+-VIDEO-.*?\\.mp4")
+                                            let stickerRegex = try! NSRegularExpression(pattern: "[\\d]+-STICKER-.*?\\.webp")
+                                            let voiceRegex = try! NSRegularExpression(pattern: "[\\d]+-AUDIO-.*?\\.opus")
+                                            
+                                            do {
+                                                for entry in entries {
+                                                    let entryPath = entry.path.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "..", with: "_")
+                                                    if entryPath.isEmpty {
+                                                        continue
+                                                    }
+                                                    let tempFile = TempBox.shared.tempFile(fileName: entryPath)
+                                                    if entryPath == mainFileName {
+                                                        if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.path, toPath: tempFile.path) {
+                                                            mainFile = tempFile
+                                                        }
+                                                    } else {
+                                                        let entryFileName = (entryPath as NSString).lastPathComponent
+                                                        if !entryFileName.isEmpty {
+                                                            let mediaType: ChatHistoryImport.MediaType
+                                                            let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
+                                                            if photoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .photo
+                                                            } else if videoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .video
+                                                            } else if stickerRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .sticker
+                                                            } else if voiceRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
+                                                                mediaType = .voice
+                                                            } else {
+                                                                mediaType = .file
+                                                            }
+                                                            otherEntries.append((entry, entryFileName, mediaType))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else if fileExtension.lowercased() == "txt" {
+                                            var fileScanExpressions: [String] = [
+                                                "^\\[LINE\\]",
+                                            ]
+                                            
+                                            if let data = appConfiguration.data, let dict = data["history_import_filters"] as? [String: Any] {
+                                                if let zip = dict["txt"] as? [String: Any] {
+                                                    if let patterns = zip["patterns"] as? [String] {
+                                                        fileScanExpressions = patterns
+                                                    }
+                                                }
+                                            }
+                                            
+                                            let filePatterns: [NSRegularExpression] = fileScanExpressions.compactMap { string -> NSRegularExpression? in
+                                                return try? NSRegularExpression(pattern: string)
+                                            }
+                                            
+                                            if let mainFileTextHeader = extractTextFileHeader(path: url.path) {
+                                                let fullRange = NSRange(mainFileTextHeader.startIndex ..< mainFileTextHeader.endIndex, in: mainFileTextHeader)
+                                                var foundMatch = false
+                                                for pattern in filePatterns {
+                                                    if pattern.firstMatch(in: mainFileTextHeader, options: [], range: fullRange) != nil {
+                                                        foundMatch = true
+                                                        break
+                                                    }
+                                                }
+                                                if !foundMatch {
+                                                    beginShare()
+                                                    return
+                                                }
+                                            } else {
+                                                beginShare()
+                                                return
+                                            }
+                                            
+                                            let tempFile = TempBox.shared.tempFile(fileName: "History.txt")
+                                            if let _ = try? FileManager.default.copyItem(atPath: url.path, toPath: tempFile.path) {
+                                                mainFile = tempFile
+                                            } else {
+                                                beginShare()
+                                                return
+                                            }
+                                        }
+                                        
+                                        if let mainFile = mainFile, let mainFileHeader = extractTextFileHeader(path :mainFile.path) {
                                             final class TempController: ViewController {
                                                 override public var _presentedInModal: Bool {
                                                     get {
@@ -505,8 +594,7 @@ public class ShareRootControllerImpl {
                                                     
                                                     super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
                                                     
-                                                    //TODO:localize
-                                                    self.title = "Import Chat"
+                                                    self.title = presentationData.strings.ChatImport_Title
                                                     self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
                                                 }
                                                 
@@ -528,7 +616,7 @@ public class ShareRootControllerImpl {
                                                     super.containerLayoutUpdated(layout, transition: transition)
                                                     
                                                     let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: floor((layout.size.height - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
+                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: self.navigationHeight + floor((layout.size.height - self.navigationHeight - indicatorSize.height) / 2.0)), size: indicatorSize))
                                                 }
                                             }
                                             
@@ -542,10 +630,9 @@ public class ShareRootControllerImpl {
                                             |> deliverOnMainQueue).start(next: { parseInfo in
                                                 switch parseInfo {
                                                 case let .group(groupTitle):
-                                                    //TODO:localize
                                                     var attemptSelectionImpl: ((Peer) -> Void)?
                                                     var createNewGroupImpl: (() -> Void)?
-                                                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled, .doNotSearchMessages], hasContactSelector: false, hasGlobalSearch: false, title: "Import Chat", attemptSelection: { peer in
+                                                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled, .doNotSearchMessages], hasContactSelector: false, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer in
                                                         attemptSelectionImpl?(peer)
                                                     }, createNewGroup: {
                                                         createNewGroupImpl?()
@@ -565,25 +652,25 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { peer in
                                                         var errorText: String?
                                                         if let channel = peer as? TelegramChannel {
-                                                            if channel.hasPermission(.changeInfo) {
+                                                            if channel.hasPermission(.changeInfo), (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
                                                             } else {
-                                                                errorText = "You need to be an admin of the group to import messages into it."
+                                                                errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                             }
                                                         } else if let group = peer as? TelegramGroup {
                                                             switch group.role {
                                                             case .creator:
                                                                 break
                                                             default:
-                                                                errorText = "You need to be an admin of the group to import messages into it."
+                                                                errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                             }
                                                         } else {
-                                                            errorText = "You can't import history into this group."
+                                                            errorText = presentationData.strings.ChatImport_SelectionErrorGroupGeneric
                                                         }
                                                         
                                                         if let errorText = errorText {
@@ -592,18 +679,78 @@ public class ShareRootControllerImpl {
                                                             })])
                                                             strongSelf.mainWindow?.present(controller, on: .root)
                                                         } else {
-                                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                            let text: String
-                                                            if let groupTitle = groupTitle {
-                                                                text = "Are you sure you want to import messages from **\(groupTitle)** into **\(peer.debugDisplayTitle)**?"
-                                                            } else {
-                                                                text = "Are you sure you want to import messages into **\(peer.debugDisplayTitle)**?"
-                                                            }
-                                                            let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                            }), TextAlertAction(type: .defaultAction, title: "Import", action: {
-                                                                beginWithPeer(peer.id)
-                                                            })], parseMarkdown: true)
-                                                            strongSelf.mainWindow?.present(controller, on: .root)
+                                                            controller.inProgress = true
+                                                            let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                            |> deliverOnMainQueue).start(next: { result in
+                                                                controller.inProgress = false
+                                                                
+                                                                let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                                
+                                                                var errorText: String?
+                                                                if let channel = peer as? TelegramChannel {
+                                                                    if channel.hasPermission(.changeInfo), (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
+                                                                    } else {
+                                                                        errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
+                                                                    }
+                                                                } else if let group = peer as? TelegramGroup {
+                                                                    switch group.role {
+                                                                    case .creator:
+                                                                        break
+                                                                    default:
+                                                                        errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
+                                                                    }
+                                                                } else if let _ = peer as? TelegramUser {
+                                                                } else {
+                                                                    errorText = presentationData.strings.ChatImport_SelectionErrorGroupGeneric
+                                                                }
+                                                                
+                                                                if let errorText = errorText {
+                                                                    let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                                                    })])
+                                                                    strongSelf.mainWindow?.present(controller, on: .root)
+                                                                } else {
+                                                                    let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                                    let text: String
+                                                                    switch result {
+                                                                    case .allowed:
+                                                                        if let groupTitle = groupTitle {
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithTitle(groupTitle, peer.debugDisplayTitle).0
+                                                                        } else {
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithoutTitle(peer.debugDisplayTitle).0
+                                                                        }
+                                                                    case let .alert(textValue):
+                                                                        text = textValue
+                                                                    }
+                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_SelectionConfirmationAlertTitle, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                                    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_SelectionConfirmationAlertImportAction, action: {
+                                                                        beginWithPeer(peer.id)
+                                                                    })], parseMarkdown: true)
+                                                                    strongSelf.mainWindow?.present(controller, on: .root)
+                                                                }
+                                                            }, error: { error in
+                                                                controller.inProgress = false
+                                                                
+                                                                let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                                let errorText: String
+                                                                switch error {
+                                                                case .generic:
+                                                                    errorText = presentationData.strings.Login_UnknownError
+                                                                case .chatAdminRequired:
+                                                                    errorText = presentationData.strings.ChatImportActivity_ErrorNotAdmin
+                                                                case .invalidChatType:
+                                                                    errorText = presentationData.strings.ChatImportActivity_ErrorInvalidChatType
+                                                                case .userBlocked:
+                                                                    errorText = presentationData.strings.ChatImportActivity_ErrorUserBlocked
+                                                                case .limitExceeded:
+                                                                    errorText = presentationData.strings.ChatImportActivity_ErrorLimitExceeded
+                                                                case .userIsNotMutualContact:
+                                                                    errorText = presentationData.strings.ChatImport_UserErrorNotMutual
+                                                                }
+                                                                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                                                })])
+                                                                strongSelf.mainWindow?.present(controller, on: .root)
+                                                            })
                                                         }
                                                     }
                                                     
@@ -615,7 +762,7 @@ public class ShareRootControllerImpl {
                                                         } else {
                                                             resolvedGroupTitle = "Group"
                                                         }
-                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Create Group and Import Messages", text: "Are you sure you want to create group **\(resolvedGroupTitle)** and import messages from another messaging app?", actions: [TextAlertAction(type: .defaultAction, title: "Create and Import", action: {
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
                                                             var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in
@@ -649,11 +796,10 @@ public class ShareRootControllerImpl {
                                                                 if let peerId = peerId {
                                                                     beginWithPeer(peerId)
                                                                 } else {
-                                                                    //TODO:localize
                                                                 }
                                                             })
                                                         }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                        })], parseMarkdown: true)
+                                                        })], actionLayout: .vertical, parseMarkdown: true)
                                                         strongSelf.mainWindow?.present(controller, on: .root)
                                                     }
                                                     
@@ -661,9 +807,8 @@ public class ShareRootControllerImpl {
                                                 case let .privateChat(title):
                                                     let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                                     
-                                                    //TODO:localize
                                                     var attemptSelectionImpl: ((Peer) -> Void)?
-                                                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled, .doNotSearchMessages], hasChatListSelector: false, hasContactSelector: true, hasGlobalSearch: false, title: "Import Chat", attemptSelection: { peer in
+                                                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled, .doNotSearchMessages, .excludeSecretChats], hasChatListSelector: false, hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer in
                                                         attemptSelectionImpl?(peer)
                                                     }, pretendPresentedInModal: true))
                                                     
@@ -681,13 +826,33 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
                                                         controller?.inProgress = true
                                                         let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
-                                                        |> deliverOnMainQueue).start(error: { error in
+                                                        |> deliverOnMainQueue).start(next: { result in
+                                                            controller?.inProgress = false
+                                                            
+                                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                            let text: String
+                                                            switch result {
+                                                            case .allowed:
+                                                                if let title = title {
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                } else {
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                }
+                                                            case let .alert(textValue):
+                                                                text = textValue
+                                                            }
+                                                            let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_SelectionConfirmationAlertTitle, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_SelectionConfirmationAlertImportAction, action: {
+                                                                beginWithPeer(peer.id)
+                                                            })], parseMarkdown: true)
+                                                            strongSelf.mainWindow?.present(controller, on: .root)
+                                                        }, error: { error in
                                                             controller?.inProgress = false
                                                             
                                                             let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
@@ -695,36 +860,28 @@ public class ShareRootControllerImpl {
                                                             switch error {
                                                             case .generic:
                                                                 errorText = presentationData.strings.Login_UnknownError
+                                                            case .chatAdminRequired:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorNotAdmin
+                                                            case .invalidChatType:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorInvalidChatType
+                                                            case .userBlocked:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorUserBlocked
+                                                            case .limitExceeded:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorLimitExceeded
                                                             case .userIsNotMutualContact:
-                                                                errorText = "You can only import messages into private chats with users who added you in their contact list."
+                                                                errorText = presentationData.strings.ChatImport_UserErrorNotMutual
                                                             }
                                                             let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                                                             })])
-                                                            strongSelf.mainWindow?.present(controller, on: .root)
-                                                        }, completed: {
-                                                            controller?.inProgress = false
-                                                            
-                                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                            let text: String
-                                                            if let title = title {
-                                                                text = "Are you sure you want to import messages from **\(title)** into the chat with **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))**?"
-                                                            } else {
-                                                                text = "Are you sure you want to import messages into the chat with **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))**?"
-                                                            }
-                                                            let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                            }), TextAlertAction(type: .defaultAction, title: "Import", action: {
-                                                                beginWithPeer(peer.id)
-                                                            })], parseMarkdown: true)
                                                             strongSelf.mainWindow?.present(controller, on: .root)
                                                         })
                                                     }
                                                     
                                                     navigationController.viewControllers = [controller]
                                                 case let .unknown(peerTitle):
-                                                    //TODO:localize
                                                     var attemptSelectionImpl: ((Peer) -> Void)?
                                                     var createNewGroupImpl: (() -> Void)?
-                                                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeDisabled, .doNotSearchMessages], hasContactSelector: true, hasGlobalSearch: false, title: "Import Chat", attemptSelection: { peer in
+                                                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeDisabled, .doNotSearchMessages], hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer in
                                                         attemptSelectionImpl?(peer)
                                                     }, createNewGroup: {
                                                         createNewGroupImpl?()
@@ -744,47 +901,33 @@ public class ShareRootControllerImpl {
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                        }, peerId: peerId, archive: archive, mainEntry: mainFile, otherEntries: otherEntries))
+                                                        }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
                                                         controller?.inProgress = true
                                                         let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
-                                                        |> deliverOnMainQueue).start(error: { error in
-                                                            controller?.inProgress = false
-                                                            
-                                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                            let errorText: String
-                                                            switch error {
-                                                            case .generic:
-                                                                errorText = presentationData.strings.Login_UnknownError
-                                                            case .userIsNotMutualContact:
-                                                                errorText = "You can only import messages into private chats with users who added you in their contact list."
-                                                            }
-                                                            let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                                                            })])
-                                                            strongSelf.mainWindow?.present(controller, on: .root)
-                                                        }, completed: {
+                                                        |> deliverOnMainQueue).start(next: { result in
                                                             controller?.inProgress = false
                                                             
                                                             let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                                             
                                                             var errorText: String?
                                                             if let channel = peer as? TelegramChannel {
-                                                                if channel.hasPermission(.changeInfo) {
+                                                                if channel.hasPermission(.changeInfo), (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
                                                                 } else {
-                                                                    errorText = "You need to be an admin of the group to import messages into it."
+                                                                    errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                                 }
                                                             } else if let group = peer as? TelegramGroup {
                                                                 switch group.role {
                                                                 case .creator:
                                                                     break
                                                                 default:
-                                                                    errorText = "You need to be an admin of the group to import messages into it."
+                                                                    errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                                 }
                                                             } else if let _ = peer as? TelegramUser {
                                                             } else {
-                                                                errorText = "You can't import history into this group."
+                                                                errorText = presentationData.strings.ChatImport_SelectionErrorGroupGeneric
                                                             }
                                                             
                                                             if let errorText = errorText {
@@ -796,30 +939,62 @@ public class ShareRootControllerImpl {
                                                                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                                                 if let user = peer as? TelegramUser {
                                                                     let text: String
-                                                                    if let title = peerTitle {
-                                                                        text = "Are you sure you want to import messages from **\(title)** into the chat with **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))**?"
-                                                                    } else {
-                                                                        text = "Are you sure you want to import messages into the chat with **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))**?"
+                                                                    switch result {
+                                                                    case .allowed:
+                                                                        if let title = peerTitle {
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                        } else {
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                        }
+                                                                    case let .alert(textValue):
+                                                                        text = textValue
                                                                     }
-                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                                    }), TextAlertAction(type: .defaultAction, title: "Import", action: {
+                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_SelectionConfirmationAlertTitle, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                                    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_SelectionConfirmationAlertImportAction, action: {
                                                                         beginWithPeer(peer.id)
                                                                     })], parseMarkdown: true)
                                                                     strongSelf.mainWindow?.present(controller, on: .root)
                                                                 } else {
                                                                     let text: String
-                                                                    if let groupTitle = peerTitle {
-                                                                        text = "Are you sure you want to import messages from **\(groupTitle)** into **\(peer.debugDisplayTitle)**?"
-                                                                    } else {
-                                                                        text = "Are you sure you want to import messages into **\(peer.debugDisplayTitle)**?"
+                                                                    switch result {
+                                                                    case .allowed:
+                                                                        if let groupTitle = peerTitle {
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithTitle(groupTitle, peer.debugDisplayTitle).0
+                                                                        } else {
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithoutTitle(peer.debugDisplayTitle).0
+                                                                        }
+                                                                    case let .alert(textValue):
+                                                                        text = textValue
                                                                     }
-                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Import Messages", text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                                    }), TextAlertAction(type: .defaultAction, title: "Import", action: {
+                                                                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_SelectionConfirmationAlertTitle, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                                                    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_SelectionConfirmationAlertImportAction, action: {
                                                                         beginWithPeer(peer.id)
                                                                     })], parseMarkdown: true)
                                                                     strongSelf.mainWindow?.present(controller, on: .root)
                                                                 }
                                                             }
+                                                        }, error: { error in
+                                                            controller?.inProgress = false
+                                                            
+                                                            let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                                                            let errorText: String
+                                                            switch error {
+                                                            case .generic:
+                                                                errorText = presentationData.strings.Login_UnknownError
+                                                            case .chatAdminRequired:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorNotAdmin
+                                                            case .invalidChatType:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorInvalidChatType
+                                                            case .userBlocked:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorUserBlocked
+                                                            case .limitExceeded:
+                                                                errorText = presentationData.strings.ChatImportActivity_ErrorLimitExceeded
+                                                            case .userIsNotMutualContact:
+                                                                errorText = presentationData.strings.ChatImport_UserErrorNotMutual
+                                                            }
+                                                            let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                                            })])
+                                                            strongSelf.mainWindow?.present(controller, on: .root)
                                                         })
                                                     }
                                                     
@@ -831,7 +1006,7 @@ public class ShareRootControllerImpl {
                                                         } else {
                                                             resolvedGroupTitle = "Group"
                                                         }
-                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Create Group and Import Messages", text: "Are you sure you want to create group **\(resolvedGroupTitle)** and import messages from another messaging app?", actions: [TextAlertAction(type: .defaultAction, title: "Create and Import", action: {
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
                                                             var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in
@@ -865,11 +1040,10 @@ public class ShareRootControllerImpl {
                                                                 if let peerId = peerId {
                                                                     beginWithPeer(peerId)
                                                                 } else {
-                                                                    //TODO:localize
                                                                 }
                                                             })
                                                         }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                                                        })], parseMarkdown: true)
+                                                        })], actionLayout: .vertical, parseMarkdown: true)
                                                         strongSelf.mainWindow?.present(controller, on: .root)
                                                     }
                                                     

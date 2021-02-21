@@ -23,7 +23,7 @@
     origMethod = class_getInstanceMethod(targetClass, currentSelector);
     newMethod = class_getInstanceMethod(targetClass, newSelector);
     if ((origMethod != nil) && (newMethod != nil)) {
-        if(class_addMethod(targetClass, currentSelector, method_getImplementation(newMethod), method_getTypeEncoding(newMethod))) {
+        if (class_addMethod(targetClass, currentSelector, method_getImplementation(newMethod), method_getTypeEncoding(newMethod))) {
             class_replaceMethod(targetClass, newSelector, method_getImplementation(origMethod), method_getTypeEncoding(origMethod));
         } else {
             method_exchangeImplementations(origMethod, newMethod);
@@ -50,7 +50,7 @@
     targetClass = object_getClass((id)targetClass);
     
     if ((origMethod != nil) && (newMethod != nil)) {
-        if(class_addMethod(targetClass, currentSelector, method_getImplementation(newMethod), method_getTypeEncoding(newMethod))) {
+        if (class_addMethod(targetClass, currentSelector, method_getImplementation(newMethod), method_getTypeEncoding(newMethod))) {
             class_replaceMethod(targetClass, newSelector, method_getImplementation(origMethod), method_getTypeEncoding(origMethod));
         } else {
             method_exchangeImplementations(origMethod, newMethod);

@@ -13,6 +13,7 @@
 @class Api1_PhotoSize_photoSize;
 @class Api1_PhotoSize_photoCachedSize;
 @class Api1_PhotoSize_photoStrippedSize;
+@class Api1_PhotoSize_photoSizeProgressive;
 
 @class Api1_FileLocation;
 @class Api1_FileLocation_fileLocationToBeDeprecated;
@@ -96,6 +97,7 @@
 + (Api1_PhotoSize_photoSize *)photoSizeWithType:(NSString *)type location:(Api1_FileLocation *)location w:(NSNumber *)w h:(NSNumber *)h size:(NSNumber *)size;
 + (Api1_PhotoSize_photoCachedSize *)photoCachedSizeWithType:(NSString *)type location:(Api1_FileLocation *)location w:(NSNumber *)w h:(NSNumber *)h bytes:(NSData *)bytes;
 + (Api1_PhotoSize_photoStrippedSize *)photoStrippedSizeWithType:(NSString *)type bytes:(NSData *)bytes;
++ (Api1_PhotoSize_photoSizeProgressive *)photoSizeProgressiveWithType:(NSString *)type location:(Api1_FileLocation *)location w:(NSNumber *)w h:(NSNumber *)h sizes:(NSArray *)sizes;
 
 @end
 
@@ -127,6 +129,14 @@
 
 @end
 
+@interface Api1_PhotoSize_photoSizeProgressive : Api1_PhotoSize
+
+@property (nonatomic, strong) Api1_FileLocation * location;
+@property (nonatomic, strong) NSNumber * w;
+@property (nonatomic, strong) NSNumber * h;
+@property (nonatomic, strong) NSArray * sizes;
+
+@end
 
 @interface Api1_FileLocation : NSObject
 

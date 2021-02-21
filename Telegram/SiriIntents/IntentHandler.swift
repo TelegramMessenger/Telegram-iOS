@@ -10,6 +10,7 @@ import OpenSSLEncryptionProvider
 import AppLockState
 import UIKit
 import GeneratedSources
+import WidgetItems
 
 private var accountCache: Account?
 
@@ -54,12 +55,35 @@ enum IntentHandlingError {
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
-class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling {
+class IntentHandler: INExtension {
+    override public func handler(for intent: INIntent) -> Any {
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+            if intent is SelectAvatarFriendsIntent {
+                return AvatarsIntentHandler()
+            } else if intent is SelectFriendsIntent {
+                return FriendsIntentHandler()
+            } else {
+                return DefaultIntentHandler()
+            }
+        } else {
+            return DefaultIntentHandler()
+        }
+    }
+}
+
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
+@objc(IntentHandler)
+class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
     private let accountPromise = Promise<Account?>()
+    private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
     
     private let resolvePersonsDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
+    private let searchDisposable = MetaDisposable()
     
+    private var rootPath: String?
+    private var accountManager: AccountManager?
+    private var encryptionParameters: ValueBoxEncryptionParameters?
     private var appGroupUrl: URL?
     
     override init() {
@@ -88,6 +112,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         
+        self.rootPath = rootPath
+        
         TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: arc4random64())
         
         let logsPath = rootPath + "/siri-logs"
@@ -97,16 +123,61 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
+        initializeAccountManagement()
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
+        self.accountManager = accountManager
+        
+        let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
+        let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        self.encryptionParameters = encryptionParameters
+        
+        self.allAccounts.set(accountManager.accountRecords()
+        |> take(1)
+        |> map { view -> [(AccountRecordId, PeerId, Bool)] in
+            var result: [(AccountRecordId, Int, PeerId, Bool)] = []
+            for record in view.records {
+                let isLoggedOut = record.attributes.contains(where: { attribute in
+                    return attribute is LoggedOutAccountAttribute
+                })
+                if isLoggedOut {
+                    continue
+                }
+                /*let isTestingEnvironment = record.attributes.contains(where: { attribute in
+                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                        return true
+                    } else {
+                        return false
+                    }
+                })*/
+                var backupData: AccountBackupData?
+                var sortIndex: Int32 = 0
+                for attribute in record.attributes {
+                    if let attribute = attribute as? AccountSortOrderAttribute {
+                        sortIndex = attribute.order
+                    } else if let attribute = attribute as? AccountBackupDataAttribute {
+                        backupData = attribute.data
+                    }
+                }
+                if let backupData = backupData {
+                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentRecord?.id == record.id))
+                }
+            }
+            result.sort(by: { lhs, rhs in
+                if lhs.1 != rhs.1 {
+                    return lhs.1 < rhs.1
+                } else {
+                    return lhs.0 < rhs.0
+                }
+            })
+            return result.map { record -> (AccountRecordId, PeerId, Bool) in
+                return (record.0, record.2, record.3)
+            }
+        })
+        
         let account: Signal<Account?, NoError>
         if let accountCache = accountCache {
             account = .single(accountCache)
         } else {
-            initializeAccountManagement()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
-            
-            let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
-            let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
-            
             account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
             |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
@@ -139,10 +210,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     deinit {
         self.resolvePersonsDisposable.dispose()
         self.actionDisposable.dispose()
-    }
-    
-    override public func handler(for intent: INIntent) -> Any {
-        return self
+        self.searchDisposable.dispose()
     }
     
     enum ResolveResult {
@@ -701,45 +769,603 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
 
     @available(iOSApplicationExtension 14.0, iOS 14.0, *)
-    func provideFriendsOptionsCollection(for intent: SelectFriendsIntent, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
-        let _ = (self.accountPromise.get()
+    func provideFriendsOptionsCollection(for intent: SelectFriendsIntent, searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        guard let rootPath = self.rootPath, let _ = self.accountManager, let encryptionParameters = self.encryptionParameters else {
+            completion(nil, nil)
+            return
+        }
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            let presentationData = WidgetPresentationData.getForExtension()
+            
+            let error = NSError(domain: presentationData.generalLockedTitle, code: 1, userInfo: [
+                NSLocalizedDescriptionKey: presentationData.generalLockedText
+            ])
+            
+            completion(nil, error)
+            return
+        }
+        
+        self.searchDisposable.set((self.allAccounts.get()
+        |> castError(Error.self)
         |> take(1)
-        |> mapToSignal { account -> Signal<[Friend], NoError> in
-            guard let account = account else {
-                return .single([])
-            }
-            return account.postbox.transaction { transaction -> [Friend] in
-                var peers: [Peer] = []
-                
-                outer: for peerId in transaction.getContactPeerIds() {
-                    if let peer = transaction.getPeer(peerId) as? TelegramUser {
-                        peers.append(peer)
-                    }
-                }
-                
-                peers.sort(by: { lhs, rhs in
-                    return lhs.debugDisplayTitle < rhs.debugDisplayTitle
-                })
-                
-                var result: [Friend] = []
-                for peer in peers {
-                    let profileImage = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                        return account.postbox.mediaBox.resourcePath(representation.resource)
-                    }.flatMap { path -> INImage? in
-                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                            return INImage(imageData: data)
+        |> mapToSignal { accounts -> Signal<INObjectCollection<Friend>, Error> in
+            var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
+            
+            for (accountId, accountPeerId, _) in accounts {
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                    var accountTitle: String = ""
+                    if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
+                        if let username = peer.username, !username.isEmpty {
+                            accountTitle = "@\(username)"
                         } else {
-                            return nil
+                            accountTitle = peer.debugDisplayTitle
                         }
                     }
-                    result.append(Friend(identifier: "\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: nil))
+                    
+                    var peers: [Peer] = []
+                    
+                    if let searchTerm = searchTerm {
+                        if !searchTerm.isEmpty {
+                            for renderedPeer in transaction.searchPeers(query: searchTerm) {
+                                if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
+                                    peers.append(peer)
+                                }
+                            }
+                            
+                            if peers.count > 30 {
+                                peers = Array(peers.dropLast(peers.count - 30))
+                            }
+                        }
+                    } else {
+                        for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50) {
+                            if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
+                                peers.append(peer)
+                            }
+                        }
+                    }
+                    
+                    let items = mapPeersToFriends(accountId: accountId, accountPeerId: accountPeerId, mediaBox: postbox.mediaBox, peers: peers)
+                    
+                    return INObjectSection<Friend>(title: accountTitle, items: items)
+                })
+                |> `catch` { _ -> Signal<INObjectSection<Friend>, NoError> in
+                    return .single(INObjectSection<Friend>(title: nil, items: []))
                 }
-                return result
+                |> castError(Error.self))
+            }
+            
+            return combineLatest(accountResults)
+            |> map { accountResults -> INObjectCollection<Friend> in
+                let filteredSections = accountResults.filter { section in
+                    return !section.items.isEmpty
+                }
+                if filteredSections.count == 1 {
+                    return INObjectCollection<Friend>(items: filteredSections[0].items)
+                } else {
+                    return INObjectCollection<Friend>(sections: filteredSections)
+                }
+            }
+        }).start(next: { result in
+            completion(result, nil)
+        }, error: { error in
+            completion(nil, error)
+        }))
+    }
+}
+
+private final class WidgetIntentHandler {
+    private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
+    
+    private let searchDisposable = MetaDisposable()
+    
+    private var rootPath: String?
+    private var encryptionParameters: ValueBoxEncryptionParameters?
+    private var appGroupUrl: URL?
+    
+    init() {
+        guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+            return
+        }
+        
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+        
+        let appGroupName = "group.\(baseAppBundleId)"
+        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        
+        guard let appGroupUrl = maybeAppGroupUrl else {
+            return
+        }
+        
+        self.appGroupUrl = appGroupUrl
+        
+        let rootPath = rootPathForBasePath(appGroupUrl.path)
+        performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
+        
+        self.rootPath = rootPath
+        
+        TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: arc4random64())
+        
+        let logsPath = rootPath + "/siri-logs"
+        let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
+        
+        setupSharedLogger(rootPath: rootPath, path: logsPath)
+        
+        initializeAccountManagement()
+        
+        let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
+        let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        self.encryptionParameters = encryptionParameters
+        
+        let view = AccountManager.getCurrentRecords(basePath: rootPath + "/accounts-metadata")
+        
+        var result: [(AccountRecordId, Int, PeerId, Bool)] = []
+        for record in view.records {
+            let isLoggedOut = record.attributes.contains(where: { attribute in
+                return attribute is LoggedOutAccountAttribute
+            })
+            if isLoggedOut {
+                continue
+            }
+            var backupData: AccountBackupData?
+            var sortIndex: Int32 = 0
+            for attribute in record.attributes {
+                if let attribute = attribute as? AccountSortOrderAttribute {
+                    sortIndex = attribute.order
+                } else if let attribute = attribute as? AccountBackupDataAttribute {
+                    backupData = attribute.data
+                }
+            }
+            if let backupData = backupData {
+                result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentId == record.id))
             }
         }
-        |> deliverOnMainQueue).start(next: { result in
-            let collection = INObjectCollection(items: result)
-            completion(collection, nil)
+        result.sort(by: { lhs, rhs in
+            if lhs.1 != rhs.1 {
+                return lhs.1 < rhs.1
+            } else {
+                return lhs.0 < rhs.0
+            }
         })
+        self.allAccounts.set(.single(result.map { record -> (AccountRecordId, PeerId, Bool) in
+            return (record.0, record.2, record.3)
+        }))
     }
+    
+    deinit {
+        self.searchDisposable.dispose()
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func provideFriendsOptionsCollection(searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        guard let rootPath = self.rootPath, let encryptionParameters = self.encryptionParameters else {
+            completion(nil, nil)
+            return
+        }
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            
+            let presentationData = WidgetPresentationData.getForExtension()
+            
+            let error = NSError(domain: "Locked", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
+            ])
+            
+            completion(nil, error)
+            return
+        }
+        
+        self.searchDisposable.set((self.allAccounts.get()
+        |> castError(Error.self)
+        |> take(1)
+        |> mapToSignal { accounts -> Signal<INObjectCollection<Friend>, Error> in
+            var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
+            
+            for (accountId, accountPeerId, _) in accounts {
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                    var accountTitle: String = ""
+                    if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
+                        if let username = peer.username, !username.isEmpty {
+                            accountTitle = "@\(username)"
+                        } else {
+                            accountTitle = peer.debugDisplayTitle
+                        }
+                    }
+                    
+                    var peers: [Peer] = []
+                    
+                    if let searchTerm = searchTerm {
+                        if !searchTerm.isEmpty {
+                            for renderedPeer in transaction.searchPeers(query: searchTerm) {
+                                if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
+                                    peers.append(peer)
+                                }
+                            }
+                            
+                            if peers.count > 30 {
+                                peers = Array(peers.dropLast(peers.count - 30))
+                            }
+                        }
+                    } else {
+                        for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50) {
+                            if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
+                                peers.append(peer)
+                            }
+                        }
+                    }
+                    
+                    let items = mapPeersToFriends(accountId: accountId, accountPeerId: accountPeerId, mediaBox: postbox.mediaBox, peers: peers)
+                    
+                    return INObjectSection<Friend>(title: accountTitle, items: items)
+                })
+                |> `catch` { _ -> Signal<INObjectSection<Friend>, NoError> in
+                    return .single(INObjectSection<Friend>(title: nil, items: []))
+                }
+                |> castError(Error.self))
+            }
+            
+            return combineLatest(accountResults)
+            |> map { accountResults -> INObjectCollection<Friend> in
+                let filteredSections = accountResults.filter { section in
+                    return !section.items.isEmpty
+                }
+                if filteredSections.count == 1 {
+                    return INObjectCollection<Friend>(items: filteredSections[0].items)
+                } else {
+                    return INObjectCollection<Friend>(sections: filteredSections)
+                }
+            }
+        }).start(next: { result in
+            completion(result, nil)
+        }, error: { error in
+            completion(nil, error)
+        }))
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func defaultFriends() -> [Friend]? {
+        guard let rootPath = self.rootPath, let encryptionParameters = self.encryptionParameters else {
+            return []
+        }
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            return []
+        }
+        
+        var resultItems: [Friend] = []
+        
+        let semaphore: DispatchSemaphore = DispatchSemaphore(value: 0)
+        let _ = ((self.allAccounts.get()
+        |> castError(Error.self)
+        |> take(1)
+        |> mapToSignal { accounts -> Signal<[Friend], Error> in
+            var accountResults: [Signal<[Friend], Error>] = []
+            
+            for (accountId, accountPeerId, isActive) in accounts {
+                if !isActive {
+                    continue
+                }
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> [Friend] in
+                    var peers: [Peer] = []
+                    
+                    for id in getRecentPeers(transaction: transaction) {
+                        if let peer = transaction.getPeer(id), !(peer is TelegramSecretChat), !peer.isDeleted {
+                            peers.append(peer)
+                        }
+                        if peers.count >= 8 {
+                            break
+                        }
+                    }
+                    
+                    let items = mapPeersToFriends(accountId: accountId, accountPeerId: accountPeerId, mediaBox: postbox.mediaBox, peers: peers)
+                    
+                    return items
+                })
+                |> `catch` { _ -> Signal<[Friend], NoError> in
+                    return .single([])
+                }
+                |> castError(Error.self))
+            }
+            
+            return combineLatest(accountResults)
+            |> map { accountResults -> [Friend] in
+                var combinedResult: [Friend] = []
+                for result in accountResults {
+                    combinedResult.append(contentsOf: result)
+                }
+                return combinedResult
+            }
+        }).start(next: { result in
+            resultItems = result
+            semaphore.signal()
+        }, error: { error in
+            semaphore.signal()
+        }))
+        
+        semaphore.wait()
+        
+        if resultItems.count > 8 {
+            resultItems = Array(resultItems.dropLast(resultItems.count - 8))
+        }
+        
+        return resultItems
+    }
+}
+
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
+@objc(FriendsIntentHandler)
+class FriendsIntentHandler: NSObject, SelectFriendsIntentHandling {
+    private let handler: WidgetIntentHandler
+    
+    override init() {
+        self.handler = WidgetIntentHandler()
+        
+        super.init()
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func provideFriendsOptionsCollection(for intent: SelectFriendsIntent, searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        self.handler.provideFriendsOptionsCollection(searchTerm: searchTerm, with: completion)
+    }
+}
+
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
+@objc(AvatarsIntentHandler)
+class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
+    private let handler: WidgetIntentHandler
+    
+    override init() {
+        self.handler = WidgetIntentHandler()
+        
+        super.init()
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func provideFriendsOptionsCollection(for intent: SelectAvatarFriendsIntent, searchTerm: String?, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        self.handler.provideFriendsOptionsCollection(searchTerm: searchTerm, with: completion)
+    }
+    
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func defaultFriends(for intent: SelectAvatarFriendsIntent) -> [Friend]? {
+        return self.handler.defaultFriends()
+    }
+}
+
+private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    let context = UIGraphicsGetCurrentContext()
+    
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+    
+    source.draw(in: CGRect(origin: CGPoint(), size: size))
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+private let deviceColorSpace: CGColorSpace = {
+    if #available(iOSApplicationExtension 9.3, iOS 9.3, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
+
+private extension UIColor {
+    convenience init(rgb: UInt32) {
+        self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: 1.0)
+    }
+}
+
+private let gradientColors: [NSArray] = [
+    [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
+    [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],
+    [UIColor(rgb: 0x665fff).cgColor, UIColor(rgb: 0x82b1ff).cgColor],
+    [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
+    [UIColor(rgb: 0x4acccd).cgColor, UIColor(rgb: 0x00fcfd).cgColor],
+    [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
+    [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
+]
+
+private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: Int64, letters: [String]) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
+    let context = UIGraphicsGetCurrentContext()
+    
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+    
+    let colorIndex = abs(Int(accountPeerId + peerId))
+    
+    let colorsArray = gradientColors[colorIndex % gradientColors.count]
+    var locations: [CGFloat] = [1.0, 0.0]
+    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+    
+    context?.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    
+    context?.setBlendMode(.normal)
+    
+    let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
+    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 20.0), NSAttributedString.Key.foregroundColor: UIColor.white])
+    
+    let line = CTLineCreateWithAttributedString(attributedString)
+    let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+    
+    let lineOffset = CGPoint(x: string == "B" ? 1.0 : 0.0, y: 0.0)
+    let lineOrigin = CGPoint(x: floor(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floor(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0))
+    
+    context?.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context?.scaleBy(x: 1.0, y: -1.0)
+    context?.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    context?.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+    if let context = context {
+        CTLineDraw(line, context)
+    }
+    context?.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, letters: [String], size: CGSize) -> UIImage {
+    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+        return roundImage
+    } else {
+        return avatarViewLettersImage(size: size, peerId: peerId, accountPeerId: accountPeerId, letters: letters)!
+    }
+}
+
+private func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil) -> UIImage? {
+    guard let image = image else {
+        return nil
+    }
+    
+    let imageSize = image.size
+
+    UIGraphicsBeginImageContextWithOptions(imageSize, backgroundColor != nil, image.scale)
+    if let context = UIGraphicsGetCurrentContext() {
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: imageSize))
+        }
+        
+        let imageRect = CGRect(origin: CGPoint(), size: imageSize)
+        context.saveGState()
+        context.translateBy(x: imageRect.midX, y: imageRect.midY)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+        context.clip(to: imageRect, mask: image.cgImage!)
+        context.setFillColor(color.cgColor)
+        context.fill(imageRect)
+        context.restoreGState()
+    }
+    
+    let tintedImage = UIGraphicsGetImageFromCurrentImageContext()!
+    UIGraphicsEndImageContext()
+    
+    return tintedImage
+}
+
+private let savedMessagesColors: NSArray = [
+    UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor
+]
+
+private func savedMessagesImage(size: CGSize) -> UIImage? {
+    guard let icon = generateTintedImage(image: UIImage(named: "Intents/SavedMessages"), color: .white) else {
+        return nil
+    }
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    let context = UIGraphicsGetCurrentContext()
+    
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+    
+    let colorsArray = savedMessagesColors
+    var locations: [CGFloat] = [1.0, 0.0]
+    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+    
+    context?.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    
+    context?.setBlendMode(.normal)
+    
+    let factor = size.width / 60.0
+    context?.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context?.scaleBy(x: factor, y: -factor)
+    context?.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    if let context = context {
+        context.draw(icon.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - icon.size.width) / 2.0), y: floor((size.height - icon.size.height) / 2.0)), size: icon.size))
+    }
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
+private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId, mediaBox: MediaBox, peers: [Peer]) -> [Friend] {
+    var items: [Friend] = []
+    for peer in peers {
+        autoreleasepool {
+            var profileImage: INImage?
+            
+            if peer.id == accountPeerId {
+                let cachedPath = mediaBox.cachedRepresentationPathForId("savedMessagesAvatar50x50", representationId: "intents.png", keepDuration: .shortLived)
+                if let _ = fileSize(cachedPath) {
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                } else {
+                    let image = savedMessagesImage(size: CGSize(width: 50.0, height: 50.0))
+                    if let data = image?.pngData() {
+                        let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+                    }
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                }
+            } else if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
+                let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.uniqueId, representationId: "intents.png", keepDuration: .shortLived)
+                if let _ = fileSize(cachedPath) {
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                } else {
+                    let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                    if let data = image.pngData() {
+                        let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+                    }
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                }
+            }
+            if profileImage == nil {
+                let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
+                if let _ = fileSize(cachedPath) {
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                } else {
+                    let image = avatarImage(path: nil, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                    if let data = image.pngData() {
+                        let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+                    }
+                    do {
+                        let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                        profileImage = INImage(imageData: data)
+                    } catch {
+                    }
+                }
+            }
+            
+            var displayTitle = peer.debugDisplayTitle
+            if peer.id == accountPeerId {
+                displayTitle = WidgetPresentationData.getForExtension().chatSavedMessages
+            }
+            
+            items.append(Friend(identifier: "\(accountId.int64):\(peer.id.toInt64())", display: displayTitle, subtitle: nil, image: profileImage))
+        }
+    }
+    return items
 }

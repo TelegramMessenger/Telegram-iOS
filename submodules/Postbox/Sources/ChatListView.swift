@@ -559,31 +559,31 @@ final class MutableChatListView {
         return self.sampledState.hole
     }
     
-    private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?, getPeerPresence: (PeerId) -> PeerPresence?) -> MutableChatListEntry? {
+    private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox) -> MutableChatListEntry? {
         switch entry {
         case let .IntermediateMessageEntry(index, messageIndex):
             var renderedMessages: [Message] = []
             if let messageIndex = messageIndex {
                 if let messageGroup = postbox.messageHistoryTable.getMessageGroup(at: messageIndex, limit: 10) {
-                    renderedMessages.append(contentsOf: messageGroup.compactMap(renderMessage))
+                    renderedMessages.append(contentsOf: messageGroup.compactMap(postbox.renderIntermediateMessage))
                 }
             }
             var peers = SimpleDictionary<PeerId, Peer>()
             var notificationSettings: PeerNotificationSettings?
             var presence: PeerPresence?
             var isContact: Bool = false
-            if let peer = getPeer(index.messageIndex.id.peerId) {
+            if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
                 peers[peer.id] = peer
                 if let associatedPeerId = peer.associatedPeerId {
-                    if let associatedPeer = getPeer(associatedPeerId) {
+                    if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
                         peers[associatedPeer.id] = associatedPeer
                     }
-                    notificationSettings = getPeerNotificationSettings(associatedPeerId)
-                    presence = getPeerPresence(associatedPeerId)
+                    notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
+                    presence = postbox.peerPresenceTable.get(associatedPeerId)
                     isContact = postbox.contactsTable.isContact(peerId: associatedPeerId)
                 } else {
-                    notificationSettings = getPeerNotificationSettings(index.messageIndex.id.peerId)
-                    presence = getPeerPresence(index.messageIndex.id.peerId)
+                    notificationSettings = postbox.peerNotificationSettingsTable.getEffective(index.messageIndex.id.peerId)
+                    presence = postbox.peerPresenceTable.get(index.messageIndex.id.peerId)
                     isContact = postbox.contactsTable.isContact(peerId: peer.id)
                 }
             }
@@ -597,9 +597,9 @@ final class MutableChatListView {
         }
     }
     
-    func render(postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?, getPeerPresence: (PeerId) -> PeerPresence?) {
+    func render(postbox: Postbox) {
         for i in 0 ..< self.additionalItemEntries.count {
-            if let updatedEntry = self.renderEntry(self.additionalItemEntries[i].entry, postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings, getPeerPresence: getPeerPresence) {
+            if let updatedEntry = self.renderEntry(self.additionalItemEntries[i].entry, postbox: postbox) {
                 self.additionalItemEntries[i].entry = updatedEntry
             }
         }

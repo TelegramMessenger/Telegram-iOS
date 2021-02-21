@@ -3,6 +3,6 @@
 @interface TGPhotoEditorHUDView : UIView
 
 - (void)setText:(NSString *)text;
-- (void)setAttributedText:(NSAttributedString *)text;
+- (void)setTitle:(NSString *)title value:(NSString *)value;
 
 @end

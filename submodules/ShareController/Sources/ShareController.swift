@@ -304,7 +304,15 @@ public final class ShareController: ViewController {
     
     private var defaultAction: ShareControllerAction?
     
+    public var actionCompleted: (() -> Void)?
     public var dismissed: ((Bool) -> Void)?
+    public var completed: (([PeerId]) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                self.controllerNode.completed = completed
+            }
+        }
+    }
     
     public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, fromForeignApp: Bool = false, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
         self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, openStats: openStats, fromForeignApp: fromForeignApp, shares: shares, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forcedTheme: forcedTheme, forcedActionTitle: forcedActionTitle)
@@ -339,6 +347,8 @@ public final class ShareController: ViewController {
                 self.defaultAction = ShareControllerAction(title: forcedActionTitle ?? self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
                     UIPasteboard.general.string = text
                     self?.controllerNode.cancel?()
+                    
+                    self?.actionCompleted?()
                 })
             case .text:
                 break
@@ -348,6 +358,8 @@ public final class ShareController: ViewController {
                     let url = "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m"
                     UIPasteboard.general.string = url
                     self?.controllerNode.cancel?()
+                    
+                    self?.actionCompleted?()
                 })
                 break
             case .quote:
@@ -356,6 +368,7 @@ public final class ShareController: ViewController {
                 if case .saveToCameraRoll = preferredAction {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(representations: representations)
+                        self?.actionCompleted?()
                     })
                 }
             case let .media(mediaReference):
@@ -368,12 +381,14 @@ public final class ShareController: ViewController {
                 if case .saveToCameraRoll = preferredAction, canSave {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(mediaReference: mediaReference)
+                        self?.actionCompleted?()
                     })
                 }
             case let .messages(messages):
                 if case .saveToCameraRoll = preferredAction {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(messages: messages)
+                        self?.actionCompleted?()
                     })
                 } else if let message = messages.first {
                     let groupingKey: Int64? = message.groupingKey
@@ -390,6 +405,7 @@ public final class ShareController: ViewController {
                         self.defaultAction = ShareControllerAction(title: self.presentationData.strings.SharedMedia_ViewInChat, action: { [weak self] in
                             self?.controllerNode.cancel?()
                             showInChat(message)
+                            self?.actionCompleted?()
                         })
                     } else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
                         if message.id.namespace == Namespaces.Message.Cloud {
@@ -407,6 +423,7 @@ public final class ShareController: ViewController {
                                     }
                                 })
                                 strongSelf.controllerNode.cancel?()
+                                strongSelf.actionCompleted?()
                             })
                         }
                     }
@@ -419,6 +436,7 @@ public final class ShareController: ViewController {
             self.defaultAction = ShareControllerAction(title: action.title, action: { [weak self] in
                 self?.controllerNode.cancel?()
                 action.action()
+                self?.actionCompleted?()
             })
         }
         
@@ -451,6 +469,7 @@ public final class ShareController: ViewController {
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, shares: self.shares, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme)
+        self.controllerNode.completed = completed
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             self?.dismissed?(shared)
@@ -466,6 +485,7 @@ public final class ShareController: ViewController {
             guard let strongSelf = self else {
                 return .complete()
             }
+                        
             var shareSignals: [Signal<[MessageId?], NoError>] = []
             switch strongSelf.subject {
             case let .url(url):

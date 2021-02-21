@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import SyncCore
-import TelegramCore
 import TelegramApi
 
 public enum ChatHistoryImport {
@@ -16,6 +15,8 @@ public enum ChatHistoryImport {
         case generic
         case chatAdminRequired
         case invalidChatType
+        case userBlocked
+        case limitExceeded
     }
     
     public enum ParsedInfo {
@@ -49,7 +50,7 @@ public enum ChatHistoryImport {
     }
     
     public static func initSession(account: Account, peerId: PeerId, file: TempBoxFile, mediaCount: Int32) -> Signal<Session, InitImportError> {
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false)
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: true, useLargerParts: true, increaseParallelParts: true, useMultiplexedRequests: false, useCompression: true)
         |> mapError { _ -> InitImportError in
             return .generic
         }
@@ -64,14 +65,17 @@ public enum ChatHistoryImport {
                     guard let inputPeer = inputPeer else {
                         return .fail(.generic)
                     }
-                    return account.network.request(Api.functions.messages.initHistoryImport(peer: inputPeer, file: inputFile, mediaCount: mediaCount))
+                    return account.network.request(Api.functions.messages.initHistoryImport(peer: inputPeer, file: inputFile, mediaCount: mediaCount), automaticFloodWait: false)
                     |> mapError { error -> InitImportError in
-                        switch error.errorDescription {
-                        case "CHAT_ADMIN_REQUIRED":
+                        if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
                             return .chatAdminRequired
-                        case "IMPORT_PEER_TYPE_INVALID":
+                        } else if error.errorDescription == "IMPORT_PEER_TYPE_INVALID" {
                             return .invalidChatType
-                        default:
+                        } else if error.errorDescription == "USER_IS_BLOCKED" {
+                            return .userBlocked
+                        } else if error.errorDescription == "FLOOD_WAIT" {
+                            return .limitExceeded
+                        } else {
                             return .generic
                         }
                     }
@@ -100,10 +104,19 @@ public enum ChatHistoryImport {
     
     public enum UploadMediaError {
         case generic
+        case chatAdminRequired
     }
     
     public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
-        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false)
+        var forceNoBigParts = true
+        guard let size = fileSize(file.path), size != 0 else {
+            return .single(1.0)
+        }
+        if size >= 30 * 1024 * 1024 {
+            forceNoBigParts = false
+        }
+        
+        return multipartUpload(network: account.network, postbox: account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: forceNoBigParts, useLargerParts: true, useMultiplexedRequests: true)
         |> mapError { _ -> UploadMediaError in
             return .generic
         }
@@ -136,8 +149,13 @@ public enum ChatHistoryImport {
                 return .fail(.generic)
             }
             return account.network.request(Api.functions.messages.uploadImportedMedia(peer: session.inputPeer, importId: session.id, fileName: fileName, media: inputMedia))
-            |> mapError { _ -> UploadMediaError in
-                return .generic
+            |> mapError { error -> UploadMediaError in
+                switch error.errorDescription {
+                case "CHAT_ADMIN_REQUIRED":
+                    return .chatAdminRequired
+                default:
+                    return .generic
+                }
             }
             |> mapToSignal { result -> Signal<Float, UploadMediaError> in
                 return .single(1.0)
@@ -163,42 +181,58 @@ public enum ChatHistoryImport {
         }
     }
     
+    public enum CheckPeerImportResult {
+        case allowed
+        case alert(String)
+    }
+    
     public enum CheckPeerImportError {
         case generic
+        case chatAdminRequired
+        case invalidChatType
+        case userBlocked
+        case limitExceeded
         case userIsNotMutualContact
     }
     
-    public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<Never, CheckPeerImportError> {
+    public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<CheckPeerImportResult, CheckPeerImportError> {
         return account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)
         }
         |> castError(CheckPeerImportError.self)
-        |> mapToSignal { peer -> Signal<Never, CheckPeerImportError> in
+        |> mapToSignal { peer -> Signal<CheckPeerImportResult, CheckPeerImportError> in
             guard let peer = peer else {
                 return .fail(.generic)
             }
-            if let inputUser = apiInputUser(peer) {
-                return account.network.request(Api.functions.users.getUsers(id: [inputUser]))
-                |> mapError { _ -> CheckPeerImportError in
+            guard let inputPeer = apiInputPeer(peer) else {
+                return .fail(.generic)
+            }
+            
+            return account.network.request(Api.functions.messages.checkHistoryImportPeer(peer: inputPeer))
+            |> mapError { error -> CheckPeerImportError in
+                if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
+                    return .chatAdminRequired
+                } else if error.errorDescription == "IMPORT_PEER_TYPE_INVALID" {
+                    return .invalidChatType
+                } else if error.errorDescription == "USER_IS_BLOCKED" {
+                    return .userBlocked
+                } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
+                    return .userBlocked
+                } else if error.errorDescription == "FLOOD_WAIT" {
+                    return .limitExceeded
+                } else {
                     return .generic
                 }
-                |> mapToSignal { result -> Signal<Never, CheckPeerImportError> in
-                    guard let apiUser = result.first else {
-                        return .fail(.generic)
-                    }
-                    switch apiUser {
-                    case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _):
-                        if (flags & (1 << 12)) == 0 {
-                            // not mutual contact
-                            return .fail(.userIsNotMutualContact)
-                        }
-                        return .complete()
-                    case.userEmpty:
-                        return .fail(.generic)
+            }
+            |> map { result -> CheckPeerImportResult in
+                switch result {
+                case let .checkedHistoryImportPeer(confirmText):
+                    if confirmText.isEmpty {
+                        return .allowed
+                    } else {
+                        return .alert(confirmText)
                     }
                 }
-            } else {
-                return .complete()
             }
         }
     }

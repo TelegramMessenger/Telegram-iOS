@@ -475,7 +475,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             } else if let channel = peer as? TelegramChannel {
                 if message.flags.contains(.Incoming) {
                     canDelete = channel.hasPermission(.deleteAllMessages)
-                    canEdit = canEdit && channel.hasPermission(.editAllMessages)
+                    canEdit = canEdit && channel.hasPermission(.sendMessages)
                 } else {
                     canDelete = true
                 }
@@ -491,7 +491,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         
         var authorNameText: String?
-        if let author = message.effectiveAuthor {
+        if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
+            authorNameText = authorSignature
+        } else if let author = message.effectiveAuthor {
             authorNameText = author.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         } else if let peer = message.peers[message.id.peerId] {
             authorNameText = peer.displayTitle(strings: self.strings, displayOrder: self.nameOrder)

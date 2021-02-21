@@ -221,6 +221,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         }
     }
     
+    var currentAutoremoveTimeout: Int32? = chatPresentationInterfaceState.autoremoveTimeout
+    var canSetupAutoremoveTimeout = false
+    
     var accessoryItems: [ChatTextInputAccessoryItem] = []
     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
         var extendedSearchLayout = false
@@ -232,7 +235,33 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         }
         
         if !extendedSearchLayout {
-            accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
+            currentAutoremoveTimeout = peer.messageAutoremoveTimeout
+            canSetupAutoremoveTimeout = true
+        }
+    } else if let group = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+        if case .creator = group.role {
+            canSetupAutoremoveTimeout = true
+        } else if case let .admin(rights, _) = group.role {
+            if rights.rights.contains(.canDeleteMessages) {
+                canSetupAutoremoveTimeout = true
+            }
+        }
+    } else if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+        if user.botInfo == nil {
+            canSetupAutoremoveTimeout = true
+        }
+    } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+        if channel.hasPermission(.deleteAllMessages) {
+            canSetupAutoremoveTimeout = true
+        }
+    }
+    
+    if canSetupAutoremoveTimeout {
+        if case .scheduledMessages = chatPresentationInterfaceState.subject {
+        } else if chatPresentationInterfaceState.renderedPeer?.peerId != context.account.peerId {
+            if currentAutoremoveTimeout != nil || chatPresentationInterfaceState.renderedPeer?.peer is TelegramSecretChat {
+                accessoryItems.append(.messageAutoremoveTimeout(currentAutoremoveTimeout))
+            }
         }
     }
     
@@ -247,17 +276,21 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
-                if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
-                    var extendedSearchLayout = false
-                    loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
-                        if case let .contextRequestResult(peer, _) = result, peer != nil {
-                            extendedSearchLayout = true
-                            break loop
-                        }
+                var extendedSearchLayout = false
+                loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
+                    if case let .contextRequestResult(peer, _) = result, peer != nil {
+                        extendedSearchLayout = true
+                        break loop
                     }
-                    
-                    if !extendedSearchLayout {
-                        accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
+                }
+                if !extendedSearchLayout {
+                    if case .scheduledMessages = chatPresentationInterfaceState.subject {
+                    } else if chatPresentationInterfaceState.renderedPeer?.peerId != context.account.peerId {
+                        if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                            accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
+                        } else if currentAutoremoveTimeout != nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
+                            accessoryItems.append(.messageAutoremoveTimeout(currentAutoremoveTimeout))
+                        }
                     }
                 }
                 

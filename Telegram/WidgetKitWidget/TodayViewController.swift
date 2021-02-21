@@ -1,3 +1,5 @@
+#if arch(arm64) || arch(x86_64)
+
 import UIKit
 import NotificationCenter
 import BuildConfig
@@ -16,6 +18,29 @@ import OpenSSLEncryptionProvider
 import WidgetItemsUtils
 
 import GeneratedSources
+
+struct ParsedPeer {
+    var accountId: Int64
+    var accountPeerId: Int64
+    var peer: WidgetDataPeer
+}
+
+struct ParsedPeers {
+    var peers: [ParsedPeer]
+    var updateTimestamp: Int32
+}
+
+private extension ParsedPeers {
+    init(accountId: Int64, peers: WidgetDataPeers) {
+        self.init(peers: peers.peers.map { peer -> ParsedPeer in
+            return ParsedPeer(
+                accountId: accountId,
+                accountPeerId: peers.accountPeerId,
+                peer: peer
+            )
+        }, updateTimestamp: peers.updateTimestamp)
+    }
+}
 
 private var installedSharedLogger = false
 
@@ -36,26 +61,157 @@ private let accountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInpu
     return nil
 })
 
-private struct ApplicationSettings {
-    let logging: LoggingSettings
-}
-
-private func applicationSettings(accountManager: AccountManager) -> Signal<ApplicationSettings, NoError> {
-    return accountManager.transaction { transaction -> ApplicationSettings in
-        let loggingSettings: LoggingSettings
-        if let value = transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings {
-            loggingSettings = value
-        } else {
-            loggingSettings = LoggingSettings.defaultSettings
-        }
-        return ApplicationSettings(logging: loggingSettings)
-    }
-}
-
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
 }
 
+@available(iOS 14.0, *)
+private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderContext, completion: @escaping (Timeline<SimpleEntry>) -> ()) {
+    if context.isPreview {
+        completion(Timeline(entries: [SimpleEntry(date: Date(), contents: .preview)], policy: .atEnd))
+        return
+    }
+    
+    let currentDate = Date()
+    let entryDate = Calendar.current.date(byAdding: .hour, value: 0, to: currentDate)!
+    
+    guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+        completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
+        return
+    }
+    
+    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+    
+    let appGroupName = "group.\(baseAppBundleId)"
+    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+    
+    guard let appGroupUrl = maybeAppGroupUrl else {
+        completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
+        return
+    }
+    
+    let rootPath = rootPathForBasePath(appGroupUrl.path)
+    
+    TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: arc4random64())
+    
+    let logsPath = rootPath + "/widget-logs"
+    let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
+    
+    setupSharedLogger(rootPath: rootPath, path: logsPath)
+    
+    initializeAccountManagement()
+    
+    let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
+    let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+    
+    var itemsByAccount: [Int64: [(Int64, Friend)]] = [:]
+    var itemOrder: [(Int64, Int64)] = []
+    if let friends = friends {
+        for item in friends {
+            guard let identifier = item.identifier else {
+                continue
+            }
+            guard let index = identifier.firstIndex(of: ":") else {
+                continue
+            }
+            guard let accountId = Int64(identifier[identifier.startIndex ..< index]) else {
+                continue
+            }
+            guard let peerId = Int64(identifier[identifier.index(after: index)...]) else {
+                continue
+            }
+            if itemsByAccount[accountId] == nil {
+                itemsByAccount[accountId] = []
+            }
+            itemsByAccount[accountId]?.append((peerId, item))
+            itemOrder.append((accountId, peerId))
+        }
+    }
+    
+    var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
+    for (accountId, items) in itemsByAccount {
+        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> [ParsedPeer] in
+            guard let state = transaction.getState() as? AuthorizedAccountState else {
+                return []
+            }
+            
+            var result: [ParsedPeer] = []
+            
+            for (peerId, _) in items {
+                guard let peer = transaction.getPeer(PeerId(peerId)) else {
+                    continue
+                }
+                
+                var name: String = ""
+                var lastName: String?
+                
+                if let user = peer as? TelegramUser {
+                    if let firstName = user.firstName {
+                        name = firstName
+                        lastName = user.lastName
+                    } else if let lastName = user.lastName {
+                        name = lastName
+                    } else if let phone = user.phone, !phone.isEmpty {
+                        name = phone
+                    }
+                } else {
+                    name = peer.debugDisplayTitle
+                }
+                
+                var badge: WidgetDataPeer.Badge?
+                
+                if let readState = transaction.getCombinedPeerReadState(peer.id), readState.count > 0 {
+                    var isMuted = false
+                    if let notificationSettings = transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings {
+                        isMuted = notificationSettings.isRemovedFromTotalUnreadCount(default: false)
+                    }
+                    badge = WidgetDataPeer.Badge(
+                        count: Int(readState.count),
+                        isMuted: isMuted
+                    )
+                }
+                
+                var mappedMessage: WidgetDataPeer.Message?
+                if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
+                    if let message = transaction.getMessage(index.id) {
+                        mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: message)
+                    }
+                }
+                
+                let widgetPeer = WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
+                    return postbox.mediaBox.resourcePath(representation.resource)
+                }, badge: badge, message: mappedMessage)
+                
+                result.append(ParsedPeer(accountId: accountId, accountPeerId: state.peerId.toInt64(), peer: widgetPeer))
+            }
+            
+            return result
+        })
+        |> `catch` { _ -> Signal<[ParsedPeer], NoError> in
+            return .single([])
+        })
+    }
+    
+    let _ = combineLatest(friendsByAccount).start(next: { allPeers in
+        var orderedPeers: [ParsedPeer] = []
+        
+        outer: for (accountId, peerId) in itemOrder {
+            for peerSet in allPeers {
+                for peer in peerSet {
+                    if peer.accountId == accountId && peer.peer.id == peerId {
+                        orderedPeers.append(peer)
+                        continue outer
+                    }
+                }
+            }
+        }
+        
+        let result = ParsedPeers(peers: orderedPeers, updateTimestamp: Int32(Date().timeIntervalSince1970))
+        completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(result))], policy: .atEnd))
+    })
+}
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct Provider: IntentTimelineProvider {
     public typealias Entry = SimpleEntry
     
@@ -64,126 +220,39 @@ struct Provider: IntentTimelineProvider {
     }
 
     func getSnapshot(for configuration: SelectFriendsIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let contents: SimpleEntry.Contents
-        switch configuration.contents {
-        case .unknown, .recent:
-            contents = .recent
-        case .custom:
-            contents = .recent
-        }
-        let entry = SimpleEntry(date: Date(), contents: contents)
+        let entry = SimpleEntry(date: Date(), contents: context.isPreview ? .preview : .peers(ParsedPeers(accountId: 0, peers: WidgetDataPeers(accountPeerId: 0, peers: [], updateTimestamp: 0))))
         completion(entry)
     }
 
     func getTimeline(for configuration: SelectFriendsIntent, in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        let currentDate = Date()
-        let entryDate = Calendar.current.date(byAdding: .hour, value: 0, to: currentDate)!
-        
-        switch configuration.contents {
-        case .unknown, .recent:
-            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
-        case .custom:
-            guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-                completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
-                return
-            }
-            
-            let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-            
-            let appGroupName = "group.\(baseAppBundleId)"
-            let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-            
-            guard let appGroupUrl = maybeAppGroupUrl else {
-                completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
-                return
-            }
-            
-            let rootPath = rootPathForBasePath(appGroupUrl.path)
-            
-            let dataPath = rootPath + "/widget-data"
-            
-            guard let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data), case let .peers(widgetPeers) = widgetData.content else {
-                completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .recent)], policy: .atEnd))
-                return
-            }
-            
-            TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: arc4random64())
-            
-            let logsPath = rootPath + "/widget-logs"
-            let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
-            
-            setupSharedLogger(rootPath: rootPath, path: logsPath)
-            
-            initializeAccountManagement()
-            
-            let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
-            let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
-            
-            let _ = (accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: widgetData.accountId), encryptionParameters: encryptionParameters, transaction: { postbox, transaction -> WidgetDataPeers in
-                var peers: [WidgetDataPeer] = []
-                if let items = configuration.friends {
-                    for item in items {
-                        guard let identifier = item.identifier, let peerIdValue = Int64(identifier) else {
-                            continue
-                        }
-                        guard let peer = transaction.getPeer(PeerId(peerIdValue)) else {
-                            continue
-                        }
-                        
-                        var name: String = ""
-                        var lastName: String?
-                        
-                        if let user = peer as? TelegramUser {
-                            if let firstName = user.firstName {
-                                name = firstName
-                                lastName = user.lastName
-                            } else if let lastName = user.lastName {
-                                name = lastName
-                            } else if let phone = user.phone, !phone.isEmpty {
-                                name = phone
-                            }
-                        } else {
-                            name = peer.debugDisplayTitle
-                        }
-                        
-                        var badge: WidgetDataPeer.Badge?
-                        
-                        if let readState = transaction.getCombinedPeerReadState(peer.id), readState.count > 0 {
-                            var isMuted = false
-                            if let notificationSettings = transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings {
-                                isMuted = notificationSettings.isRemovedFromTotalUnreadCount(default: false)
-                            }
-                            badge = WidgetDataPeer.Badge(
-                                count: Int(readState.count),
-                                isMuted: isMuted
-                            )
-                        }
-                        
-                        var mappedMessage: WidgetDataPeer.Message?
-                        if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
-                            if let message = transaction.getMessage(index.id) {
-                                mappedMessage = WidgetDataPeer.Message(message: message)
-                            }
-                        }
-                        
-                        peers.append(WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                            return postbox.mediaBox.resourcePath(representation.resource)
-                        }, badge: badge, message: mappedMessage))
-                    }
-                }
-                return WidgetDataPeers(accountPeerId: widgetPeers.accountPeerId, peers: peers)
-            })
-            |> deliverOnMainQueue).start(next: { peers in
-                completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(peers))], policy: .atEnd))
-            })
-        }
+        getCommonTimeline(friends: configuration.friends, in: context, completion: completion)
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
+struct AvatarsProvider: IntentTimelineProvider {
+    public typealias Entry = SimpleEntry
+    
+    func placeholder(in context: Context) -> SimpleEntry {
+        return SimpleEntry(date: Date(), contents: .recent)
+    }
+
+    func getSnapshot(for configuration: SelectAvatarFriendsIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
+        let entry = SimpleEntry(date: Date(), contents: context.isPreview ? .preview : .peers(ParsedPeers(accountId: 0, peers: WidgetDataPeers(accountPeerId: 0, peers: [], updateTimestamp: 0))))
+        completion(entry)
+    }
+
+    func getTimeline(for configuration: SelectAvatarFriendsIntent, in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        getCommonTimeline(friends: configuration.friends, in: context, completion: completion)
+    }
+}
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct SimpleEntry: TimelineEntry {
     enum Contents {
         case recent
-        case peers(WidgetDataPeers)
+        case preview
+        case peers(ParsedPeers)
     }
     
     let date: Date
@@ -191,285 +260,457 @@ struct SimpleEntry: TimelineEntry {
 }
 
 enum PeersWidgetData {
-    case placeholder
     case empty
-    case locked
-    case peers(WidgetDataPeers)
+    case preview
+    case peers(ParsedPeers)
 }
 
-extension PeersWidgetData {
-    static let previewData = PeersWidgetData.placeholder
-}
-
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct AvatarItemView: View {
-    var accountPeerId: Int64
-    var peer: WidgetDataPeer
+    var peer: ParsedPeer?
     var itemSize: CGFloat
-    var displayBadge: Bool = true
+    var placeholderColor: Color
     
     var body: some View {
         return ZStack {
-            Image(uiImage: avatarImage(accountPeerId: accountPeerId, peer: peer, size: CGSize(width: itemSize, height: itemSize)))
+            if let peer = peer {
+                Image(uiImage: avatarImage(accountPeerId: peer.accountPeerId, peer: peer.peer, size: CGSize(width: itemSize, height: itemSize)))
                 .clipShape(Circle())
-            if displayBadge, let badge = peer.badge, badge.count > 0 {
-                Text("\(badge.count)")
-                    .font(Font.system(size: 16.0))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 4.0)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(badge.isMuted ? Color.gray : Color.red)
-                            .frame(minWidth: 20, idealWidth: 20, maxWidth: .infinity, minHeight: 20, idealHeight: 20, maxHeight: 20.0, alignment: .center)
-                    )
-                    .position(x: floor(0.84 * itemSize), y: floor(0.16 * itemSize))
+            } else {
+                Circle()
+                    .fill(placeholderColor)
+                    .frame(width: itemSize, height: itemSize)
             }
         }
     }
 }
 
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct WidgetView: View {
     @Environment(\.widgetFamily) private var widgetFamily
     @Environment(\.colorScheme) private var colorScheme
     let data: PeersWidgetData
+    let presentationData: WidgetPresentationData
     
-    func placeholder(geometry: GeometryProxy) -> some View {
-        let defaultItemSize: CGFloat = 60.0
-        let defaultPaddingFraction: CGFloat = 0.36
-        
-        let columnCount = Int(round(geometry.size.width / (defaultItemSize * (1.0 + defaultPaddingFraction))))
-        let itemSize = floor(geometry.size.width / (CGFloat(columnCount) + defaultPaddingFraction * CGFloat(columnCount - 1)))
-        
-        let firstRowY = itemSize / 2.0
-        let secondRowY = itemSize / 2.0 + geometry.size.height - itemSize
-        
-        return ZStack {
-            ForEach(0 ..< columnCount * 2, content: { i in
-                return Circle().frame(width: itemSize, height: itemSize).position(x: itemSize / 2.0 + floor(CGFloat(i % columnCount) * itemSize * (1.0 + defaultPaddingFraction)), y: i / columnCount == 0 ? firstRowY : secondRowY).foregroundColor(.gray)
-            })
-        }
-    }
-    
-    private func linkForPeer(id: Int64) -> String {
+    private func linkForPeer(accountId: Int64, id: Int64) -> String {
         switch self.widgetFamily {
         case .systemSmall:
             return "\(buildConfig.appSpecificUrlScheme)://"
         default:
-            return "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(id)"
+            return "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(id)&accountId=\(accountId)"
         }
     }
     
-    func peersView(geometry: GeometryProxy, peers: WidgetDataPeers) -> some View {
-        let columnCount: Int
-        let rowCount: Int
+    func chatTopLine(_ content: ChatContent) -> some View {
+        let dateText: String
         
-        let itemSizeFraction: CGFloat
-        let horizontalInsetFraction: CGFloat
-        let verticalInsetFraction: CGFloat
-        let horizontalSpacingFraction: CGFloat
-        let verticalSpacingFraction: CGFloat
+        let chatTitle: AnyView
+        let date: Text
+        var isPlaceholder = false
         
-        switch self.widgetFamily {
-        case .systemLarge:
-            itemSizeFraction = 0.1762917933
-            horizontalInsetFraction = 0.04863221884
-            verticalInsetFraction = 0.04863221884
-            horizontalSpacingFraction = 0.06079027356
-            verticalSpacingFraction = 0.06079027356
-            columnCount = 4
-            rowCount = 4
-        case .systemMedium:
-            itemSizeFraction = 0.1762917933
-            horizontalInsetFraction = 0.04863221884
-            verticalInsetFraction = 0.1032258065
-            horizontalSpacingFraction = 0.06079027356
-            verticalSpacingFraction = 0.07741935484
-            columnCount = 4
-            rowCount = 2
-        case .systemSmall:
-            itemSizeFraction = 0.335483871
-            horizontalInsetFraction = 0.1032258065
-            verticalInsetFraction = 0.1032258065
-            horizontalSpacingFraction = 0.1161290323
-            verticalSpacingFraction = 0.1161290323
-            columnCount = 2
-            rowCount = 2
-        @unknown default:
-            itemSizeFraction = 0.335483871
-            horizontalInsetFraction = 0.1032258065
-            verticalInsetFraction = 0.1032258065
-            horizontalSpacingFraction = 0.1161290323
-            verticalSpacingFraction = 0.1161290323
-            columnCount = 2
-            rowCount = 2
-        }
-        
-        let itemSize = floor(geometry.size.width * itemSizeFraction)
-        
-        return ZStack {
-            ForEach(0 ..< min(peers.peers.count, columnCount * rowCount), content: { i in
-                Link(destination: URL(string: linkForPeer(id: peers.peers[i].id))!, label: {
-                    AvatarItemView(
-                        accountPeerId: peers.accountPeerId,
-                        peer: peers.peers[i],
-                        itemSize: itemSize
-                    ).frame(width: itemSize, height: itemSize)
-                }).frame(width: itemSize, height: itemSize)
-                .position(x: floor(horizontalInsetFraction * geometry.size.width + itemSize / 2.0 + CGFloat(i % columnCount) * (itemSize + horizontalSpacingFraction * geometry.size.width)), y: floor(verticalInsetFraction * geometry.size.height + itemSize / 2.0 + CGFloat(i / columnCount) * (itemSize + verticalSpacingFraction * geometry.size.height)))
-            })
-        }
-    }
-    
-    func peerViews() -> AnyView {
-        switch data {
+        switch content {
+        case let .peer(peer):
+            if let message = peer.peer.message {
+                dateText = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .none, timeStyle: .short)
+            } else {
+                dateText = ""
+            }
+            var formattedName = peer.peer.name
+            if peer.accountPeerId == peer.peer.id {
+                formattedName = self.presentationData.chatSavedMessages
+            } else if let lastName = peer.peer.lastName {
+                formattedName.append(" \(lastName)")
+            }
+            chatTitle = AnyView(Text(formattedName)
+                .lineLimit(1)
+                .font(Font.system(size: 16.0, weight: .medium, design: .default))
+                .foregroundColor(.primary))
+            date = Text(dateText)
+            .font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
+        case let .preview(index):
+            let titleText = index == 0 ? "News Channel" : "Duck"
+            dateText = index == 0 ? "9:00" : "8:42"
+            chatTitle = AnyView(Text(titleText)
+                .lineLimit(1)
+                .font(Font.system(size: 16.0, weight: .medium, design: .default))
+                .foregroundColor(.primary))
+            date = Text(dateText)
+            .font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
         case .placeholder:
-            return AnyView(GeometryReader { geometry in
-                placeholder(geometry: geometry)
-            })
-        case .empty:
-            return AnyView(VStack {
-                Text(presentationData.applicationStartRequiredString)
-            })
-        case .locked:
-            return AnyView(VStack {
-                Text(presentationData.applicationLockedString)
-            })
-        case let .peers(peers):
-            return AnyView(GeometryReader { geometry in
-                peersView(geometry: geometry, peers: peers)
-            })
+            isPlaceholder = true
+            dateText = "         "
+            chatTitle = AnyView(Text(" ").font(Font.system(size: 16.0, weight: .medium, design: .default)).foregroundColor(.primary))
+            date = Text(dateText)
+            .font(Font.system(size: 16.0, weight: .regular, design: .default)).foregroundColor(.secondary)
         }
-    }
-    
-    var body1: some View {
-        ZStack {
-            peerViews()
-        }
+        return HStack(alignment: .center, spacing: 0.0, content: {
+            if !isPlaceholder {
+                chatTitle
+            } else {
+                chatTitle
+                    .frame(minWidth: 48.0)
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0 + 1.0)
+                        }
+                    )
+            }
+            Spacer()
+            if !isPlaceholder {
+                date
+            } else {
+                date
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0)
+                        }
+                    )
+            }
+        })
         .padding(0.0)
     }
     
-    func chatTopLine(_ peer: WidgetDataPeer) -> some View {
-        let dateText: String
-        if let message = peer.message {
-            dateText = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .none, timeStyle: .short)
+    func chatBottomLine(_ content: ChatContent) -> AnyView {
+        var text = ""
+        var isPlaceholder = false
+        switch content {
+        case let .peer(peer):
+            if let message = peer.peer.message {
+                text = message.text
+                switch message.content {
+                case .text:
+                    break
+                case .image:
+                    if !message.text.isEmpty {
+                        text = "🖼 \(message.text)"
+                    } else {
+                        text = "🖼 \(self.presentationData.messagePhoto)"
+                    }
+                case .video:
+                    if !message.text.isEmpty {
+                        text = "📹 \(message.text)"
+                    } else {
+                        text = "📹 \(self.presentationData.messageVideo)"
+                    }
+                case .gif:
+                    if !message.text.isEmpty {
+                        text = "\(message.text)"
+                    } else {
+                        text = "\(self.presentationData.messageAnimation)"
+                    }
+                case let .file(file):
+                    if !message.text.isEmpty {
+                        text = "📹 \(message.text)"
+                    } else {
+                        text = "📎 \(file.name)"
+                    }
+                case let .music(music):
+                    if !music.title.isEmpty && !music.artist.isEmpty {
+                        text = "\(music.artist) — \(music.title)"
+                    } else if !music.title.isEmpty {
+                        text = music.title
+                    } else if !music.artist.isEmpty {
+                        text = music.artist
+                    } else {
+                        text = "Unknown Artist"
+                    }
+                case .voiceMessage:
+                    text = "🎤 \(self.presentationData.messageVoice)"
+                case .videoMessage:
+                    text = "\(self.presentationData.messageVideoMessage)"
+                case let .sticker(sticker):
+                    text = "\(sticker.altText) \(presentationData.messageSticker)"
+                case let .call(call):
+                    if call.isVideo {
+                        text = "\(self.presentationData.messageVideoCall)"
+                    } else {
+                        text = "\(self.presentationData.messageVoiceCall)"
+                    }
+                case .mapLocation:
+                    text = "\(self.presentationData.messageLocation)"
+                case let .game(game):
+                    text = "🎮 \(game.title)"
+                case let .poll(poll):
+                    text = "📊 \(poll.title)"
+                case let .autodeleteTimer(value):
+                    if value.value != nil {
+                        text = self.presentationData.autodeleteTimerUpdated
+                    } else {
+                        text = self.presentationData.autodeleteTimerRemoved
+                    }
+                }
+                
+                if let author = message.author {
+                    if author.isMe {
+                        text = "\(presentationData.messageAuthorYou): \(text)"
+                    } else {
+                        text = "\(author.title): \(text)"
+                    }
+                }
+            }
+            text += "\n"
+        case let .preview(index):
+            if index == 0 {
+                text = "☀️ 23 °C\n☁️ Passing Clouds"
+            } else {
+                text = "😂 \(presentationData.messageSticker)"
+                text += "\n"
+            }
+        case .placeholder:
+            isPlaceholder = true
+        }
+        
+        let textView = Text(text)
+            .lineLimit(2)
+            .font(Font.system(size: 15.0, weight: .regular, design: .default))
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.leading)
+            .padding(0.0)
+        
+        if !isPlaceholder {
+            return AnyView(textView)
         } else {
-            dateText = ""
+            return AnyView(
+                VStack(alignment: .leading, spacing: 0.0, content: {
+                    Text(" ")
+                        .lineLimit(1)
+                        .font(Font.system(size: 15.0, weight: .regular, design: .default))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .padding(0.0)
+                        .frame(minWidth: 182.0)
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0 - 1.0)
+                        }
+                    )
+                    Text(" ")
+                        .lineLimit(1)
+                        .font(Font.system(size: 15.0, weight: .regular, design: .default))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .padding(0.0)
+                        .frame(minWidth: 96.0)
+                    .background(GeometryReader { geometry in
+                        RoundedRectangle(cornerRadius: 4.0)
+                            .fill(getPlaceholderColor())
+                            .frame(width: geometry.size.width, height: 8.0, alignment: .center)
+                            .offset(x: 0.0, y: (geometry.size.height - 8.0) / 2.0 - 1.0)
+                        }
+                    )
+                })
+            )
         }
-        return HStack(alignment: .center, spacing: 0.0, content: {
-            Text(peer.name).font(Font.system(size: 16.0, weight: .medium, design: .default)).foregroundColor(.primary)
-            Spacer()
-            Text(dateText).font(Font.system(size: 14.0, weight: .regular, design: .default)).foregroundColor(.secondary)
+    }
+    
+    enum ChatContent {
+        case peer(ParsedPeer)
+        case preview(Int)
+        case placeholder
+    }
+    
+    func chatContent(_ content: ChatContent) -> some View {
+        return VStack(alignment: .leading, spacing: 0.0, content: {
+            chatTopLine(content)
+            chatBottomLine(content)
         })
     }
     
-    func chatBottomLine(_ peer: WidgetDataPeer) -> some View {
-        var text = peer.message?.text ?? ""
-        if let message = peer.message {
-            //TODO:localize
-            switch message.content {
-            case .text:
-                break
-            case .image:
-                text = "🖼 Photo"
-            case .video:
-                text = "📹 Video"
-            case .gif:
-                text = "Gif"
-            case let .file(file):
-                text = "📎 \(file.name)"
-            case let .music(music):
-                if !music.title.isEmpty && !music.artist.isEmpty {
-                    text = "\(music.artist) — \(music.title)"
-                } else if !music.title.isEmpty {
-                    text = music.title
-                } else if !music.artist.isEmpty {
-                    text = music.artist
-                } else {
-                    text = "Music"
-                }
-            case .voiceMessage:
-                text = "🎤 Voice Message"
-            case .videoMessage:
-                text = "Video Message"
-            case let .sticker(sticker):
-                text = "\(sticker.altText) Sticker"
-            case let .call(call):
-                if call.isVideo {
-                    text = "Video Call"
-                } else {
-                    text = "Voice Call"
-                }
-            case .mapLocation:
-                text = "Location"
-            case let .game(game):
-                text = "🎮 \(game.title)"
-            case let .poll(poll):
-                text = "📊 \(poll.title)"
-            }
-        }
-        
-        var hasBadge = false
-        if let badge = peer.badge, badge.count > 0 {
-            hasBadge = true
-        }
-        
-        return HStack(alignment: .center, spacing: hasBadge ? 6.0 : 0.0, content: {
-            Text(text).lineLimit(nil).font(Font.system(size: 15.0, weight: .regular, design: .default)).foregroundColor(.secondary).multilineTextAlignment(.leading).frame(maxHeight: .infinity, alignment: .topLeading)
-            Spacer()
-            if let badge = peer.badge, badge.count > 0 {
-                VStack {
-                    Spacer()
-                    Text("\(badge.count)")
-                        .font(Font.system(size: 14.0))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 4.0)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(badge.isMuted ? Color.gray : Color.blue)
-                                .frame(minWidth: 20, idealWidth: 20, maxWidth: .infinity, minHeight: 20, idealHeight: 20, maxHeight: 20.0, alignment: .center)
-                        )
-                        .padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 6.0, trailing: 3.0))
-                }
-            }
-        })
-    }
-    
-    func chatContent(_ peer: WidgetDataPeer) -> some View {
-        return VStack(alignment: .leading, spacing: 2.0, content: {
-            chatTopLine(peer)
-            chatBottomLine(peer).frame(maxHeight: .infinity)
-        })
-    }
-    
-    func chatContentView(_ index: Int) -> AnyView {
-        let peers: WidgetDataPeers
+    func chatContentView(_ index: Int, size: CGSize) -> AnyView {
+        let peers: ParsedPeers?
+        var isPlaceholder = false
+        var isPreview = false
         switch data {
         case let .peers(peersValue):
-            peers = peersValue
-            if peers.peers.count <= index {
-                return AnyView(Spacer())
+            if peersValue.peers.count <= index {
+                isPlaceholder = peersValue.peers.count != 0
+                peers = nil
+            } else {
+                peers = peersValue
             }
+        case .preview:
+            peers = nil
+            isPreview = true
         default:
-            return AnyView(Spacer())
+            peers = nil
         }
         
-        return AnyView(
-            Link(destination: URL(string: linkForPeer(id: peers.peers[index].id))!, label: {
+        let itemHeight = (size.height - 22.0) / 2.0
+        
+        if isPlaceholder {
+            return AnyView(Spacer()
+                .frame(width: size.width, height: itemHeight, alignment: .leading)
+            )
+        }
+        
+        if isPreview {
+            return AnyView(
                 HStack(alignment: .center, spacing: 0.0, content: {
-                AvatarItemView(accountPeerId: peers.accountPeerId, peer: peers.peers[index], itemSize: 60.0, displayBadge: false).frame(width: 60.0, height: 60.0, alignment: .leading).padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
-                chatContent(peers.peers[index]).frame(maxWidth: .infinity).padding(EdgeInsets(top: 10.0, leading: 0.0, bottom: 10.0, trailing: 10.0))
+                    Image("Widget/Avatar\(index == 0 ? "Channel" : "1")")
+                        .aspectRatio(1.0, contentMode: .fit)
+                        .clipShape(Circle())
+                        .frame(width: 54.0, height: 54.0, alignment: .leading)
+                        .padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                    chatContent(.preview(index)).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
+                })
+                .frame(width: size.width, height: itemHeight, alignment: .leading)
+            )
+        }
+        
+        let url: URL
+        if let peers = peers {
+            url = URL(string: linkForPeer(accountId: peers.peers[index].accountId, id: peers.peers[index].peer.id))!
+        } else {
+            url = URL(string: "\(buildConfig.appSpecificUrlScheme)://")!
+        }
+        
+        let content: ChatContent
+        if let peer = peers?.peers[index] {
+            content = .peer(peer)
+        } else {
+            content = .placeholder
+        }
+        
+        let avatarView: AvatarItemView
+        avatarView = AvatarItemView(peer: peers?.peers[index], itemSize: 54.0, placeholderColor: getPlaceholderColor())
+        
+        return AnyView(
+            Link(destination: url, label: {
+                HStack(alignment: .center, spacing: 0.0, content: {
+                    avatarView
+                        .frame(width: 54.0, height: 54.0, alignment: .leading)
+                        .padding(EdgeInsets(top: 0.0, leading: 10.0, bottom: 0.0, trailing: 10.0))
+                    chatContent(content).frame(maxWidth: .infinity).padding(EdgeInsets(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 10.0))
                 })
             })
+            .frame(width: size.width, height: itemHeight, alignment: .leading)
         )
+    }
+    
+    func chatSeparatorView(size: CGSize) -> some View {
+        return HStack(alignment: .center, spacing: 0.0, content: {
+            Spacer()
+            Rectangle()
+                .foregroundColor(getSeparatorColor())
+                .frame(width: size.width - 54.0 - 20.0, height: 0.5, alignment: .leading)
+        })
+        .frame(width: size.width, height: 1.0, alignment: .leading)
+    }
+    
+    func chatsUpdateBackgroundView(size: CGSize) -> some View {
+        return Rectangle().foregroundColor(getUpdatedBackgroundColor())
+            //.position(x: size.width / 2.0, y: size.height - 11.0)
+            .frame(width: size.width, height: 22.0, alignment: .center)
+    }
+    
+    func chatUpdateView(size: CGSize) -> some View {
+        return ZStack(alignment: Alignment(horizontal: .center, vertical: .center), content: {
+            Rectangle().foregroundColor(getUpdatedBackgroundColor())
+            chatsUpdateTimestampView(size: size)
+        })
+        .frame(width: size.width, height: 22.0 - 1.0, alignment: .center)
+    }
+    
+    func chatsUpdateTimestampView(size: CGSize) -> some View {
+        let text: String
+        switch data {
+        case let .peers(peersValue):
+            if peersValue.peers.isEmpty {
+                text = self.presentationData.widgetLongTapToEdit
+            } else {
+                let date = Date(timeIntervalSince1970: Double(peersValue.updateTimestamp))
+                let calendar = Calendar.current
+                if !calendar.isDate(Date(), inSameDayAs: date) {
+                    let formatter = DateFormatter()
+                    formatter.dateStyle = .short
+                    formatter.timeStyle = .none
+                    text = self.presentationData.widgetUpdatedAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
+                } else {
+                    let formatter = DateFormatter()
+                    formatter.dateStyle = .none
+                    formatter.timeStyle = .short
+                    text = self.presentationData.widgetUpdatedTodayAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
+                }
+            }
+        case .preview:
+            let date = Date()
+            let calendar = Calendar.current
+            if !calendar.isDate(Date(), inSameDayAs: date) {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .short
+                formatter.timeStyle = .none
+                text = self.presentationData.widgetUpdatedAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
+            } else {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .none
+                formatter.timeStyle = .short
+                text = self.presentationData.widgetUpdatedTodayAt.replacingOccurrences(of: "{}", with: formatter.string(from: date))
+            }
+        default:
+            text = self.presentationData.widgetLongTapToEdit
+        }
+        
+        return Text(text)
+            .font(Font.system(size: 12.0))
+            .foregroundColor(getUpdatedTextColor())
+    }
+    
+    func getBackgroundColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return .white
+        case .dark:
+            return Color(.sRGB, red: 28.0 / 255.0, green: 28.0 / 255.0, blue: 30.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
     }
     
     func getSeparatorColor() -> Color {
         switch colorScheme {
         case .light:
-            return Color(.sRGB, red: 200.0 / 255.0, green: 199.0 / 255.0, blue: 204.0 / 255.0, opacity: 1.0)
+            return Color(.sRGB, red: 216.0 / 255.0, green: 216.0 / 255.0, blue: 216.0 / 255.0, opacity: 1.0)
         case .dark:
-            return Color(.sRGB, red: 61.0 / 255.0, green: 61.0 / 255.0, blue: 64.0 / 255.0, opacity: 1.0)
+            return Color(.sRGB, red: 0.0 / 255.0, green: 0.0 / 255.0, blue: 0.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    func getUpdatedBackgroundColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 242.0 / 255.0, green: 242.0 / 255.0, blue: 247.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 21.0 / 255.0, green: 21.0 / 255.0, blue: 21.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    func getUpdatedTextColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 146.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 146.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    func getPlaceholderColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 235.0 / 255.0, green: 235.0 / 255.0, blue: 241.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 38.0 / 255.0, green: 38.0 / 255.0, blue: 41.0 / 255.0, opacity: 1.0)
         @unknown default:
             return .secondary
         }
@@ -477,13 +718,105 @@ struct WidgetView: View {
     
     var body: some View {
         GeometryReader(content: { geometry in
-            ZStack {
-                chatContentView(0).position(x: geometry.size.width / 2.0, y: geometry.size.height / 4.0).frame(width: geometry.size.width, height: geometry.size.height / 2.0, alignment: .leading)
-                chatContentView(1).position(x: geometry.size.width / 2.0, y: geometry.size.height / 2.0 + geometry.size.height / 4.0).frame(width: geometry.size.width, height: geometry.size.height / 2.0, alignment: .leading)
-                Rectangle().foregroundColor(getSeparatorColor()).position(x: geometry.size.width / 2.0, y: geometry.size.height / 4.0).frame(width: geometry.size.width, height: 0.33, alignment: .leading)
-            }
+            return VStack(alignment: .center, spacing: 0.0, content: {
+                chatContentView(0, size: geometry.size)
+                chatSeparatorView(size: geometry.size)
+                chatContentView(1, size: geometry.size)
+                chatUpdateView(size: geometry.size)
+            })
         })
+        .background(Rectangle().foregroundColor(getBackgroundColor()))
         .padding(0.0)
+        .unredacted()
+    }
+}
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
+struct AvatarsWidgetView: View {
+    @Environment(\.widgetFamily) private var widgetFamily
+    @Environment(\.colorScheme) private var colorScheme
+    let data: PeersWidgetData
+    let presentationData: WidgetPresentationData
+    
+    func placeholder(geometry: GeometryProxy) -> some View {
+        return Spacer()
+    }
+    
+    private func linkForPeer(accountId: Int64, id: Int64) -> String {
+        switch self.widgetFamily {
+        case .systemSmall:
+            return "\(buildConfig.appSpecificUrlScheme)://"
+        default:
+            return "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(id)&accountId=\(accountId)"
+        }
+    }
+    
+    func getPlaceholderColor() -> Color {
+        switch colorScheme {
+        case .light:
+            return Color(.sRGB, red: 235.0 / 255.0, green: 235.0 / 255.0, blue: 241.0 / 255.0, opacity: 1.0)
+        case .dark:
+            return Color(.sRGB, red: 38.0 / 255.0, green: 38.0 / 255.0, blue: 41.0 / 255.0, opacity: 1.0)
+        @unknown default:
+            return .secondary
+        }
+    }
+    
+    func itemView(index: Int) -> some View {
+        let peers: ParsedPeers?
+        var isPlaceholder = false
+        var isPreview = false
+        switch data {
+        case let .peers(peersValue):
+            if peersValue.peers.count <= index {
+                isPlaceholder = peersValue.peers.count != 0
+                peers = nil
+            } else {
+                peers = peersValue
+            }
+        case .preview:
+            peers = nil
+            isPreview = true
+        default:
+            peers = nil
+        }
+        
+        if let peers = peers {
+            return AnyView(Link(destination: URL(string: linkForPeer(accountId: peers.peers[index].accountId, id: peers.peers[index].peer.id))!, label: {
+                GeometryReader(content: { geometry in
+                    AvatarItemView(peer: peers.peers[index], itemSize: geometry.size.height, placeholderColor: getPlaceholderColor())
+                })
+            }).aspectRatio(1.0, contentMode: .fit))
+        } else if isPlaceholder {
+            return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
+        } else if isPreview {
+            return AnyView(Image("Widget/Avatar\(index + 1)").aspectRatio(1.0, contentMode: .fit).clipShape(Circle()))
+        } else {
+            return AnyView(Circle().aspectRatio(1.0, contentMode: .fit).foregroundColor(getPlaceholderColor()))
+        }
+    }
+    
+    var body: some View {
+        return VStack(alignment: .center, spacing: 18.0, content: {
+            HStack(alignment: .center, spacing: nil, content: {
+                ForEach(0 ..< 4, id: \.self) { index in
+                    itemView(index: index)
+                    if index != 3 {
+                        Spacer()
+                    }
+                }
+            })
+            HStack(alignment: .center, spacing: nil, content: {
+                ForEach(0 ..< 4, id: \.self) { index in
+                    itemView(index: 4 + index)
+                    if index != 3 {
+                        Spacer()
+                    }
+                }
+            })
+        })
+        .padding(EdgeInsets(top: 10.0, leading: 10.0, bottom: 10.0, trailing: 10.0))
+        .unredacted()
     }
 }
 
@@ -498,89 +831,76 @@ private let buildConfig: BuildConfig = {
     return buildConfig
 }()
 
-private extension WidgetPresentationData {
-    static var `default` = WidgetPresentationData(
-        applicationLockedString: "Unlock the app to use the widget",
-        applicationStartRequiredString: "Open the app to use the widget",
-        widgetGalleryTitle: "Telegram",
-        widgetGalleryDescription: ""
-    )
-}
-
-private let presentationData: WidgetPresentationData = {
-    let appBundleIdentifier = Bundle.main.bundleIdentifier!
-    guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-        return WidgetPresentationData.default
-    }
-    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-    
-    let appGroupName = "group.\(baseAppBundleId)"
-    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-    
-    guard let appGroupUrl = maybeAppGroupUrl else {
-        return WidgetPresentationData.default
-    }
-    
-    let rootPath = rootPathForBasePath(appGroupUrl.path)
-    
-    if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
-        return value
-    } else {
-        return WidgetPresentationData.default
-    }
-}()
-
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 func getWidgetData(contents: SimpleEntry.Contents) -> PeersWidgetData {
     switch contents {
     case .recent:
-        let appBundleIdentifier = Bundle.main.bundleIdentifier!
-        guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-            return .placeholder
-        }
-        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-        
-        let appGroupName = "group.\(baseAppBundleId)"
-        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-        
-        guard let appGroupUrl = maybeAppGroupUrl else {
-            return .placeholder
-        }
-        
-        let rootPath = rootPathForBasePath(appGroupUrl.path)
-        
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
-            return .locked
-        }
-        
-        let dataPath = rootPath + "/widget-data"
-        
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
-            switch widgetData.content {
-            case let .peers(peers):
-                return .peers(peers)
-            case .disabled:
-                return .placeholder
-            case .notAuthorized:
-                return .locked
-            }
-        } else {
-            return .placeholder
-        }
+        return .empty
+    case .preview:
+        return .preview
     case let .peers(peers):
         return .peers(peers)
     }
 }
 
-@main
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
 struct Static_Widget: Widget {
     private let kind: String = "Static_Widget"
 
     public var body: some WidgetConfiguration {
+        let presentationData = WidgetPresentationData.getForExtension()
+        
         return IntentConfiguration(kind: kind, intent: SelectFriendsIntent.self, provider: Provider(), content: { entry in
-            WidgetView(data: getWidgetData(contents: entry.contents))
+            WidgetView(data: getWidgetData(contents: entry.contents), presentationData: presentationData)
         })
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName(presentationData.widgetGalleryTitle)
-        .description(presentationData.widgetGalleryDescription)
+        .configurationDisplayName(presentationData.widgetChatsGalleryTitle)
+        .description(presentationData.widgetChatsGalleryDescription)
     }
 }
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
+struct Static_AvatarsWidget: Widget {
+    private let kind: String = "Static_AvatarsWidget"
+
+    public var body: some WidgetConfiguration {
+        let presentationData = WidgetPresentationData.getForExtension()
+        
+        return IntentConfiguration(kind: kind, intent: SelectAvatarFriendsIntent.self, provider: AvatarsProvider(), content: { entry in
+            AvatarsWidgetView(data: getWidgetData(contents: entry.contents), presentationData: presentationData)
+        })
+        .supportedFamilies([.systemMedium])
+        .configurationDisplayName(presentationData.widgetShortcutsGalleryTitle)
+        .description(presentationData.widgetShortcutsGalleryDescription)
+    }
+}
+
+@main
+struct AllWidgetsEntryPoint {
+    static func main() {
+        if #available(iOS 14.0, *) {
+            AllWidgets.main()
+        } else {
+            preconditionFailure()
+        }
+    }
+}
+
+@available(iOSApplicationExtension 14.0, iOS 14.0, *)
+struct AllWidgets: WidgetBundle {
+   var body: some Widget {
+        Static_Widget()
+        Static_AvatarsWidget()
+   }
+}
+
+#else
+
+@main
+class MyApp {
+    static func main() {
+        preconditionFailure("Not supported")
+    }
+}
+
+#endif

@@ -270,16 +270,22 @@ public final class SecretMediaPreviewController: ViewController {
                                 videoDuration = file.duration
                             }
                         }
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                                if let countdownBeginTime = attribute.countdownBeginTime {
-                                    if let videoDuration = videoDuration {
-                                        beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
-                                    } else {
-                                        beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
-                                    }
+                        
+                        if let attribute = message.autoclearAttribute {
+                            if let countdownBeginTime = attribute.countdownBeginTime {
+                                if let videoDuration = videoDuration {
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                                } else {
+                                    beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                                 }
-                                break
+                            }
+                        } else if let attribute = message.autoremoveAttribute {
+                            if let countdownBeginTime = attribute.countdownBeginTime {
+                                if let videoDuration = videoDuration {
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                                } else {
+                                    beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                                }
                             }
                         }
                         
@@ -453,16 +459,21 @@ public final class SecretMediaPreviewController: ViewController {
                         videoDuration = file.duration
                     }
                 }
-                for attribute in message.attributes {
-                    if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                        if let countdownBeginTime = attribute.countdownBeginTime {
-                            if let videoDuration = videoDuration {
-                                beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
-                            } else {
-                                beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
-                            }
+                if let attribute = message.autoclearAttribute {
+                    if let countdownBeginTime = attribute.countdownBeginTime {
+                        if let videoDuration = videoDuration {
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                        } else {
+                            beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                         }
-                        break
+                    }
+                } else if let attribute = message.autoremoveAttribute {
+                    if let countdownBeginTime = attribute.countdownBeginTime {
+                        if let videoDuration = videoDuration {
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                        } else {
+                            beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                        }
                     }
                 }
                 

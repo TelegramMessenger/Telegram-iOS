@@ -199,7 +199,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                 } else {
                     text = .presence
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: participant.presences[participant.peer.id], text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: participant.presences[participant.peer.id], text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: participant.peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
                     arguments.openPeer(participant.peer)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -263,7 +263,7 @@ private struct ChannelMembersControllerState: Equatable {
     }
 }
 
-private func ChannelMembersControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
+private func channelMembersControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?, isGroup: Bool) -> [ChannelMembersEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
@@ -277,35 +277,16 @@ private func ChannelMembersControllerEntries(context: AccountContext, presentati
         }
         
         if canAddMember {
-            entries.append(.addMember(presentationData.theme, presentationData.strings.Channel_Members_AddMembers))
+            entries.append(.addMember(presentationData.theme, isGroup ? presentationData.strings.Group_Members_AddMembers : presentationData.strings.Channel_Members_AddMembers))
             if let peer = view.peers[view.peerId] as? TelegramChannel, peer.addressName == nil {
                 entries.append(.inviteLink(presentationData.theme, presentationData.strings.Channel_Members_InviteLink))
             }
-            entries.append(.addMemberInfo(presentationData.theme, presentationData.strings.Channel_Members_AddMembersHelp))
+            entries.append(.addMemberInfo(presentationData.theme, isGroup ? presentationData.strings.Group_Members_AddMembersHelp : presentationData.strings.Channel_Members_AddMembersHelp))
         }
 
         
         var index: Int32 = 0
         let sortedParticipants = participants
-        /*
-         participants.sorted(by: { lhs, rhs in
-         let lhsInvitedAt: Int32
-         switch lhs.participant {
-         case .creator:
-         lhsInvitedAt = Int32.min
-         case let .member(_, invitedAt, _, _):
-         lhsInvitedAt = invitedAt
-         }
-         let rhsInvitedAt: Int32
-         switch rhs.participant {
-         case .creator:
-         rhsInvitedAt = Int32.min
-         case let .member(_, invitedAt, _, _):
-         rhsInvitedAt = invitedAt
-         }
-         return lhsInvitedAt < rhsInvitedAt
-         })
-         */
         for participant in sortedParticipants {
             var editable = true
             var canEditMembers = false
@@ -482,6 +463,11 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var isGroup = true
+        if let peer = peerViewMainPeer(view) as? TelegramChannel, case .broadcast = peer.info {
+            isGroup = false
+        }
+        
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let peers = peers, !peers.isEmpty {
@@ -533,8 +519,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
         let previous = previousPeers
         previousPeers = peers
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ChannelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(isGroup ? presentationData.strings.Group_Members_Title : presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers, isGroup: isGroup), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
         
         return (controllerState, (listState, arguments))
     }

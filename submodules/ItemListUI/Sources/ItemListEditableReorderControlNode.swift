@@ -33,7 +33,7 @@ public final class ItemListEditableReorderControlNode: ASDisplayNode {
             
             return (40.0, { height, offsetForLabel, transition in
                 if let image = image {
-                    transition.updateFrame(node: resultNode.iconNode, frame: CGRect(origin: CGPoint(x: 7.0, y: floor((height - image.size.height) / 2.0) - (offsetForLabel ? 6.0 : 0.0)), size: image.size))
+                    transition.updateFrame(node: resultNode.iconNode, frame: CGRect(origin: CGPoint(x: 0.0, y: floor((height - image.size.height) / 2.0) - (offsetForLabel ? 6.0 : 0.0)), size: image.size))
                 }
                 return resultNode
             })

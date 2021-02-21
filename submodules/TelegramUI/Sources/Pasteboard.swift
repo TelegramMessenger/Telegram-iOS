@@ -36,7 +36,8 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
     attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: [], using: { attributes, range, _ in
         if let value = attributes[.link], let url = (value as? URL)?.absoluteString {
             string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
-        } else if let value = attributes[.font], let font = value as? UIFont {
+        }
+        if let value = attributes[.font], let font = value as? UIFont {
             let fontName = font.fontName.lowercased()
             if fontName.contains("bolditalic") {
                 string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
@@ -48,6 +49,12 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
             } else if fontName.contains("menlo") || fontName.contains("courier") || fontName.contains("sfmono") {
                 string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
             }
+        }
+        if let _ = attributes[.strikethroughStyle] {
+            string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
+        }
+        if let _ = attributes[.underlineStyle] {
+            string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
         }
     })
     return string

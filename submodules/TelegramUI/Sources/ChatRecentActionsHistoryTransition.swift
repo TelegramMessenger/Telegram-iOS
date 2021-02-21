@@ -649,7 +649,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 } else {
                     var appendedRightsHeader = false
                     
-                    if case let .creator(_, prevAdminInfo, prevRank) = prev.participant, case let .creator(_, newAdminInfo, newRank) = new.participant, (prevRank != newRank || prevAdminInfo?.rights.flags.contains(.canBeAnonymous) != newAdminInfo?.rights.flags.contains(.canBeAnonymous)) {
+                    if case let .creator(_, prevAdminInfo, prevRank) = prev.participant, case let .creator(_, newAdminInfo, newRank) = new.participant, (prevRank != newRank || prevAdminInfo?.rights.rights.contains(.canBeAnonymous) != newAdminInfo?.rights.rights.contains(.canBeAnonymous)) {
                         if prevRank != newRank {
                             appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRankName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), newRank ?? "") : self.presentationData.strings.Channel_AdminLog_MessageRankUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!, newRank ?? ""), generateEntities: { index in
                                 var result: [MessageTextEntityType] = []
@@ -663,7 +663,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 return result
                             }, to: &text, entities: &entities)
                         }
-                        if prevAdminInfo?.rights.flags.contains(.canBeAnonymous) != newAdminInfo?.rights.flags.contains(.canBeAnonymous) {
+                        if prevAdminInfo?.rights.rights.contains(.canBeAnonymous) != newAdminInfo?.rights.rights.contains(.canBeAnonymous) {
                             let order: [(TelegramChatAdminRightsFlags, String)]
                             
                             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
@@ -676,7 +676,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             
                             var appendedRightsHeader = false
                             for (flag, string) in order {
-                                if prevAdminInfo?.rights.flags.contains(flag) != newAdminInfo?.rights.flags.contains(flag) {
+                                if prevAdminInfo?.rights.rights.contains(flag) != newAdminInfo?.rights.rights.contains(flag) {
                                     if !appendedRightsHeader {
                                         appendedRightsHeader = true
                                         appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessagePromotedName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessagePromotedNameUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
@@ -694,7 +694,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     }
                                     
                                     text += "\n"
-                                    if prevAdminInfo?.rights.flags.contains(flag) != true {
+                                    if prevAdminInfo?.rights.rights.contains(flag) != true {
                                         text += "+"
                                     } else {
                                         text += "-"
@@ -705,8 +705,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         }
                     } else if case let .member(_, _, prevAdminRights, _, prevRank) = prev.participant {
                         if case let .member(_, _, newAdminRights, _, newRank) = new.participant {
-                            let prevFlags = prevAdminRights?.rights.flags ?? []
-                            let newFlags = newAdminRights?.rights.flags ?? []
+                            var prevFlags = prevAdminRights?.rights.rights ?? []
+                            var newFlags = newAdminRights?.rights.rights ?? []
                             
                             let order: [(TelegramChatAdminRightsFlags, String)]
                             
@@ -716,22 +716,57 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canPostMessages, self.presentationData.strings.Channel_AdminLog_CanSendMessages),
                                     (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessagesOfOthers),
                                     (.canEditMessages, self.presentationData.strings.Channel_AdminLog_CanEditMessages),
-                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
+                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
+                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
                             } else {
                                 order = [
                                     (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
                                     (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
                                     (.canBanUsers, self.presentationData.strings.Channel_AdminLog_CanBanUsers),
-                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                    (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canBeAnonymous, self.presentationData.strings.Channel_AdminLog_CanBeAnonymous),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
+                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.groupSpecific)
+                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.groupSpecific)
+                            }
+                            
+                            if prevFlags.isEmpty && newFlags.isEmpty && (prevAdminRights != nil) != (newAdminRights != nil) {
+                                if !appendedRightsHeader {
+                                    appendedRightsHeader = true
+                                    if prevAdminRights == nil {
+                                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageAddedAdminName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessageAddedAdminNameUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
+                                            var result: [MessageTextEntityType] = []
+                                            if index == 0 {
+                                                result.append(.TextMention(peerId: new.peer.id))
+                                            } else if index == 1 {
+                                                result.append(.Mention)
+                                            } else if index == 2 {
+                                                result.append(.Bold)
+                                            }
+                                            return result
+                                        }, to: &text, entities: &entities)
+                                    } else {
+                                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRemovedAdminName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessageRemovedAdminNameUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
+                                            var result: [MessageTextEntityType] = []
+                                            if index == 0 {
+                                                result.append(.TextMention(peerId: new.peer.id))
+                                            } else if index == 1 {
+                                                result.append(.Mention)
+                                            } else if index == 2 {
+                                                result.append(.Bold)
+                                            }
+                                            return result
+                                        }, to: &text, entities: &entities)
+                                    }
+                                }
                             }
                             
                             for (flag, string) in order {
@@ -1163,6 +1198,172 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
                         return [.TextMention(peerId: author.id)]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .groupCallUpdateParticipantVolume(participantId, volume):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                var participant: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+                if let participantPeer = self.entry.peers[participantId] {
+                    participant = participantPeer
+                    peers[peer.id] = participantPeer
+                }
+                
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_UpdatedParticipantVolume(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", participant?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", "\(volume / 100)%")
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .deleteExportedInvitation(invite):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+ 
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .revokeExportedInvitation(invite):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+ 
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .editExportedInvitation(previousInvite, updatedInvite):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+ 
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link.replacingOccurrences(of: "https://", with: ""))
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .participantJoinedViaInvite(invite):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+ 
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .changeHistoryTTL(_, updatedValue):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+ 
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: (String, [(Int, NSRange)])
+                if let updatedValue = updatedValue {
+                    rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedAutoremoveTimeoutSet(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", timeIntervalString(strings: self.presentationData.strings, value: updatedValue))
+                } else {
+                    rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedAutoremoveTimeoutRemove(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                }
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
                     }
                     return []
                 }, to: &text, entities: &entities)

@@ -144,6 +144,11 @@ public final class ChannelAdminEventLogContext {
         }
     }
     
+    public func reload() {
+        self.entries = ([], self.filter)
+        self.loadMoreEntries()
+    }
+    
     public func loadMoreEntries() {
         assert(self.queue.isCurrent())
         

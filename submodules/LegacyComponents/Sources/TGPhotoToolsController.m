@@ -336,9 +336,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         return;
     }
     
-    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@  %@", tool.title, [tool stringValue:true]] attributes:@{NSFontAttributeName: TGMediumSystemFontOfSize(14.0f), NSForegroundColorAttributeName: [TGPhotoEditorInterfaceAssets accentColor]}];
-    [text addAttributes:@{NSFontAttributeName: TGSystemFontOfSize(14.0f), NSForegroundColorAttributeName: [UIColor whiteColor]} range:NSMakeRange(0, tool.title.length)];
-    [_hudView setAttributedText:text];
+    [_hudView setTitle:tool.title value:[tool stringValue:true]];
 }
 
 #pragma mark - Transition

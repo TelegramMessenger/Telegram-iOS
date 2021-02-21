@@ -376,12 +376,17 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.context = context
         self.queryPromise = Promise<WallpaperSearchQuery>(self.queryValue)
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
         self.recentListNode = ListView()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.recentListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.gridNode = GridNode()
         
         self.emptyResultsTitleNode = ImmediateTextNode()

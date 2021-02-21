@@ -9,7 +9,7 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-final class ShareInputFieldNodeTheme: Equatable {
+public final class ShareInputFieldNodeTheme: Equatable {
     let backgroundColor: UIColor
     let textColor: UIColor
     let placeholderColor: UIColor
@@ -49,20 +49,21 @@ final class ShareInputFieldNodeTheme: Equatable {
     }
 }
 
-extension ShareInputFieldNodeTheme {
+public extension ShareInputFieldNodeTheme {
     convenience init(presentationTheme theme: PresentationTheme) {
         self.init(backgroundColor: theme.actionSheet.inputBackgroundColor, textColor: theme.actionSheet.inputTextColor, placeholderColor: theme.actionSheet.inputPlaceholderColor, clearButtonColor: theme.actionSheet.inputClearButtonColor, accentColor: theme.actionSheet.controlAccentColor, keyboard: theme.rootController.keyboardColor)
     }
 }
 
-final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
+public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private let theme: ShareInputFieldNodeTheme
     private let backgroundNode: ASImageNode
     private let textInputNode: EditableTextNode
     private let placeholderNode: ASTextNode
     private let clearButton: HighlightableButtonNode
     
-    var updateHeight: (() -> Void)?
+    public var updateHeight: (() -> Void)?
+    public var updateText: ((String) -> Void)?
     
     private let backgroundInsets = UIEdgeInsets(top: 16.0, left: 16.0, bottom: 1.0, right: 16.0)
     private let inputInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 10.0, right: 16.0)
@@ -70,7 +71,7 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     
     private var selectTextOnce: Bool = false
     
-    var text: String {
+    public var text: String {
         get {
             return self.textInputNode.attributedText?.string ?? ""
         }
@@ -81,13 +82,13 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         }
     }
     
-    var placeholder: String = "" {
+    public var placeholder: String = "" {
         didSet {
             self.placeholderNode.attributedText = NSAttributedString(string: self.placeholder, font: Font.regular(17.0), textColor: self.theme.placeholderColor)
         }
     }
     
-    init(theme: ShareInputFieldNodeTheme, placeholder: String) {
+    public init(theme: ShareInputFieldNodeTheme, placeholder: String) {
         self.theme = theme
         
         self.backgroundNode = ASImageNode()
@@ -131,11 +132,11 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
     }
     
-    func preselectText() {
+    public func preselectText() {
         self.selectTextOnce = true
     }
     
-    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let backgroundInsets = self.backgroundInsets
         let inputInsets = self.inputInsets
         let accessoryButtonsWidth = self.accessoryButtonsWidth
@@ -158,19 +159,20 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         return panelHeight
     }
     
-    func activateInput() {
+    public func activateInput() {
         self.textInputNode.becomeFirstResponder()
     }
     
-    func deactivateInput() {
+    public func deactivateInput() {
         self.textInputNode.resignFirstResponder()
     }
     
-    @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
+    @objc public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         self.updateTextNodeText(animated: true)
+        self.updateText?(editableTextNode.attributedText?.string ?? "")
     }
     
-    func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
+    public func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
         self.placeholderNode.isHidden = true
         self.clearButton.isHidden = false
         
@@ -182,7 +184,7 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         }
     }
     
-    func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+    public func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
         self.placeholderNode.isHidden = !(editableTextNode.textView.text ?? "").isEmpty
         self.clearButton.isHidden = true
     }

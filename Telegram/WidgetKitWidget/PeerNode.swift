@@ -92,13 +92,80 @@ private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: 
     return image
 }
 
+private func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil) -> UIImage? {
+    guard let image = image else {
+        return nil
+    }
+    
+    let imageSize = image.size
+
+    UIGraphicsBeginImageContextWithOptions(imageSize, backgroundColor != nil, image.scale)
+    if let context = UIGraphicsGetCurrentContext() {
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: imageSize))
+        }
+        
+        let imageRect = CGRect(origin: CGPoint(), size: imageSize)
+        context.saveGState()
+        context.translateBy(x: imageRect.midX, y: imageRect.midY)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+        context.clip(to: imageRect, mask: image.cgImage!)
+        context.setFillColor(color.cgColor)
+        context.fill(imageRect)
+        context.restoreGState()
+    }
+    
+    let tintedImage = UIGraphicsGetImageFromCurrentImageContext()!
+    UIGraphicsEndImageContext()
+    
+    return tintedImage
+}
+
+private let savedMessagesColors: NSArray = [
+    UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor
+]
+
+private func savedMessagesImage(size: CGSize) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    let context = UIGraphicsGetCurrentContext()
+    
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+    
+    let colorsArray = savedMessagesColors
+    var locations: [CGFloat] = [1.0, 0.0]
+    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+    
+    context?.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    
+    context?.setBlendMode(.normal)
+    
+    let factor = size.width / 60.0
+    context?.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context?.scaleBy(x: factor, y: -factor)
+    context?.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    if let context = context, let icon = generateTintedImage(image: UIImage(named: "Widget/SavedMessages"), color: .white) {
+        context.draw(icon.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - icon.size.width) / 2.0), y: floor((size.height - icon.size.height) / 2.0)), size: icon.size))
+    }
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
 private let avatarSize = CGSize(width: 50.0, height: 50.0)
 
-func avatarImage(accountPeerId: Int64, peer: WidgetDataPeer, size: CGSize) -> UIImage {
-    if let path = peer.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+func avatarImage(accountPeerId: Int64?, peer: WidgetDataPeer?, size: CGSize) -> UIImage {
+    if let peer = peer, let accountPeerId = accountPeerId, peer.id == accountPeerId {
+        return savedMessagesImage(size: size)!
+    } else if let path = peer?.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
         return roundImage
     } else {
-        return avatarViewLettersImage(size: size, peerId: peer.id, accountPeerId: accountPeerId, letters: peer.letters)!
+        return avatarViewLettersImage(size: size, peerId: peer?.id ?? 1, accountPeerId: accountPeerId ?? 1, letters: peer?.letters ?? [" "])!
     }
 }
 

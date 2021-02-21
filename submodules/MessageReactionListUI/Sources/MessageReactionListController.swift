@@ -182,6 +182,9 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         
         self.listNode = ListView()
         self.listNode.limitHitTestToNodes = true
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.placeholderNode = MessageReactionListLoadingPlaceholder(theme: presentationData.theme, itemHeight: itemHeight)
         self.placeholderNode?.isUserInteractionEnabled = false

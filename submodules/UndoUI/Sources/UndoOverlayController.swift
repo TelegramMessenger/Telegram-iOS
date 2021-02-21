@@ -27,6 +27,11 @@ public enum UndoOverlayContent {
     case linkCopied(text: String)
     case banned(text: String)
     case importedMessage(text: String)
+    case audioRate(slowdown: Bool, text: String)
+    case forward(savedMessages: Bool, text: String)
+    case autoDelete(isOn: Bool, title: String?, text: String)
+    case gigagroupConversion(text: String)
+    case linkRevoked(text: String)
 }
 
 public enum UndoOverlayAction {

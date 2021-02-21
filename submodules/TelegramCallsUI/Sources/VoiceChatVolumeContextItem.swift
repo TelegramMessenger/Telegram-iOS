@@ -138,8 +138,8 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
             
             let iconSize = CGSize(width: 36.0, height: 36.0)
             let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSize.width - 10.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
-            transition.updateFrameAdditive(node: self.backgroundIconNode, frame: iconFrame)
-            transition.updateFrameAdditive(node: self.foregroundIconNode, frame: iconFrame)
+            self.backgroundIconNode.frame = iconFrame
+            self.foregroundIconNode.frame = iconFrame
             
             self.updateValue(transition: transition)
         })

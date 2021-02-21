@@ -6,6 +6,7 @@ import UIKit
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import UIKitRuntimeUtils
 
 final class ChatDateSelectionSheet: ActionSheetController {
     private let strings: PresentationStrings
@@ -83,6 +84,8 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.strings = strings
         self.valueChanged = valueChanged
         
+        UILabel.setDateLabel(theme.primaryTextColor)
+        
         self.pickerView = UIDatePicker()
         self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .date
@@ -96,6 +99,7 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         }
         
         self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "highlightColor")
         
         super.init(theme: theme)
         
@@ -103,14 +107,13 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.pickerView.addTarget(self, action: #selector(self.pickerChanged), for: .valueChanged)
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 157.0)
-    }
-    
-    override func layout() {
-        super.layout()
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 157.0)
         
-        self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.size.width, height: 180.0))
+        self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 180.0))
+       
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
     
     @objc func pickerChanged() {

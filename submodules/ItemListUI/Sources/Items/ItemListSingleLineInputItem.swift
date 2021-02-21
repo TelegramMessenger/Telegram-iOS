@@ -5,6 +5,14 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
+private let validIdentifierSet: CharacterSet = {
+    var set = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
+    set.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
+    set.insert(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
+    set.insert("_")
+    return set
+}()
+
 public enum ItemListSingleLineInputItemType: Equatable {
     case regular(capitalization: Bool, autocorrection: Bool)
     case password
@@ -343,7 +351,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                         strongSelf.textNode.textField.text = item.text
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: 1.0), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset + titleLayout.size.width + item.spacing)), height: layout.contentSize.height - 2.0))
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: 0.0), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset + titleLayout.size.width + item.spacing)), height: layout.contentSize.height - 2.0))
                     
                     switch item.alignment {
                         case .default:
@@ -487,6 +495,10 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                 var text = textField.text ?? ""
                 text.replaceSubrange(text.index(text.startIndex, offsetBy: range.lowerBound) ..< text.index(text.startIndex, offsetBy: range.upperBound), with: result)
                 textField.text = text
+                if case .username = item.type {
+                    text = text.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "_")
+                    textField.text = text
+                }
                 if let startPosition = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound + result.count) {
                     let selectionRange = textField.textRange(from: startPosition, to: startPosition)
                     DispatchQueue.main.async {
@@ -497,6 +509,39 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                 return false
             }
         }
+        
+        if let item = self.item, case .username = item.type {
+            var cleanString = string.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "_")
+            
+            let filtered = cleanString.unicodeScalars.filter { validIdentifierSet.contains($0) }
+            let filteredString = String(String.UnicodeScalarView(filtered))
+            
+            if cleanString != filteredString {
+                cleanString = filteredString
+                
+                self.textNode.layer.addShakeAnimation()
+                let hapticFeedback = HapticFeedback()
+                hapticFeedback.error()
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+                    let _ = hapticFeedback
+                })
+            }
+            
+            if cleanString != string {
+                var text = textField.text ?? ""
+                text.replaceSubrange(text.index(text.startIndex, offsetBy: range.lowerBound) ..< text.index(text.startIndex, offsetBy: range.upperBound), with: cleanString)
+                textField.text = text
+                if let startPosition = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound + cleanString.count) {
+                    let selectionRange = textField.textRange(from: startPosition, to: startPosition)
+                    DispatchQueue.main.async {
+                        textField.selectedTextRange = selectionRange
+                    }
+                }
+                self.textFieldTextChanged(textField)
+                return false
+            }
+        }
+        
         return true
     }
     

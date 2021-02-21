@@ -57,14 +57,14 @@ class UpdateMessageService: NSObject, MTMessageService {
                 if groups.count != 0 {
                     self.putNext(groups)
                 }
-            case let .updateShortChatMessage(flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities):
-                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: .peerUser(userId: fromId), peerId: Api.Peer.peerChat(chatId: chatId), fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
+            case let .updateShortChatMessage(flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities, ttlPeriod):
+                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: .peerUser(userId: fromId), peerId: Api.Peer.peerChat(chatId: chatId), fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil, ttlPeriod: ttlPeriod)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
                 if groups.count != 0 {
                     self.putNext(groups)
                 }
-            case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities):
+            case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities, ttlPeriod):
                 let generatedFromId: Api.Peer
                 if (Int(flags) & 1 << 1) != 0 {
                     generatedFromId = Api.Peer.peerUser(userId: self.peerId.id)
@@ -74,7 +74,7 @@ class UpdateMessageService: NSObject, MTMessageService {
                 
                 let generatedPeerId = Api.Peer.peerUser(userId: userId)
                 
-                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: generatedFromId, peerId: generatedPeerId, fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
+                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: generatedFromId, peerId: generatedPeerId, fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil, ttlPeriod: ttlPeriod)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
                 if groups.count != 0 {
@@ -82,7 +82,7 @@ class UpdateMessageService: NSObject, MTMessageService {
                 }
             case .updatesTooLong:
                 self.pipe.putNext([.reset])
-            case let .updateShortSentMessage(_, _, pts, ptsCount, _, _, _):
+            case let .updateShortSentMessage(_, _, pts, ptsCount, _, _, _, _):
                 self.pipe.putNext([.updatePts(pts: pts, ptsCount: ptsCount)])
         }
     }

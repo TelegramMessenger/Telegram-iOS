@@ -331,7 +331,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
                     
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }
@@ -542,7 +542,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     } else if let statusFrameValue = statusFrame {
                         if progressFrame.intersects(statusFrameValue) {
                             fittedLayoutSize.height += 10.0
-                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
+                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 10.0)
                         }
                     }
                     
@@ -1128,7 +1128,7 @@ final class FileMessageSelectionNode: ASDisplayNode {
     public init(theme: PresentationTheme, incoming: Bool, noPreview: Bool, toggle: @escaping (Bool) -> Void) {
         self.noPreview = noPreview
         self.toggle = toggle
-        self.checkNode = CheckNode(strokeColor: incoming ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: noPreview ? .compact : .overlay)
+        self.checkNode = CheckNode(theme: noPreview ? CheckNodeTheme(backgroundColor: theme.list.itemCheckColors.fillColor, strokeColor: theme.list.itemCheckColors.foregroundColor, borderColor: incoming ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor, overlayBorder: false, hasInset: false, hasShadow: false) : CheckNodeTheme(theme: theme, style: .overlay))
         self.checkNode.isUserInteractionEnabled = false
         
         super.init()
@@ -1157,7 +1157,7 @@ final class FileMessageSelectionNode: ASDisplayNode {
     public func updateSelected(_ selected: Bool, animated: Bool) {
         if self.selected != selected {
             self.selected = selected
-            self.checkNode.setIsChecked(selected, animated: animated)
+            self.checkNode.setSelected(selected, animated: animated)
         }
     }
     
@@ -1170,12 +1170,14 @@ final class FileMessageSelectionNode: ASDisplayNode {
     override public func layout() {
         super.layout()
         
-        let checkSize = CGSize(width: 30.0, height: 30.0)
+        let checkSize: CGSize
         let checkOrigin: CGPoint
         if self.noPreview {
-            checkOrigin = CGPoint(x: 23.0, y: 20.0)
+            checkSize = CGSize(width: 20.0, height: 20.0)
+            checkOrigin = CGPoint(x: 29.0, y: 26.0)
         } else {
-            checkOrigin = CGPoint(x: 39.0, y: -5.0)
+            checkSize = CGSize(width: 28.0, height: 28.0)
+            checkOrigin = CGPoint(x: 41.0, y: -3.0)
         }
         self.checkNode.frame = CGRect(origin: checkOrigin, size: checkSize)
     }

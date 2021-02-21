@@ -236,7 +236,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             isReplyThread = true
                         }
                         
-                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
+                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
                         statusSize = size
                         statusApply = apply
                     }

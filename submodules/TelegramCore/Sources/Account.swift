@@ -160,7 +160,7 @@ public enum AccountPreferenceEntriesResult {
 
 public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountPreferenceEntriesResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
     return postbox
     |> mapToSignal { value -> Signal<AccountPreferenceEntriesResult, NoError> in
         switch value {
@@ -176,6 +176,8 @@ public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys
                     }
                     return .result(path, result)
                 }
+            case .error:
+                return .single(.progress(0.0))
         }
     }
 }
@@ -187,7 +189,7 @@ public enum AccountNoticeEntriesResult {
 
 public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountNoticeEntriesResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
     return postbox
     |> mapToSignal { value -> Signal<AccountNoticeEntriesResult, NoError> in
         switch value {
@@ -197,6 +199,8 @@ public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encrypti
                 return postbox.transaction { transaction -> AccountNoticeEntriesResult in
                     return .result(path, transaction.getAllNoticeEntries())
                 }
+            case .error:
+                return .single(.progress(0.0))
         }
     }
 }
@@ -208,7 +212,7 @@ public enum LegacyAccessChallengeDataResult {
 
 public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<LegacyAccessChallengeDataResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
     return postbox
     |> mapToSignal { value -> Signal<LegacyAccessChallengeDataResult, NoError> in
         switch value {
@@ -218,6 +222,8 @@ public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecord
                 return postbox.transaction { transaction -> LegacyAccessChallengeDataResult in
                     return .result(transaction.legacyGetAccessChallengeData())
                 }
+            case .error:
+                return .single(.progress(0.0))
         }
     }
 }
@@ -225,13 +231,15 @@ public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecord
 public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: false)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: false, isReadOnly: false, useCopy: false)
     
     return postbox
     |> mapToSignal { result -> Signal<AccountResult, NoError> in
         switch result {
             case let .upgrading(progress):
                 return .single(.upgrading(progress))
+            case .error:
+                return .single(.upgrading(0.0))
             case let .postbox(postbox):
                 return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
                     return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
@@ -1026,7 +1034,8 @@ public class Account {
         
         self.managedOperationsDisposable.add(managedSecretChatOutgoingOperations(auxiliaryMethods: auxiliaryMethods, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
+        self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: true).start())
+        self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: false).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, accountPeerId: self.peerId, stateManager: self.stateManager).start())
         

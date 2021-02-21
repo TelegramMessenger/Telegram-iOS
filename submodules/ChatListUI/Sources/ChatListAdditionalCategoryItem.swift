@@ -32,6 +32,7 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         image: UIImage?,
         appearance: ChatListNodeAdditionalCategory.Appearance,
         isSelected: Bool,
+        header: ListViewItemHeader?,
         action: @escaping () -> Void
     ) {
         self.presentationData = presentationData
@@ -47,7 +48,7 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         case .option:
             self.header = ChatListSearchItemHeader(type: .chatTypes, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
         case .action:
-            self.header = nil
+            self.header = header
         }
     }
     
@@ -249,7 +250,7 @@ public class ChatListAdditionalCategoryItemNode: ItemListRevealOptionsItemNode {
                     selectionNode = current
                     updatedSelectionNode = selectionNode
                 } else {
-                    selectionNode = CheckNode(strokeColor: item.presentationData.theme.list.itemCheckColors.strokeColor, fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
+                    selectionNode = CheckNode(theme: CheckNodeTheme(theme: item.presentationData.theme, style: .plain))
                     selectionNode.isUserInteractionEnabled = false
                     updatedSelectionNode = selectionNode
                 }
@@ -321,9 +322,9 @@ public class ChatListAdditionalCategoryItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.selectionNode = updatedSelectionNode
                                     strongSelf.addSubnode(updatedSelectionNode)
                                 }
-                                updatedSelectionNode.setIsChecked(isSelected, animated: animated)
+                                updatedSelectionNode.setSelected(isSelected, animated: animated)
                                 
-                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 32.0 - 12.0, y: floor((nodeLayout.contentSize.height - 32.0) / 2.0)), size: CGSize(width: 32.0, height: 32.0))
+                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 22.0 - 17.0, y: floor((nodeLayout.contentSize.height - 22.0) / 2.0)), size: CGSize(width: 22.0, height: 22.0))
                             } else if let selectionNode = strongSelf.selectionNode {
                                 selectionNode.removeFromSupernode()
                                 strongSelf.selectionNode = nil

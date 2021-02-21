@@ -931,8 +931,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             var directionIsToRight: Bool?
             if abs(velocity.x) > 10.0 {
                 directionIsToRight = velocity.x < 0.0
-            } else if abs(transitionFraction) > 0.5 {
-                directionIsToRight = transitionFraction < 0.0
+            } else if abs(self.transitionFraction) > 0.5 {
+                directionIsToRight = self.transitionFraction < 0.0
             }
             var updatedIndex = self.currentIndex
             if let directionIsToRight = directionIsToRight {
@@ -2259,6 +2259,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
             let textColor = presentationData.theme.list.itemPrimaryTextColor
             
             self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
+            self.textNode.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
+            self.textNode.tintColor = presentationData.theme.list.itemAccentColor
             
             self.textNode.clipsToBounds = true
             self.textNode.delegate = self
@@ -2921,17 +2923,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: titleString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
+        self.titleNode.accessibilityLabel = titleString.string
         
         let subtitleNodeLayout = self.subtitleNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: subtitleString, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: subtitleString, constrainedSize: CGSize(width: titleConstrainedSize.width - 82.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
+        self.subtitleNode.accessibilityLabel = subtitleString.string
         
         let usernameNodeLayout = self.usernameNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
-                
+        self.usernameNode.accessibilityLabel = usernameString.string
+        
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
         

@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AlertUI
 import PresentationDataUtils
 import PeerInfoUI
+import UndoUI
 
 private enum SubscriberAction: Equatable {
     case join
@@ -95,6 +96,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private let badgeText: ImmediateTextNode
     private let activityIndicator: UIActivityIndicatorView
     
+    private let helpButton: HighlightableButtonNode
+    
     private var action: SubscriberAction?
     
     private let actionDisposable = MetaDisposable()
@@ -122,6 +125,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         self.badgeText.displaysAsynchronously = false
         self.badgeText.isHidden = true
         
+        self.helpButton = HighlightableButtonNode()
+        
         self.discussButton.addSubnode(self.discussButtonText)
         self.discussButton.addSubnode(self.badgeBackground)
         self.discussButton.addSubnode(self.badgeText)
@@ -131,9 +136,11 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.button)
         self.addSubnode(self.discussButton)
         self.view.addSubview(self.activityIndicator)
+        self.addSubnode(self.helpButton)
         
         self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.discussButton.addTarget(self, action: #selector(self.discussPressed), forControlEvents: .touchUpInside)
+        self.helpButton.addTarget(self, action: #selector(self.helpPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -146,6 +153,10 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             return nil
         }
         return super.hitTest(point, with: event)
+    }
+    
+    @objc func helpPressed() {
+        self.interfaceInteraction?.presentGigagroupHelp()
     }
     
     @objc func buttonPressed() {
@@ -213,6 +224,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             
             if previousState?.theme !== interfaceState.theme {
                 self.badgeBackground.image = PresentationResourcesChatList.badgeBackgroundActive(interfaceState.theme, diameter: 20.0)
+                self.helpButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/Help"), color: interfaceState.theme.chat.inputPanel.panelControlAccentColor), for: .normal)
             }
             
             if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.pinnedMessage != interfaceState.pinnedMessage {
@@ -234,10 +246,20 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             if let action = self.action, action == .muteNotifications || action == .unmuteNotifications {
                 let buttonWidth = self.button.titleNode.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
                 self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+                
+                if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, peer.flags.contains(.isGigagroup) {
+                    self.helpButton.isHidden = false
+                } else {
+                    self.helpButton.isHidden = true
+                }
             } else {
                 self.button.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight))
+                self.helpButton.isHidden = true
             }
+            self.helpButton.frame = CGRect(x: width - rightInset - panelHeight, y: 0.0, width: panelHeight, height: panelHeight)
         } else {
+            self.helpButton.isHidden = true
+            
             let availableWidth = min(600.0, width - leftInset - rightInset)
             let leftOffset = floor((width - availableWidth) / 2.0)
             self.button.frame = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: CGSize(width: floor(availableWidth / 2.0), height: panelHeight))

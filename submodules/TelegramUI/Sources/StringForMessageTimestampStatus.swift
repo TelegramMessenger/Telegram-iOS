@@ -42,15 +42,15 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
     }
     
     if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
-        //TODO:localize
-        
-        dateText = dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date) + ", " + stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat) + " Imported " + dateText
+        dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).0
     }
     
     var authorTitle: String?
     if let author = message.author as? TelegramUser {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
             authorTitle = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+        } else if let forwardInfo = message.forwardInfo {
+            authorTitle = forwardInfo.authorSignature
         }
     } else {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {

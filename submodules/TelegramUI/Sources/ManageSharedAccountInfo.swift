@@ -29,7 +29,23 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
                     let secret: Data? = address.secret
                     addressList.append(AccountDatacenterAddress(host: host, port: Int32(address.port), isMedia: address.preferForMedia, secret: secret))
                 }
-                datacenters[Int32(id)] = AccountDatacenterInfo(masterKey: AccountDatacenterKey(id: authInfo.authKeyId, data: authKey), addressList: addressList)
+                
+                var ephemeralMainKey: AccountDatacenterKey?
+                if let ephemeralMainAuthInfo = context.authInfoForDatacenter(withId: id, selector: .ephemeralMain), let ephemeralAuthKey = ephemeralMainAuthInfo.authKey {
+                    ephemeralMainKey = AccountDatacenterKey(id: ephemeralMainAuthInfo.authKeyId, data: ephemeralAuthKey)
+                }
+                
+                var ephemeralMediaKey: AccountDatacenterKey?
+                if let ephemeralMediaAuthInfo = context.authInfoForDatacenter(withId: id, selector: .ephemeralMedia), let ephemeralAuthKey = ephemeralMediaAuthInfo.authKey {
+                    ephemeralMediaKey = AccountDatacenterKey(id: ephemeralMediaAuthInfo.authKeyId, data: ephemeralAuthKey)
+                }
+                
+                datacenters[Int32(id)] = AccountDatacenterInfo(
+                    masterKey: AccountDatacenterKey(id: authInfo.authKeyId, data: authKey),
+                    ephemeralMainKey: ephemeralMainKey,
+                    ephemeralMediaKey: ephemeralMediaKey,
+                    addressList: addressList
+                )
             }
         }
     }
@@ -38,12 +54,20 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
     
     return combineLatest(peerName, notificationKey)
     |> map { peerName, notificationKey -> StoredAccountInfo in
-        return StoredAccountInfo(id: account.id.int64, primaryId: primaryDatacenterId, isTestingEnvironment: account.testingEnvironment, peerName: peerName, datacenters: datacenters, notificationKey: AccountNotificationKey(id: notificationKey.id, data: notificationKey.data))
+        return StoredAccountInfo(
+            id: account.id.int64,
+            primaryId: primaryDatacenterId,
+            isTestingEnvironment: account.testingEnvironment,
+            peerName: peerName,
+            datacenters: datacenters,
+            notificationKey: AccountNotificationKey(id: notificationKey.id, data: notificationKey.data)
+        )
     }
 }
 
 func sharedAccountInfos(accountManager: AccountManager, accounts: Signal<[Account], NoError>) -> Signal<StoredAccountInfos, NoError> {
     return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.proxySettings]), accounts)
+    |> take(1)
     |> mapToSignal { sharedData, accounts -> Signal<StoredAccountInfos, NoError> in
         let proxySettings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings
         let proxy = proxySettings?.effectiveActiveServer.flatMap { proxyServer -> AccountProxyConnection? in

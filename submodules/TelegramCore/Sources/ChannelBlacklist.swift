@@ -257,8 +257,14 @@ public func updateDefaultChannelMemberBannedRights(account: Account, peerId: Pee
             return .complete()
         }
         return account.network.request(Api.functions.messages.editChatDefaultBannedRights(peer: inputPeer, bannedRights: rights.apiBannedRights))
-        |> retryRequest
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
         |> mapToSignal { result -> Signal<Never, NoError> in
+            guard let result = result else {
+                return .complete()
+            }
             account.stateManager.addUpdates(result)
             return account.postbox.transaction { transaction -> Void in
                 guard let peer = transaction.getPeer(peerId) else {

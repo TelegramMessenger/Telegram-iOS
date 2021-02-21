@@ -16,6 +16,16 @@ public struct WidgetDataPeer: Codable, Equatable {
     }
     
     public struct Message: Codable, Equatable {
+        public struct Author: Codable, Equatable {
+            public var isMe: Bool
+            public var title: String
+            
+            public init(isMe: Bool, title: String) {
+                self.isMe = isMe
+                self.title = title
+            }
+        }
+        
         public enum Content: Codable, Equatable {
             public enum DecodingError: Error {
                 case generic
@@ -109,6 +119,14 @@ public struct WidgetDataPeer: Codable, Equatable {
                 }
             }
             
+            public struct AutodeleteTimer: Codable, Equatable {
+                public var value: Int32?
+                
+                public init(value: Int32?) {
+                    self.value = value
+                }
+            }
+            
             enum CodingKeys: String, CodingKey {
                 case text
                 case image
@@ -123,6 +141,7 @@ public struct WidgetDataPeer: Codable, Equatable {
                 case mapLocation
                 case game
                 case poll
+                case autodeleteTimer
             }
             
             case text
@@ -138,6 +157,7 @@ public struct WidgetDataPeer: Codable, Equatable {
             case mapLocation(MapLocation)
             case game(Game)
             case poll(Poll)
+            case autodeleteTimer(AutodeleteTimer)
             
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -167,6 +187,8 @@ public struct WidgetDataPeer: Codable, Equatable {
                     self = .game(game)
                 } else if let poll = try? container.decode(Poll.self, forKey: .poll) {
                     self = .poll(poll)
+                } else if let autodeleteTimer = try? container.decode(AutodeleteTimer.self, forKey: .autodeleteTimer) {
+                    self = .autodeleteTimer(autodeleteTimer)
                 } else {
                     throw DecodingError.generic
                 }
@@ -201,15 +223,19 @@ public struct WidgetDataPeer: Codable, Equatable {
                     try container.encode(game, forKey: .game)
                 case let .poll(poll):
                     try container.encode(poll, forKey: .poll)
+                case let .autodeleteTimer(autodeleteTimer):
+                    try container.encode(autodeleteTimer, forKey: .autodeleteTimer)
                 }
             }
         }
         
+        public var author: Author?
         public var text: String
         public var content: Content
         public var timestamp: Int32
         
-        public init(text: String, content: Content, timestamp: Int32) {
+        public init(author: Author?, text: String, content: Content, timestamp: Int32) {
+            self.author = author
             self.text = text
             self.content = content
             self.timestamp = timestamp
@@ -238,25 +264,145 @@ public struct WidgetDataPeer: Codable, Equatable {
 public struct WidgetDataPeers: Codable, Equatable {
     public var accountPeerId: Int64
     public var peers: [WidgetDataPeer]
+    public var updateTimestamp: Int32
     
-    public init(accountPeerId: Int64, peers: [WidgetDataPeer]) {
+    public init(accountPeerId: Int64, peers: [WidgetDataPeer], updateTimestamp: Int32) {
         self.accountPeerId = accountPeerId
         self.peers = peers
+        self.updateTimestamp = updateTimestamp
     }
 }
 
 public struct WidgetPresentationData: Codable, Equatable {
-    public var applicationLockedString: String
-    public var applicationStartRequiredString: String
-    public var widgetGalleryTitle: String
-    public var widgetGalleryDescription: String
+    public var widgetChatsGalleryTitle: String
+    public var widgetChatsGalleryDescription: String
+    public var widgetShortcutsGalleryTitle: String
+    public var widgetShortcutsGalleryDescription: String
     
-    public init(applicationLockedString: String, applicationStartRequiredString: String, widgetGalleryTitle: String, widgetGalleryDescription: String) {
-        self.applicationLockedString = applicationLockedString
-        self.applicationStartRequiredString = applicationStartRequiredString
-        self.widgetGalleryTitle = widgetGalleryTitle
-        self.widgetGalleryDescription = widgetGalleryDescription
+    public var widgetLongTapToEdit: String
+    public var widgetUpdatedTodayAt: String
+    public var widgetUpdatedAt: String
+    
+    public var messageAuthorYou: String
+    public var messagePhoto: String
+    public var messageVideo: String
+    public var messageAnimation: String
+    public var messageVoice: String
+    public var messageVideoMessage: String
+    public var messageSticker: String
+    public var messageVoiceCall: String
+    public var messageVideoCall: String
+    public var messageLocation: String
+    
+    public var autodeleteTimerUpdated: String
+    public var autodeleteTimerRemoved: String
+    
+    public var generalLockedTitle: String
+    public var generalLockedText: String
+    
+    public var chatSavedMessages: String
+    
+    public init(
+        widgetChatsGalleryTitle: String,
+        widgetChatsGalleryDescription: String,
+        widgetShortcutsGalleryTitle: String,
+        widgetShortcutsGalleryDescription: String,
+        widgetLongTapToEdit: String,
+        widgetUpdatedTodayAt: String,
+        widgetUpdatedAt: String,
+        messageAuthorYou: String,
+        messagePhoto: String,
+        messageVideo: String,
+        messageAnimation: String,
+        messageVoice: String,
+        messageVideoMessage: String,
+        messageSticker: String,
+        messageVoiceCall: String,
+        messageVideoCall: String,
+        messageLocation: String,
+        autodeleteTimerUpdated: String,
+        autodeleteTimerRemoved: String,
+        generalLockedTitle: String,
+        generalLockedText: String,
+        chatSavedMessages: String
+    ) {
+        self.widgetChatsGalleryTitle = widgetChatsGalleryTitle
+        self.widgetChatsGalleryDescription = widgetChatsGalleryDescription
+        self.widgetShortcutsGalleryTitle = widgetShortcutsGalleryTitle
+        self.widgetShortcutsGalleryDescription = widgetShortcutsGalleryDescription
+        self.widgetLongTapToEdit = widgetLongTapToEdit
+        self.widgetUpdatedTodayAt = widgetUpdatedTodayAt
+        self.widgetUpdatedAt = widgetUpdatedAt
+        self.messageAuthorYou = messageAuthorYou
+        self.messagePhoto = messagePhoto
+        self.messageVideo = messageVideo
+        self.messageAnimation = messageAnimation
+        self.messageVoice = messageVoice
+        self.messageVideoMessage = messageVideoMessage
+        self.messageSticker = messageSticker
+        self.messageVoiceCall = messageVoiceCall
+        self.messageVideoCall = messageVideoCall
+        self.messageLocation = messageLocation
+        self.autodeleteTimerUpdated = autodeleteTimerUpdated
+        self.autodeleteTimerRemoved = autodeleteTimerRemoved
+        self.generalLockedTitle = generalLockedTitle
+        self.generalLockedText = generalLockedText
+        self.chatSavedMessages = chatSavedMessages
     }
+    
+    public static func getForExtension() -> WidgetPresentationData {
+        let appBundleIdentifier = Bundle.main.bundleIdentifier!
+        guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+            return WidgetPresentationData.default
+        }
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+        
+        let appGroupName = "group.\(baseAppBundleId)"
+        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        
+        guard let appGroupUrl = maybeAppGroupUrl else {
+            return WidgetPresentationData.default
+        }
+        
+        let rootPath = rootPathForBasePath(appGroupUrl.path)
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
+            return value
+        } else {
+            return WidgetPresentationData.default
+        }
+    }
+}
+
+public extension WidgetPresentationData {
+    static var `default` = WidgetPresentationData(
+        widgetChatsGalleryTitle: "Chats",
+        widgetChatsGalleryDescription: "Display the latest message from the most important chats.",
+        widgetShortcutsGalleryTitle: "Shortcuts",
+        widgetShortcutsGalleryDescription: "Display shortcuts of your most important chats to always have quick access to them.",
+        widgetLongTapToEdit: "Tap or hold to edit widget.",
+        widgetUpdatedTodayAt: "Updated at {}",
+        widgetUpdatedAt: "Updated {}",
+        messageAuthorYou: "You",
+        messagePhoto: "Photo",
+        messageVideo: "Video",
+        messageAnimation: "GIF",
+        messageVoice: "Voice Message",
+        messageVideoMessage: "Video Message",
+        messageSticker: "Sticker",
+        messageVoiceCall: "Call",
+        messageVideoCall: "Video Call",
+        messageLocation: "Map",
+        autodeleteTimerUpdated: "Auto-delete timer updated",
+        autodeleteTimerRemoved: "Auto-delete timer disabled",
+        generalLockedTitle: "Locked",
+        generalLockedText: "Open Telegram and enter passcode to edit widget.",
+        chatSavedMessages: "Saved Messages"
+    )
+}
+
+private func rootPathForBasePath(_ appGroupPath: String) -> String {
+    return appGroupPath + "/telegram-data"
 }
 
 public func widgetPresentationDataPath(rootPath: String) -> String {
@@ -271,23 +417,19 @@ public struct WidgetData: Codable, Equatable {
         }
         
         private enum Cases: Int32, Codable {
-            case notAuthorized
-            case disabled
+            case empty
             case peers
         }
         
-        case notAuthorized
-        case disabled
+        case empty
         case peers(WidgetDataPeers)
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let discriminator = try container.decode(Cases.self, forKey: .discriminator)
             switch discriminator {
-            case .notAuthorized:
-                self = .notAuthorized
-            case .disabled:
-                self = .disabled
+            case .empty:
+                self = .empty
             case .peers:
                 self = .peers(try container.decode(WidgetDataPeers.self, forKey: .peers))
             }
@@ -296,10 +438,8 @@ public struct WidgetData: Codable, Equatable {
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             switch self {
-            case .notAuthorized:
-                try container.encode(Cases.notAuthorized, forKey: .discriminator)
-            case .disabled:
-                try container.encode(Cases.disabled, forKey: .discriminator)
+            case .empty:
+                try container.encode(Cases.empty, forKey: .discriminator)
             case let .peers(peers):
                 try container.encode(Cases.peers, forKey: .discriminator)
                 try container.encode(peers, forKey: .peers)
@@ -309,9 +449,11 @@ public struct WidgetData: Codable, Equatable {
     
     public var accountId: Int64
     public var content: Content
+    public var unlockedForLockId: String?
     
-    public init(accountId: Int64, content: Content) {
+    public init(accountId: Int64, content: Content, unlockedForLockId: String?) {
         self.accountId = accountId
         self.content = content
+        self.unlockedForLockId = unlockedForLockId
     }
 }

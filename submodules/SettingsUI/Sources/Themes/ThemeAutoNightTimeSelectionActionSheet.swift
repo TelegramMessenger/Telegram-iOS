@@ -8,6 +8,7 @@ import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
+import UIKitRuntimeUtils
 
 final class ThemeAutoNightTimeSelectionActionSheet: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -98,6 +99,8 @@ private final class ThemeAutoNightTimeSelectionActionSheetItemNode: ActionSheetI
         self.strings = strings
         self.valueChanged = valueChanged
         
+        UILabel.setDateLabel(theme.primaryTextColor)
+        
         self.pickerView = UIDatePicker()
         self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .time
@@ -115,14 +118,13 @@ private final class ThemeAutoNightTimeSelectionActionSheetItemNode: ActionSheetI
         self.pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 216.0)
-    }
-    
-    override func layout() {
-        super.layout()
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 216.0)
         
-        self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.size.width, height: 216.0))
+        self.pickerView.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
     
     @objc private func datePickerUpdated() {

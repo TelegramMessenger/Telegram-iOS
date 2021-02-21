@@ -24,7 +24,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var theme: SolidRoundedButtonTheme
     private var font: SolidRoundedButtonFont
     
-    private let buttonBackgroundNode: ASImageNode
+    private let buttonBackgroundNode: ASDisplayNode
     private let buttonGlossNode: SolidRoundedButtonGlossNode
     private let buttonNode: HighlightTrackingButtonNode
     private let titleNode: ImmediateTextNode
@@ -60,10 +60,12 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonCornerRadius = cornerRadius
         self.title = title
         
-        self.buttonBackgroundNode = ASImageNode()
-        self.buttonBackgroundNode.isLayerBacked = true
-        self.buttonBackgroundNode.displaysAsynchronously = false
-        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.backgroundColor)
+        self.buttonBackgroundNode = ASDisplayNode()
+        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+        self.buttonBackgroundNode.cornerRadius = cornerRadius
+        if #available(iOS 13.0, *) {
+            self.buttonBackgroundNode.layer.cornerCurve = .continuous
+        }
         
         self.buttonGlossNode = SolidRoundedButtonGlossNode(color: theme.foregroundColor, cornerRadius: cornerRadius)
         
@@ -122,7 +124,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
         self.theme = theme
         
-        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: self.buttonCornerRadius, color: theme.backgroundColor)
+        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonGlossNode.color = theme.foregroundColor
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)

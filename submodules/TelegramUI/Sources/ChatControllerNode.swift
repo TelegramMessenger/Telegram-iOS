@@ -306,6 +306,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
     private var emptyNode: ChatEmptyNode?
+    private var emptyType: ChatHistoryNodeLoadState.EmptyType?
+    private var didDisplayEmptyGreeting = false
     private var validEmptyNodeLayout: (CGSize, UIEdgeInsets)?
     var restrictedNode: ChatRecentActionsEmptyNode?
     
@@ -535,11 +537,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     strongSelf.updateIsLoading(isLoading: false, animated: animated)
                 }
                 
-                var isEmpty = false
-                if case .empty = loadState {
-                    isEmpty = true
+                var emptyType: ChatHistoryNodeLoadState.EmptyType?
+                if case let .empty(type) = loadState {
+                    emptyType = type
+                    if case .joined = type {
+                        if strongSelf.didDisplayEmptyGreeting {
+                            emptyType = .generic
+                        } else {
+                            strongSelf.didDisplayEmptyGreeting = true
+                        }
+                    }
+                } else if case .messages = loadState {
+                    strongSelf.didDisplayEmptyGreeting = true
                 }
-                strongSelf.updateIsEmpty(isEmpty, animated: animated)
+                strongSelf.updateIsEmpty(emptyType, animated: animated)
             }
         }
         
@@ -707,11 +718,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
     }
     
-    private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
-        if isEmpty && self.emptyNode == nil {
+    private func updateIsEmpty(_ emptyType: ChatHistoryNodeLoadState.EmptyType?, animated: Bool) {
+        self.emptyType = emptyType
+        if let emptyType = emptyType, self.emptyNode == nil {
             let emptyNode = ChatEmptyNode(account: self.context.account, interaction: self.interfaceInteraction)
             if let (size, insets) = self.validEmptyNodeLayout {
-                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: size, insets: insets, transition: .immediate)
+                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, size: size, insets: insets, transition: .immediate)
             }
             emptyNode.isHidden = self.restrictedNode != nil
             self.emptyNode = emptyNode
@@ -731,14 +743,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)? {
+    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)? {
         if let greetingStickerNode = self.emptyNode?.greetingStickerNode {
-            self.historyNode.itemHeaderNodesAlpha = 0.0
-            return (greetingStickerNode, self, self.historyNode, { [weak self] in
-                self?.historyNode.forEachItemHeaderNode { node in
-                    node.alpha = 1.0
-                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                }
+            let historyNode = self.historyNode
+            historyNode.alpha = 0.0
+            return (greetingStickerNode, self, self.historyNode, { completion in
+                historyNode.alpha = 1.0
+                historyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { _ in
+                    completion()
+                })
             })
         } else {
             return nil
@@ -1145,6 +1158,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             previewing = false
         }
         
+        var isSelectionEnabled = true
+        if previewing {
+            isSelectionEnabled = false
+        } else if case .pinnedMessages = self.chatPresentationInterfaceState.subject {
+            isSelectionEnabled = false
+        }
+        self.historyNode.isSelectionGestureEnabled = isSelectionEnabled
+        
         var inputPanelSize: CGSize?
         var immediatelyLayoutInputPanelAndAnimateAppearance = false
         var secondaryInputPanelSize: CGSize?
@@ -1374,8 +1395,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var emptyNodeInsets = insets
         emptyNodeInsets.bottom += inputPanelsHeight
         self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets)
-        if let emptyNode = self.emptyNode {
-            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
+        if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
+            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
             transition.updateFrame(node: emptyNode, frame: contentBounds)
         }
         

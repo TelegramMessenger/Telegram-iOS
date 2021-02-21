@@ -36,10 +36,14 @@ public struct AccountDatacenterAddress: Codable {
 
 public struct AccountDatacenterInfo: Codable {
     public let masterKey: AccountDatacenterKey
+    public let ephemeralMainKey: AccountDatacenterKey?
+    public let ephemeralMediaKey: AccountDatacenterKey?
     public let addressList: [AccountDatacenterAddress]
     
-    public init(masterKey: AccountDatacenterKey, addressList: [AccountDatacenterAddress]) {
+    public init(masterKey: AccountDatacenterKey, ephemeralMainKey: AccountDatacenterKey?, ephemeralMediaKey: AccountDatacenterKey?, addressList: [AccountDatacenterAddress]) {
         self.masterKey = masterKey
+        self.ephemeralMainKey = ephemeralMainKey
+        self.ephemeralMediaKey = ephemeralMediaKey
         self.addressList = addressList
     }
 }

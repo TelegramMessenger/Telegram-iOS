@@ -202,19 +202,29 @@ public final class ChatPeekTimeout {
 
 public final class ChatPeerNearbyData: Equatable {
     public static func == (lhs: ChatPeerNearbyData, rhs: ChatPeerNearbyData) -> Bool {
+        return lhs.distance == rhs.distance
+    }
+    
+    public let distance: Int32
+    
+    public init(distance: Int32) {
+        self.distance = distance
+    }
+}
+
+public final class ChatGreetingData: Equatable {
+    public static func == (lhs: ChatGreetingData, rhs: ChatGreetingData) -> Bool {
         if let lhsSticker = lhs.sticker, let rhsSticker = rhs.sticker, !lhsSticker.isEqual(to: rhsSticker) {
             return false
         } else if (lhs.sticker == nil) != (rhs.sticker == nil) {
             return false
         }
-        return lhs.distance == rhs.distance
+        return true
     }
     
-    public let distance: Int32
     public let sticker: TelegramMediaFile?
     
-    public init(distance: Int32, sticker: TelegramMediaFile?) {
-        self.distance = distance
+    public init(sticker: TelegramMediaFile?) {
         self.sticker = sticker
     }
 }
@@ -270,12 +280,14 @@ public final class NavigateToChatControllerParams {
     public let activateMessageSearch: (ChatSearchDomain, String)?
     public let peekData: ChatPeekTimeout?
     public let peerNearbyData: ChatPeerNearbyData?
+    public let greetingData: ChatGreetingData?
+    public let reportReason: ReportReason?
     public let animated: Bool
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, greetingData: ChatGreetingData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -292,6 +304,8 @@ public final class NavigateToChatControllerParams {
         self.activateMessageSearch = activateMessageSearch
         self.peekData = peekData
         self.peerNearbyData = peerNearbyData
+        self.greetingData = greetingData
+        self.reportReason = reportReason
         self.animated = animated
         self.options = options
         self.parentGroupId = parentGroupId

@@ -764,6 +764,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private let chatControllerInteraction: ChatControllerInteraction
     private let contentType: ContentType
     
+    weak var parentController: ViewController?
+    
     private let scrollNode: ASScrollNode
     private let floatingHeaderNode: FloatingHeaderNode
     private var flashHeaderDelayTimer: Foundation.Timer?

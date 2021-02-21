@@ -159,7 +159,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker {
             let sticker: Signal<TelegramMediaFile?, NoError>
-            if let preloadedSticker = interfaceState.peerNearbyData?.sticker {
+            if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = .single(preloadedSticker)
             } else {
                 sticker = randomGreetingSticker(account: self.account)
@@ -336,7 +336,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker {
             let sticker: Signal<TelegramMediaFile?, NoError>
-            if let preloadedSticker = interfaceState.peerNearbyData?.sticker {
+            if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = .single(preloadedSticker)
             } else {
                 sticker = randomGreetingSticker(account: self.account)
@@ -809,7 +809,7 @@ final class ChatEmptyNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, emptyType: ChatHistoryNodeLoadState.EmptyType, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
@@ -838,7 +838,11 @@ final class ChatEmptyNode: ASDisplayNode {
             } else if let _ = interfaceState.peerNearbyData {
                 contentType = .peerNearby
             } else if let _ = peer as? TelegramUser {
-                contentType = .greeting
+                if case .joined = emptyType, !peer.isDeleted {
+                    contentType = .greeting
+                } else {
+                    contentType = .regular
+                }
             } else {
                 contentType = .regular
             }
