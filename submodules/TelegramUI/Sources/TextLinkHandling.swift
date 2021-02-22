@@ -53,8 +53,8 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                 switch result {
                     case let .externalUrl(url):
                         context.sharedContext.applicationBindings.openUrl(url)
-                    case let .peer(peerId, _):
-                        openResolvedPeerImpl(peerId, .default)
+                    case let .peer(peerId, navigation):
+                        openResolvedPeerImpl(peerId, navigation)
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = controller.navigationController as? NavigationController {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true)))
