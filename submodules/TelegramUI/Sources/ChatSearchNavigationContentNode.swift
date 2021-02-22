@@ -58,6 +58,12 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             self?.interaction.toggleMembersSearch(false)
         }
         
+        self.searchBar.tokensUpdated = { [weak self] tokens in
+            if tokens.isEmpty {
+                self?.interaction.toggleMembersSearch(false)
+            }
+        }
+        
         if let statuses = interaction.statuses {
             self.searchingActivityDisposable = (statuses.searching
             |> deliverOnMainQueue).start(next: { [weak self] value in
