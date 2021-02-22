@@ -8,6 +8,7 @@ import SyncCore
 public enum JoinChannelError {
     case generic
     case tooMuchJoined
+    case tooMuchUsers
 }
 
 public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
@@ -18,10 +19,13 @@ public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChan
         if let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
             |> mapError { error -> JoinChannelError in
-                if error.errorDescription == "CHANNELS_TOO_MUCH" {
-                    return .tooMuchJoined
-                } else {
-                    return .generic
+                switch error.errorDescription {
+                    case "CHANNELS_TOO_MUCH":
+                        return .tooMuchJoined
+                    case "USERS_TOO_MUCH":
+                        return .tooMuchUsers
+                    default:
+                        return .generic
                 }
             }
             |> mapToSignal { updates -> Signal<RenderedChannelParticipant?, JoinChannelError> in

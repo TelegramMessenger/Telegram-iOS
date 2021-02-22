@@ -189,7 +189,9 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         }
                     }))
                     return
-                default:
+                case .tooMuchUsers:
+                    text = presentationInterfaceState.strings.Conversation_UsersTooMuchError
+                case .generic:
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
                     } else {

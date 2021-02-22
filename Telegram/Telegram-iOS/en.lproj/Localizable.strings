@@ -6149,3 +6149,5 @@ Sorry for the inconvenience.";
 "Channel.Setup.LinkTypePrivate" = "Private";
 
 "VoiceOver.ScrollStatus" = "Row %1$@ of %2$@";
+
+"Conversation.UsersTooMuchError" = "Sorry, this group is full.";
