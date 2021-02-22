@@ -1344,8 +1344,6 @@
                         dict[@"stickers"] = adjustments.paintingData.stickers;
                     if (timer != nil)
                         dict[@"timer"] = timer;
-                    else if (groupedId != nil && !hasAnyTimers)
-                        dict[@"groupedId"] = groupedId;
                     
                     id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                     return generatedItem;
