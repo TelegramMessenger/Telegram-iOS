@@ -2086,10 +2086,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.prefetchManager.updateAutoDownloadSettings(settings)
     }
     
-    func updateStickerSettings(_ settings: ChatInterfaceStickerSettings) {
+    func updateStickerSettings(_ settings: ChatInterfaceStickerSettings, forceStopAnimations: Bool) {
         self.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
-                itemNode.updateStickerSettings()
+                itemNode.updateStickerSettings(forceStopAnimations: forceStopAnimations)
             }
         }
     }

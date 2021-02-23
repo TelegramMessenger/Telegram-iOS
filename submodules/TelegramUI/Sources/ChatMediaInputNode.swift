@@ -1242,6 +1242,9 @@ final class ChatMediaInputNode: ChatInputNode {
                 let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
                     return sourceNode
                 })
+                controller.visibilityUpdated = { [weak self] visible in
+                    
+                }
                 strongSelf.controllerInteraction.presentGlobalOverlayController(controller, nil)
                 return controller
             }

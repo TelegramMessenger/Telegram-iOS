@@ -504,6 +504,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         if !displayInfo {
             authorNameText = ""
             dateText = ""
+            canEdit = false
         }
         
         var messageText = NSAttributedString(string: "")

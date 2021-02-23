@@ -44,6 +44,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
             }
         }, sendFile: nil,
         sendSticker: nil,
+        requestMessageActionUrlAuth: nil,
         present: presentImpl, dismissInput: {}, contentContext: nil)
     }
     

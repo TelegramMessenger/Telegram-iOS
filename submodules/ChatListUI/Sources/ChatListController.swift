@@ -527,6 +527,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         self.titleView.theme = self.presentationData.theme
+        self.titleView.strings = self.presentationData.strings
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))

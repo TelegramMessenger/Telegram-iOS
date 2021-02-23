@@ -1080,3 +1080,13 @@ private class ShareToInstagramActivity: UIActivity {
         activityDidFinish(true)
     }
 }
+
+
+public func presentExternalShare(context: AccountContext, text: String, parentController: ViewController) {
+    let activityController = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+    if let window = parentController.view.window {
+        activityController.popoverPresentationController?.sourceView = window
+        activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+    }
+    context.sharedContext.applicationBindings.presentNativeController(activityController)
+}
