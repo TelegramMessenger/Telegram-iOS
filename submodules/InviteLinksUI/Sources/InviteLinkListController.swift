@@ -687,8 +687,10 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                             ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                                 dismissAction()
                                 
-                                revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
-
+                                revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                    if case let .replace(_, newInvite) = result {
+                                        invitesContext.add(newInvite)
+                                    }
                                 }))
                                 
                                 invitesContext.remove(invite)
