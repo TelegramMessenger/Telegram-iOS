@@ -1202,12 +1202,12 @@ public class Account {
         }
     }
     
-    public func allPeerInputActivities() -> Signal<[PeerActivitySpace: [PeerId: PeerInputActivity]], NoError> {
+    public func allPeerInputActivities() -> Signal<[PeerActivitySpace: [(PeerId, PeerInputActivity)]], NoError> {
         return self.peerInputActivityManager.allActivities()
         |> map { activities in
-            var result: [PeerActivitySpace: [PeerId: PeerInputActivity]] = [:]
+            var result: [PeerActivitySpace: [(PeerId, PeerInputActivity)]] = [:]
             for (chatPeerId, chatActivities) in activities {
-                result[chatPeerId] = chatActivities.mapValues({ $0.activity })
+                result[chatPeerId] = chatActivities.map { ($0.0, $0.1.activity) }
             }
             return result
         }
