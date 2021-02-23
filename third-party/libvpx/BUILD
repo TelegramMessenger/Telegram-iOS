@@ -28,6 +28,7 @@ genrule(
     name = "libvpx_build",
     srcs = [
         "build-libvpx-bazel.sh",
+        "0001-Add-support-for-arm64-iphonesimulator-gcc.patch",
         ":libvpx_sources",
     ],
     cmd_bash = 
@@ -40,6 +41,9 @@ genrule(
     elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
         BUILD_ARCH="arm64"
         PLATFORM_HEADER_DIR="arm64-darwin-gcc"
+    elif [ "$(TARGET_CPU)" == "ios_sim_arm64" ]; then
+        BUILD_ARCH="sim_arm64"
+        PLATFORM_HEADER_DIR="arm64-iphonesimulator-gcc"
     elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
         BUILD_ARCH="x86_64"
         PLATFORM_HEADER_DIR="x86_64-iphonesimulator-gcc"
@@ -51,11 +55,22 @@ genrule(
     rm -rf "$$BUILD_DIR"
     mkdir -p "$$BUILD_DIR"
 
+    YASM_DIR="$$BUILD_DIR/yasm"
+    rm -rf "$$YASM_DIR"
+    mkdir -p "$$YASM_DIR"
+    tar -xf "$(location //third-party/yasm:yasm.tar)" -C "$$YASM_DIR"
+    ABS_YASM_DIR="$$(pwd)/$$(dirname $$YASM_DIR)/$$(basename $$YASM_DIR)"
+
     cp $(location :build-libvpx-bazel.sh) "$$BUILD_DIR/"
+    cp $(location :0001-Add-support-for-arm64-iphonesimulator-gcc.patch) "$$BUILD_DIR/"
 
     SOURCE_PATH="third-party/libvpx/libvpx"
 
     cp -R "$$SOURCE_PATH" "$$BUILD_DIR/"
+
+    pushd "$$BUILD_DIR/libvpx"
+    patch -p1 < ../0001-Add-support-for-arm64-iphonesimulator-gcc.patch
+    popd
 
     mkdir -p "$$BUILD_DIR/Public/libvpx"
 
@@ -72,6 +87,9 @@ genrule(
     outs = ["Public/vpx/" + x for x in headers] +
     ["Public/vpx/vpx_config.h"] +
     ["Public/vpx/lib{}.a".format(x) for x in libs],
+    tools = [
+        "//third-party/yasm:yasm.tar",
+    ],
     visibility = [
         "//visibility:public",
     ]

@@ -135,6 +135,8 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                                     fileName = value
                                 } else if file.isVideo {
                                     fileName = "telegram_video.mp4"
+                                } else if file.isVoice {
+                                    fileName = "telegram_audio.ogg"
                                 } else {
                                     fileName = "file"
                                 }
@@ -283,6 +285,7 @@ public final class ShareController: ViewController {
     private var currentAccount: Account
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    private let forcedTheme: PresentationTheme?
     private var activeAccountsDisposable: Disposable?
     
     private let externalShare: Bool
@@ -293,6 +296,7 @@ public final class ShareController: ViewController {
     private let immediatePeerId: PeerId?
     private let openStats: (() -> Void)?
     private let shares: Int?
+    private let fromForeignApp: Bool
     
     private let peers = Promise<([(RenderedPeer, PeerPresence?)], Peer)>()
     private let peersDisposable = MetaDisposable()
@@ -302,12 +306,19 @@ public final class ShareController: ViewController {
     private var defaultAction: ShareControllerAction?
     
     public var dismissed: ((Bool) -> Void)?
-    
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
-        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, openStats: openStats, shares: shares, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId)
+    public var completed: (([PeerId]) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                self.controllerNode.completed = completed
+            }
+        }
     }
     
-    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, fromForeignApp: Bool = false, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
+        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, openStats: openStats, fromForeignApp: fromForeignApp, shares: shares, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forcedTheme: forcedTheme, forcedActionTitle: forcedActionTitle)
+    }
+    
+    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, fromForeignApp: Bool = false, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
         self.sharedContext = sharedContext
         self.currentContext = currentContext
         self.currentAccount = currentContext.account
@@ -318,9 +329,14 @@ public final class ShareController: ViewController {
         self.switchableAccounts = switchableAccounts
         self.immediatePeerId = immediatePeerId
         self.openStats = openStats
+        self.fromForeignApp = fromForeignApp
         self.shares = shares
+        self.forcedTheme = forcedTheme
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
+        if let forcedTheme = self.forcedTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forcedTheme)
+        }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -342,7 +358,7 @@ public final class ShareController: ViewController {
         
         switch subject {
             case let .url(text):
-                self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
+                self.defaultAction = ShareControllerAction(title: forcedActionTitle ?? self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
                     UIPasteboard.general.string = text
                     self?.controllerNode.cancel?()
                 })
@@ -457,7 +473,8 @@ public final class ShareController: ViewController {
                 return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, shares: self.shares)
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, shares: self.shares, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme)
+        self.controllerNode.completed = completed
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             self?.dismissed?(shared)
@@ -473,6 +490,7 @@ public final class ShareController: ViewController {
             guard let strongSelf = self else {
                 return .complete()
             }
+                        
             var shareSignals: [Signal<[MessageId?], NoError>] = []
             switch strongSelf.subject {
             case let .url(url):
@@ -696,7 +714,7 @@ public final class ShareController: ViewController {
                                     let shareToInstagram = ShareToInstagramActivity(action: { sharedItems in
                                         let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
                                         
-                                        let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
+                                        let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
                                         renderer.update(layout: layout) { image in
                                             if let data = image?.pngData() {
                                                 let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,

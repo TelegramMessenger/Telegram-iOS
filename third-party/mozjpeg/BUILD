@@ -22,6 +22,7 @@ genrule(
     srcs = [
         "build-mozjpeg-bazel.sh",
         ":mozjpeg_sources",
+        "@cmake_tar_gz//file",
     ],
     cmd_bash = 
     """
@@ -31,6 +32,8 @@ genrule(
         BUILD_ARCH="armv7"
     elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
         BUILD_ARCH="arm64"
+    elif [ "$(TARGET_CPU)" == "ios_sim_arm64" ]; then
+        BUILD_ARCH="sim_arm64"
     elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
         BUILD_ARCH="x86_64"
     else
@@ -44,7 +47,7 @@ genrule(
     CMAKE_DIR="$$(pwd)/$$BUILD_DIR/cmake"
     rm -rf "$$CMAKE_DIR"
     mkdir -p "$$CMAKE_DIR"
-    tar -xf "$(location //third-party/cmake:cmake.tar)" -C "$$CMAKE_DIR"
+    tar -xzf "$(location @cmake_tar_gz//file)" -C "$$CMAKE_DIR"
 
     cp $(location :build-mozjpeg-bazel.sh) "$$BUILD_DIR/"
 
@@ -54,7 +57,7 @@ genrule(
 
     mkdir -p "$$BUILD_DIR/Public/mozjpeg"
 
-    PATH="$$PATH:$$CMAKE_DIR/bin" sh $$BUILD_DIR/build-mozjpeg-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/mozjpeg" "$$BUILD_DIR"
+    PATH="$$PATH:$$CMAKE_DIR/cmake-3.19.2-macos-universal/CMake.app/Contents/bin" sh $$BUILD_DIR/build-mozjpeg-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/mozjpeg" "$$BUILD_DIR"
     """ +
     "\n".join([
         "cp -f \"$$BUILD_DIR/mozjpeg/{}\" \"$(location Public/mozjpeg/{})\"".format(header, header) for header in headers
@@ -67,9 +70,6 @@ genrule(
     outs = ["Public/mozjpeg/" + x for x in headers] +
     ["Public/mozjpeg/jconfig.h"] +
     ["Public/mozjpeg/lib/lib{}.a".format(x) for x in libs],
-    tools = [
-        "//third-party/cmake:cmake.tar",
-    ],
     visibility = [
         "//visibility:public",
     ]
@@ -84,7 +84,7 @@ objc_library(
     name = "mozjpeg",
     module_name = "mozjpeg",
     enable_modules = True,
-    hdrs = [":Public/mozjpeg/" + x for x in headers],
+    hdrs = [":Public/mozjpeg/" + x for x in headers] + [":Public/mozjpeg/jconfig.h"],
     includes = [
         "Public",
         "Public/mozjpeg",

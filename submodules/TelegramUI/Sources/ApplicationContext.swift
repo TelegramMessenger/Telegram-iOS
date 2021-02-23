@@ -317,6 +317,9 @@ final class AuthorizedApplicationContext {
                                     }
                                 }
                             }
+                            if let forwardInfo = firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                                return
+                            }
                             
                             if chatIsVisible {
                                 return
@@ -727,6 +730,8 @@ final class AuthorizedApplicationContext {
                 }
             }))
         })
+        
+        self.rootController.setForceInCallStatusBar((self.context.sharedContext as! SharedAccountContextImpl).currentCallStatusBarNode)
     }
     
     deinit {

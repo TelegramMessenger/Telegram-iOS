@@ -138,7 +138,7 @@ final class SecureIdValueFormFileItemNode: FormEditableBlockItemNode<SecureIdVal
         
         let progressState: RadialStatusNodeState
         if let progress = progress {
-            progressState = .progress(color: .white, lineWidth: nil, value: progress, cancelEnabled: false)
+            progressState = .progress(color: .white, lineWidth: nil, value: progress, cancelEnabled: false, animateRotation: true)
         } else {
             progressState = .none
         }

@@ -729,7 +729,7 @@ private func languageSearchableItems(context: AccountContext, localizations: [Lo
     return items
 }
 
-func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasWallet: Signal<Bool, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
+func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasTwoStepAuth: Signal<Bool?, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
     let watchAppInstalled = (context.watchManager?.watchAppInstalled ?? .single(false))
     |> take(1)
 
@@ -825,8 +825,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         }
     }
     
-    return combineLatest(watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasWallet, activeSessionsContext, activeWebSessionsContext)
-    |> map { watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasWallet, activeSessionsContext, activeWebSessionsContext in
+    return combineLatest(watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, activeSessionsContext, activeWebSessionsContext)
+    |> map { watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, activeSessionsContext, activeWebSessionsContext in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -875,21 +875,12 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             allItems.append(watch)
         }
         
-        let passport = SettingsSearchableItem(id: .passport(0), title: strings.Settings_Passport, alternate: synonyms(strings.SettingsSearch_Synonyms_Passport), icon: .passport, breadcrumbs: [], present: { context, _, present in
-            present(.modal, SecureIdAuthController(context: context, mode: .list))
-        })
-        allItems.append(passport)
-
-        #if ENABLE_WALLET
-        if hasWallet {
-            let wallet = SettingsSearchableItem(id: .wallet(0), title: strings.Settings_Wallet, alternate: synonyms(strings.SettingsSearch_Synonyms_Wallet), icon: .wallet, breadcrumbs: [], present: { context, _, present in
-                context.sharedContext.openWallet(context: context, walletContext: .generic, present: { c in
-                    present(.push, c)
-                })
+        if let hasTwoStepAuth = hasTwoStepAuth, hasTwoStepAuth {
+            let passport = SettingsSearchableItem(id: .passport(0), title: strings.Settings_Passport, alternate: synonyms(strings.SettingsSearch_Synonyms_Passport), icon: .passport, breadcrumbs: [], present: { context, _, present in
+                present(.modal, SecureIdAuthController(context: context, mode: .list))
             })
-            allItems.append(wallet)
+            allItems.append(passport)
         }
-        #endif
         
         let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: synonyms(strings.SettingsSearch_Synonyms_Support), icon: .support, breadcrumbs: [], present: { context, _, present in
             let _ = (supportPeerId(account: context.account)

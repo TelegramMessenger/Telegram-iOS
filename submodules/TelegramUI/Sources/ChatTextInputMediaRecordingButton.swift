@@ -9,6 +9,7 @@ import TelegramPresentationData
 import LegacyComponents
 import AccountContext
 import ChatInterfaceState
+import AudioBlob
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0

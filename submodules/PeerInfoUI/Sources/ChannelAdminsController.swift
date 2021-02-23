@@ -236,7 +236,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         arguments.openAdmin(participant.participant)
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removeAdmin(peerId)
@@ -852,7 +852,9 @@ public func rebuildControllerStackAfterSupergroupUpgrade(controller: ViewControl
         if controllers[i] === controller {
             for j in 0 ..< i {
                 if controllers[j] is ChatController {
-                    controllers.removeSubrange(j + 1 ... i - 1)
+                    if j + 1 <= i - 1 {
+                        controllers.removeSubrange(j + 1 ... i - 1)
+                    }
                     break
                 }
             }

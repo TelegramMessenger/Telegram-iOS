@@ -1,10 +1,10 @@
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
     name = "com_google_protobuf",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.8.0.zip"],
-    sha256 = "1e622ce4b84b88b6d2cdf1db38d1a634fe2392d74f0b7b74ff98f3a51838ee53",
-    strip_prefix = "protobuf-3.8.0",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.14.0.zip"],
+    sha256 = "bf0e5070b4b99240183b29df78155eee335885e53a8af8683964579c214ad301",
+    strip_prefix = "protobuf-3.14.0",
     type = "zip",
 )
 
@@ -50,3 +50,9 @@ apple_support_dependencies()
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
+
+http_file(
+    name = "cmake_tar_gz",
+    urls = ["https://github.com/Kitware/CMake/releases/download/v3.19.2/cmake-3.19.2-macos-universal.tar.gz"],
+    sha256 = "50afa2cb66bea6a0314ef28034f3ff1647325e30cf5940f97906a56fd9640bd8",
+)

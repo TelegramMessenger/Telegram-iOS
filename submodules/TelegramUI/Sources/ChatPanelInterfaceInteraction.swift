@@ -20,10 +20,10 @@ final class ChatPanelInterfaceInteractionStatuses {
     let startingBot: Signal<Bool, NoError>
     let unblockingPeer: Signal<Bool, NoError>
     let searching: Signal<Bool, NoError>
-    let loadingMessage: Signal<Bool, NoError>
+    let loadingMessage: Signal<ChatLoadingMessageSubject?, NoError>
     let inlineSearch: Signal<Bool, NoError>
     
-    init(editingMessage: Signal<Float?, NoError>, startingBot: Signal<Bool, NoError>, unblockingPeer: Signal<Bool, NoError>, searching: Signal<Bool, NoError>, loadingMessage: Signal<Bool, NoError>, inlineSearch: Signal<Bool, NoError>) {
+    init(editingMessage: Signal<Float?, NoError>, startingBot: Signal<Bool, NoError>, unblockingPeer: Signal<Bool, NoError>, searching: Signal<Bool, NoError>, loadingMessage: Signal<ChatLoadingMessageSubject?, NoError>, inlineSearch: Signal<Bool, NoError>) {
         self.editingMessage = editingMessage
         self.startingBot = startingBot
         self.unblockingPeer = unblockingPeer
@@ -73,7 +73,7 @@ final class ChatPanelInterfaceInteraction {
     let openSearchResults: () -> Void
     let openCalendarSearch: () -> Void
     let toggleMembersSearch: (Bool) -> Void
-    let navigateToMessage: (MessageId, Bool, Bool) -> Void
+    let navigateToMessage: (MessageId, Bool, Bool, ChatLoadingMessageSubject) -> Void
     let navigateToChat: (PeerId) -> Void
     let navigateToProfile: (PeerId) -> Void
     let openPeerInfo: () -> Void
@@ -126,6 +126,9 @@ final class ChatPanelInterfaceInteraction {
     let scrollToTop: () -> Void
     let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
     let activatePinnedListPreview: (ASDisplayNode, ContextGesture) -> Void
+    let editMessageMedia: (MessageId, Bool) -> Void
+    let joinGroupCall: (CachedChannelData.ActiveCall) -> Void
+    let presentInviteMembers: () -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -152,7 +155,7 @@ final class ChatPanelInterfaceInteraction {
         navigateMessageSearch: @escaping (ChatPanelSearchNavigationAction) -> Void,
         openCalendarSearch: @escaping () -> Void,
         toggleMembersSearch: @escaping (Bool) -> Void,
-        navigateToMessage: @escaping (MessageId, Bool, Bool) -> Void,
+        navigateToMessage: @escaping (MessageId, Bool, Bool, ChatLoadingMessageSubject) -> Void,
         navigateToChat: @escaping (PeerId) -> Void,
         navigateToProfile: @escaping (PeerId) -> Void,
         openPeerInfo: @escaping () -> Void,
@@ -205,6 +208,9 @@ final class ChatPanelInterfaceInteraction {
         scrollToTop: @escaping () -> Void,
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         activatePinnedListPreview: @escaping (ASDisplayNode, ContextGesture) -> Void,
+        joinGroupCall: @escaping (CachedChannelData.ActiveCall) -> Void,
+        presentInviteMembers: @escaping () -> Void,
+        editMessageMedia: @escaping (MessageId, Bool) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -283,6 +289,9 @@ final class ChatPanelInterfaceInteraction {
         self.scrollToTop = scrollToTop
         self.viewReplies = viewReplies
         self.activatePinnedListPreview = activatePinnedListPreview
+        self.editMessageMedia = editMessageMedia
+        self.joinGroupCall = joinGroupCall
+        self.presentInviteMembers = presentInviteMembers
         self.statuses = statuses
     }
 }

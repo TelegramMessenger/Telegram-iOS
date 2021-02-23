@@ -8,6 +8,8 @@ import BuildConfig
 import Contacts
 import OpenSSLEncryptionProvider
 import AppLockState
+import UIKit
+import GeneratedSources
 
 private var accountCache: Account?
 
@@ -52,7 +54,7 @@ enum IntentHandlingError {
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
-public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
+class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling, SelectFriendsIntentHandling {
     private let accountPromise = Promise<Account?>()
     
     private let resolvePersonsDisposable = MetaDisposable()
@@ -696,5 +698,48 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
             completion(response)
         }))
+    }
+
+    @available(iOSApplicationExtension 14.0, iOS 14.0, *)
+    func provideFriendsOptionsCollection(for intent: SelectFriendsIntent, with completion: @escaping (INObjectCollection<Friend>?, Error?) -> Void) {
+        let _ = (self.accountPromise.get()
+        |> take(1)
+        |> mapToSignal { account -> Signal<[Friend], NoError> in
+            guard let account = account else {
+                return .single([])
+            }
+            return account.postbox.transaction { transaction -> [Friend] in
+                var peers: [Peer] = []
+                
+                outer: for peerId in transaction.getContactPeerIds() {
+                    if let peer = transaction.getPeer(peerId) as? TelegramUser {
+                        peers.append(peer)
+                    }
+                }
+                
+                peers.sort(by: { lhs, rhs in
+                    return lhs.debugDisplayTitle < rhs.debugDisplayTitle
+                })
+                
+                var result: [Friend] = []
+                for peer in peers {
+                    let profileImage = smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
+                        return account.postbox.mediaBox.resourcePath(representation.resource)
+                    }.flatMap { path -> INImage? in
+                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                            return INImage(imageData: data)
+                        } else {
+                            return nil
+                        }
+                    }
+                    result.append(Friend(identifier: "\(peer.id.toInt64())", display: peer.debugDisplayTitle, subtitle: nil, image: nil))
+                }
+                return result
+            }
+        }
+        |> deliverOnMainQueue).start(next: { result in
+            let collection = INObjectCollection(items: result)
+            completion(collection, nil)
+        })
     }
 }

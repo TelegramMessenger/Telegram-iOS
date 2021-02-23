@@ -9,6 +9,8 @@
 
 @property (nonatomic, readonly) TGImageView *imageView;
 @property (nonatomic, readonly) TGCheckButtonView *checkButton;
+@property (nonatomic, readonly) UIImageView *typeIconView;
+
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
 @property (nonatomic, strong) TGMediaSelectionContext *selectionContext;

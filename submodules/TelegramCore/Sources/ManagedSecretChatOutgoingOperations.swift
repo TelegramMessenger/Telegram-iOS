@@ -153,8 +153,8 @@ func managedSecretChatOutgoingOperations(auxiliaryMethods: AccountAuxiliaryMetho
                                     return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .resendOperations(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                 case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds, messageId):
                                     return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .screenshotMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                case let .terminate(reportSpam):
-                                    return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, reportSpam: reportSpam)
+                                case let .terminate(reportSpam, requestRemoteHistoryRemoval):
+                                    return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, reportSpam: reportSpam, requestRemoteHistoryRemoval: requestRemoteHistoryRemoval)
                             }
                         } else {
                             assertionFailure()
@@ -1479,7 +1479,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                 }
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
-                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                                 }
                                 
                                 var updatedMedia = currentMessage.media
@@ -1567,7 +1567,7 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
                             resultTimestamp = timestamp
                             var storeForwardInfo: StoreMessageForwardInfo?
                             if let forwardInfo = currentMessage.forwardInfo {
-                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                             }
                             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
                         })
@@ -1673,8 +1673,12 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
     }
 }
 
-private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32, reportSpam: Bool) -> Signal<Void, NoError> {
-    return network.request(Api.functions.messages.discardEncryption(chatId: peerId.id))
+private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32, reportSpam: Bool, requestRemoteHistoryRemoval: Bool) -> Signal<Void, NoError> {
+    var flags: Int32 = 0
+    if requestRemoteHistoryRemoval {
+        flags |= 1 << 0
+    }
+    return network.request(Api.functions.messages.discardEncryption(flags: flags, chatId: peerId.id))
     |> map(Optional.init)
     |> `catch` { _ in
         return .single(nil)

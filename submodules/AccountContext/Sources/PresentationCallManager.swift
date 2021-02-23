@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -8,6 +9,11 @@ import TelegramAudio
 
 public enum RequestCallResult {
     case requested
+    case alreadyInProgress(PeerId?)
+}
+
+public enum JoinGroupCallManagerResult {
+    case joined
     case alreadyInProgress(PeerId?)
 }
 
@@ -126,6 +132,7 @@ public protocol PresentationCall: class {
     var peer: Peer? { get }
     
     var state: Signal<PresentationCallState, NoError> { get }
+    var audioLevel: Signal<Float, NoError> { get }
 
     var isMuted: Signal<Bool, NoError> { get }
     
@@ -151,8 +158,158 @@ public protocol PresentationCall: class {
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
+public struct PresentationGroupCallState: Equatable {
+    public enum NetworkState {
+        case connecting
+        case connected
+    }
+    
+    public enum DefaultParticipantMuteState {
+        case unmuted
+        case muted
+    }
+    
+    public var networkState: NetworkState
+    public var canManageCall: Bool
+    public var adminIds: Set<PeerId>
+    public var muteState: GroupCallParticipantsContext.Participant.MuteState?
+    public var defaultParticipantMuteState: DefaultParticipantMuteState?
+    
+    public init(
+        networkState: NetworkState,
+        canManageCall: Bool,
+        adminIds: Set<PeerId>,
+        muteState: GroupCallParticipantsContext.Participant.MuteState?,
+        defaultParticipantMuteState: DefaultParticipantMuteState?
+    ) {
+        self.networkState = networkState
+        self.canManageCall = canManageCall
+        self.adminIds = adminIds
+        self.muteState = muteState
+        self.defaultParticipantMuteState = defaultParticipantMuteState
+    }
+}
+
+public struct PresentationGroupCallSummaryState: Equatable {
+    public var info: GroupCallInfo?
+    public var participantCount: Int
+    public var callState: PresentationGroupCallState
+    public var topParticipants: [GroupCallParticipantsContext.Participant]
+    public var activeSpeakers: Set<PeerId>
+    
+    public init(
+        info: GroupCallInfo?,
+        participantCount: Int,
+        callState: PresentationGroupCallState,
+        topParticipants: [GroupCallParticipantsContext.Participant],
+        activeSpeakers: Set<PeerId>
+    ) {
+        self.info = info
+        self.participantCount = participantCount
+        self.callState = callState
+        self.topParticipants = topParticipants
+        self.activeSpeakers = activeSpeakers
+    }
+}
+
+public struct PresentationGroupCallMemberState: Equatable {
+    public var ssrc: UInt32
+    public var muteState: GroupCallParticipantsContext.Participant.MuteState?
+    public var speaking: Bool
+    
+    public init(
+        ssrc: UInt32,
+        muteState: GroupCallParticipantsContext.Participant.MuteState?,
+        speaking: Bool
+    ) {
+        self.ssrc = ssrc
+        self.muteState = muteState
+        self.speaking = speaking
+    }
+}
+
+public enum PresentationGroupCallMuteAction: Equatable {
+    case muted(isPushToTalkActive: Bool)
+    case unmuted
+    
+    public var isEffectivelyMuted: Bool {
+        switch self {
+            case let .muted(isPushToTalkActive):
+                return !isPushToTalkActive
+            case .unmuted:
+                return false
+        }
+    }
+}
+
+public struct PresentationGroupCallMembers: Equatable {
+    public var participants: [GroupCallParticipantsContext.Participant]
+    public var speakingParticipants: Set<PeerId>
+    public var totalCount: Int
+    public var loadMoreToken: String?
+    
+    public init(
+        participants: [GroupCallParticipantsContext.Participant],
+        speakingParticipants: Set<PeerId>,
+        totalCount: Int,
+        loadMoreToken: String?
+    ) {
+        self.participants = participants
+        self.speakingParticipants = speakingParticipants
+        self.totalCount = totalCount
+        self.loadMoreToken = loadMoreToken
+    }
+}
+
+public final class PresentationGroupCallMemberEvent {
+    public let peer: Peer
+    public let joined: Bool
+    
+    public init(peer: Peer, joined: Bool) {
+        self.peer = peer
+        self.joined = joined
+    }
+}
+
+public protocol PresentationGroupCall: class {
+    var account: Account { get }
+    var accountContext: AccountContext { get }
+    var internalId: CallSessionInternalId { get }
+    var peerId: PeerId { get }
+    
+    var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
+    
+    var canBeRemoved: Signal<Bool, NoError> { get }
+    var state: Signal<PresentationGroupCallState, NoError> { get }
+    var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> { get }
+    var members: Signal<PresentationGroupCallMembers?, NoError> { get }
+    var audioLevels: Signal<[(PeerId, Float, Bool)], NoError> { get }
+    var myAudioLevel: Signal<Float, NoError> { get }
+    var isMuted: Signal<Bool, NoError> { get }
+    
+    var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
+    
+    func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>
+    
+    func toggleIsMuted()
+    func setIsMuted(action: PresentationGroupCallMuteAction)
+    func updateDefaultParticipantsAreMuted(isMuted: Bool)
+    func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
+    func setCurrentAudioOutput(_ output: AudioSessionOutput)
+    
+    func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
+    
+    func invitePeer(_ peerId: PeerId) -> Bool
+    func removedPeer(_ peerId: PeerId)
+    var invitedPeers: Signal<[PeerId], NoError> { get }
+    
+    func loadMoreMembers(token: String)
+}
+
 public protocol PresentationCallManager: class {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
+    var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
+    func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
 }

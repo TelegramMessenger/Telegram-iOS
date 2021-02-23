@@ -265,18 +265,29 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             return .complete()
         }
     } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
-        let deleteUser: Signal<Void, NoError> = network.request(Api.functions.messages.deleteChatUser(chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
-        |> map { result -> Api.Updates? in
-            return result
-        }
-        |> `catch` { _ in
-            return .single(nil)
-        }
-        |> mapToSignal { updates in
-            if let updates = updates {
-                stateManager.addUpdates(updates)
+        let deleteUser: Signal<Void, NoError>
+        if operation.deleteGloballyIfPossible {
+            deleteUser = network.request(Api.functions.messages.deleteChat(chatId: peer.id.id))
+            |> `catch` { _ in
+                return .single(.boolFalse)
             }
-            return .complete()
+            |> mapToSignal { _ in
+                return .complete()
+            }
+        } else {
+            deleteUser = network.request(Api.functions.messages.deleteChatUser(flags: 0, chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
+                |> map { result -> Api.Updates? in
+                    return result
+                }
+                |> `catch` { _ in
+                    return .single(nil)
+                }
+                |> mapToSignal { updates in
+                    if let updates = updates {
+                        stateManager.addUpdates(updates)
+                    }
+                    return .complete()
+                }
         }
         let reportSignal: Signal<Void, NoError>
         if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {

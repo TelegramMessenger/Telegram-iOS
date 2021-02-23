@@ -20,6 +20,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/Markdown:Markdown",
+        "//submodules/TelegramCallsUI:TelegramCallsUI",
     ],
     visibility = [
         "//visibility:public",

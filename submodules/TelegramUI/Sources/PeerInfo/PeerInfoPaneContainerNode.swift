@@ -12,7 +12,8 @@ import ContextUI
 
 protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
-    var shouldReceiveExpandProgressUpdates: Bool { get }
+    
+    var parentController: ViewController? { get set }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
@@ -100,6 +101,12 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
     func updateText(_ title: String, isSelected: Bool, presentationData: PresentationData) {
         self.isSelected = isSelected
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
+        
+        self.buttonNode.accessibilityLabel = title
+        self.buttonNode.accessibilityTraits = [.button]
+        if isSelected {
+            self.buttonNode.accessibilityTraits.insert(.selected)
+        }
     }
     
     func updateLayout(height: CGFloat) -> CGFloat {
@@ -376,7 +383,8 @@ private final class PeerInfoPendingPane {
         requestPerformPeerMemberAction: @escaping (PeerInfoMember, PeerMembersListAction) -> Void,
         peerId: PeerId,
         key: PeerInfoPaneKey,
-        hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void
+        hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void,
+        parentController: ViewController?
     ) {
         let paneNode: PeerInfoPaneNode
         switch key {
@@ -403,7 +411,7 @@ private final class PeerInfoPendingPane {
                 preconditionFailure()
             }
         }
-        
+        paneNode.parentController = parentController
         self.pane = PeerInfoPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
         |> take(1)
@@ -421,6 +429,8 @@ private final class PeerInfoPendingPane {
 final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let peerId: PeerId
+    
+    weak var parentController: ViewController?
     
     private let coveringBackgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
@@ -751,7 +761,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                         if leftScope {
                             apply()
                         }
-                    }
+                    },
+                    parentController: self.parentController
                 )
                 self.pendingPanes[key] = pane
                 pane.pane.node.frame = paneFrame

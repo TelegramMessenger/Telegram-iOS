@@ -73,8 +73,18 @@ public final class ContextMenuActionItem {
     }
 }
 
+public protocol ContextMenuCustomNode: ASDisplayNode {
+    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void)
+    func updateTheme(presentationData: PresentationData)
+}
+
+public protocol ContextMenuCustomItem {
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
+}
+
 public enum ContextMenuItem {
     case action(ContextMenuActionItem)
+    case custom(ContextMenuCustomItem, Bool)
     case separator
 }
 
@@ -137,6 +147,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let itemsDisposable = MetaDisposable()
     
+    private let blurBackground: Bool
+    
     init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (ReactionContextItem.Reaction) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void, displayTextSelectionTip: Bool) {
         self.presentationData = presentationData
         self.source = source
@@ -172,6 +184,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.withoutBlurDimNode.alpha = 0.0
         
         self.dismissNode = ASDisplayNode()
+        self.dismissNode.isAccessibilityElement = true
+        self.dismissNode.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
+        self.dismissNode.accessibilityTraits = .button
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -188,13 +203,19 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         var feedbackTap: (() -> Void)?
         
+        var blurBackground = true
+        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
+            blurBackground = false
+        }
+        self.blurBackground = blurBackground
+            
         self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: [], getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
         }, feedbackTap: {
             feedbackTap?()
-        }, displayTextSelectionTip: self.displayTextSelectionTip)
+        }, displayTextSelectionTip: self.displayTextSelectionTip, blurBackground: blurBackground)
         
         if !reactionItems.isEmpty {
             let reactionContextNode = ReactionContextNode(account: account, theme: presentationData.theme, items: reactionItems)
@@ -211,9 +232,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.scrollNode.view.delegate = self
         
-        self.view.addSubview(self.effectView)
-        self.addSubnode(self.dimNode)
-        self.addSubnode(self.withoutBlurDimNode)
+        if blurBackground {
+            self.view.addSubview(self.effectView)
+            self.addSubnode(self.dimNode)
+            self.addSubnode(self.withoutBlurDimNode)
+        }
         
         self.addSubnode(self.clippingNode)
         
@@ -1028,7 +1051,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self?.beginDismiss(result)
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
-        }, displayTextSelectionTip: self.displayTextSelectionTip)
+        }, displayTextSelectionTip: self.displayTextSelectionTip, blurBackground: self.blurBackground)
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
         if let layout = self.validLayout {
@@ -1074,7 +1097,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
 
         switch layout.metrics.widthClass {
         case .compact:
-            if self.effectView.superview == nil {
+            if case let .extracted(extractedSource) = self.source, !extractedSource.blurBackground {
+            } else if self.effectView.superview == nil {
                 self.view.insertSubview(self.effectView, at: 0)
                 if #available(iOS 10.0, *) {
                     if let propertyAnimator = self.propertyAnimator {
@@ -1088,7 +1112,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.dimNode.isHidden = false
             self.withoutBlurDimNode.isHidden = true
         case .regular:
-            if self.effectView.superview != nil {
+            if case let .extracted(extractedSource) = self.source, !extractedSource.blurBackground {
+            } else if self.effectView.superview != nil {
                 self.effectView.removeFromSuperview()
                 self.withoutBlurDimNode.alpha = 1.0
             }
@@ -1255,7 +1280,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         }
                         contentUnscaledSize = CGSize(width: constrainedWidth, height: max(100.0, proposedContentHeight))
                         
-                        if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
+                        if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
                             contentUnscaledSize = preferredSize
                         }
                     } else {
@@ -1265,7 +1290,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         let proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
                         contentUnscaledSize = CGSize(width: min(layout.size.width, 340.0), height: min(568.0, proposedContentHeight))
                         
-                        if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
+                        if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
                             contentUnscaledSize = preferredSize
                         }
                     }
@@ -1352,15 +1377,28 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
+    
         if let previousActionsContainerNode = previousActionsContainerNode {
             if transition.isAnimated {
-                transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
-                previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
-                    previousActionsContainerNode?.removeFromSupernode()
-                })
-                
-                transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
-                if transition.isAnimated {
+                if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions {
+                    var initialFrame = self.actionsContainerNode.frame
+                    let delta = (previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height)
+                    initialFrame.origin.y = self.actionsContainerNode.frame.minY + previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height
+                    transition.animateFrame(node: self.actionsContainerNode, from: initialFrame)
+                    transition.animatePosition(node: previousActionsContainerNode, to: CGPoint(x: 0.0, y: -delta), removeOnCompletion: false, additive: true)
+                    previousActionsContainerNode.animateOut(offset: delta, transition: transition)
+                    
+                    previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                        previousActionsContainerNode?.removeFromSupernode()
+                    })
+                    self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                } else {
+                    transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
+                    previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                        previousActionsContainerNode?.removeFromSupernode()
+                    })
+                    
+                    transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
                     self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             } else {
@@ -1471,6 +1509,7 @@ public final class ContextControllerPutBackViewInfo {
 public protocol ContextExtractedContentSource: class {
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
+    var blurBackground: Bool { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
     func putBack() -> ContextControllerPutBackViewInfo?
@@ -1528,7 +1567,11 @@ public final class ContextController: ViewController, StandalonePresentableContr
         
         super.init(navigationBarPresentationData: nil)
         
-        self.statusBar.statusBarStyle = .Hide
+        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
+            self.statusBar.statusBarStyle = .Ignore
+        } else {
+            self.statusBar.statusBarStyle = .Hide
+        }
         self.lockOrientation = true
     }
     

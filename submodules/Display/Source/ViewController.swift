@@ -139,7 +139,7 @@ public enum TabBarItemContextActionType {
     }
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
-    var _presentedInModal: Bool = false
+    open var _presentedInModal: Bool = false
     
     public var presentedOverCoveringView: Bool = false
     
@@ -252,6 +252,8 @@ public enum TabBarItemContextActionType {
     }
     
     public var additionalNavigationBarHeight: CGFloat = 0.0
+    
+    public var additionalSideInsets: UIEdgeInsets = UIEdgeInsets()
     
     private let _ready = Promise<Bool>(true)
     open var ready: Promise<Bool> {

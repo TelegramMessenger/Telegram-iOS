@@ -13,6 +13,7 @@ import AccountContext
 import Emoji
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
+private let phoneIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/PhoneIcon"), color: .white)
 private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 private let repliesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepliesMessagesIcon"), color: .white)
@@ -79,10 +80,14 @@ private let savedMessagesColors: NSArray = [
     UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor
 ]
 
+public enum AvatarNodeExplicitIcon {
+    case phone
+}
+
 private enum AvatarNodeState: Equatable {
     case empty
     case peerAvatar(PeerId, [String], TelegramMediaImageRepresentation?)
-    case custom(letter: [String], explicitColorIndex: Int?)
+    case custom(letter: [String], explicitColorIndex: Int?, explicitIcon: AvatarNodeExplicitIcon?)
 }
 
 private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
@@ -91,8 +96,8 @@ private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
             return true
         case let (.peerAvatar(lhsPeerId, lhsLetters, lhsPhotoRepresentations), .peerAvatar(rhsPeerId, rhsLetters, rhsPhotoRepresentations)):
             return lhsPeerId == rhsPeerId && lhsLetters == rhsLetters && lhsPhotoRepresentations == rhsPhotoRepresentations
-        case let (.custom(lhsLetters, lhsIndex), .custom(rhsLetters, rhsIndex)):
-            return lhsLetters == rhsLetters && lhsIndex == rhsIndex
+        case let (.custom(lhsLetters, lhsIndex, lhsIcon), .custom(rhsLetters, rhsIndex, rhsIcon)):
+            return lhsLetters == rhsLetters && lhsIndex == rhsIndex && lhsIcon == rhsIcon
         default:
             return false
     }
@@ -105,6 +110,7 @@ private enum AvatarNodeIcon: Equatable {
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
     case deletedIcon
+    case phoneIcon
 }
 
 public enum AvatarNodeImageOverride: Equatable {
@@ -115,6 +121,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
     case deletedIcon
+    case phoneIcon
 }
 
 public enum AvatarNodeColorOverride {
@@ -323,6 +330,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .deletedIcon:
                     representation = nil
                     icon = .deletedIcon
+                case .phoneIcon:
+                    representation = nil
+                    icon = .phoneIcon
             }
         } else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
             representation = peer?.smallProfileImage
@@ -383,7 +393,7 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setCustomLetters(_ letters: [String], explicitColor: AvatarNodeColorOverride? = nil) {
+    public func setCustomLetters(_ letters: [String], explicitColor: AvatarNodeColorOverride? = nil, icon: AvatarNodeExplicitIcon? = nil) {
         var explicitIndex: Int?
         if let explicitColor = explicitColor {
             switch explicitColor {
@@ -391,11 +401,16 @@ public final class AvatarNode: ASDisplayNode {
                     explicitIndex = 5
             }
         }
-        let updatedState: AvatarNodeState = .custom(letter: letters, explicitColorIndex: explicitIndex)
+        let updatedState: AvatarNodeState = .custom(letter: letters, explicitColorIndex: explicitIndex, explicitIcon: icon)
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = AvatarNodeParameters(theme: nil, accountPeerId: nil, peerId: nil, letters: letters, font: self.font, icon: .none, explicitColorIndex: explicitIndex, hasImage: false, clipStyle: .round)
+            let parameters: AvatarNodeParameters
+            if let icon = icon, case .phone = icon {
+                parameters = AvatarNodeParameters(theme: nil, accountPeerId: nil, peerId: nil, letters: [], font: self.font, icon: .phoneIcon, explicitColorIndex: explicitIndex, hasImage: false, clipStyle: .round)
+            } else {
+                parameters = AvatarNodeParameters(theme: nil, accountPeerId: nil, peerId: nil, letters: letters, font: self.font, icon: .none, explicitColorIndex: explicitIndex, hasImage: false, clipStyle: .round)
+            }
             
             self.displaySuspended = true
             self.contents = nil
@@ -456,6 +471,8 @@ public final class AvatarNode: ASDisplayNode {
         if let parameters = parameters as? AvatarNodeParameters, parameters.icon != .none {
             if case .deletedIcon = parameters.icon {
                 colorsArray = grayscaleColors
+            } else if case .phoneIcon = parameters.icon {
+                colorsArray = grayscaleColors
             } else if case .savedMessagesIcon = parameters.icon {
                 colorsArray = savedMessagesColors
             } else if case .repliesIcon = parameters.icon {
@@ -504,6 +521,15 @@ public final class AvatarNode: ASDisplayNode {
                 
                 if let deletedIcon = deletedIcon {
                     context.draw(deletedIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - deletedIcon.size.width) / 2.0), y: floor((bounds.size.height - deletedIcon.size.height) / 2.0)), size: deletedIcon.size))
+                }
+            } else if case .phoneIcon = parameters.icon {
+                let factor: CGFloat = 1.0
+                context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                context.scaleBy(x: factor, y: -factor)
+                context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                
+                if let phoneIcon = phoneIcon {
+                    context.draw(phoneIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - phoneIcon.size.width) / 2.0), y: floor((bounds.size.height - phoneIcon.size.height) / 2.0)), size: phoneIcon.size))
                 }
             } else if case .savedMessagesIcon = parameters.icon {
                 let factor = bounds.size.width / 60.0

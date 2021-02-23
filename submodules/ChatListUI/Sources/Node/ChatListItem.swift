@@ -442,6 +442,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var isHighlighted: Bool = false
     private var skipFadeout: Bool = false
     
+    private var onlineIsVoiceChat: Bool = false
+    
     override var canBeSelected: Bool {
         if self.selectableControlNode != nil || self.item?.editing == true {
             return false
@@ -477,11 +479,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case .groupReference:
                     return nil
-                case let .peer(peer):
-                    guard let chatMainPeer = peer.peer.chatMainPeer else {
+                case let .peer(_, peer, combinedReadState, _, _, _, _, _, _, _, _, _):
+                    guard let chatMainPeer = peer.chatMainPeer else {
                         return nil
                     }
-                    return chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    var result = ""
+                    if item.context.account.peerId == chatMainPeer.id {
+                        result += item.presentationData.strings.DialogList_SavedMessages
+                    } else {
+                        result += chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    }
+                    if let combinedReadState = combinedReadState, combinedReadState.count > 0 {
+                        result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(combinedReadState.count))"
+                    }
+                    return result
             }
         } set(value) {
         }
@@ -495,25 +506,25 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case .groupReference:
                     return nil
-                case let .peer(peer):
-                    if let message = peer.messages.last {
+                case let .peer(messages, peer, combinedReadState, _, _, _, _, _, _, _, _, _):
+                    if let message = messages.last {
                         var result = ""
                         if message.flags.contains(.Incoming) {
-                            result += "Message"
+                            result += item.presentationData.strings.VoiceOver_ChatList_Message
                         } else {
-                            result += "Outgoing message"
+                            result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: peer.messages, chatPeer: peer.peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
+                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
-                            result += "\nFrom: \(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0)"
                         }
-                        if !message.flags.contains(.Incoming), let combinedReadState = peer.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
-                            result += "\nRead"
+                        if !message.flags.contains(.Incoming), let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageRead)"
                         }
                         result += "\n\(messageText)"
                         return result
                     } else {
-                        return "Empty"
+                        return item.presentationData.strings.VoiceOver_ChatList_MessageEmpty
                     }
             }
         } set(value) {
@@ -695,7 +706,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
             
             if let item = self.item {
-                self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted))
+                self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted, voiceChat: self.onlineIsVoiceChat), color: nil, transition: transition)
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
@@ -711,11 +722,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if let item = self.item {
                 let onlineIcon: UIImage?
                 if item.index.pinningIndex != nil {
-                    onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned)
+                    onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned, voiceChat: self.onlineIsVoiceChat)
                 } else {
-                    onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular)
+                    onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: self.onlineIsVoiceChat)
                 }
-                self.onlineNode.setImage(onlineIcon)
+                self.onlineNode.setImage(onlineIcon, color: nil, transition: transition)
             }
         }
     }
@@ -796,10 +807,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     embeddedState = embeddedStateValue
                     summaryInfo = summaryInfoValue
                     
-                    if let peerPresence = peerPresence as? TelegramUserPresence, case .present = peerPresence.status {
+                    switch peerValue.peer {
+                    case _ as TelegramUser, _ as TelegramSecretChat:
+                        if let peerPresence = peerPresence as? TelegramUserPresence, case .present = peerPresence.status {
+                            inputActivities = inputActivitiesValue
+                        } else {
+                            inputActivities = nil
+                        }
+                    default:
                         inputActivities = inputActivitiesValue
-                    } else {
-                        inputActivities = nil
                     }
                     
                     isPeerGroup = false
@@ -951,7 +967,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if let message = messages.last, let author = message.author as? TelegramUser, let peer = itemPeer.chatMainPeer, !(peer is TelegramUser) {
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                         } else if !displayAsMessage {
-                            peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
+                                peerText = authorSignature
+                            } else {
+                                peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            }
                         }
                     }
                     
@@ -1243,28 +1263,36 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             var credibilityIconOffset: CGFloat = 0.0
-            if displayAsMessage {
-                switch item.content {
-                case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _):
-                    if let peer = messages.last?.author {
-                        if peer.isScam {
-                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
-                            credibilityIconOffset = 2.0
-                        } else if peer.isVerified {
-                            currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                            credibilityIconOffset = 3.0
+            if !isPeerGroup {
+                if displayAsMessage {
+                    switch item.content {
+                    case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _):
+                        if let peer = messages.last?.author {
+                            if peer.isScam {
+                                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
+                                credibilityIconOffset = 2.0
+                            } else if peer.isFake {
+                                currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, type: .regular)
+                                credibilityIconOffset = 2.0
+                            } else if peer.isVerified {
+                                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                                credibilityIconOffset = 3.0
+                            }
                         }
+                    default:
+                        break
                     }
-                default:
-                    break
-                }
-            } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
-                if peer.isScam {
-                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
-                    credibilityIconOffset = 2.0
-                } else if peer.isVerified {
-                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                    credibilityIconOffset = 3.0
+                } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
+                    if peer.isScam {
+                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
+                        credibilityIconOffset = 2.0
+                    } else if peer.isFake {
+                        currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, type: .regular)
+                        credibilityIconOffset = 2.0
+                    } else if peer.isVerified {
+                        currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                        credibilityIconOffset = 3.0
+                    }
                 }
             }
             if let currentSecretIconImage = currentSecretIconImage {
@@ -1312,7 +1340,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             badgeSize = max(badgeSize, reorderInset)
             
-            let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: hideAuthor ? nil : authorAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: (hideAuthor && !hasDraft) ? nil : authorAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             var textCutout: TextNodeCutout?
             if !textLeftCutout.isZero {
@@ -1338,18 +1366,27 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var online = false
             var animateOnline = false
+            var onlineIsVoiceChat = false
 
             let peerRevealOptions: [ItemListRevealOption]
             let peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
                 case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _, displayAsMessage, _):
-                    if !displayAsMessage, let peer = renderedPeer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId  {
-                        var updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
-                        let relativeStatus = relativeUserPresenceStatus(updatedPresence, relativeTo: timestamp)
-                        if case .online = relativeStatus {
-                            online = true
+                    if !displayAsMessage {
+                        if let peer = renderedPeer.chatMainPeer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
+                            let updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
+                            let relativeStatus = relativeUserPresenceStatus(updatedPresence, relativeTo: timestamp)
+                            if case .online = relativeStatus {
+                                online = true
+                            }
+                            animateOnline = true
+                        } else if let channel = renderedPeer.peer as? TelegramChannel {
+                            onlineIsVoiceChat = true
+                            if channel.flags.contains(.hasActiveVoiceChat) && item.interaction.searchTextHighightState == nil {
+                                online = true
+                            }
+                            animateOnline = true
                         }
-                        animateOnline = true
                     }
                     
                     let isPinned = item.index.pinningIndex != nil
@@ -1380,7 +1417,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     peerLeftRevealOptions = []
             }
             
-            let (onlineLayout, onlineApply) = onlineLayout(online)
+            let (onlineLayout, onlineApply) = onlineLayout(online, onlineIsVoiceChat)
             var animateContent = false
             if let currentItem = currentItem, currentItem.content.chatLocation == item.content.chatLocation {
                 animateContent = true
@@ -1425,6 +1462,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.currentItemHeight = itemHeight
                     strongSelf.cachedChatListText = chatListText
                     strongSelf.cachedChatListSearchResult = chatListSearchResult
+                    strongSelf.onlineIsVoiceChat = onlineIsVoiceChat
                     
                     strongSelf.contextContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     
@@ -1510,18 +1548,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
-                    let onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width - 2.0, y: avatarFrame.maxY - onlineLayout.height - 2.0), size: onlineLayout)
+                    let onlineFrame: CGRect
+                    if onlineIsVoiceChat {
+                        onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width + 1.0 - UIScreenPixel, y: avatarFrame.maxY - onlineLayout.height + 1.0 - UIScreenPixel), size: onlineLayout)
+                    } else {
+                        onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width - 2.0, y: avatarFrame.maxY - onlineLayout.height - 2.0), size: onlineLayout)
+                    }
                     transition.updateFrame(node: strongSelf.onlineNode, frame: onlineFrame)
                     
                     let onlineIcon: UIImage?
                     if strongSelf.reallyHighlighted {
-                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted)
+                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted, voiceChat: onlineIsVoiceChat)
                     } else if item.index.pinningIndex != nil {
-                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned)
+                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned, voiceChat: onlineIsVoiceChat)
                     } else {
-                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular)
+                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: onlineIsVoiceChat)
                     }
-                    strongSelf.onlineNode.setImage(onlineIcon)
+                    strongSelf.onlineNode.setImage(onlineIcon, color: item.presentationData.theme.list.itemCheckColors.foregroundColor, transition: .immediate)
                                   
                     let _ = measureApply()
                     let _ = dateApply()
@@ -1850,7 +1893,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
             
             var onlineFrame = self.onlineNode.frame
-            onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width - 2.0
+            if self.onlineIsVoiceChat {
+                onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width + 1.0 - UIScreenPixel
+            } else {
+                onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width - 2.0
+            }
             transition.updateFrame(node: self.onlineNode, frame: onlineFrame)
             
             var titleOffset: CGFloat = 0.0

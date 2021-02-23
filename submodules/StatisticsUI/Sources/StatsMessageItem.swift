@@ -85,6 +85,13 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
+    let contextSourceNode: ContextExtractedContentContainingNode
+    private let containerNode: ContextControllerSourceNode
+    private let extractedBackgroundImageNode: ASImageNode
+    
+    private var extractedRect: CGRect?
+    private var nonExtractedRect: CGRect?
+    
     let contentImageNode: TransformImageNode
     let titleNode: TextNode
     let labelNode: TextNode
@@ -116,6 +123,13 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
+        self.contextSourceNode = ContextExtractedContentContainingNode()
+        self.containerNode = ContextControllerSourceNode()
+        
+        self.extractedBackgroundImageNode = ASImageNode()
+        self.extractedBackgroundImageNode.displaysAsynchronously = false
+        self.extractedBackgroundImageNode.alpha = 0.0
         
         self.contentImageNode = TransformImageNode()
         self.contentImageNode.isLayerBacked = true

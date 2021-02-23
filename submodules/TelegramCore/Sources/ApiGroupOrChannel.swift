@@ -97,7 +97,16 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 21)) != 0 {
             channelFlags.insert(.hasGeo)
         }
-        
+        if (flags & Int32(1 << 23)) != 0 {
+            channelFlags.insert(.hasVoiceChat)
+        }
+        if (flags & Int32(1 << 24)) != 0 {
+            channelFlags.insert(.hasActiveVoiceChat)
+        }
+        if (flags & Int32(1 << 25)) != 0 {
+            channelFlags.insert(.isFake)
+        }
+
         let restrictionInfo: PeerAccessRestrictionInfo?
         if let restrictionReason = restrictionReason {
             restrictionInfo = PeerAccessRestrictionInfo(apiReasons: restrictionReason)
@@ -141,12 +150,25 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                 } else {
                     let _ = channelFlags.remove(.isVerified)
                 }
+                if (flags & Int32(1 << 23)) != 0 {
+                    channelFlags.insert(.hasVoiceChat)
+                } else {
+                    let _ = channelFlags.remove(.hasVoiceChat)
+                }
+                if (flags & Int32(1 << 24)) != 0 {
+                    channelFlags.insert(.hasActiveVoiceChat)
+                } else {
+                    let _ = channelFlags.remove(.hasActiveVoiceChat)
+                }
                 var info = lhs.info
                 switch info {
                 case .broadcast:
                     break
                 case .group:
-                    let infoFlags = TelegramChannelGroupFlags()
+                    var infoFlags = TelegramChannelGroupFlags()
+                    if (flags & Int32(1 << 22)) != 0 {
+                        infoFlags.insert(.slowModeEnabled)
+                    }
                     info = .group(TelegramChannelGroupInfo(flags: infoFlags))
                 }
                 
@@ -171,6 +193,16 @@ func mergeChannel(lhs: TelegramChannel?, rhs: TelegramChannel) -> TelegramChanne
         channelFlags.insert(.isVerified)
     } else {
         let _ = channelFlags.remove(.isVerified)
+    }
+    if rhs.flags.contains(.hasVoiceChat) {
+        channelFlags.insert(.hasVoiceChat)
+    } else {
+        let _ = channelFlags.remove(.hasVoiceChat)
+    }
+    if rhs.flags.contains(.hasActiveVoiceChat) {
+        channelFlags.insert(.hasActiveVoiceChat)
+    } else {
+        let _ = channelFlags.remove(.hasActiveVoiceChat)
     }
     var info = lhs.info
     switch info {

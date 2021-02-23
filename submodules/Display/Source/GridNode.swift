@@ -497,6 +497,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     var nextItemOrigin = CGPoint(x: initialSpacing + itemInsets.left, y: 0.0)
                     var index = 0
                     var previousSection: GridSection?
+                    
+                    var previousFillsRow = false
+                    
                     for item in self.items {
                         var itemSize = defaultItemSize
                         
@@ -507,6 +510,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         } else if (previousSection != nil) != (section != nil) {
                             keepSection = false
                         }
+                        
+                    
+                        if !previousFillsRow && item.fillsRowWithDynamicHeight != nil {
+                            keepSection = false
+                        }
+                        previousFillsRow = item.fillsRowWithDynamicHeight != nil
                         
                         if !keepSection {
                             if incrementedCurrentRow {
@@ -899,12 +908,17 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             
             let itemInBounds = bounds.intersects(item.frame)
             
+            var absoluteRect = item.frame
             if let itemNode = self.itemNodes[item.index] {
                 if itemNode.frame != item.frame {
                     itemNode.frame = item.frame
                 }
                 itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads && itemInBounds)
-                itemNode.updateAbsoluteRect(item.frame, within: bounds.size)
+                
+                if let supernode = self.supernode {
+                    absoluteRect = supernode.convert(itemNode.bounds, from: itemNode)
+                }
+                itemNode.updateAbsoluteRect(absoluteRect, within: bounds.size)
             } else {
                 let itemNode = self.items[item.index].node(layout: presentationLayoutTransition.layout.layout, synchronousLoad: synchronousLoads && itemInBounds)
                 itemNode.frame = item.frame
@@ -912,7 +926,11 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 addedNodes = true
                 itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads)
                 self.setupNode?(itemNode)
-                itemNode.updateAbsoluteRect(item.frame, within: bounds.size)
+                
+                if let supernode = self.supernode {
+                    absoluteRect = supernode.convert(itemNode.bounds, from: itemNode)
+                }
+                itemNode.updateAbsoluteRect(absoluteRect, within: bounds.size)
             }
         }
         

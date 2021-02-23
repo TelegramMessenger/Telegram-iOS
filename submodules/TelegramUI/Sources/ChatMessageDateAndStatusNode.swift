@@ -167,8 +167,24 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var theme: ChatPresentationThemeData?
     private var layoutSize: CGSize?
     
+    private var tapGestureRecognizer: UITapGestureRecognizer?
+    
     var openReactions: (() -> Void)?
     var openReplies: (() -> Void)?
+    var pressed: (() -> Void)? {
+        didSet {
+            if self.pressed != nil {
+                if self.tapGestureRecognizer == nil {
+                    let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+                    self.tapGestureRecognizer = tapGestureRecognizer
+                    self.view.addGestureRecognizer(tapGestureRecognizer)
+                }
+            } else if let tapGestureRecognizer = self.tapGestureRecognizer{
+                self.tapGestureRecognizer = nil
+                self.view.removeGestureRecognizer(tapGestureRecognizer)
+            }
+        }
+    }
     
     override init() {
         self.dateNode = TextNode()
@@ -178,6 +194,12 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.dateNode)
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.pressed?()
+        }
     }
     
     func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int, _ isPinned: Bool) -> (CGSize, (Bool) -> Void) {
@@ -866,6 +888,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         if let reactionButtonNode = self.reactionButtonNode {
             if reactionButtonNode.frame.contains(point) {
                 return reactionButtonNode.view
+            }
+        }
+        if self.pressed != nil {
+            if self.bounds.contains(point) {
+                return self.view
             }
         }
         return nil

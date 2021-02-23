@@ -69,7 +69,7 @@ final class NotificationContainerControllerNode: ASDisplayNode {
             if item.groupingKey == key {
                 self.topItemAndNode = nil
                 self.displayingItemsUpdated?(false)
-                topItemNode.animateOut(completion: { [weak self, weak topItemNode] in
+                topItemNode.animateOut(completion: { [weak topItemNode] in
                     topItemNode?.removeFromSupernode()
                 })
             }
@@ -78,7 +78,7 @@ final class NotificationContainerControllerNode: ASDisplayNode {
     
     func enqueue(_ item: NotificationItem) {
         if let (_, topItemNode) = self.topItemAndNode {
-            topItemNode.animateOut(completion: { [weak self, weak topItemNode] in
+            topItemNode.animateOut(completion: { [weak topItemNode] in
                 topItemNode?.removeFromSupernode()
             })
         }

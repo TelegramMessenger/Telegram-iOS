@@ -78,6 +78,7 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
 
 public enum ReportReason: Equatable {
     case spam
+    case fake
     case violence
     case porno
     case childAbuse
@@ -91,6 +92,8 @@ private extension ReportReason {
         switch self {
             case .spam:
                 return .inputReportReasonSpam
+            case .fake:
+                return .inputReportReasonFake
             case .violence:
                 return .inputReportReasonViolence
             case .porno:

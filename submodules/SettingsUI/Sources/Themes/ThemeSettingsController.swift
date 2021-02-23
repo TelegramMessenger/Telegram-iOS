@@ -358,7 +358,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     }
                     if name == .night {
                         colors = colors.filter { $0 != .gray }
-                        defaultColor = PresentationThemeAccentColor(baseColor: .white)
                     } else {
                         colors = colors.filter { $0 != .white }
                     }

@@ -114,16 +114,17 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         didSet {
             if self.musicMediaPlayer !== oldValue {
                 if let musicMediaPlayer = self.musicMediaPlayer {
+                    let type = musicMediaPlayer.type
                     let account = musicMediaPlayer.account
                     self.musicMediaPlayerStateValue.set(musicMediaPlayer.playbackState
-                    |> map { state -> (Account, SharedMediaPlayerItemPlaybackStateOrLoading)? in
+                    |> map { state -> (Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)? in
                         guard let state = state else {
                             return nil
                         }
                         if case let .item(item) = state {
-                            return (account, .state(item))
+                            return (account, .state(item), type)
                         } else {
-                            return (account, .loading)
+                            return (account, .loading, type)
                         }
                     } |> deliverOnMainQueue)
                 } else {
@@ -132,8 +133,8 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             }
         }
     }
-    private let musicMediaPlayerStateValue = Promise<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?>(nil)
-    public var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> {
+    private let musicMediaPlayerStateValue = Promise<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?>(nil)
+    public var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> {
         return self.musicMediaPlayerStateValue.get()
     }
     
@@ -202,7 +203,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             if let voice = voice {
                 return (voice.0, voice.1, .voice)
             } else if let music = music {
-                return (music.0, music.1, .music)
+                return (music.0, music.1, music.2)
             } else {
                 return nil
             }
@@ -492,7 +493,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                         strongSelf.musicMediaPlayer?.control(.playback(.pause))
                         strongSelf.voiceMediaPlayer?.stop()
                         if let (account, playlist, settings, _) = inputData {
-                            let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true)
+                            let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true, type: type)
                             strongSelf.voiceMediaPlayer = voiceMediaPlayer
                             voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
                                 if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
@@ -510,11 +511,11 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                         } else {
                             strongSelf.voiceMediaPlayer = nil
                         }
-                    case .music:
+                    case .music, .file:
                         strongSelf.musicMediaPlayer?.stop()
                         strongSelf.voiceMediaPlayer?.control(.playback(.pause))
                         if let (account, playlist, settings, storedState) = inputData {
-                            let musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: storedState?.playbackRate ?? .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false)
+                            let musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: storedState?.playbackRate ?? .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false, type: type)
                             strongSelf.musicMediaPlayer = musicMediaPlayer
                             musicMediaPlayer.cancelled = { [weak musicMediaPlayer] in
                                 if let strongSelf = self, let musicMediaPlayer = musicMediaPlayer, musicMediaPlayer === strongSelf.musicMediaPlayer {
@@ -549,7 +550,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         switch selectedType {
             case .voice:
                 self.voiceMediaPlayer?.control(control)
-            case .music:
+            case .music, .file:
                 if self.voiceMediaPlayer != nil {
                     switch control {
                         case .playback(.play), .playback(.togglePlayPause):
@@ -567,8 +568,11 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         switch type {
             case .voice:
                 signal = self.voiceMediaPlayerState
-            case .music:
+            case .music, .file:
                 signal = self.musicMediaPlayerState
+                |> map { value in
+                    return value.flatMap { ($0.0, $0.1) }
+                }
         }
         return signal
         |> map { stateOrLoading -> SharedMediaPlayerItemPlaybackState? in
@@ -598,7 +602,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                         return .never()
                     }
                 }
-            case .music:
+            case .music, .file:
                 return .never()
         }
     }

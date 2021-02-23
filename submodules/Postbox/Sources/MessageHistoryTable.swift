@@ -22,9 +22,17 @@ private func getAdjacentEntryGroupInfo(_ entry: IntermediateMessageHistoryEntry?
     if let entry = entry {
         if let groupingKey = entry.message.groupingKey, let groupInfo = entry.message.groupInfo {
             if groupingKey == key {
-                return (entry, .sameGroup(groupInfo))
+                if let groupInfo = entry.message.groupInfo {
+                    return (entry, .sameGroup(groupInfo))
+                } else {
+                    return (entry, .none)
+                }
             } else {
-                return (entry, .otherGroup(groupInfo))
+                if let groupInfo = entry.message.groupInfo {
+                    return (entry, .otherGroup(groupInfo))
+                } else {
+                    return (entry, .none)
+                }
             }
         } else {
             return (entry, .none)
@@ -462,6 +470,19 @@ final class MessageHistoryTable: Table {
     
     func removeAllMessagesWithAuthor(peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation], forEachMedia: (Media) -> Void) {
         let indices = self.allIndicesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace)
+        self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations, forEachMedia: forEachMedia)
+    }
+    
+    func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation], forEachMedia: (Media) -> Void) {
+        var indices: [MessageIndex] = []
+        for entry in self.allIndicesWithGlobalTag(tag: tag) {
+            switch entry {
+            case let .message(index):
+                indices.append(index)
+            case .hole:
+                break
+            }
+        }
         self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations, forEachMedia: forEachMedia)
     }
     
@@ -1053,6 +1074,9 @@ final class MessageHistoryTable: Table {
             if forwardInfo.psaType != nil {
                 forwardInfoFlags |= 1 << 4
             }
+            if !forwardInfo.flags.isEmpty {
+                forwardInfoFlags |= 1 << 5
+            }
             sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
             var forwardAuthorId: Int64 = forwardInfo.authorId?.toInt64() ?? 0
             var forwardDate: Int32 = forwardInfo.date
@@ -1093,6 +1117,11 @@ final class MessageHistoryTable: Table {
                     var length: Int32 = 0
                     sharedBuffer.write(&length, offset: 0, length: 4)
                 }
+            }
+            
+            if !forwardInfo.flags.isEmpty {
+                var value: Int32 = forwardInfo.flags.rawValue
+                sharedBuffer.write(&value, offset: 0, length: 4)
             }
         } else {
             var forwardInfoFlags: Int8 = 0
@@ -1622,6 +1651,9 @@ final class MessageHistoryTable: Table {
                 if forwardInfo.psaType != nil {
                     forwardInfoFlags |= 1 << 4
                 }
+                if !forwardInfo.flags.isEmpty {
+                    forwardInfoFlags |= 1 << 5
+                }
                 sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
                 var forwardAuthorId: Int64 = forwardInfo.authorId?.toInt64() ?? 0
                 var forwardDate: Int32 = forwardInfo.date
@@ -1662,6 +1694,11 @@ final class MessageHistoryTable: Table {
                         var length: Int32 = 0
                         sharedBuffer.write(&length, offset: 0, length: 4)
                     }
+                }
+                
+                if !forwardInfo.flags.isEmpty {
+                    var value: Int32 = forwardInfo.flags.rawValue
+                    sharedBuffer.write(&value, offset: 0, length: 4)
                 }
             } else {
                 var forwardInfoFlags: Int8 = 0
@@ -1776,7 +1813,7 @@ final class MessageHistoryTable: Table {
         if let previousMessage = self.getMessage(index) {
             var storeForwardInfo: StoreMessageForwardInfo?
             if let forwardInfo = previousMessage.forwardInfo {
-                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.authorId, sourceId: forwardInfo.sourceId, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.authorId, sourceId: forwardInfo.sourceId, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
             }
             
             var parsedAttributes: [MessageAttribute] = []
@@ -2179,6 +2216,7 @@ final class MessageHistoryTable: Table {
                 var forwardSourceMessageId: MessageId?
                 var authorSignature: String? = nil
                 var psaType: String? = nil
+                var flags: MessageForwardInfo.Flags = []
                 
                 value.read(&forwardAuthorId, offset: 0, length: 8)
                 value.read(&forwardDate, offset: 0, length: 4)
@@ -2213,7 +2251,13 @@ final class MessageHistoryTable: Table {
                     value.skip(Int(psaTypeLength))
                 }
                 
-                forwardInfo = IntermediateMessageForwardInfo(authorId: forwardAuthorId == 0 ? nil : PeerId(forwardAuthorId), sourceId: forwardSourceId, sourceMessageId: forwardSourceMessageId, date: forwardDate, authorSignature: authorSignature, psaType: psaType)
+                if (forwardInfoFlags & (1 << 5)) != 0 {
+                    var rawValue: Int32 = 0
+                    value.read(&rawValue, offset: 0, length: 4)
+                    flags = MessageForwardInfo.Flags(rawValue: rawValue)
+                }
+                
+                forwardInfo = IntermediateMessageForwardInfo(authorId: forwardAuthorId == 0 ? nil : PeerId(forwardAuthorId), sourceId: forwardSourceId, sourceMessageId: forwardSourceMessageId, date: forwardDate, authorSignature: authorSignature, psaType: psaType, flags: flags)
             }
             
             var hasAuthor: Int8 = 0
@@ -2369,7 +2413,7 @@ final class MessageHistoryTable: Table {
             if let sourceId = internalForwardInfo.sourceId {
                 source = peerTable.get(sourceId)
             }
-            forwardInfo = MessageForwardInfo(author: forwardAuthor, source: source, sourceMessageId: internalForwardInfo.sourceMessageId, date: internalForwardInfo.date, authorSignature: internalForwardInfo.authorSignature, psaType: internalForwardInfo.psaType)
+            forwardInfo = MessageForwardInfo(author: forwardAuthor, source: source, sourceMessageId: internalForwardInfo.sourceMessageId, date: internalForwardInfo.date, authorSignature: internalForwardInfo.authorSignature, psaType: internalForwardInfo.psaType, flags: internalForwardInfo.flags)
         }
         
         var author: Peer?
@@ -2684,6 +2728,10 @@ final class MessageHistoryTable: Table {
             return true
         }, limit: 0)
         return indices
+    }
+    
+    func allIndicesWithGlobalTag(tag: GlobalMessageTags) -> [GlobalMessageHistoryTagsTableEntry] {
+        return self.globalTagsTable.getAll()
     }
     
     func allIndicesWithForwardAuthor(peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) -> [MessageIndex] {

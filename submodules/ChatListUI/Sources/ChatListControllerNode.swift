@@ -493,8 +493,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.deletePeerChat = { [weak self] peerId, joined in
             self?.deletePeerChat?(peerId, joined)
         }
-        itemNode.listNode.peerSelected = { [weak self] peerId, a, b in
-            self?.peerSelected?(peerId, a, b)
+        itemNode.listNode.peerSelected = { [weak self] peerId, animated, activateInput, promoInfo in
+            self?.peerSelected?(peerId, animated, activateInput, promoInfo)
         }
         itemNode.listNode.groupSelected = { [weak self] groupId in
             self?.groupSelected?(groupId)
@@ -540,7 +540,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     var hidePsa: ((PeerId) -> Void)?
     var deletePeerChat: ((PeerId, Bool) -> Void)?
-    var peerSelected: ((Peer, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
+    var peerSelected: ((Peer, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
     var groupSelected: ((PeerGroupId) -> Void)?
     var updatePeerGrouping: ((PeerId, Bool) -> Void)?
     var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
@@ -911,6 +911,14 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
+        if isEditing {
+            if !layout.safeInsets.left.isZero {
+                insets.bottom += 34.0
+            } else {
+                insets.bottom += 49.0
+            }
+        }
+        
         transition.updateAlpha(node: self, alpha: isReorderingFilters ? 0.5 : 1.0)
         self.isUserInteractionEnabled = !isReorderingFilters
         
@@ -1120,7 +1128,7 @@ final class ChatListControllerNode: ASDisplayNode {
             
             if let toolbarNode = self.toolbarNode {
                 transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
-                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right,  bottomInset: bottomInset, toolbar: toolbar, transition: transition)
+                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
                 let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
                     self?.toolbarActionSelected?(.left)
@@ -1130,7 +1138,7 @@ final class ChatListControllerNode: ASDisplayNode {
                     self?.toolbarActionSelected?(.middle)
                 })
                 toolbarNode.frame = tabBarFrame
-                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, toolbar: toolbar, transition: .immediate)
+                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: toolbar, transition: .immediate)
                 self.addSubnode(toolbarNode)
                 self.toolbarNode = toolbarNode
                 if transition.isAnimated {
@@ -1156,7 +1164,7 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode, displaySearchFilters: Bool, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode, displaySearchFilters: Bool, initialFilter: ChatListSearchFilter, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return nil
         }
@@ -1166,7 +1174,7 @@ final class ChatListControllerNode: ASDisplayNode {
             filter.insert(.excludeRecent)
         }
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, filter: filter, groupId: self.groupId, displaySearchFilters: displaySearchFilters, openPeer: { [weak self] peer, dismissSearch in
+        let contentNode = ChatListSearchContainerNode(context: self.context, filter: filter, groupId: self.groupId, displaySearchFilters: displaySearchFilters, initialFilter: initialFilter, openPeer: { [weak self] peer, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in

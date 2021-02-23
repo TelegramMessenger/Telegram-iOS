@@ -15,17 +15,34 @@ import TelegramStringFormatting
 import AnimatedCountLabelNode
 import AnimatedNavigationStripeNode
 import ContextUI
+import RadialStatusNode
 
 private enum PinnedMessageAnimation {
     case slideToTop
     case slideToBottom
 }
 
+private final class ButtonsContainerNode: ASDisplayNode {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let subnodes = self.subnodes {
+            for subnode in subnodes {
+                if let result = subnode.view.hitTest(self.view.convert(point, to: subnode.view), with: event) {
+                    return result
+                }
+            }
+        }
+        return nil
+    }
+}
+
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let context: AccountContext
     private let tapButton: HighlightTrackingButtonNode
+    private let buttonsContainer: ButtonsContainerNode
     private let closeButton: HighlightableButtonNode
     private let listButton: HighlightableButtonNode
+    private let activityIndicatorContainer: ASDisplayNode
+    private let activityIndicator: RadialStatusNode
     
     private let contextContainer: ContextControllerSourceNode
     private let clippingContainer: ASDisplayNode
@@ -47,6 +64,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var isReplyThread: Bool = false
     
     private let fetchDisposable = MetaDisposable()
+    
+    private var statusDisposable: Disposable?
 
     private let queue = Queue()
     
@@ -55,6 +74,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         self.tapButton = HighlightTrackingButtonNode()
         
+        self.buttonsContainer = ButtonsContainerNode()
+        
         self.closeButton = HighlightableButtonNode()
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
@@ -62,6 +83,14 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.listButton = HighlightableButtonNode()
         self.listButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.listButton.displaysAsynchronously = false
+        
+        self.activityIndicatorContainer = ASDisplayNode()
+        self.activityIndicatorContainer.isUserInteractionEnabled = false
+        self.activityIndicator = RadialStatusNode(backgroundNodeColor: .clear)
+        self.activityIndicator.isUserInteractionEnabled = false
+        self.activityIndicatorContainer.addSubnode(self.activityIndicator)
+        self.activityIndicator.alpha = 0.0
+        ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: self.activityIndicatorContainer, scale: 0.1)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -126,8 +155,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.imageNodeContainer.addSubnode(self.imageNode)
         self.contentContainer.addSubnode(self.imageNodeContainer)
         
-        self.contextContainer.addSubnode(self.closeButton)
-        self.contextContainer.addSubnode(self.listButton)
+        self.buttonsContainer.addSubnode(self.closeButton)
+        self.buttonsContainer.addSubnode(self.listButton)
+        self.contextContainer.addSubnode(self.buttonsContainer)
+        self.contextContainer.addSubnode(self.activityIndicatorContainer)
         
         self.tapButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
         self.contextContainer.addSubnode(self.tapButton)
@@ -146,6 +177,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     deinit {
         self.fetchDisposable.dispose()
+        self.statusDisposable?.dispose()
     }
     
     private var theme: PresentationTheme?
@@ -163,6 +195,46 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.listButton.setImage(PresentationResourcesChat.chatInputPanelPinnedListIconImage(interfaceState.theme), for: [])
             self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
             self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
+        }
+        
+        if self.statusDisposable == nil, let interfaceInteraction = self.interfaceInteraction, let statuses = interfaceInteraction.statuses {
+            self.statusDisposable = (statuses.loadingMessage
+            |> map { status -> Bool in
+                return status == .pinnedMessage
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] isLoading in
+                guard let strongSelf = self else {
+                    return
+                }
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+                if isLoading {
+                    if strongSelf.activityIndicator.alpha.isZero {
+                        transition.updateAlpha(node: strongSelf.activityIndicator, alpha: 1.0)
+                        transition.updateSublayerTransformScale(node: strongSelf.activityIndicatorContainer, scale: 1.0)
+                        
+                        transition.updateAlpha(node: strongSelf.buttonsContainer, alpha: 0.0)
+                        transition.updateSublayerTransformScale(node: strongSelf.buttonsContainer, scale: 0.1)
+                        
+                        if let theme = strongSelf.theme {
+                            strongSelf.activityIndicator.transitionToState(.progress(color: theme.chat.inputPanel.panelControlAccentColor, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true), animated: false, completion: {
+                            })
+                        }
+                    }
+                } else {
+                    if !strongSelf.activityIndicator.alpha.isZero {
+                        transition.updateAlpha(node: strongSelf.activityIndicator, alpha: 0.0, completion: { [weak self] completed in
+                            if completed {
+                                self?.activityIndicator.transitionToState(.none, animated: false, completion: {
+                                })
+                            }
+                        })
+                        transition.updateSublayerTransformScale(node: strongSelf.activityIndicatorContainer, scale: 0.1)
+                        
+                        transition.updateAlpha(node: strongSelf.buttonsContainer, alpha: 1.0)
+                        transition.updateSublayerTransformScale(node: strongSelf.buttonsContainer, scale: 1.0)
+                    }
+                }
+            })
         }
         
         let isReplyThread: Bool
@@ -219,11 +291,18 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let rightInset: CGFloat = 18.0 + rightInset
         
+        let buttonsContainerSize = CGSize(width: 16.0, height: panelHeight)
+        self.buttonsContainer.frame = CGRect(origin: CGPoint(x: width - buttonsContainerSize.width - rightInset, y: 0.0), size: buttonsContainerSize)
+        
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: buttonsContainerSize.width - closeButtonSize.width, y: 19.0), size: closeButtonSize))
         
         let listButtonSize = self.listButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.listButton, frame: CGRect(origin: CGPoint(x: width - rightInset - listButtonSize.width + 4.0, y: 13.0), size: listButtonSize))
+        transition.updateFrame(node: self.listButton, frame: CGRect(origin: CGPoint(x: buttonsContainerSize.width - listButtonSize.width + 4.0, y: 13.0), size: listButtonSize))
+        
+        let indicatorSize = CGSize(width: 22.0, height: 22.0)
+        transition.updateFrame(node: self.activityIndicatorContainer, frame: CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width + 5.0, y: 15.0), size: indicatorSize))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(), size: indicatorSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - rightInset - closeButtonSize.width - 4.0, height: panelHeight))
@@ -450,7 +529,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             if self.isReplyThread {
                 interfaceInteraction.scrollToTop()
             } else {
-                interfaceInteraction.navigateToMessage(message.message.id, false, true)
+                interfaceInteraction.navigateToMessage(message.message.id, false, true, .pinnedMessage)
             }
         }
     }

@@ -60,6 +60,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 text = strings.Activity_PlayingGame
                             case .typingText:
                                 text = strings.DialogList_Typing
+                            case .speakingInGroupCall:
+                                text = ""
                         }
                         let string = NSAttributedString(string: text, font: textFont, textColor: color)
                         
@@ -74,6 +76,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .uploading(string, lightColor)
                             case .playingGame:
                                 state = .playingGame(string, lightColor)
+                            case .speakingInGroupCall:
+                                state = .typingText(string, lightColor)
                         }
                     } else {
                         let text: String
@@ -96,6 +100,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                     text = strings.DialogList_SinglePlayingGameSuffix(peerTitle).0
                                 case .typingText:
                                     text = strings.DialogList_SingleTypingSuffix(peerTitle).0
+                                case .speakingInGroupCall:
+                                    text = ""
                             }
                         } else {
                             text = activities[0].0.compactDisplayTitle
@@ -113,13 +119,20 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .uploading(string, lightColor)
                             case .playingGame:
                                 state = .playingGame(string, lightColor)
+                            case .speakingInGroupCall:
+                                state = .typingText(string, lightColor)
                         }
                     }
                 } else {
                     let string: NSAttributedString
                     if activities.count > 1 {
                         let peerTitle = activities[0].0.compactDisplayTitle
-                        string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
+                        if activities.count == 2 {
+                            let secondPeerTitle = activities[1].0.compactDisplayTitle
+                            string = NSAttributedString(string: strings.DialogList_MultipleTypingPair(peerTitle, secondPeerTitle).0, font: textFont, textColor: color)
+                        } else {
+                            string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
+                        }
                     } else {
                         string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
                     }

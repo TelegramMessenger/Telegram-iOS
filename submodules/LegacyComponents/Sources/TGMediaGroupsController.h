@@ -8,6 +8,7 @@
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool liveVideoUploadEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
+@property (nonatomic, assign) CGFloat topInset;
 
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 

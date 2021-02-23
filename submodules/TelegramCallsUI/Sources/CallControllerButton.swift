@@ -11,9 +11,10 @@ private let labelFont = Font.regular(13.0)
 final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     struct Content: Equatable {
         enum Appearance: Equatable {
-            enum Color {
+            enum Color: Equatable {
                 case red
                 case green
+                case custom(UInt32, CGFloat)
             }
             
             case blurred(isFilled: Bool)
@@ -36,6 +37,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case speaker
             case airpods
             case airpodsPro
+            case headphones
             case accept
             case end
         }
@@ -59,7 +61,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     private let contentNode: ASImageNode
     private let overlayHighlightNode: ASImageNode
     private var statusNode: SemanticStatusNode?
-    private let textNode: ImmediateTextNode
+    let textNode: ImmediateTextNode
     
     private let largeButtonSize: CGFloat = 72.0
     
@@ -195,6 +197,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58)
+                    case let .custom(color, alpha):
+                        fillColor = UIColor(rgb: color, alpha: alpha)
                     }
                 }
                 
@@ -218,6 +222,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsButton"), color: imageColor)
                 case .airpodsPro:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsProButton"), color: imageColor)
+                case .headphones:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallHeadphonesButton"), color: imageColor)
                 case .accept:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAcceptButton"), color: imageColor)
                 case .end:
@@ -287,6 +293,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
+                    case let .custom(color, alpha):
+                        fillColor = UIColor(rgb: color).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     }
                 }
                 

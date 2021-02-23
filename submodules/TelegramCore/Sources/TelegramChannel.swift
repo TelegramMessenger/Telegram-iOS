@@ -13,6 +13,7 @@ public enum TelegramChannelPermission {
     case addAdmins
     case changeInfo
     case canBeAnonymous
+    case manageCalls
 }
 
 public extension TelegramChannel {
@@ -124,6 +125,11 @@ public extension TelegramChannel {
                     return true
                 }
                 return false
+            case .manageCalls:
+                if let adminRights = self.adminRights, adminRights.flags.contains(.canManageCalls) {
+                    return true
+                }
+                return false
             case .canBeAnonymous:
                 if let adminRights = self.adminRights, adminRights.flags.contains(.canBeAnonymous) {
                     return true
@@ -132,7 +138,7 @@ public extension TelegramChannel {
         }
     }
     
-    public func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> (Int32, Bool)? {
+    func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> (Int32, Bool)? {
         if self.flags.contains(.isCreator) {
             return nil
         }
@@ -148,7 +154,7 @@ public extension TelegramChannel {
         return nil
     }
     
-    public var isRestrictedBySlowmode: Bool {
+    var isRestrictedBySlowmode: Bool {
         if self.flags.contains(.isCreator) {
             return false
         }

@@ -176,7 +176,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             switch fetchStatus {
                 case let .Fetching(_, progress):
                     let adjustedProgress = max(progress, 0.027)
-                    state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                    state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                 case .Remote:
                     state = .download(.white)
                 default:

@@ -30,7 +30,7 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
             return (strings.Conversation_Mute, theme.chat.inputPanel.panelControlAccentColor)
         case .unmuteNotifications:
             return (strings.Conversation_Unmute, theme.chat.inputPanel.panelControlAccentColor)
-        case let .unpinMessages(count):
+        case .unpinMessages:
             return (strings.Chat_PanelUnpinAllMessages, theme.chat.inputPanel.panelControlAccentColor)
         case .hidePinnedMessages:
             return (strings.Chat_PanelHidePinnedMessages, theme.chat.inputPanel.panelControlAccentColor)
@@ -204,7 +204,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         self.layoutData = (width, leftInset, rightInset)
         
         if self.presentationInterfaceState != interfaceState {

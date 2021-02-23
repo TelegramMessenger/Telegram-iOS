@@ -6,14 +6,27 @@ public enum ImpactHapticFeedbackStyle: Hashable {
     case light
     case medium
     case heavy
+    case soft
+    case rigid
+    case veryLight
 }
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 private final class HapticFeedbackImpl {
     private lazy var impactGenerator: [ImpactHapticFeedbackStyle : UIImpactFeedbackGenerator] = {
-        [.light: UIImpactFeedbackGenerator(style: .light),
-         .medium: UIImpactFeedbackGenerator(style: .medium),
-         .heavy: UIImpactFeedbackGenerator(style: .heavy)] }()
+        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+            return [.light: UIImpactFeedbackGenerator(style: .light),
+                    .medium: UIImpactFeedbackGenerator(style: .medium),
+                    .heavy: UIImpactFeedbackGenerator(style: .heavy),
+                    .soft: UIImpactFeedbackGenerator(style: .soft),
+                    .rigid: UIImpactFeedbackGenerator(style: .rigid),
+                    .veryLight: UIImpactFeedbackGenerator()]
+        } else {
+            return [.light: UIImpactFeedbackGenerator(style: .light),
+                    .medium: UIImpactFeedbackGenerator(style: .medium),
+                    .heavy: UIImpactFeedbackGenerator(style: .heavy)]
+        }
+    }()
    
     private lazy var selectionGenerator: UISelectionFeedbackGenerator? = {
         let generator = UISelectionFeedbackGenerator()
@@ -64,7 +77,11 @@ private final class HapticFeedbackImpl {
     
     func impact(_ style: ImpactHapticFeedbackStyle) {
         if let impactGenerator = self.impactGenerator[style] {
-            impactGenerator.impactOccurred()
+            if #available(iOSApplicationExtension 13.0, iOS 13.0, *), case .veryLight = style {
+                impactGenerator.impactOccurred(intensity: 0.3)
+            } else {
+                impactGenerator.impactOccurred()
+            }
         }
     }
     

@@ -25,14 +25,7 @@ import WatchBridge
 import LegacyDataImport
 import SettingsUI
 import AppBundle
-#if ENABLE_WALLET
-import WalletUI
-#endif
 import UrlHandling
-#if ENABLE_WALLET
-import WalletUrl
-import WalletCore
-#endif
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
@@ -1273,11 +1266,7 @@ final class SharedApplicationContext {
             |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
                 return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
-        }).start(next: { [weak self] accountManager, loggedOutAccountPeerIds in
-            guard let strongSelf = self else {
-                return
-            }
-
+        }).start(next: { accountManager, loggedOutAccountPeerIds in
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
@@ -1765,12 +1754,6 @@ final class SharedApplicationContext {
                 } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                     authContext.rootController.applyConfirmationCode(confirmationCode)
                 }
-                #if ENABLE_WALLET
-                if let _ = parseWalletUrl(url) {
-                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
-                }
-                #endif
             }
         })
     }
@@ -1932,7 +1915,7 @@ final class SharedApplicationContext {
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedContext in
             let type = ApplicationShortcutItemType(rawValue: shortcutItem.type)
-            var immediately = type == .account
+            let immediately = type == .account
             let proceed: () -> Void = {
                 let _ = (self.context.get()
                 |> take(1)
@@ -2165,6 +2148,9 @@ final class SharedApplicationContext {
                         var authorizationOptions: UNAuthorizationOptions = [.badge, .sound, .alert, .carPlay]
                         if #available(iOS 12.0, *) {
                             authorizationOptions.insert(.providesAppNotificationSettings)
+                        }
+                        if #available(iOS 13.0, *) {
+                            authorizationOptions.insert(.announcement)
                         }
                         notificationCenter.requestAuthorization(options: authorizationOptions, completionHandler: { result, _ in
                             completion(result)

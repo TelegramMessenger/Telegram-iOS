@@ -447,7 +447,8 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3),
         pageIndicatorInactiveColor: UIColor(rgb: 0xe3e3e7),
         inputClearButtonColor: UIColor(rgb: 0xcccccc),
-        itemBarChart: PresentationThemeItemBarChart(color1: UIColor(rgb: 0x007ee5), color2: UIColor(rgb: 0xc8c7cc), color3: UIColor(rgb: 0xf2f1f7))
+        itemBarChart: PresentationThemeItemBarChart(color1: UIColor(rgb: 0x007ee5), color2: UIColor(rgb: 0xc8c7cc), color3: UIColor(rgb: 0xf2f1f7)),
+        itemInputField: PresentationInputFieldTheme(backgroundColor: UIColor(rgb: 0xf2f2f7), strokeColor: UIColor(rgb: 0xf2f2f7), placeholderColor: UIColor(rgb: 0xb6b6bb), primaryColor: UIColor(rgb: 0x000000), controlColor: UIColor(rgb: 0xb6b6bb))
     )
     
     let chatList = PresentationThemeChatList(
@@ -548,7 +549,9 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         mediaOverlayControlColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x000000, alpha: 0.6), foregroundColor: UIColor(rgb: 0xffffff)),
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: UIColor(rgb: 0x007ee5), strokeColor: UIColor(rgb: 0xc7c7cc), foregroundColor: UIColor(rgb: 0xffffff)),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff3b30), foregroundColor: UIColor(rgb: 0xffffff)),
-        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
+        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
+        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor.withAlphaComponent(0.3), withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.25)),
+        stickerPlaceholderShimmerColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.2), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.1))
     )
     
     let messageDay = PresentationThemeChatMessage(
@@ -614,7 +617,9 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         mediaOverlayControlColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x000000, alpha: 0.6), foregroundColor: UIColor(rgb: 0xffffff)),
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: UIColor(rgb: 0x007ee5), strokeColor: UIColor(rgb: 0xc7c7cc), foregroundColor: UIColor(rgb: 0xffffff)),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff3b30), foregroundColor: UIColor(rgb: 0xffffff)),
-        mediaHighlightOverlayColor: UIColor(rgb: 0xffffff, alpha: 0.6)
+        mediaHighlightOverlayColor: UIColor(rgb: 0xffffff, alpha: 0.6),
+        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor.withAlphaComponent(0.3), withoutWallpaper: UIColor(rgb: 0xf7f7f7)),
+        stickerPlaceholderShimmerColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.2), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.1))
     )
     
     let serviceMessage = PresentationThemeServiceMessage(

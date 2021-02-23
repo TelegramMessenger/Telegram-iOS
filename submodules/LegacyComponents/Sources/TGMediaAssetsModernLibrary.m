@@ -400,13 +400,12 @@
     {
         case PHAuthorizationStatusRestricted:
             return TGMediaLibraryAuthorizationStatusRestricted;
-            
         case PHAuthorizationStatusDenied:
             return TGMediaLibraryAuthorizationStatusDenied;
-            
+        case PHAuthorizationStatusLimited:
+            return TGMediaLibraryAuthorizationStatusLimited;
         case PHAuthorizationStatusAuthorized:
             return TGMediaLibraryAuthorizationStatusAuthorized;
-            
         default:
             return TGMediaLibraryAuthorizationStatusNotDetermined;
     }

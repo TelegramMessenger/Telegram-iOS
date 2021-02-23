@@ -36,7 +36,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         
         self.titleView = ChatRecentActionsTitleView(color: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -76,7 +76,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, navigateMessageSearch: { _ in
         }, openCalendarSearch: {
         }, toggleMembersSearch: { _ in
-        }, navigateToMessage: { _, _, _ in
+        }, navigateToMessage: { _, _, _, _ in
         }, navigateToChat: { _ in
         }, navigateToProfile: { _ in
         }, openPeerInfo: {
@@ -132,6 +132,9 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, scrollToTop: {
         }, viewReplies: { _, _ in
         }, activatePinnedListPreview: { _, _ in
+        }, joinGroupCall: { _ in
+        }, presentInviteMembers: {
+        }, editMessageMedia: { _, _ in
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

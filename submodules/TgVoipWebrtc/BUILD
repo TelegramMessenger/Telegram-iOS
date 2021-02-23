@@ -48,7 +48,8 @@ objc_library(
     deps = [
         "//third-party/webrtc:webrtc_lib",
         "//submodules/MtProtoKit:MtProtoKit",
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
     ],
     sdk_frameworks = [
         "Foundation",

@@ -119,6 +119,29 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         }
     }
     
+    var sameAuthor = false
+    if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id && lhs.effectivelyIncoming(accountPeerId) == rhs.effectivelyIncoming(accountPeerId) {
+        sameAuthor = true
+    }
+    
+    var lhsEffectiveTimestamp = lhs.timestamp
+    var rhsEffectiveTimestamp = rhs.timestamp
+    
+    if let lhsForwardInfo = lhs.forwardInfo, lhsForwardInfo.flags.contains(.isImported), let rhsForwardInfo = rhs.forwardInfo, rhsForwardInfo.flags.contains(.isImported) {
+        lhsEffectiveTimestamp = lhsForwardInfo.date
+        rhsEffectiveTimestamp = rhsForwardInfo.date
+        
+        if (lhsForwardInfo.author?.id != nil) == (rhsForwardInfo.author?.id != nil) && (lhsForwardInfo.authorSignature != nil) == (rhsForwardInfo.authorSignature != nil) {
+            if let lhsAuthorId = lhsForwardInfo.author?.id, let rhsAuthorId = rhsForwardInfo.author?.id {
+                sameAuthor = lhsAuthorId == rhsAuthorId
+            } else if let lhsAuthorSignature = lhsForwardInfo.authorSignature, let rhsAuthorSignature = rhsForwardInfo.authorSignature {
+                sameAuthor = lhsAuthorSignature == rhsAuthorSignature
+            }
+        } else {
+            sameAuthor = false
+        }
+    }
+    
     if lhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
         if let forwardInfo = lhs.forwardInfo {
             lhsEffectiveAuthor = forwardInfo.author
@@ -130,12 +153,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         }
     }
     
-    var sameAuthor = false
-    if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id && lhs.effectivelyIncoming(accountPeerId) == rhs.effectivelyIncoming(accountPeerId) {
-        sameAuthor = true
-    }
-    
-    if abs(lhs.timestamp - rhs.timestamp) < Int32(10 * 60) && sameAuthor {
+    if abs(lhsEffectiveTimestamp - rhsEffectiveTimestamp) < Int32(10 * 60) && sameAuthor {
         if let channel = lhs.peers[lhs.id.peerId] as? TelegramChannel, case .group = channel.info, lhsEffectiveAuthor?.id == channel.id, !lhs.effectivelyIncoming(accountPeerId) {
             return .none
         }
@@ -337,7 +355,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill, controllerInteraction: controllerInteraction)
+                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, forwardInfo: message.forwardInfo, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill, controllerInteraction: controllerInteraction)
                 }
             }
         }
@@ -424,6 +442,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
+            node.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
             
             node.updateSelectionState(animated: false)
             node.updateHighlightedState(animated: false)
@@ -493,6 +512,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                         completion(layout, { _ in
                             apply(animation, false)
                             if let nodeValue = node() as? ChatMessageItemView {
+                                nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
                                 nodeValue.updateSelectionState(animated: false)
                                 nodeValue.updateHighlightedState(animated: false)
                             }

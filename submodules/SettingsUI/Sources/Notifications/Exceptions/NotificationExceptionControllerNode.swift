@@ -531,7 +531,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.selectPeer()
                 })
             case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.updateRevealedPeerId(peerId)
@@ -891,7 +891,9 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     filter.insert(.onlyChannels)
             }
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
-            controller.peerSelected = { [weak controller] peerId in
+            controller.peerSelected = { [weak controller] peer in
+                let peerId = peer.id
+                
                 presentPeerSettings(peerId, {
                     controller?.dismiss()
                 })

@@ -347,7 +347,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         super.didLoad()
         
         self.titleNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugTap(_:))))
-        
         #if DEBUG
         self.noticeNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugQrTap(_:))))
         #endif

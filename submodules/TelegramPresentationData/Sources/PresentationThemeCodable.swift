@@ -777,6 +777,7 @@ extension PresentationThemeList: Codable {
         case pageIndicatorInactive
         case inputClearButton
         case itemBarChart
+        case itemInputField
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -819,7 +820,8 @@ extension PresentationThemeList: Codable {
             scrollIndicatorColor: try decodeColor(values, .scrollIndicator),
             pageIndicatorInactiveColor: try decodeColor(values, .pageIndicatorInactive),
             inputClearButtonColor: try decodeColor(values, .inputClearButton),
-            itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart)
+            itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart),
+            itemInputField: try values.decode(PresentationInputFieldTheme.self, forKey: .itemInputField)
         )
     }
     
@@ -854,6 +856,7 @@ extension PresentationThemeList: Codable {
         try encodeColor(&values, self.pageIndicatorInactiveColor, .pageIndicatorInactive)
         try encodeColor(&values, self.inputClearButtonColor, .inputClearButton)
         try values.encode(self.itemBarChart, forKey: .itemBarChart)
+        try values.encode(self.itemInputField, forKey: .itemInputField)
     }
 }
 
@@ -1233,6 +1236,8 @@ extension PresentationThemeChatMessage: Codable {
         case selectionControl
         case deliveryFailed
         case mediaHighlightOverlay
+        case stickerPlaceholder
+        case stickerPlaceholderShimmer
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -1251,7 +1256,10 @@ extension PresentationThemeChatMessage: Codable {
                   mediaOverlayControlColors: try values.decode(PresentationThemeFillForeground.self, forKey: .mediaOverlayControl),
                   selectionControlColors: try values.decode(PresentationThemeFillStrokeForeground.self, forKey: .selectionControl),
                   deliveryFailedColors: try values.decode(PresentationThemeFillForeground.self, forKey: .deliveryFailed),
-                  mediaHighlightOverlayColor: try decodeColor(values, .mediaHighlightOverlay))
+                  mediaHighlightOverlayColor: try decodeColor(values, .mediaHighlightOverlay),
+                  stickerPlaceholderColor: try values.decode(PresentationThemeVariableColor.self, forKey: .stickerPlaceholder),
+                  stickerPlaceholderShimmerColor: try values.decode(PresentationThemeVariableColor.self, forKey: .stickerPlaceholderShimmer)
+        )
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -1271,6 +1279,8 @@ extension PresentationThemeChatMessage: Codable {
         try values.encode(self.selectionControlColors, forKey: .selectionControl)
         try values.encode(self.deliveryFailedColors, forKey: .deliveryFailed)
         try encodeColor(&values, self.mediaHighlightOverlayColor, .mediaHighlightOverlay)
+        try values.encode(self.stickerPlaceholderColor, forKey: .stickerPlaceholder)
+        try values.encode(self.stickerPlaceholderShimmerColor, forKey: .stickerPlaceholderShimmer)
     }
 }
 

@@ -27,6 +27,7 @@ DerivedData
 buck-out/*
 .buckd/*
 tools/buck
+tools/bazel
 AppBinary.xcworkspace/*
 Project.xcodeproj/*
 Watch/Watch.xcodeproj/*

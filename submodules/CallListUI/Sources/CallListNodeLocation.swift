@@ -50,19 +50,19 @@ struct CallListNodeViewUpdate {
     let scrollPosition: CallListNodeViewScrollPosition?
 }
 
-func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType, account: Account) -> Signal<CallListNodeViewUpdate, NoError> {
+func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType, account: Account) -> Signal<(CallListNodeViewUpdate, CallListViewType), NoError> {
     switch locationAndType.location {
         case let .initial(count):
-            return account.viewTracker.callListView(type: locationAndType.type, index: MessageIndex.absoluteUpperBound(), count: count) |> map { view -> CallListNodeViewUpdate in
-                return CallListNodeViewUpdate(view: view, type: .Generic, scrollPosition: nil)
+            return account.viewTracker.callListView(type: locationAndType.type, index: MessageIndex.absoluteUpperBound(), count: count) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
+                return (CallListNodeViewUpdate(view: view, type: .Generic, scrollPosition: nil), locationAndType.type)
             }
         case let .changeType(index):
-            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> CallListNodeViewUpdate in
-                return CallListNodeViewUpdate(view: view, type: .ReloadAnimated, scrollPosition: nil)
+            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
+                return (CallListNodeViewUpdate(view: view, type: .ReloadAnimated, scrollPosition: nil), locationAndType.type)
             }
         case let .navigation(index):
             var first = true
-            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> CallListNodeViewUpdate in
+            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
                 let genericType: CallListNodeViewUpdateType
                 if first {
                     first = false
@@ -70,13 +70,13 @@ func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType
                 } else {
                     genericType = .Generic
                 }
-                return CallListNodeViewUpdate(view: view, type: genericType, scrollPosition: nil)
+                return (CallListNodeViewUpdate(view: view, type: genericType, scrollPosition: nil), locationAndType.type)
             }
         case let .scroll(index, sourceIndex, scrollPosition, animated):
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let callScrollPosition: CallListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> CallListNodeViewUpdate in
+            return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> (CallListNodeViewUpdate, CallListViewType) in
                 let genericType: CallListNodeViewUpdateType
                 let scrollPosition: CallListNodeViewScrollPosition? = first ? callScrollPosition : nil
                 if first {
@@ -85,7 +85,7 @@ func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType
                 } else {
                     genericType = .Generic
                 }
-                return CallListNodeViewUpdate(view: view, type: genericType, scrollPosition: scrollPosition)
+                return (CallListNodeViewUpdate(view: view, type: genericType, scrollPosition: scrollPosition), locationAndType.type)
             }
     }
 }

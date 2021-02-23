@@ -36,7 +36,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.contentNode.openMedia = { [weak self] mode in
             if let strongSelf = self, let item = strongSelf.item {
                 if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    if let image = content.image, let instantPage = content.instantPage {
+                    if let _ = content.image, let _ = content.instantPage {
                         if instantPageType(of: content) != .album {
                             item.controllerInteraction.openInstantPage(item.message, item.associatedData)
                             return

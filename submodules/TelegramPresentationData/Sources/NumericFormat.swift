@@ -88,7 +88,11 @@ public func unmuteIntervalString(strings: PresentationStrings, value: Int32) -> 
 public func callDurationString(strings: PresentationStrings, value: Int32) -> String {
     if value < 60 {
         return strings.Call_Seconds(max(1, value))
-    } else {
+    } else if value < 60 * 60 {
         return strings.Call_Minutes(max(1, value / 60))
+    } else if value < 60 * 60 * 24 {
+        return strings.Call_Hours(max(1, value / (60 * 60)))
+    } else {
+        return strings.Call_Days(max(1, value / (60 * 60 * 24)))
     }
 }

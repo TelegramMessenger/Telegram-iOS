@@ -12,6 +12,23 @@ enum MessageTimestampStatusFormat {
     case minimal
 }
 
+private func dateStringForDay(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, timestamp: Int32) -> String {
+    var t: time_t = time_t(timestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    let timestampNow = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+    var now: time_t = time_t(timestampNow)
+    var timeinfoNow: tm = tm()
+    localtime_r(&now, &timeinfoNow)
+    
+    if timeinfo.tm_year != timeinfoNow.tm_year {
+        return "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat))"
+    } else {
+        return "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, dateTimeFormat: dateTimeFormat))"
+    }
+}
+
 func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, reactionCount: Int) -> String {
     let timestamp: Int32
     if let scheduleTime = message.scheduleTime {
@@ -22,6 +39,10 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
     if timestamp == scheduleWhenOnlineTimestamp {
         dateText = "         "
+    }
+    
+    if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+        dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).0
     }
     
     var authorTitle: String?

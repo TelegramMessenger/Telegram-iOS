@@ -4,6 +4,16 @@ import Display
 import TelegramPresentationData
 import LegacyUI
 
+private class DocumentPickerViewController: UIDocumentPickerViewController {
+    var didDisappear: (() -> Void)?
+    
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.didDisappear?()
+    }
+}
+
 private final class LegacyICloudFileController: LegacyController, UIDocumentPickerDelegate {
     let completion: ([URL]) -> Void
     
@@ -52,7 +62,10 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
     })
     legacyController.statusBar.statusBarStyle = .Black
     
-    let controller = UIDocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
+    let controller = DocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
+    controller.didDisappear = {
+        dismissImpl?()
+    }
     controller.delegate = legacyController
     if #available(iOSApplicationExtension 11.0, iOS 11.0, *), case .default = mode {
         controller.allowsMultipleSelection = true

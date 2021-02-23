@@ -16,6 +16,7 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
     let context: AccountContext
     let title: String
     let image: UIImage?
+    let appearance: ChatListNodeAdditionalCategory.Appearance
     let isSelected: Bool
     let action: () -> Void
     
@@ -29,7 +30,9 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         context: AccountContext,
         title: String,
         image: UIImage?,
+        appearance: ChatListNodeAdditionalCategory.Appearance,
         isSelected: Bool,
+        header: ListViewItemHeader?,
         action: @escaping () -> Void
     ) {
         self.presentationData = presentationData
@@ -37,10 +40,16 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         self.context = context
         self.title = title
         self.image = image
+        self.appearance = appearance
         self.isSelected = isSelected
         self.action = action
         
-        self.header = ChatListSearchItemHeader(type: .chatTypes, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+        switch appearance {
+        case .option:
+            self.header = ChatListSearchItemHeader(type: .chatTypes, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+        case .action:
+            self.header = header
+        }
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -81,6 +90,9 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
     }
     
     public func selected(listView: ListView) {
+        if case .action = self.appearance {
+            listView.clearHighlightAnimated(true)
+        }
         self.action()
     }
     
@@ -107,6 +119,9 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
                 } else {
                     last = true
                 }
+            } else if let _ = nextItem as? ChatListAdditionalCategoryItem {
+            } else {
+                last = true
             }
         } else {
             last = true
@@ -172,16 +187,37 @@ public class ChatListAdditionalCategoryItemNode: ItemListRevealOptionsItemNode {
     }
     
     override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
-        return
-        
-        /*super.setHighlighted(highlighted, at: point, animated: animated)
-        
-        self.isHighlighted = highlighted
-        self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)*/
+        if let item = self.item, case .action = item.appearance {
+            super.setHighlighted(highlighted, at: point, animated: animated)
+            
+            self.isHighlighted = highlighted
+            self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+        }
     }
 
     
     public func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        let reallyHighlighted = self.isHighlighted
+        let highlightProgress: CGFloat = 1.0
+        
+        if reallyHighlighted {
+            if self.highlightedBackgroundNode.supernode == nil {
+                self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
+                self.highlightedBackgroundNode.alpha = 0.0
+            }
+            self.highlightedBackgroundNode.layer.removeAllAnimations()
+            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
+        } else {
+            if self.highlightedBackgroundNode.supernode != nil {
+                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0 - highlightProgress, completion: { [weak self] completed in
+                    if let strongSelf = self {
+                        if completed {
+                            strongSelf.highlightedBackgroundNode.removeFromSupernode()
+                        }
+                    }
+                })
+            }
+        }
     }
     
     public func asyncLayout() -> (_ item: ChatListAdditionalCategoryItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool, Bool) -> Void)) {
@@ -206,20 +242,29 @@ public class ChatListAdditionalCategoryItemNode: ItemListRevealOptionsItemNode {
             let updatedSelectionNode: CheckNode?
             let isSelected = item.isSelected
             
-            rightInset += 28.0
-            
-            let selectionNode: CheckNode
-            if let current = currentSelectionNode {
-                selectionNode = current
-                updatedSelectionNode = selectionNode
+            if case .option = item.appearance {
+                rightInset += 28.0
+                
+                let selectionNode: CheckNode
+                if let current = currentSelectionNode {
+                    selectionNode = current
+                    updatedSelectionNode = selectionNode
+                } else {
+                    selectionNode = CheckNode(strokeColor: item.presentationData.theme.list.itemCheckColors.strokeColor, fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
+                    selectionNode.isUserInteractionEnabled = false
+                    updatedSelectionNode = selectionNode
+                }
             } else {
-                selectionNode = CheckNode(strokeColor: item.presentationData.theme.list.itemCheckColors.strokeColor, fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
-                selectionNode.isUserInteractionEnabled = false
-                updatedSelectionNode = selectionNode
+                updatedSelectionNode = nil
             }
             
             var titleAttributedString: NSAttributedString?
-            let textColor = item.presentationData.theme.list.itemPrimaryTextColor
+            let textColor: UIColor
+            if case .action = item.appearance {
+                textColor = item.presentationData.theme.list.itemAccentColor
+            } else {
+                textColor = item.presentationData.theme.list.itemPrimaryTextColor
+            }
             titleAttributedString = NSAttributedString(string: item.title, font: titleFont, textColor: textColor)
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -261,11 +306,12 @@ public class ChatListAdditionalCategoryItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                             }
                             
-                            strongSelf.avatarNode.image = item.image
-                            
                             strongSelf.topSeparatorNode.isHidden = true
                             
-                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
+                            if let image = item.image {
+                                strongSelf.avatarNode.image = item.image
+                                transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0 + floor((avatarDiameter - image.size.width) / 2.0), y: floor((nodeLayout.contentSize.height - image.size.width) / 2.0)), size: image.size))
+                            }
                             
                             let _ = titleApply()
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame.offsetBy(dx: revealOffset, dy: 0.0))

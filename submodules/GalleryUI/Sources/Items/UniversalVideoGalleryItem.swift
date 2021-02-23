@@ -723,7 +723,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     var fetching = false
                     if initialBuffering {
                         if displayProgress {
-                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true), animated: false, completion: {})
                         } else {
                             strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
                         }
@@ -740,7 +740,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                             fetching = true
                                             isPaused = true
                                         }
-                                        state = .progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: true)
+                                        state = .progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: true, animateRotation: true)
                                     default:
                                         break
                                 }
@@ -793,7 +793,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let strongSelf = self, !isAnimated {
                         videoNode?.seek(0.0)
                         
-                        if strongSelf.actionAtEnd == .stop {
+                        if strongSelf.actionAtEnd == .stop && strongSelf.isCentral {
                             strongSelf.updateControlsVisibility(true)
                             strongSelf.controlsTimer?.invalidate()
                             strongSelf.controlsTimer = nil
@@ -900,6 +900,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                 } else {
+                    self.controlsTimer?.invalidate()
+                    self.controlsTimer = nil
+                    
                     self.dismissOnOrientationChange = false
                     if videoNode.ownsContentNode {
                         videoNode.pause()

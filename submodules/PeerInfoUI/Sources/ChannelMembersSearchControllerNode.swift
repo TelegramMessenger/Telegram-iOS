@@ -15,63 +15,144 @@ import SearchBarNode
 import ContactsPeerItem
 import SearchUI
 import ItemListUI
+import ContactListUI
+import ChatListSearchItemHeader
 
 private final class ChannelMembersSearchInteraction {
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
+    let copyInviteLink: () -> Void
     
-    init(openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(
+        openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void,
+        copyInviteLink: @escaping () -> Void
+    ) {
         self.openPeer = openPeer
+        self.copyInviteLink = copyInviteLink
     }
 }
 
 private enum ChannelMembersSearchEntryId: Hashable {
+    case copyInviteLink
     case peer(PeerId)
+    case contact(PeerId)
 }
 
 private enum ChannelMembersSearchEntry: Comparable, Identifiable {
+    case copyInviteLink
     case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing, String?, Bool)
+    case contact(Int, Peer, TelegramUserPresence?)
     
     var stableId: ChannelMembersSearchEntryId {
         switch self {
-            case let .peer(peer):
-                return .peer(peer.1.peer.id)
+        case .copyInviteLink:
+            return .copyInviteLink
+        case let .peer(_, participant, _, _, _):
+            return .peer(participant.peer.id)
+        case let .contact(_, peer, _):
+            return .contact(peer.id)
         }
     }
     
     static func ==(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         switch lhs {
-            case let .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled):
-                if case .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled) = rhs {
-                    return true
-                } else {
+        case .copyInviteLink:
+            if case .copyInviteLink = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled):
+            if case .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .contact(lhsIndex, lhsPeer, lhsPresence):
+            if case let .contact(rhsIndex, rhsPeer, rhsPresence) = rhs {
+                if lhsIndex != rhsIndex {
                     return false
                 }
+                if !lhsPeer.isEqual(rhsPeer) {
+                    return false
+                }
+                if lhsPresence != rhsPresence {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
         }
     }
     
     static func <(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         switch lhs {
-            case let .peer(lhsPeer):
-                if case let .peer(rhsPeer) = rhs {
-                    return lhsPeer.0 < rhsPeer.0
-                } else {
-                    return false
-                }
+        case .copyInviteLink:
+            if case .copyInviteLink = rhs {
+                return false
+            } else {
+                return true
+            }
+        case let .peer(lhsIndex, _, _, _, _):
+            if case .copyInviteLink = rhs {
+                return false
+            } else if case let .peer(rhsIndex, _, _, _, _) = rhs {
+                return lhsIndex < rhsIndex
+            } else if case .contact = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .contact(lhsIndex, _, _):
+            if case .copyInviteLink = rhs {
+                return false
+            } else if case .peer = rhs {
+                return false
+            } else if case let .contact(rhsIndex, _, _) = rhs {
+                return lhsIndex < rhsIndex
+            } else {
+                return false
+            }
         }
     }
     
     func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchInteraction) -> ListViewItem {
         switch self {
-            case let .peer(_, participant, editing, label, enabled):
-                let status: ContactsPeerItemStatus
-                if let label = label {
-                    status = .custom(string: label, multiline: false)
-                } else {
-                    status = .none
-                }
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
-                    interaction.openPeer(participant.peer, participant)
-                })
+        case .copyInviteLink:
+            let icon: ContactListActionItemIcon
+            if let iconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: presentationData.theme.list.itemAccentColor) {
+                icon = .generic(iconImage)
+            } else {
+                icon = .none
+            }
+            return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.VoiceChat_CopyInviteLink, icon: icon, clearHighlightAutomatically: true, header: nil, action: {
+                interaction.copyInviteLink()
+            })
+        case let .peer(_, participant, editing, label, enabled):
+            let status: ContactsPeerItemStatus
+            if let label = label {
+                status = .custom(string: label, multiline: false)
+            } else if participant.peer.id != context.account.peerId {
+                let presence = participant.presences[participant.peer.id] ?? TelegramUserPresence(status: .none, lastActivity: 0)
+                status = .presence(presence, presentationData.dateTimeFormat)
+            } else {
+                status = .none
+            }
+            
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: .groupMembers, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+                interaction.openPeer(participant.peer, participant)
+            })
+        case let .contact(_, peer, presence):
+            let status: ContactsPeerItemStatus
+            if peer.id != context.account.peerId, let presence = presence {
+                status = .presence(presence, presentationData.dateTimeFormat)
+            } else {
+                status = .none
+            }
+            
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: nil), status: status, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+                interaction.openPeer(peer, nil)
+            })
         }
     }
 }
@@ -110,20 +191,26 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((Peer, RenderedChannelParticipant?) -> Void)?
+    var requestCopyInviteLink: (() -> Void)?
     var pushController: ((ViewController) -> Void)?
     
+    private let forceTheme: PresentationTheme?
     var presentationData: PresentationData
 
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
+    init(context: AccountContext, presentationData: PresentationData, forceTheme: PresentationTheme?, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.context = context
         self.listNode = ListView()
         self.peerId = peerId
         self.mode = mode
         self.filters = filters
         self.presentationData = presentationData
+        self.forceTheme = forceTheme
+        if let forceTheme = forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
+        }
         
         super.init()
         
@@ -135,14 +222,21 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         
         self.addSubnode(self.listNode)
         
-        let interaction = ChannelMembersSearchInteraction(openPeer: { [weak self] peer, participant in
-            self?.requestOpenPeerFromSearch?(peer, participant)
-            self?.listNode.clearHighlightAnimated(true)
-        })
+        let interaction = ChannelMembersSearchInteraction(
+            openPeer: { [weak self] peer, participant in
+                self?.requestOpenPeerFromSearch?(peer, participant)
+                self?.listNode.clearHighlightAnimated(true)
+            },
+            copyInviteLink: { [weak self] in
+                self?.requestCopyInviteLink?()
+                self?.listNode.clearHighlightAnimated(true)
+            }
+        )
         
         let previousEntries = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
         
         let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
+        let additionalDisposable = MetaDisposable()
         
         if peerId.namespace == Namespaces.Peer.CloudGroup {
             let disposable = (context.account.postbox.peerView(id: peerId)
@@ -169,6 +263,16 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 var entries: [ChannelMembersSearchEntry] = []
                 
+                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                    if case .excludeNonMembers = filter {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    entries.append(.copyInviteLink)
+                }
+                
                 var index = 0
                 for participant in participants.participants {
                     guard let peer = peerView.peers[participant.peerId] else {
@@ -190,8 +294,16 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                         if ids.contains(peer.id) {
                                             continue
                                         }
-                                    case .disable:
+                                    case let .disable(ids):
+                                        if ids.contains(peer.id) {
+                                            enabled = false
+                                        }
+                                    case .excludeNonMembers:
                                         break
+                                    case .excludeBots:
+                                        if let user = peer as? TelegramUser, user.botInfo != nil {
+                                            continue
+                                        }
                                 }
                             }
                         case .promote:
@@ -204,28 +316,61 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                         if ids.contains(peer.id) {
                                             continue
                                         }
-                                    case .disable:
+                                    case let .disable(ids):
+                                        if ids.contains(peer.id) {
+                                            enabled = false
+                                        }
+                                    case .excludeNonMembers:
                                         break
+                                    case .excludeBots:
+                                        if let user = peer as? TelegramUser, user.botInfo != nil {
+                                            continue
+                                        }
                                 }
                             }
                             if case .creator = participant {
                                 label = strongSelf.presentationData.strings.Channel_Management_LabelOwner
                                 enabled = false
                             }
+                        case .inviteToCall:
+                            if peer.id == context.account.peerId {
+                                continue
+                            }
+                            if let user = peer as? TelegramUser, user.botInfo != nil || user.flags.contains(.isSupport) {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                    case let .exclude(ids):
+                                        if ids.contains(peer.id) {
+                                            continue
+                                        }
+                                    case let .disable(ids):
+                                        if ids.contains(peer.id) {
+                                            enabled = false
+                                        }
+                                    case .excludeNonMembers:
+                                        break
+                                    case .excludeBots:
+                                        if let user = peer as? TelegramUser, user.botInfo != nil {
+                                            continue
+                                        }
+                                }
+                            }
                     }
                     let renderedParticipant: RenderedChannelParticipant
                     switch participant {
                         case .creator:
-                            renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer)
+                            renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer, presences: peerView.peerPresences)
                         case .admin:
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
                         case .member:
                             var peers: [PeerId: Peer] = [:]
                             peers[peer.id] = peer
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers)
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
                     }
                     
                     entries.append(.peer(index, renderedParticipant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
@@ -237,16 +382,35 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             })
             disposableAndLoadMoreControl = (disposable, nil)
         } else {
-            disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { [weak self] state in
+            let membersState = Promise<ChannelMemberListState>()
+            
+            disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+                membersState.set(.single(state))
+            })
+            
+            additionalDisposable.set((combineLatest(queue: .mainQueue(),
+               membersState.get(),
+               context.account.postbox.contactPeersView(accountPeerId: context.account.peerId, includePresences: true)
+            ).start(next: { [weak self] state, contactsView in
                 guard let strongSelf = self else {
                     return
                 }
                 var entries: [ChannelMembersSearchEntry] = []
                 
+                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                    if case .excludeNonMembers = filter {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    entries.append(.copyInviteLink)
+                }
+                
                 var index = 0
-                for participant in state.list {
+                participantsLoop: for participant in state.list {
                     if participant.peer.isDeleted {
-                        continue
+                        continue participantsLoop
                     }
                     
                     var label: String?
@@ -254,16 +418,24 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     switch mode {
                         case .ban:
                             if participant.peer.id == context.account.peerId {
-                                continue
+                                continue participantsLoop
                             }
                             for filter in filters {
                                 switch filter {
                                 case let .exclude(ids):
                                     if ids.contains(participant.peer.id) {
-                                        continue
+                                        continue participantsLoop
                                     }
-                                case .disable:
+                                case let .disable(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        enabled = false
+                                    }
+                                case .excludeNonMembers:
                                     break
+                                case .excludeBots:
+                                    if let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                                        continue participantsLoop
+                                    }
                                 }
                             }
                         case .promote:
@@ -274,27 +446,78 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 switch filter {
                                 case let .exclude(ids):
                                     if ids.contains(participant.peer.id) {
-                                        continue
+                                        continue participantsLoop
                                     }
-                                case .disable:
+                                case let .disable(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        enabled = false
+                                    }
+                                case .excludeNonMembers:
                                     break
+                                case .excludeBots:
+                                    if let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                                        continue participantsLoop
+                                    }
                                 }
                             }
                             if case .creator = participant.participant {
                                 label = strongSelf.presentationData.strings.Channel_Management_LabelOwner
                                 enabled = false
                             }
+                        case .inviteToCall:
+                            if participant.peer.id == context.account.peerId {
+                                continue
+                            }
+                            if let user = participant.peer as? TelegramUser, user.botInfo != nil || user.flags.contains(.isSupport) {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                case let .exclude(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        continue participantsLoop
+                                    }
+                                case let .disable(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        enabled = false
+                                    }
+                                case .excludeNonMembers:
+                                    break
+                                case .excludeBots:
+                                    if let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                                        continue participantsLoop
+                                    }
+                                }
+                            }
                     }
                     entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
                     index += 1
                 }
                 
+                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                    if case .excludeNonMembers = filter {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    for peer in contactsView.peers {
+                        entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.peerPresences[peer.id] as? TelegramUserPresence))
+                        index += 1
+                    }
+                }
+                
                 let previous = previousEntries.swap(entries)
                 
                 strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, context: context, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
-            })
+            })))
         }
-        self.disposable = disposableAndLoadMoreControl.0
+        
+        let combinedDisposable = DisposableSet()
+        combinedDisposable.add(disposableAndLoadMoreControl.0)
+        combinedDisposable.add(additionalDisposable)
+        
+        self.disposable = combinedDisposable
         self.listControl = disposableAndLoadMoreControl.1
         
         if peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -316,21 +539,27 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
-        self.searchDisplayController?.updatePresentationData(presentationData)
+        if let forceTheme = forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
+        }
+        self.searchDisplayController?.updatePresentationData(self.presentationData)
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.containerLayout != nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
+        var headerInsets = layout.insets(options: [.input])
+        headerInsets.top += actualNavigationBarHeight
+        
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
 
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
@@ -350,7 +579,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, openPeer: { [weak self] peer, participant in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, forceTheme: self.forceTheme, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, openPeer: { [weak self] peer, participant in
             self?.requestOpenPeerFromSearch?(peer, participant)
         }, updateActivity: { value in
             

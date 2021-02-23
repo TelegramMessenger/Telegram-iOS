@@ -69,14 +69,16 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
     }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud], defaultMessageNamespaceReadStates: [Namespaces.Message.Local: .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false)], chatMessagesNamespaces: Set([Namespaces.Message.Cloud, Namespaces.Message.Local, Namespaces.Message.SecretIncoming]), globalNotificationSettingsPreferencesKey: PreferencesKeys.globalNotifications, defaultGlobalNotificationSettings: GlobalNotificationSettings.defaultSettings)
 }()
 
-public func accountTransaction<T>(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, transaction: @escaping (Transaction) -> T) -> Signal<T, NoError> {
+public func accountTransaction<T>(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, transaction: @escaping (Postbox, Transaction) -> T) -> Signal<T, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970))
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true)
     return postbox
     |> mapToSignal { value -> Signal<T, NoError> in
         switch value {
             case let .postbox(postbox):
-                return postbox.transaction(transaction)
+                return postbox.transaction { t in
+                    transaction(postbox, t)
+                }
             default:
                 return .complete()
         }

@@ -61,7 +61,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     private var isEmpty: Bool?
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
-    private var placeholderNode: ShimmerEffectNode?
+    private var placeholderNode: StickerShimmerEffectNode?
     
     private var theme: PresentationTheme?
     
@@ -86,7 +86,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     override init() {
         self.imageNode = TransformImageNode()
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
-        self.placeholderNode = ShimmerEffectNode()
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.isUserInteractionEnabled = false
         
         super.init()
         
@@ -117,9 +118,11 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             if !animated {
                 placeholderNode.removeFromSupernode()
             } else {
+                placeholderNode.allowsGroupOpacity = true
                 placeholderNode.alpha = 0.0
                 placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
                     placeholderNode?.removeFromSupernode()
+                    placeholderNode?.allowsGroupOpacity = false
                 })
             }
         }
@@ -181,9 +184,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.setNeedsLayout()
         }
         self.isEmpty = isEmpty
-        
-        //self.updateSelectionState(animated: false)
-        //self.updateHiddenMedia()
     }
     
     override func layout() {
@@ -197,8 +197,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
             placeholderNode.frame = bounds
             
-            if let theme = self.theme {
-                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 10.0)], size: bounds.size)
+            if let theme = self.theme, let (_, stickerItem) = self.currentState, let item = stickerItem {
+                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
             }
         }
         

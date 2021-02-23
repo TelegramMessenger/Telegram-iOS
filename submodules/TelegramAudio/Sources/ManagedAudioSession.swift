@@ -174,7 +174,19 @@ public final class ManagedAudioSession {
     private var currentTypeAndOutputMode: (ManagedAudioSessionType, AudioSessionOutputMode)?
     private var deactivateTimer: SwiftSignalKit.Timer?
     
-    private var isHeadsetPluggedInValue = false
+    private let isHeadsetPluggedInSync = Atomic<Bool>(value: false)
+    private var isHeadsetPluggedInValue = false {
+        didSet {
+            if self.isHeadsetPluggedInValue != oldValue {
+                let _ = self.isHeadsetPluggedInSync.swap(self.isHeadsetPluggedInValue)
+            }
+        }
+    }
+    
+    public func getIsHeadsetPluggedIn() -> Bool {
+        return self.isHeadsetPluggedInSync.with { $0 }
+    }
+    
     private let outputsToHeadphonesSubscribers = Bag<(Bool) -> Void>()
     
     private var availableOutputsValue: [AudioSessionOutput] = []
@@ -770,14 +782,17 @@ public final class ManagedAudioSession {
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
                         var alreadySet = false
                         if self.isHeadsetPluggedInValue {
-                            loop: for route in routes {
-                                switch route.portType {
-                                case .headphones, .bluetoothA2DP, .bluetoothHFP:
-                                    let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
-                                    alreadySet = true
-                                    break loop
-                                default:
-                                    break
+                            if case .voiceCall = updatedType, case .custom(.builtin) = outputMode {
+                            } else {
+                                loop: for route in routes {
+                                    switch route.portType {
+                                    case .headphones, .bluetoothA2DP, .bluetoothHFP:
+                                        let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                        alreadySet = true
+                                        break loop
+                                    default:
+                                        break
+                                    }
                                 }
                             }
                         }
@@ -808,13 +823,13 @@ public final class ManagedAudioSession {
                 
                 print("\(CFAbsoluteTimeGetCurrent()) AudioSession activate: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
-                self.updateCurrentAudioRouteInfo()
-                
-                print("\(CFAbsoluteTimeGetCurrent()) AudioSession updateCurrentAudioRouteInfo: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-                
                 try self.setupOutputMode(outputMode, type: type)
                 
                 print("\(CFAbsoluteTimeGetCurrent()) AudioSession setupOutputMode: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                
+                self.updateCurrentAudioRouteInfo()
+                
+                print("\(CFAbsoluteTimeGetCurrent()) AudioSession updateCurrentAudioRouteInfo: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 if case .voiceCall = type {
                     try AVAudioSession.sharedInstance().setPreferredIOBufferDuration(0.005)

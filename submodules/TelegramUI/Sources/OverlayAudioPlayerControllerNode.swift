@@ -15,11 +15,13 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     let ready = Promise<Bool>()
     
     private let context: AccountContext
+    
     private let peerId: PeerId
     private var presentationData: PresentationData
     private let type: MediaManagerPlayerType
     private let requestDismiss: () -> Void
     private let requestShare: (MessageId) -> Void
+    private let requestSearchByArtist: (String) -> Void
     private let playlistLocation: SharedMediaPlaylistLocation?
     private let isGlobalSearch: Bool
     
@@ -42,13 +44,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     private var presentationDataDisposable: Disposable?
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation?, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
+    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation?, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void, requestSearchByArtist: @escaping (String) -> Void) {
         self.context = context
         self.peerId = peerId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.type = type
         self.requestDismiss = requestDismiss
         self.requestShare = requestShare
+        self.requestSearchByArtist = requestSearchByArtist
         self.playlistLocation = playlistLocation
         
         if case .regular = initialOrder {
@@ -74,7 +77,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, toggleMessagesSelection: { _, _ in
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
-        }, sendSticker: { _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _ in
             return false
         }, sendGif: { _, _, _ in
             return false
@@ -124,6 +127,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in
@@ -166,6 +170,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .music
             case .voice:
                 tagMask = .voiceOrInstantVideo
+            case .file:
+                tagMask = .file
         }
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
@@ -220,6 +226,10 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         
         self.controlsNode.requestShare = { [weak self] messageId in
             self?.requestShare(messageId)
+        }
+        
+        self.controlsNode.requestSearchByArtist = { [weak self] artist in
+            self?.requestSearchByArtist(artist)
         }
         
         self.controlsNode.updateOrder = { [weak self] order in
@@ -511,6 +521,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .music
             case .voice:
                 tagMask = .voiceOrInstantVideo
+            case .file:
+                tagMask = .file
         }
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)

@@ -53,7 +53,6 @@
     if (iosMajorVersion() >= 11)
         _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     _tableView.alwaysBounceVertical = true;
-    _tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _tableView.backgroundColor = self.view.backgroundColor;
     _tableView.delaysContentTouches = true;
     _tableView.canCancelContentTouches = true;
@@ -69,6 +68,17 @@
     
     if (![self _updateControllerInset:false])
         [self controllerInsetUpdated:UIEdgeInsetsZero];
+}
+
+- (void)setTopInset:(CGFloat)topInset {
+    _topInset = topInset;
+    [self viewDidLayoutSubviews];
+}
+
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    
+    _tableView.frame = CGRectMake(0.0, _topInset, self.view.bounds.size.width, self.view.bounds.size.height - _topInset);
 }
 
 - (void)loadViewIfNeeded

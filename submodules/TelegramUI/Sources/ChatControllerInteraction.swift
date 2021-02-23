@@ -60,7 +60,7 @@ public final class ChatControllerInteraction {
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool
+    let sendSticker: (FileMediaReference, String?, Bool, ASDisplayNode, CGRect) -> Bool
     let sendGif: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
     let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
@@ -103,6 +103,7 @@ public final class ChatControllerInteraction {
     let performTextSelectionAction: (UInt32, NSAttributedString, TextSelectionAction) -> Void
     let updateMessageLike: (MessageId, Bool) -> Void
     let openMessageReactions: (MessageId) -> Void
+    let displayImportedMessageTooltip: (ASDisplayNode) -> Void
     let displaySwipeToReplyHint: () -> Void
     let dismissReplyMarkupMessage: (Message) -> Void
     let openMessagePollResults: (MessageId, Data) -> Void
@@ -111,7 +112,7 @@ public final class ChatControllerInteraction {
     let displayPsa: (String, ASDisplayNode) -> Void
     let displayDiceTooltip: (TelegramMediaDice) -> Void
     let animateDiceSuccess: (Bool) -> Void
-    let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?
+    let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)?
     let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
@@ -149,7 +150,7 @@ public final class ChatControllerInteraction {
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool,
+        sendSticker: @escaping (FileMediaReference, String?, Bool, ASDisplayNode, CGRect) -> Bool,
         sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
@@ -192,6 +193,7 @@ public final class ChatControllerInteraction {
         performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void,
         updateMessageLike: @escaping (MessageId, Bool) -> Void,
         openMessageReactions: @escaping (MessageId) -> Void,
+        displayImportedMessageTooltip: @escaping (ASDisplayNode) -> Void,
         displaySwipeToReplyHint: @escaping () -> Void,
         dismissReplyMarkupMessage: @escaping (Message) -> Void,
         openMessagePollResults: @escaping (MessageId, Data) -> Void,
@@ -200,7 +202,7 @@ public final class ChatControllerInteraction {
         displayPsa: @escaping (String, ASDisplayNode) -> Void,
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
         animateDiceSuccess: @escaping (Bool) -> Void,
-        greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?,
+        greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)?,
         openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
@@ -271,6 +273,7 @@ public final class ChatControllerInteraction {
         self.performTextSelectionAction = performTextSelectionAction
         self.updateMessageLike = updateMessageLike
         self.openMessageReactions = openMessageReactions
+        self.displayImportedMessageTooltip = displayImportedMessageTooltip
         self.displaySwipeToReplyHint = displaySwipeToReplyHint
         self.dismissReplyMarkupMessage = dismissReplyMarkupMessage
         self.openMessagePollResults = openMessagePollResults
@@ -295,7 +298,7 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
@@ -320,6 +323,7 @@ public final class ChatControllerInteraction {
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in

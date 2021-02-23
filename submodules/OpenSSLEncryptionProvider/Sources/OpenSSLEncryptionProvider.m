@@ -97,7 +97,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setConstantTime:(id<MTBignum>)other {
     assert([other isKindOfClass:[MTBignumImpl class]]);
     MTBignumImpl *otherImpl = other;
+    #ifndef TELEGRAM_USE_BORINGSSL
     BN_set_flags(otherImpl->_value, BN_FLG_CONSTTIME);
+    #endif
 }
 
 - (void)assignWordTo:(id<MTBignum>)bignum value:(unsigned long)value {

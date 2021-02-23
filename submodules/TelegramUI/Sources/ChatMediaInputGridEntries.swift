@@ -28,7 +28,7 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
             return .peerSpecificSetup
         case let .collectionIndex(index):
             return .sticker(index.collectionId, index.itemIndex.id)
-        case let .trending(id, index):
+        case let .trending(id, _):
             return .trending(id)
         }
     }

@@ -13,6 +13,7 @@ import CallListUI
 import ChatListUI
 import SettingsUI
 import AppBundle
+import DatePickerNode
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -190,7 +191,7 @@ public final class TelegramRootController: NavigationController {
         rootTabController.setControllers(controllers, selectedIndex: nil)
     }
     
-    public func openChatsController(activateSearch: Bool) {
+    public func openChatsController(activateSearch: Bool, filter: ChatListSearchFilter = .chats, query: String? = nil) {
         guard let rootTabController = self.rootTabController else {
             return
         }
@@ -204,7 +205,7 @@ public final class TelegramRootController: NavigationController {
         }
         
         if activateSearch {
-            self.chatListController?.activateSearch()
+            self.chatListController?.activateSearch(filter: filter, query: query)
         }
     }
     

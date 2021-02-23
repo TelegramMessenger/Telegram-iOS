@@ -528,7 +528,18 @@
         videoComposition.animationTool = [AVVideoCompositionCoreAnimationTool videoCompositionCoreAnimationToolWithPostProcessingAsVideoLayer:videoLayer inLayer:parentLayer];
     }
     
-    AVAssetReaderVideoCompositionOutput *output = [[AVAssetReaderVideoCompositionOutput alloc] initWithVideoTracks:[composition tracksWithMediaType:AVMediaTypeVideo] videoSettings:@{ (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange) }];
+    NSDictionary *settings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:outputDimensions];
+    *outputSettings = settings;
+    *dimensions = outputDimensions;
+
+    NSMutableDictionary *videoSettings = [[NSMutableDictionary alloc] init];
+    videoSettings[(id)kCVPixelBufferPixelFormatTypeKey] = @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange);
+#if TARGET_IPHONE_SIMULATOR
+#else
+    videoSettings[AVVideoColorPropertiesKey] = settings[AVVideoColorPropertiesKey];
+#endif
+    
+    AVAssetReaderVideoCompositionOutput *output = [[AVAssetReaderVideoCompositionOutput alloc] initWithVideoTracks:[composition tracksWithMediaType:AVMediaTypeVideo] videoSettings:videoSettings];
     output.videoComposition = videoComposition;
     
     AVAssetImageGenerator *imageGenerator = [[AVAssetImageGenerator alloc] initWithAsset:composition];
@@ -542,9 +553,6 @@
     {
         return [context addImageGenerator:imageGenerator];
     }];
-    
-    *outputSettings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:outputDimensions];
-    *dimensions = outputDimensions;
     
     return output;
 }
@@ -1315,12 +1323,29 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     AVVideoPixelAspectRatioKey: videoAspectRatioSettings
     };
     
+    NSDictionary *hdVideoProperties = @
+    {
+    AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+    AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
+    };
+    
+#if TARGET_IPHONE_SIMULATOR
     return @
     {
     AVVideoCodecKey: AVVideoCodecH264,
     AVVideoCompressionPropertiesKey: codecSettings,
     AVVideoWidthKey: @((NSInteger)dimensions.width),
     AVVideoHeightKey: @((NSInteger)dimensions.height)
+    };
+#endif
+    return @
+    {
+    AVVideoCodecKey: AVVideoCodecH264,
+    AVVideoCompressionPropertiesKey: codecSettings,
+    AVVideoWidthKey: @((NSInteger)dimensions.width),
+    AVVideoHeightKey: @((NSInteger)dimensions.height),
+    AVVideoColorPropertiesKey: hdVideoProperties
     };
 }
 

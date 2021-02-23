@@ -116,8 +116,12 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
         case let .message(message):
             let chatPeerId = message.peerId
             return chatPeerId.peerId
-        case .messageEmpty:
-            return nil
+        case let .messageEmpty(_, id, peerId):
+            if let peerId = peerId {
+                return peerId.peerId
+            } else {
+                return nil
+            }
         case let .messageService(flags, _, fromId, chatPeerId, _, _, _):
             return chatPeerId.peerId
     }
@@ -188,7 +192,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -209,6 +213,10 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                 case let .messageActionGeoProximityReached(fromId, toId, _):
                     result.append(fromId.peerId)
                     result.append(toId.peerId)
+                case let .messageActionInviteToGroupCall(_, userIds):
+                    for id in userIds {
+                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: id))
+                    }
             }
         
             return result
@@ -406,7 +414,13 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                        case let .messageFwdHeader(flags, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                            var forwardInfoFlags: MessageForwardInfo.Flags = []
+                            let isImported = (flags & (1 << 7)) != 0
+                            if isImported {
+                                forwardInfoFlags.insert(.isImported)
+                            }
+                            
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -440,11 +454,11 @@ extension StoreMessage {
                             }
                         
                             if let authorId = authorId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             } else if let sourceId = sourceId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             } else if let postAuthor = postAuthor ?? fromName {
-                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             }
                     }
                 }
@@ -634,6 +648,11 @@ extension StoreMessage {
                     var notificationFlags: NotificationInfoMessageAttributeFlags = []
                     if (flags & (1 << 4)) != 0 {
                         notificationFlags.insert(.personal)
+                    }
+                    if (flags & (1 << 4)) != 0 {
+                        notificationFlags.insert(.personal)
+                        let notConsumed = (flags & (1 << 5)) != 0
+                        attributes.append(ConsumablePersonalMentionMessageAttribute(consumed: !notConsumed, pending: false))
                     }
                     if (flags & (1 << 13)) != 0 {
                         notificationFlags.insert(.muted)

@@ -127,7 +127,7 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     NSTimeInterval _callConnectTimeout;
     NSTimeInterval _callPacketTimeout;
     
-    TgVoip *_tgVoip;
+    std::unique_ptr<TgVoip> _tgVoip;
     
     OngoingCallState _state;
     int32_t _signalBars;
@@ -262,45 +262,32 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             endpoints.push_back(endpoint);
         }
         
-        TgVoipConfig config = {
-            .initializationTimeout = _callConnectTimeout,
-            .receiveTimeout = _callPacketTimeout,
-            .dataSaving = callControllerDataSavingForType(dataSaving),
-            .enableP2P = static_cast<bool>(allowP2P),
-            .enableAEC = false,
-            .enableNS = true,
-            .enableAGC = true,
-            .enableCallUpgrade = false,
-            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
-            .maxApiLayer = [OngoingCallThreadLocalContext maxLayer]
-        };
+        TgVoipConfig config;
+        config.initializationTimeout = _callConnectTimeout;
+        config.receiveTimeout = _callPacketTimeout;
+        config.dataSaving = callControllerDataSavingForType(dataSaving);
+        config.enableP2P = static_cast<bool>(allowP2P);
+        config.enableAEC = false;
+        config.enableNS = true;
+        config.enableAGC = true;
+        config.enableVolumeControl = false;
+        config.enableCallUpgrade = false;
+        config.logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String);
+        config.maxApiLayer = [OngoingCallThreadLocalContext maxLayer];
         
         std::vector<uint8_t> encryptionKeyValue;
         encryptionKeyValue.resize(key.length);
         memcpy(encryptionKeyValue.data(), key.bytes, key.length);
         
-        TgVoipEncryptionKey encryptionKey = {
-            .value = encryptionKeyValue,
-            .isOutgoing = isOutgoing,
-        };
-        
-        /*
-         TgVoipConfig const &config,
-             TgVoipPersistentState const &persistentState,
-             std::vector<TgVoipEndpoint> const &endpoints,
-             std::unique_ptr<TgVoipProxy> const &proxy,
-             TgVoipNetworkType initialNetworkType,
-             TgVoipEncryptionKey const &encryptionKey
-         #ifdef TGVOIP_USE_CUSTOM_CRYPTO
-             ,
-             TgVoipCrypto const &crypto
-         */
+        TgVoipEncryptionKey encryptionKey;
+        encryptionKey.value = encryptionKeyValue;
+        encryptionKey.isOutgoing = isOutgoing;
         
         _tgVoip = TgVoip::makeInstance(
             config,
             { derivedStateValue },
             endpoints,
-            proxyValue,
+            proxyValue.get(),
             callControllerNetworkTypeForType(networkType),
             encryptionKey,
             crypto
@@ -341,8 +328,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         NSString *debugLog = [NSString stringWithUTF8String:finalState.debugLog.c_str()];
         _lastDerivedState = [[NSData alloc] initWithBytes:finalState.persistentState.value.data() length:finalState.persistentState.value.size()];
         
-        delete _tgVoip;
-        _tgVoip = NULL;
+        _tgVoip.reset();
         
         if (completion) {
             completion(debugLog, finalState.trafficStats.bytesSentWifi, finalState.trafficStats.bytesReceivedWifi, finalState.trafficStats.bytesSentMobile, finalState.trafficStats.bytesReceivedMobile);
@@ -381,7 +367,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)controllerStateChanged:(TgVoipState)state {
     OngoingCallState callState = OngoingCallStateInitializing;
     switch (state) {
-        case TgVoipState::Estabilished:
+        case TgVoipState::Established:
             callState = OngoingCallStateConnected;
             break;
         case TgVoipState::Failed:

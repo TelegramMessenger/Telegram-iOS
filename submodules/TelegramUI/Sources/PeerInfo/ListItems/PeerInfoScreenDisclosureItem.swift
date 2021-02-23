@@ -54,6 +54,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     private let textNode: ImmediateTextNode
     private let arrowNode: ASImageNode
     private let bottomSeparatorNode: ASDisplayNode
+    private let activateArea: AccessibilityAreaNode
     
     private var item: PeerInfoScreenDisclosureItem?
     
@@ -87,6 +88,8 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init()
         
         bringToFrontForHighlightImpl = { [weak self] in
@@ -98,6 +101,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.arrowNode)
+        self.addSubnode(self.activateArea)
     }
     
     override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -180,6 +184,9 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         
         let labelBadgeNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
         
+        self.activateArea.accessibilityLabel = item.text
+        self.activateArea.accessibilityValue = item.label.text
+        
         transition.updateFrame(node: self.labelBadgeNode, frame: labelBadgeNodeFrame)
         transition.updateFrame(node: self.labelNode, frame: labelFrame)
         transition.updateFrame(node: self.textNode, frame: textFrame)
@@ -190,6 +197,8 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: height - UIScreenPixel), size: CGSize(width: width - separatorInset, height: UIScreenPixel)))
         transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
+        
+        self.activateArea.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
         
         return height
     }

@@ -93,6 +93,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as EmbeddedMediaStickersMessageAttribute:
                 return true
+            case _ as EmojiSearchQueryMessageAttribute:
+                return true
             default:
                 return false
         }
@@ -513,7 +515,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                             
                             if let sourceForwardInfo = sourceMessage.forwardInfo {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature, psaType: nil)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature, psaType: nil, flags: [])
                             } else {
                                 if sourceMessage.id.peerId != account.peerId {
                                     var hasHiddenForwardMedia = false
@@ -543,7 +545,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                         
                                         let psaType: String? = nil
                                         
-                                        forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature, psaType: psaType)
+                                        forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature, psaType: psaType, flags: [])
                                     }
                                 } else {
                                     forwardInfo = nil

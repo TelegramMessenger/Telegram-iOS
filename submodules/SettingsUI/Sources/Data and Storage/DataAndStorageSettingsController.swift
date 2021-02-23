@@ -12,6 +12,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import OpenInExternalAppUI
+import WidgetSetupScreen
 
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
@@ -27,9 +28,10 @@ private final class DataAndStorageControllerArguments {
     let toggleDownloadInBackground: (Bool) -> Void
     let openBrowserSelection: () -> Void
     let openIntents: () -> Void
+    let openWidgetSettings: () -> Void
     let toggleEnableSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, openWidgetSettings: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -43,6 +45,7 @@ private final class DataAndStorageControllerArguments {
         self.toggleDownloadInBackground = toggleDownloadInBackground
         self.openBrowserSelection = openBrowserSelection
         self.openIntents = openIntents
+        self.openWidgetSettings = openWidgetSettings
         self.toggleEnableSensitiveContent = toggleEnableSensitiveContent
     }
 }
@@ -87,6 +90,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case useLessVoiceData(PresentationTheme, String, String)
     case otherHeader(PresentationTheme, String)
     case shareSheet(PresentationTheme, String)
+    case widgetSettings(String)
     case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
     case openLinksIn(PresentationTheme, String, String)
@@ -106,7 +110,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.autoPlay.rawValue
             case .voiceCallsHeader, .useLessVoiceData:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .shareSheet, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn, .downloadInBackground, .downloadInBackgroundInfo:
+            case .otherHeader, .shareSheet, .widgetSettings, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn, .downloadInBackground, .downloadInBackgroundInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -143,22 +147,24 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 11
             case .shareSheet:
                 return 12
-            case .saveIncomingPhotos:
+            case .widgetSettings:
                 return 13
-            case .saveEditedPhotos:
+            case .saveIncomingPhotos:
                 return 14
-            case .openLinksIn:
+            case .saveEditedPhotos:
                 return 15
-            case .downloadInBackground:
+            case .openLinksIn:
                 return 16
-            case .downloadInBackgroundInfo:
+            case .downloadInBackground:
                 return 17
-            case .connectionHeader:
+            case .downloadInBackgroundInfo:
                 return 18
-            case .connectionProxy:
+            case .connectionHeader:
                 return 19
-            case .enableSensitiveContent:
+            case .connectionProxy:
                 return 20
+            case .enableSensitiveContent:
+                return 21
         }
     }
     
@@ -238,6 +244,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .shareSheet(lhsTheme, lhsText):
                 if case let .shareSheet(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .widgetSettings(text):
+                if case .widgetSettings(text) = rhs {
                     return true
                 } else {
                     return false
@@ -345,6 +357,10 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
             case let .shareSheet(theme, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openIntents()
+                })
+            case let .widgetSettings(text):
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                    arguments.openWidgetSettings()
                 })
             case let .saveIncomingPhotos(theme, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
@@ -489,6 +505,9 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
         entries.append(.shareSheet(presentationData.theme, presentationData.strings.ChatSettings_IntentsSettings))
     }
+    /*if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+        entries.append(.widgetSettings(presentationData.strings.ChatSettings_WidgetSettings))
+    }*/
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
@@ -640,6 +659,9 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         pushControllerImpl?(controller)
     }, openIntents: {
         let controller = intentsSettingsController(context: context)
+        pushControllerImpl?(controller)
+    }, openWidgetSettings: {
+        let controller = widgetSetupScreen(context: context)
         pushControllerImpl?(controller)
     }, toggleEnableSensitiveContent: { value in
         let _ = (contentSettingsConfiguration.get()

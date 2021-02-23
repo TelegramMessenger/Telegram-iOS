@@ -813,10 +813,10 @@ public final class SemanticStatusNode: ASControlNode {
         var animate = false
         let timestamp = CACurrentMediaTime()
         
-        if let transtionContext = self.transitionContext {
-            if transtionContext.startTime + transtionContext.duration < timestamp {
+        if let transitionContext = self.transitionContext {
+            if transitionContext.startTime + transitionContext.duration < timestamp {
                 self.transitionContext = nil
-                transtionContext.completion()
+                transitionContext.completion()
             } else {
                 animate = true
             }
