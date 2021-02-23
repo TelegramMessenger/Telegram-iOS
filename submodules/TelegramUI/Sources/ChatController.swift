@@ -307,7 +307,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var automaticMediaDownloadSettingsDisposable: Disposable?
     
     private var disableStickerAnimationsPromise = ValuePromise<Bool>(false)
-    private var disableStickerAnimations = false
+    private var disableStickerAnimationsValue = false
+    var disableStickerAnimations: Bool {
+        get {
+            return self.disableStickerAnimationsValue
+        } set {
+            self.disableStickerAnimationsPromise.set(newValue)
+        }
+    }
     private var stickerSettings: ChatInterfaceStickerSettings
     private var stickerSettingsDisposable: Disposable?
     
@@ -3449,9 +3456,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let chatStickerSettings = ChatInterfaceStickerSettings(stickerSettings: stickerSettings)
-            if let strongSelf = self, strongSelf.stickerSettings != chatStickerSettings || strongSelf.disableStickerAnimations != disableStickerAnimations {
+            if let strongSelf = self, strongSelf.stickerSettings != chatStickerSettings || strongSelf.disableStickerAnimationsValue != disableStickerAnimations {
                 strongSelf.stickerSettings = chatStickerSettings
-                strongSelf.disableStickerAnimations = disableStickerAnimations
+                strongSelf.disableStickerAnimationsValue = disableStickerAnimations
                 strongSelf.controllerInteraction?.stickerSettings = chatStickerSettings
                 if strongSelf.isNodeLoaded {
                     strongSelf.chatDisplayNode.updateStickerSettings(chatStickerSettings, forceStopAnimations: disableStickerAnimations)
