@@ -718,6 +718,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 jsonParams: nil,
                                 joinTimestamp: strongSelf.temporaryJoinTimestamp,
                                 activityTimestamp: nil,
+                                activityRank: nil,
                                 muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                                 volume: nil
                             ))
