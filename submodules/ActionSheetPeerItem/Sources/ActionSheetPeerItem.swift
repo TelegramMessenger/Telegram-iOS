@@ -41,6 +41,7 @@ public class ActionSheetPeerItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -132,18 +133,10 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         }
         self.accessibilityArea.accessibilityTraits = accessibilityTraits
         self.accessibilityArea.accessibilityLabel = item.title
-        
-        self.setNeedsLayout()
     }
     
-    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 57.0)
-    }
-    
-    public override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 57.0)
         
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
@@ -160,8 +153,12 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         }
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
     
+
     @objc private func buttonPressed() {
         if let item = self.item {
             item.action()

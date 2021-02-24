@@ -305,6 +305,7 @@ public final class ShareController: ViewController {
     
     private var defaultAction: ShareControllerAction?
     
+    public var actionCompleted: (() -> Void)?
     public var dismissed: ((Bool) -> Void)?
     public var completed: (([PeerId]) -> Void)? {
         didSet {
@@ -361,6 +362,8 @@ public final class ShareController: ViewController {
                 self.defaultAction = ShareControllerAction(title: forcedActionTitle ?? self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
                     UIPasteboard.general.string = text
                     self?.controllerNode.cancel?()
+                    
+                    self?.actionCompleted?()
                 })
             case .text:
                 break
@@ -370,6 +373,8 @@ public final class ShareController: ViewController {
                     let url = "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m"
                     UIPasteboard.general.string = url
                     self?.controllerNode.cancel?()
+                    
+                    self?.actionCompleted?()
                 })
                 break
             case .quote:
@@ -378,6 +383,7 @@ public final class ShareController: ViewController {
                 if case .saveToCameraRoll = preferredAction {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(representations: representations)
+                        self?.actionCompleted?()
                     })
                 }
             case let .media(mediaReference):
@@ -390,12 +396,14 @@ public final class ShareController: ViewController {
                 if case .saveToCameraRoll = preferredAction, canSave {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(mediaReference: mediaReference)
+                        self?.actionCompleted?()
                     })
                 }
             case let .messages(messages):
                 if case .saveToCameraRoll = preferredAction {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(messages: messages)
+                        self?.actionCompleted?()
                     })
                 } else if let message = messages.first {
                     let groupingKey: Int64? = message.groupingKey
@@ -412,6 +420,7 @@ public final class ShareController: ViewController {
                         self.defaultAction = ShareControllerAction(title: self.presentationData.strings.SharedMedia_ViewInChat, action: { [weak self] in
                             self?.controllerNode.cancel?()
                             showInChat(message)
+                            self?.actionCompleted?()
                         })
                     } else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
                         if message.id.namespace == Namespaces.Message.Cloud {
@@ -429,6 +438,7 @@ public final class ShareController: ViewController {
                                     }
                                 })
                                 strongSelf.controllerNode.cancel?()
+                                strongSelf.actionCompleted?()
                             })
                         }
                     }
@@ -441,6 +451,7 @@ public final class ShareController: ViewController {
             self.defaultAction = ShareControllerAction(title: action.title, action: { [weak self] in
                 self?.controllerNode.cancel?()
                 action.action()
+                self?.actionCompleted?()
             })
         }
         

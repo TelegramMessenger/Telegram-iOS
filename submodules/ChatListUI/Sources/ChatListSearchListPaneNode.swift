@@ -206,7 +206,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     }
                 }, deletePeer: deletePeer, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        if let chatPeer = peer.peer.peers[peer.peer.peerId], chatPeer.id.namespace != Namespaces.Peer.SecretChat {
+                        if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                             peerContextAction(chatPeer, .recentSearch, node, gesture)
                         } else {
                             gesture?.cancel()
@@ -735,7 +735,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         self.tagMask = tagMask
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.presentationDataPromise.set(.single(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)))
         
         self.searchStatePromise.set(self.searchStateValue)
@@ -744,6 +745,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         self.recentListNode = ListView()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.recentListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.shimmerNode = ChatListSearchShimmerNode(key: key)
         self.shimmerNode.isUserInteractionEnabled = false
@@ -751,7 +755,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
-        
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+    
         var openMediaMessageImpl: ((Message, ChatControllerInteractionOpenMessageMode) -> Void)?
         var transitionNodeImpl: ((MessageId, Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?)?
         var addToTransitionSurfaceImpl: ((UIView) -> Void)?

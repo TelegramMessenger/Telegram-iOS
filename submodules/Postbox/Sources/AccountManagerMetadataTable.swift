@@ -12,7 +12,7 @@ public struct AccessChallengeAttempts: Equatable {
     }
 }
 
-public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
+public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case numericalPassword
         case plaintextPassword
@@ -77,6 +77,17 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
             return false
         } else {
             return true
+        }
+    }
+    
+    public var lockId: String? {
+        switch self {
+        case .none:
+            return nil
+        case let .numericalPassword(value):
+            return "numericalPassword:\(value)"
+        case let .plaintextPassword(value):
+            return "plaintextPassword:\(value)"
         }
     }
 }

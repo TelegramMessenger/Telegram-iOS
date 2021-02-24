@@ -1,33 +1,9 @@
 #import "FetchImage.h"
 
-#import <MTProtoKit/MTProtoKit.h>
-#import <EncryptionProvider/EncryptionProvider.h>
+#import <MtProtoKit/MtProtoKit.h>
+#import <OpenSSLEncryptionProvider/OpenSSLEncryptionProvider.h>
 
 #import "Serialization.h"
-
-@interface EmptyEncryptionProvider: NSObject <EncryptionProvider>
-
-@end
-
-@implementation EmptyEncryptionProvider
-
-- (id<MTBignumContext>)createBignumContext {
-    return nil;
-}
-
-- (NSData * _Nullable)rsaEncryptWithPublicKey:(NSString *)publicKey data:(NSData *)data {
-    return nil;
-}
-
-- (NSData * _Nullable)rsaEncryptPKCS1OAEPWithPublicKey:(NSString *)publicKey data:(NSData *)data {
-    return nil;
-}
-
-- (id<MTRsaPublicKey>)parseRSAPublicKey:(NSString *)publicKey {
-    return nil;
-}
-
-@end
 
 @interface InMemoryKeychain : NSObject <MTKeychain> {
     NSMutableDictionary *_dict;
@@ -108,7 +84,7 @@ dispatch_block_t fetchImage(BuildConfig *buildConfig, AccountProxyConnection * _
         apiEnvironment = [apiEnvironment withUpdatedSocksProxySettings:[[MTSocksProxySettings alloc] initWithIp:proxyConnection.host port:(uint16_t)proxyConnection.port username:proxyConnection.username password:proxyConnection.password secret:proxyConnection.secret]];
     }
     
-    MTContext *context = [[MTContext alloc] initWithSerialization:serialization encryptionProvider:[[EmptyEncryptionProvider alloc] init] apiEnvironment:apiEnvironment isTestingEnvironment:account.isTestingEnvironment useTempAuthKeys:true];
+    MTContext *context = [[MTContext alloc] initWithSerialization:serialization encryptionProvider:[[OpenSSLEncryptionProvider alloc] init] apiEnvironment:apiEnvironment isTestingEnvironment:account.isTestingEnvironment useTempAuthKeys:true];
     context.tempKeyExpiration = 10 * 60 * 60;
     
     NSDictionary *seedAddressList = @{};
@@ -154,7 +130,19 @@ dispatch_block_t fetchImage(BuildConfig *buildConfig, AccountProxyConnection * _
     
     for (NSNumber *datacenterId in account.datacenters) {
         AccountDatacenterInfo *info = account.datacenters[datacenterId];
-        [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:[[MTDatacenterAuthInfo alloc] initWithAuthKey:info.masterKey.data authKeyId:info.masterKey.keyId saltSet:@[] authKeyAttributes:@{}] selector:MTDatacenterAuthInfoSelectorPersistent];
+        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:info.masterKey.data authKeyId:info.masterKey.keyId saltSet:@[] authKeyAttributes:@{}];
+        
+        [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:authInfo selector:MTDatacenterAuthInfoSelectorPersistent];
+        
+        if (info.ephemeralMainKey != nil) {
+            MTDatacenterAuthInfo *ephemeralMainAuthInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:info.ephemeralMainKey.data authKeyId:info.ephemeralMainKey.keyId saltSet:@[] authKeyAttributes:@{}];
+            [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:ephemeralMainAuthInfo selector:MTDatacenterAuthInfoSelectorEphemeralMain];
+        }
+        
+        if (info.ephemeralMediaKey != nil) {
+            MTDatacenterAuthInfo *ephemeralMediaAuthInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:info.ephemeralMediaKey.data authKeyId:info.ephemeralMediaKey.keyId saltSet:@[] authKeyAttributes:@{}];
+            [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:ephemeralMediaAuthInfo selector:MTDatacenterAuthInfoSelectorEphemeralMedia];
+        }
     }
     
     MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];

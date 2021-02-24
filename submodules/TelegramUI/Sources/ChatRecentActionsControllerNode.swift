@@ -20,6 +20,8 @@ import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
 import PeerInfoUI
+import InviteLinksUI
+import UndoUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -108,6 +110,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.listNode = ListView()
         self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
         self.listNode.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode.alpha = 0.0
@@ -148,6 +154,43 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             case let .changeStickerPack(_, new):
                                 if let new = new {
                                     strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), nil)
+                                    return true
+                                }
+                            case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite):
+                                if !invite.link.hasSuffix("...") {
+                                    if invite.isPermanent {
+                                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                                        
+                                        var items: [ActionSheetItem] = []
+                                        items.append(ActionSheetTextItem(title: invite.link))
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.InviteLink_ContextRevoke, color: .destructive, action: { [weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                            if let strongSelf = self {
+                                                let _ = (revokePeerExportedInvitation(account: strongSelf.context.account, peerId: peer.id, link: invite.link)
+                                                
+                                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                                    self?.eventLogContext.reload()
+                                                })
+                                            }
+                                        }))
+                                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                                actionSheet?.dismissAnimated()
+                                            })
+                                        ])])
+                                        strongSelf.presentController(actionSheet, nil)
+                                    } else {
+                                        let controller = inviteLinkEditController(context: strongSelf.context, peerId: peer.id, invite: invite, completion: { [weak self] _ in
+                                            self?.eventLogContext.reload()
+                                        })
+                                        controller.navigationPresentation = .modal
+                                        strongSelf.pushController(controller)
+                                    }
+                                    return true
+                                }
+                            case .changeHistoryTTL:
+                                if strongSelf.peer.canSetupAutoremoveTimeout(accountPeerId: strongSelf.context.account.peerId) {
+                                    strongSelf.presentAutoremoveSetup()
                                     return true
                                 }
                             default:
@@ -453,7 +496,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
-        }, openPeerContextMenu: { _, _, _, _ in
+        }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
         }, openMessageStats: { _ in
@@ -865,5 +908,30 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }
         }))
+    }
+    
+    private func presentAutoremoveSetup() {
+        let peer = self.peer
+        
+        let controller = peerAutoremoveSetupScreen(context: self.context, peerId: peer.id, completion: { [weak self] updatedValue in
+            if case let .updated(value) = updatedValue {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var isOn: Bool = true
+                var text: String?
+                if let myValue = value.value {
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
+                } else {
+                    isOn = false
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
+                }
+                if let text = text {
+                    strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), nil)
+                }
+            }
+        })
+        self.pushController(controller)
     }
 }

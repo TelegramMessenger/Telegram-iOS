@@ -228,7 +228,8 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.openPeer = openPeer
         self.contextAction = contextAction
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -237,6 +238,9 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.listNode = ListView()
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.isHidden = true
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         

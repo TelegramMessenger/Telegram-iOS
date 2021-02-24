@@ -37,6 +37,8 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 migrationReference = TelegramGroupToChannelMigrationReference(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), accessHash: accessHash)
             case .inputChannelEmpty:
                 break
+            case .inputChannelFromMessage:
+                break
             }
         }
         var groupFlags = TelegramGroupFlags()
@@ -44,10 +46,16 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & (1 << 0)) != 0 {
             role = .creator(rank: nil)
         } else if let adminRights = adminRights {
-            role = .admin(TelegramChatAdminRights(apiAdminRights: adminRights), rank: nil)
+            role = .admin(TelegramChatAdminRights(apiAdminRights: adminRights) ?? TelegramChatAdminRights(rights: []), rank: nil)
         }
         if (flags & (1 << 5)) != 0 {
             groupFlags.insert(.deactivated)
+        }
+        if (flags & Int32(1 << 23)) != 0 {
+            groupFlags.insert(.hasVoiceChat)
+        }
+        if (flags & Int32(1 << 24)) != 0 {
+            groupFlags.insert(.hasActiveVoiceChat)
         }
         return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:)), migrationReference: migrationReference, creationDate: date, version: Int(version))
     case let .chatEmpty(id):
@@ -105,6 +113,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         }
         if (flags & Int32(1 << 25)) != 0 {
             channelFlags.insert(.isFake)
+        }
+        if (flags & Int32(1 << 26)) != 0 {
+            channelFlags.insert(.isGigagroup)
         }
 
         let restrictionInfo: PeerAccessRestrictionInfo?
@@ -189,6 +200,9 @@ func mergeChannel(lhs: TelegramChannel?, rhs: TelegramChannel) -> TelegramChanne
     }
     
     var channelFlags = lhs.flags
+    if rhs.flags.contains(.isGigagroup) {
+        channelFlags.insert(.isGigagroup)
+    }
     if rhs.flags.contains(.isVerified) {
         channelFlags.insert(.isVerified)
     } else {

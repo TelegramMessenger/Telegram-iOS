@@ -12,7 +12,7 @@ import AccountContext
 public enum DeleteChatPeerAction {
     case delete
     case deleteAndLeave
-    case clearHistory
+    case clearHistory(canClearCache: Bool)
     case clearCache
     case clearCacheSuggestion
     case removeFromGroup
@@ -128,8 +128,18 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 } else {
                     text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
-            case .clearHistory:
-                text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+            case let .clearHistory(canClearCache):
+                if peer.id == context.account.peerId {
+                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
+                } else if peer is TelegramUser {
+                    text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                } else {
+                    text = strings.Conversation_DeleteAllMessagesInChat(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                }
+                
+                if canClearCache {
+                    text?.0 += "\n\n\(strings.Conversation_AlsoClearCacheTitle)"
+                }
             case .removeFromGroup:
                 text = strings.VoiceChat_RemovePeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
             default:
@@ -152,7 +162,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedSize.width - 20.0, height: .greatestFiniteMagnitude))
         
         let topInset: CGFloat = 16.0
@@ -166,10 +176,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         let size = CGSize(width: constrainedSize.width, height: topInset + avatarSize + textSpacing + textSize.height + bottomInset)
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
         
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
-    }
-    
-    override func layout() {
-        super.layout()
     }
 }

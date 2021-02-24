@@ -17,6 +17,8 @@ import PresentationDataUtils
 import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
+import Markdown
+import UndoUI
 
 private final class ChannelPermissionsControllerArguments {
     let context: AccountContext
@@ -29,9 +31,11 @@ private final class ChannelPermissionsControllerArguments {
     let openPeerInfo: (Peer) -> Void
     let openKicked: () -> Void
     let presentRestrictedPermissionAlert: (TelegramChatBannedRightsFlags) -> Void
+    let presentConversionToBroadcastGroup: () -> Void
+    let openChannelExample: () -> Void
     let updateSlowmode: (Int32) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, updateSlowmode: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -41,6 +45,8 @@ private final class ChannelPermissionsControllerArguments {
         self.openPeerInfo = openPeerInfo
         self.openKicked = openKicked
         self.presentRestrictedPermissionAlert = presentRestrictedPermissionAlert
+        self.presentConversionToBroadcastGroup = presentConversionToBroadcastGroup
+        self.openChannelExample = openChannelExample
         self.updateSlowmode = updateSlowmode
     }
 }
@@ -48,6 +54,7 @@ private final class ChannelPermissionsControllerArguments {
 private enum ChannelPermissionsSection: Int32 {
     case permissions
     case slowmode
+    case conversion
     case kicked
     case exceptions
 }
@@ -63,6 +70,9 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case slowmodeHeader(PresentationTheme, String)
     case slowmode(PresentationTheme, PresentationStrings, Int32)
     case slowmodeInfo(PresentationTheme, String)
+    case conversionHeader(PresentationTheme, String)
+    case conversion(PresentationTheme, String)
+    case conversionInfo(PresentationTheme, String)
     case kicked(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case add(PresentationTheme, String)
@@ -74,6 +84,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ChannelPermissionsSection.permissions.rawValue
             case .slowmodeHeader, .slowmode, .slowmodeInfo:
                 return ChannelPermissionsSection.slowmode.rawValue
+            case .conversionHeader, .conversion, .conversionInfo:
+                return ChannelPermissionsSection.conversion.rawValue
             case .kicked:
                 return ChannelPermissionsSection.kicked.rawValue
             case .exceptionsHeader, .add, .peerItem:
@@ -87,18 +99,24 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(0)
             case let .permission(_, index, _, _, _, _):
                 return .index(1 + index)
-            case .slowmodeHeader:
+            case .conversionHeader:
                 return .index(998)
-            case .slowmode:
+            case .conversion:
                 return .index(999)
-            case .slowmodeInfo:
+            case .conversionInfo:
                 return .index(1000)
-            case .kicked:
+            case .slowmodeHeader:
                 return .index(1001)
-            case .exceptionsHeader:
+            case .slowmode:
                 return .index(1002)
-            case .add:
+            case .slowmodeInfo:
                 return .index(1003)
+            case .kicked:
+                return .index(1004)
+            case .exceptionsHeader:
+                return .index(1005)
+            case .add:
+                return .index(1006)
             case let .peerItem(_, _, _, _, _, participant, _, _, _, _):
                 return .peer(participant.peer.id)
         }
@@ -132,6 +150,24 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 }
             case let .slowmodeInfo(lhsTheme, lhsValue):
                 if case let .slowmodeInfo(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .conversionHeader(lhsTheme, lhsValue):
+                if case let .conversionHeader(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .conversion(lhsTheme, lhsText):
+                if case let .conversion(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .conversionInfo(lhsTheme, lhsValue):
+                if case let .conversionInfo(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -219,9 +255,9 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelPermissionsControllerArguments
         switch self {
-            case let .permissionsHeader(theme, text):
+            case let .permissionsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .permission(theme, _, title, value, rights, enabled):
+            case let .permission(_, _, title, value, rights, enabled):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, type: .icon, enableInteractiveChanges: enabled != nil, enabled: enabled ?? true, sectionId: self.section, style: .blocks, updated: { value in
                     if let _ = enabled {
                         arguments.updatePermission(rights, value)
@@ -231,25 +267,35 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 }, activatedWhileDisabled: {
                     arguments.presentRestrictedPermissionAlert(rights)
                 })
-            case let .slowmodeHeader(theme, value):
+            case let .slowmodeHeader(_, value):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
             case let .slowmode(theme, strings, value):
                 return ChatSlowmodeItem(theme: theme, strings: strings, value: value, enabled: true, sectionId: self.section, updated: { value in
                     arguments.updateSlowmode(value)
                 })
-            case let .slowmodeInfo(theme, value):
+            case let .slowmodeInfo(_, value):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
-            case let .kicked(theme, text, value):
+            case let .conversionHeader(_, value):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
+            case let .conversion(_, text):
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks) {
+                    arguments.presentConversionToBroadcastGroup()
+                }
+            case let .conversionInfo(_, value):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(value), sectionId: self.section) { _ in
+                    arguments.openChannelExample()
+                }
+            case let .kicked(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openKicked()
                 })
-            case let .exceptionsHeader(theme, text):
+            case let .exceptionsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .add(theme, text):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.addPeer()
                 })
-            case let .peerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, participant, editing, enabled, canOpen, defaultBannedRights):
+            case let .peerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, participant, editing, enabled, canOpen, defaultBannedRights):
                 var text: ItemListPeerItemText = .none
                 switch participant.participant {
                     case let .member(_, _, _, banInfo, _):
@@ -336,12 +382,12 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
 }
 
 public let allGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
-    (.banSendMessages, .sendMessages),
-    (.banSendMedia, .sendMessages),
-    (.banSendGifs, .sendMessages),
-    (.banEmbedLinks, .sendMessages),
-    (.banSendPolls, .sendMessages),
-    (.banAddMembers, .inviteMembers),
+    (.banSendMessages, .banMembers),
+    (.banSendMedia, .banMembers),
+    (.banSendGifs, .banMembers),
+    (.banEmbedLinks, .banMembers),
+    (.banSendPolls, .banMembers),
+    (.banAddMembers, .banMembers),
     (.banPinMessages, .pinMessages),
     (.banChangeInfo, .changeInfo)
 ]
@@ -391,7 +437,7 @@ private func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramC
     return result
 }
 
-private func channelPermissionsControllerEntries(presentationData: PresentationData, view: PeerView, state: ChannelPermissionsControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelPermissionsEntry] {
+private func channelPermissionsControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelPermissionsControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelPermissionsEntry] {
     var entries: [ChannelPermissionsEntry] = []
     
     if let channel = view.peers[view.peerId] as? TelegramChannel, let participants = participants, let cachedData = view.cachedData as? CachedChannelData, let defaultBannedRights = channel.defaultBannedRights {
@@ -419,6 +465,13 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
             }
             entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, enabled))
             rightIndex += 1
+        }
+        
+        let participantsLimit = context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
+        if channel.flags.contains(.isCreator) && !channel.flags.contains(.isGigagroup), let memberCount = cachedData.participantsSummary.memberCount, memberCount > participantsLimit - 1000 {
+            entries.append(.conversionHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastTitle.uppercased()))
+            entries.append(.conversion(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvert))
+            entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).0))
         }
         
         entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
@@ -471,10 +524,15 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var navigateToChatControllerImpl: ((PeerId) -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var dismissToChatController: (() -> Void)?
     var resetSlowmodeVisualValueImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
+    
+    let resolveDisposable = MetaDisposable()
+    actionsDisposable.add(resolveDisposable)
     
     let updateBannedDisposable = MetaDisposable()
     actionsDisposable.add(updateBannedDisposable)
@@ -698,6 +756,37 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
             }
         })
+    }, presentConversionToBroadcastGroup: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = PermissionController(context: context, splashScreen: true)
+        controller.navigationPresentation = .modal
+        controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
+        controller.proceed = { [weak controller] result in
+            let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.medium(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+            let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let attributedText = parseMarkdownIntoAttributedString(presentationData.strings.BroadcastGroups_ConfirmationAlert_Text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+            
+            let alertController = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Convert, action: { [weak controller] in
+                controller?.dismiss()
+                
+                let _ = (convertGroupToGigagroup(account: context.account, peerId: originalPeerId)
+                |> deliverOnMainQueue).start(completed: {
+                    let participantsLimit = context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .gigagroupConversion(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).0), elevatedLayout: true, action: { _ in return false }), nil)
+                    
+                    dismissToChatController?()
+                })
+            })])
+            controller?.present(alertController, in: .window(.root))
+        }
+        pushControllerImpl?(controller)
+    }, openChannelExample: {
+        resolveDisposable.set((resolvePeerByName(account: context.account, name: "durov") |> deliverOnMainQueue).start(next: { peerId in
+            if let peerId = peerId {
+                navigateToChatControllerImpl?(peerId)
+            }
+        }))
     }, updateSlowmode: { value in
         let _ = (peerView.get()
         |> take(1)
@@ -843,7 +932,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.GroupInfo_Permissions_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(presentationData: presentationData, view: view, state: state, participants: participants), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && participants != nil && previous!.count >= participants!.count)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: participants), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && participants != nil && previous!.count >= participants!.count)
         
         return (controllerState, (listState, arguments))
     }
@@ -864,8 +953,28 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
     }
+    navigateToChatControllerImpl = { [weak controller] peerId in
+        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), keepStack: .always))
+        }
+    }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    dismissToChatController = { [weak controller] in
+        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+            var viewControllers = navigationController.viewControllers
+            viewControllers = viewControllers.filter { controller in
+                if controller is ItemListController {
+                    return false
+                }
+                if controller is PeerInfoScreen {
+                    return false
+                }
+                return true
+            }
+            navigationController.setViewControllers(viewControllers, animated: true)
+        }
     }
     resetSlowmodeVisualValueImpl = { [weak controller] in
         guard let controller = controller else {

@@ -32,7 +32,7 @@
                                       (int)sourceSampleRate,
                                       0,
                                       NULL);
-        _ratio = MAX(1, destinationSampleRate / sourceSampleRate) * MAX(1, destinationChannelCount / sourceChannelCount) * 2;
+        _ratio = MAX(1, destinationSampleRate / MAX(sourceSampleRate, 1)) * MAX(1, destinationChannelCount / sourceChannelCount) * 2;
         swr_init(_context);
     }
     return self;

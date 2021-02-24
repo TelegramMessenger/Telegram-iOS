@@ -163,19 +163,13 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 148.0)
-    }
-    
-    override func layout() {
-        super.layout()
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 148.0)
+       
+        let titleSize = self.titleNode.measure(size)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 16.0), size: CGSize(width: size.width, height: titleSize.height))
         
-        let bounds = self.bounds
-        
-        let titleSize = self.titleNode.measure(bounds.size)
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 16.0), size: CGSize(width: bounds.size.width, height: titleSize.height))
-        
-        self.scrollNode.frame = CGRect(origin: CGPoint(x: 0, y: 36.0), size: CGSize(width: bounds.size.width, height: bounds.height - 36.0))
+        self.scrollNode.frame = CGRect(origin: CGPoint(x: 0, y: 36.0), size: CGSize(width: size.width, height: size.height - 36.0))
         
         let nodeInset: CGFloat = 2.0
         let nodeSize = CGSize(width: 80.0, height: 112.0)
@@ -192,6 +186,9 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
                 self.scrollNode.view.contentSize = contentSize
             }
         }
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
 }
 

@@ -85,6 +85,18 @@ static NSString *const imageItemIdetifier = @"\uFEFF\u200B";
 
 @end
 
+static UIColor *DateLabelColor = nil;
+
+
+@implementation UILabel (DateLabel)
+
++ (void)setDateLabelColor:(UIColor *)color
+{
+    DateLabelColor = color;
+}
+
+@end
+
 @implementation UILabel (Icons)
 
 + (void)load
@@ -95,6 +107,7 @@ static NSString *const imageItemIdetifier = @"\uFEFF\u200B";
         [RuntimeUtils swizzleInstanceMethodOfClass:[UILabel class] currentSelector:@selector(drawTextInRect:) newSelector:@selector(_78724db9_drawTextInRect:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UILabel class] currentSelector:@selector(layoutSubviews) newSelector:@selector(_78724db9_layoutSubviews)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UILabel class] currentSelector:@selector(setFrame:) newSelector:@selector(_78724db9_setFrame:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UILabel class] currentSelector:@selector(setTextColor:) newSelector:@selector(_78724db9_setTextColor:)];
     });
 }
 
@@ -106,7 +119,19 @@ static NSString *const imageItemIdetifier = @"\uFEFF\u200B";
     }
 }
 
+- (void)_78724db9_setTextColor:(UIColor *)color {
+    if ([NSStringFromClass(self.superview.class) hasPrefix:@"UIDatePicker"] && DateLabelColor != nil) {
+        [self _78724db9_setTextColor:DateLabelColor];
+    } else {
+        [self _78724db9_setTextColor:color];
+    }
+}
+
 - (void)_78724db9_layoutSubviews {
+    if ([NSStringFromClass(self.superview.class) hasPrefix:@"UIDatePicker"] && DateLabelColor != nil) {
+        [self _78724db9_setTextColor:DateLabelColor];
+    }
+    
     UIMenuItem *item = [[UIMenuController sharedMenuController] findImageItemByTitle:self.text];
     UIImage *image = item._tg_image;
     if (image == nil) {

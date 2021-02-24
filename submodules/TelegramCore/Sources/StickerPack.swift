@@ -88,10 +88,10 @@ public func stickerPacksAttachedToMedia(account: Account, media: AnyMediaReferen
         |> mapToSignal { reference -> Signal<[Api.StickerSetCovered], MTRpcError> in
             let inputMedia: Api.InputStickeredMedia
             if let resource = reference.updatedResource as? TelegramCloudMediaResourceWithFileReference, let updatedReference = resource.fileReference {
-                if let imageReference = media.concrete(TelegramMediaImage.self), let reference = imageReference.media.reference, case let .cloud(imageId, accessHash, fileReference) = reference, let representation = largestImageRepresentation(imageReference.media.representations) {
-                    inputMedia = .inputStickeredMediaPhoto(id: Api.InputPhoto.inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: updatedReference ?? Data())))
+                if let imageReference = media.concrete(TelegramMediaImage.self), let reference = imageReference.media.reference, case let .cloud(imageId, accessHash, _) = reference, let representation = largestImageRepresentation(imageReference.media.representations) {
+                    inputMedia = .inputStickeredMediaPhoto(id: Api.InputPhoto.inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: updatedReference)))
                 } else if let fileReference = media.concrete(TelegramMediaFile.self), let resource = fileReference.media.resource as? CloudDocumentMediaResource {
-                    inputMedia = .inputStickeredMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: updatedReference ?? Data())))
+                    inputMedia = .inputStickeredMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: updatedReference)))
                 } else {
                     return .single([])
                 }

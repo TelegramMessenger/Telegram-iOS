@@ -21,6 +21,7 @@ import ItemListPeerActionItem
 import AccountContext
 import InviteLinksUI
 import ContextUI
+import UndoUI
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext
@@ -293,7 +294,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite, displayImporters):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: 0, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: 0, peers: [], displayButton: true, displayImporters: displayImporters, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                     if let invite = invite {
                         arguments.copyLink(invite)
                     }
@@ -499,9 +500,9 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 case .privateLink:
                     break
                 case .initialSetup, .generic:
-                    entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader : presentationData.strings.Channel_Edit_LinkItem))
-                    entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
-                    entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
+                    entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader.uppercased() : presentationData.strings.Channel_Edit_LinkItem.uppercased()))
+                    entries.append(.typePublic(presentationData.theme, isGroup ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_LinkTypePublic, selectedType == .publicChannel))
+                    entries.append(.typePrivate(presentationData.theme, isGroup ? presentationData.strings.Channel_Setup_TypePrivate : presentationData.strings.Channel_Setup_LinkTypePrivate, selectedType == .privateChannel))
             
                     switch selectedType {
                         case .publicChannel:
@@ -598,13 +599,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     } else {
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePublicLinkHelp))
                     }
-//                    switch mode {
-//                        case .initialSetup:
-//                            break
-//                        case .generic, .privateLink:
-//                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                    }
+                    switch mode {
+                        case .initialSetup:
+                            break
+                        case .generic, .privateLink:
+                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                    }
                 }
             case .privateChannel:
                 let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
@@ -615,13 +616,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 } else {
                     entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePrivateLinkHelp))
                 }
-//                switch mode {
-//                    case .initialSetup:
-//                        break
-//                    case .generic, .privateLink:
-//                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                }
+                switch mode {
+                    case .initialSetup:
+                        break
+                    case .generic, .privateLink:
+                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                }
         }
     } else if let _ = view.peers[view.peerId] as? TelegramGroup {
         switch mode {
@@ -630,13 +631,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                 entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                 entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
-//                switch mode {
-//                    case .initialSetup:
-//                        break
-//                    case .generic, .privateLink:
-//                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                }
+                switch mode {
+                    case .initialSetup:
+                        break
+                    case .generic, .privateLink:
+                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                }
             case .generic, .initialSetup:                
                 let selectedType: CurrentChannelType
                 if let current = state.selectedType {
@@ -652,7 +653,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     currentAddressName = ""
                 }
                 
-                entries.append(.typeHeader(presentationData.theme, presentationData.strings.Group_Setup_TypeHeader))
+                entries.append(.typeHeader(presentationData.theme, presentationData.strings.Group_Setup_TypeHeader.uppercased()))
                 entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
                 entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
                 
@@ -729,13 +730,13 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                         entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
                         entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
-//                        switch mode {
-//                            case .initialSetup:
-//                                break
-//                            case .generic, .privateLink:
-//                                entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-//                                entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-//                        }
+                        switch mode {
+                            case .initialSetup:
+                                break
+                            case .generic, .privateLink:
+                                entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                                entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                        }
             }
         }
     }
@@ -837,6 +838,8 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
     var getControllerImpl: (() -> ViewController?)?
     
+    var dismissTooltipsImpl: (() -> Void)?
+    
     let actionsDisposable = DisposableSet()
     
     let checkAddressNameDisposable = MetaDisposable()
@@ -908,10 +911,17 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         }))
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
+       
+        dismissTooltipsImpl?()
+        
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, shareLink: { invite in
         let shareController = ShareController(context: context, subject: .url(invite.link))
+        shareController.actionCompleted = {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        }
         presentControllerImpl?(shareController, nil)
     }, linkContextAction: { node in
         guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?() else {
@@ -937,76 +947,111 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             } |> deliverOnMainQueue).start(next: { link in
                 if let link = link {
                     UIPasteboard.general.string = link
+                    
+                    dismissTooltipsImpl?()
+                    
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }
             })
         })))
         
-//        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-//            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
-//        }, action: { _, f in
-//            f(.dismissWithoutContent)
-//            
-//            let _ = (context.account.postbox.transaction { transaction -> ExportedInvitation? in
-//                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-//                    if let cachedData = cachedData as? CachedChannelData {
-//                        return cachedData.exportedInvitation
-//                    } else if let cachedData = cachedData as? CachedGroupData {
-//                        return cachedData.exportedInvitation
-//                    }
-//                }
-//                return nil
-//            } |> deliverOnMainQueue).start(next: { invite in
-//                if let invite = invite {
-//                    let controller = InviteLinkQRCodeController(context: context, invite: invite)
-//                    presentControllerImpl?(controller, nil)
-//                }
-//            })
-//        })))
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+        }, action: { _, f in
+            f(.dismissWithoutContent)
+            
+            let _ = (context.account.postbox.transaction { transaction -> ExportedInvitation? in
+                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.exportedInvitation
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        return cachedData.exportedInvitation
+                    }
+                }
+                return nil
+            } |> deliverOnMainQueue).start(next: { invite in
+                if let invite = invite {
+                    let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        let isGroup: Bool
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            isGroup = false
+                        } else {
+                            isGroup = true
+                        }
+                        let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
+                        presentControllerImpl?(controller, nil)
+                    })
+                }
+            })
+        })))
         
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
         }, action: { _, f in
             f(.dismissWithoutContent)
         
-            let controller = ActionSheetController(presentationData: presentationData)
-            let dismissAction: () -> Void = { [weak controller] in
-                controller?.dismissAnimated()
-            }
-            controller.setItemGroups([
-                ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                        dismissAction()
-                        
-                        var revoke = false
-                        updateState { state in
-                            if !state.revokingPrivateLink {
-                                revoke = true
-                                return state.withUpdatedRevokingPrivateLink(true)
-                            } else {
-                                return state
-                            }
-                        }
-                        if revoke {
-                            revokeLinkDisposable.set((revokePersistentPeerExportedInvitation(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(completed: {
-                                updateState {
-                                    $0.withUpdatedRevokingPrivateLink(false)
+            let _ = (context.account.postbox.loadedPeerWithId(peerId)
+            |> deliverOnMainQueue).start(next: { peer in
+                let isGroup: Bool
+                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    isGroup = false
+                } else {
+                    isGroup = true
+                }
+                
+                let controller = ActionSheetController(presentationData: presentationData)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                        ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                            dismissAction()
+                            
+                            let _ = (context.account.postbox.transaction { transaction -> String? in
+                                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
+                                    if let cachedData = cachedData as? CachedChannelData {
+                                        return cachedData.exportedInvitation?.link
+                                    } else if let cachedData = cachedData as? CachedGroupData {
+                                        return cachedData.exportedInvitation?.link
+                                    }
                                 }
-                            }))
-                        }
-                    })
-                ]),
-                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                return nil
+                            } |> deliverOnMainQueue).start(next: { link in
+                                if let link = link {
+                                    var revoke = false
+                                    updateState { state in
+                                        if !state.revokingPrivateLink {
+                                            revoke = true
+                                            return state.withUpdatedRevokingPrivateLink(true)
+                                        } else {
+                                            return state
+                                        }
+                                    }
+                                    if revoke {
+                                        revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
+                                            updateState {
+                                                $0.withUpdatedRevokingPrivateLink(false)
+                                            }
+                                        }))
+                                    }
+                                }
+                            })
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            })
         })))
 
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: nil)
         presentInGlobalOverlayImpl?(contextController)
     }, manageInviteLinks: {
-        let controller = inviteLinkListController(context: context, peerId: peerId)
+        let controller = inviteLinkListController(context: context, peerId: peerId, admin: nil)
         pushControllerImpl?(controller)
     })
     
@@ -1260,6 +1305,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.willDisappear = { _ in
+        dismissTooltipsImpl?()
+    }
     dismissImpl = { [weak controller, weak onDismissRemoveController] in
         guard let controller = controller else {
             return
@@ -1390,6 +1438,19 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     getControllerImpl = { [weak controller] in
         return controller
+    }
+    dismissTooltipsImpl = { [weak controller] in
+        controller?.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        controller?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
     }
     return controller
 }

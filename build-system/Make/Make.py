@@ -27,6 +27,7 @@ class BazelCommandLine:
         self.build_number = None
         self.configuration_args = None
         self.configuration_path = None
+        self.split_submodules = False
 
         self.common_args = [
             # https://docs.bazel.build/versions/master/command-line-reference.html
@@ -49,12 +50,6 @@ class BazelCommandLine:
         ]
 
         self.common_build_args = [
-            # https://github.com/bazelbuild/rules_swift
-            # If enabled and whole module optimisation is being used, the `*.swiftdoc`,
-            # `*.swiftmodule` and `*-Swift.h` are generated with a separate action
-            # rather than as part of the compilation.
-            '--features=swift.split_derived_files_generation',
-
             # https://github.com/bazelbuild/rules_swift
             # If enabled the skip function bodies frontend flag is passed when using derived
             # files generation.
@@ -112,11 +107,25 @@ class BazelCommandLine:
     def set_build_number(self, build_number):
         self.build_number = build_number
 
+    def set_split_swiftmodules(self, value):
+        self.split_submodules = value
+
     def set_configuration_path(self, path):
         self.configuration_path = path
 
     def set_configuration(self, configuration):
-        if configuration == 'debug_arm64':
+        if configuration == 'debug_universal':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                # Build universal binaries.
+                '--ios_multi_cpus=armv7,arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32'
+            ] + self.common_debug_args
+        elif configuration == 'debug_arm64':
             self.configuration_args = [
                 # bazel debug build configuration
                 '-c', 'dbg',
@@ -144,6 +153,23 @@ class BazelCommandLine:
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32',
+
+                # Generate DSYM files when building.
+                '--apple_generate_dsym',
+
+                # Require DSYM files as build output.
+                '--output_groups=+dsyms'
+            ] + self.common_release_args
+        elif configuration == 'release_armv7':
+            self.configuration_args = [
+                # bazel optimized build configuration
+                '-c', 'opt',
+
+                # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
+                '--ios_multi_cpus=armv7',
 
                 # Always build universal Watch binaries.
                 '--watchos_cpus=armv7k,arm64_32',
@@ -217,6 +243,19 @@ class BazelCommandLine:
 
         return combined_arguments
 
+    def get_additional_build_arguments(self):
+        combined_arguments = []
+        if self.split_submodules:
+            combined_arguments += [
+                # https://github.com/bazelbuild/rules_swift
+                # If enabled and whole module optimisation is being used, the `*.swiftdoc`,
+                # `*.swiftmodule` and `*-Swift.h` are generated with a separate action
+                # rather than as part of the compilation.
+                '--features=swift.split_derived_files_generation',
+            ]
+
+        return combined_arguments
+
     def invoke_build(self):
         combined_arguments = [
             self.build_environment.bazel_path
@@ -237,6 +276,7 @@ class BazelCommandLine:
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
         combined_arguments += self.get_define_arguments()
+        combined_arguments += self.get_additional_build_arguments()
 
         if self.remote_cache is not None:
             combined_arguments += [
@@ -354,6 +394,8 @@ def build(arguments):
 
     bazel_command_line.set_configuration(arguments.configuration)
     bazel_command_line.set_build_number(arguments.buildNumber)
+
+    bazel_command_line.set_split_swiftmodules(not arguments.disableParallelSwiftmoduleGeneration)
 
     bazel_command_line.invoke_build()
 
@@ -497,13 +539,21 @@ if __name__ == '__main__':
     buildParser.add_argument(
         '--configuration',
         choices=[
+            'debug_universal',
             'debug_arm64',
             'debug_armv7',
             'release_arm64',
+            'release_armv7',
             'release_universal'
         ],
         required=True,
         help='Build configuration'
+    )
+    buildParser.add_argument(
+        '--disableParallelSwiftmoduleGeneration',
+        action='store_true',
+        default=False,
+        help='Generate .swiftmodule files in parallel to building modules, can speed up compilation on multi-core systems.'
     )
 
     if len(sys.argv) < 2:

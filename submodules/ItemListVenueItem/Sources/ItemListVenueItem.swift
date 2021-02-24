@@ -71,11 +71,6 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
             if let nodeValue = node() as? ItemListVenueItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
-                var animated = true
-                if case .None = animation {
-                    animated = false
-                }
-                
                 async {
                     var firstWithHeader = false
                     var last = false

@@ -50,7 +50,7 @@ objc_library(
     copts = [
         "-I{}/PublicHeaders/TgVoip".format(package_name()),
         "-I{}/libtgvoip".format(package_name()),
-        "-I{}/third-party/webrtc/webrtc-ios/src".format(package_name()),
+        "-I{}/third-party/webrtc/webrtc".format(package_name()),
         "-Isubmodules/Opus/Public/opus",
         "-DTGVOIP_USE_INSTALLED_OPUS",
         "-Drtc=rtc1",

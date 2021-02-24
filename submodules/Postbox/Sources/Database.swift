@@ -28,11 +28,16 @@ import sqlcipher
 public final class Database {
     internal var handle: OpaquePointer? = nil
 
-    public init?(_ location: String) {
+    public init?(_ location: String, readOnly: Bool) {
         if location != ":memory:" {
             let _ = open(location + "-guard", O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
         }
-        let flags = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
+        let flags: Int32
+        if readOnly {
+            flags = SQLITE_OPEN_READONLY
+        } else {
+            flags = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
+        }
         let res = sqlite3_open_v2(location, &self.handle, flags, nil)
         if res != SQLITE_OK {
             postboxLog("sqlite3_open_v2: \(res)")

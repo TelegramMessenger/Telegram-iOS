@@ -7,13 +7,30 @@ import TelegramPresentationData
 import ListSectionHeaderNode
 import ItemListUI
 
+public enum SectionHeaderAdditionalText {
+    case none
+    case generic(String)
+    case destructive(String)
+    
+    var text: String? {
+        switch self {
+            case .none:
+                return nil
+            case let .generic(text), let .destructive(text):
+                return text
+        }
+    }
+}
+
 public class SectionHeaderItem: ListViewItem {
     let presentationData: ItemListPresentationData
     let title: String
+    let additionalText: SectionHeaderAdditionalText
     
-    public init(presentationData: ItemListPresentationData, title: String) {
+    public init(presentationData: ItemListPresentationData, title: String, additionalText: SectionHeaderAdditionalText = .none) {
         self.presentationData = presentationData
         self.title = title
+        self.additionalText = additionalText
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -96,11 +113,18 @@ private class SectionHeaderItemNode: ListViewItemNode {
                             }
                         } else {
                             headerNode = ListSectionHeaderNode(theme: item.presentationData.theme)
-                            headerNode.title = item.title
                             strongSelf.addSubnode(headerNode)
                             strongSelf.headerNode = headerNode
                         }
-
+                        headerNode.title = item.title
+                        switch item.additionalText {
+                            case .none, .generic:
+                                headerNode.actionType = .generic
+                            case .destructive:
+                                headerNode.actionType = .destructive
+                                
+                        }
+                        headerNode.action = item.additionalText.text
                         headerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                         headerNode.updateLayout(size: contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     }

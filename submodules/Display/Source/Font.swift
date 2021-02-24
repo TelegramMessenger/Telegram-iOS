@@ -45,7 +45,7 @@ public struct Font {
             }
             var updatedDescriptor: UIFontDescriptor? = descriptor.withSymbolicTraits(symbolicTraits)
             if traits.contains(.monospacedNumbers) {
-                updatedDescriptor = descriptor.addingAttributes([
+                updatedDescriptor = updatedDescriptor?.addingAttributes([
                 UIFontDescriptor.AttributeName.featureSettings: [
                   [UIFontDescriptor.FeatureKey.featureIdentifier:
                    kNumberSpacingType,
@@ -63,15 +63,25 @@ public struct Font {
                 default:
                     updatedDescriptor = updatedDescriptor?.withDesign(.default)
             }
-            switch weight {
-            case .semibold:
-                let fontTraits = [UIFontDescriptor.TraitKey.weight: UIFont.Weight.semibold]
+            if weight != .regular {
+                let fontWeight: UIFont.Weight
+                switch weight {
+                    case .light:
+                        fontWeight = .light
+                    case .medium:
+                        fontWeight = .medium
+                    case .semibold:
+                        fontWeight = .semibold
+                    case .bold:
+                        fontWeight = .bold
+                    default:
+                        fontWeight = .regular
+                }
                 updatedDescriptor = updatedDescriptor?.addingAttributes([
-                    UIFontDescriptor.AttributeName.traits: fontTraits
+                    UIFontDescriptor.AttributeName.traits: [UIFontDescriptor.TraitKey.weight: fontWeight]
                 ])
-            default:
-                break
             }
+         
             if let updatedDescriptor = updatedDescriptor {
                 return UIFont(descriptor: updatedDescriptor, size: size)
             } else {

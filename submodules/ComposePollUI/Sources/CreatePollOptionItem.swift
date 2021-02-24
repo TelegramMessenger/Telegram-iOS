@@ -97,7 +97,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private var checkNode: CheckNode?
+    private var checkNode: InteractiveCheckNode?
     
     private let textClippingNode: ASDisplayNode
     private let textNode: EditableTextNode
@@ -160,10 +160,6 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         
         self.containerNode.addSubnode(self.reorderControlNode)
         self.containerNode.addSubnode(self.textLimitNode)
-    }
-    
-    @objc private func checkNodePressed() {
-        self.item?.toggleSelected()
     }
     
     override func didLoad() {
@@ -360,16 +356,18 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     
                     strongSelf.textNode.keyboardAppearance = item.presentationData.theme.rootController.keyboardColor.keyboardAppearance
                     
-                    let checkSize = CGSize(width: 32.0, height: 32.0)
-                    let checkFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + 11.0, y: floor((layout.contentSize.height - checkSize.height) / 2.0)), size: checkSize)
+                    let checkSize = CGSize(width: 22.0, height: 22.0)
+                    let checkFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + 16.0, y: floor((layout.contentSize.height - checkSize.height) / 2.0)), size: checkSize)
                     if let isSelected = item.isSelected {
                         if let checkNode = strongSelf.checkNode {
                             transition.updateFrame(node: checkNode, frame: checkFrame)
-                            checkNode.setIsChecked(isSelected, animated: true)
+                            checkNode.setSelected(isSelected, animated: true)
                         } else {
-                            let checkNode = CheckNode(strokeColor: item.presentationData.theme.list.itemCheckColors.strokeColor, fillColor: item.presentationData.theme.list.itemSwitchColors.positiveColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
-                            checkNode.addTarget(target: strongSelf, action: #selector(strongSelf.checkNodePressed))
-                            checkNode.setIsChecked(isSelected, animated: false)
+                            let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: item.presentationData.theme.list.itemSwitchColors.positiveColor, strokeColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: item.presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
+                            checkNode.setSelected(isSelected, animated: false)
+                            checkNode.valueChanged = { [weak self] value in
+                                self?.item?.toggleSelected()
+                            }
                             strongSelf.checkNode = checkNode
                             strongSelf.containerNode.addSubnode(checkNode)
                             checkNode.frame = checkFrame

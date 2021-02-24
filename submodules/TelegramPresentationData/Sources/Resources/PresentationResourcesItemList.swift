@@ -85,14 +85,7 @@ public struct PresentationResourcesItemList {
     
     public static func itemListReorderIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListReorderIndicatorIcon.rawValue, { theme in
-            generateImage(CGSize(width: 16.0, height: 9.0), contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.list.controlSecondaryColor.cgColor)
-                
-                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: 1.5)))
-                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 3.5), size: CGSize(width: size.width, height: 1.5)))
-                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 7), size: CGSize(width: size.width, height: 1.5)))
-            })
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/Reorder"), color: theme.list.controlSecondaryColor)
         })
     }
     

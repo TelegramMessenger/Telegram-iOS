@@ -54,7 +54,7 @@ public final class ItemListControllerSegmentedTitleView: UIView {
         super.layoutSubviews()
         
         let size = self.bounds.size
-        let controlSize = self.segmentedControlNode.updateLayout(.sizeToFit(maximumWidth: size.width, minimumWidth: 160.0), transition: .immediate)
+        let controlSize = self.segmentedControlNode.updateLayout(.sizeToFit(maximumWidth: size.width, minimumWidth: 160.0, height: 32.0), transition: .immediate)
         self.segmentedControlNode.frame = CGRect(origin: CGPoint(x: floor((size.width - controlSize.width) / 2.0), y: floor((size.height - controlSize.height) / 2.0)), size: controlSize)
     }
 }

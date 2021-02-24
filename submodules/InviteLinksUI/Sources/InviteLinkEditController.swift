@@ -17,6 +17,7 @@ import PresentationDataUtils
 import AppBundle
 import ContextUI
 import TelegramStringFormatting
+import UndoUI
 
 private final class InviteLinkEditControllerArguments {
     let context: AccountContext
@@ -40,22 +41,29 @@ private enum InviteLinksEditSection: Int32 {
 
 private let invalidAmountCharacters = CharacterSet(charactersIn: "01234567890.,").inverted
 func isValidNumberOfUsers(_ number: String) -> Bool {
+    if number.isEmpty {
+        return true
+    }
     let number = normalizeArabicNumeralString(number, type: .western)
     if number.rangeOfCharacter(from: invalidAmountCharacters) != nil || number == "0" {
         return false
     }
-    return true
+    if let value = Int32(number), value > 0 && value < 100000 {
+        return true
+    } else {
+        return false
+    }
 }
 
 private enum InviteLinksEditEntry: ItemListNodeEntry {
     case timeHeader(PresentationTheme, String)
     case timePicker(PresentationTheme, InviteLinkTimeLimit)
-    case timeExpiryDate(PresentationTheme, Int32?, Bool)
-    case timeCustomPicker(PresentationTheme, Int32?)
+    case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
+    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?)
     case timeInfo(PresentationTheme, String)
     
     case usageHeader(PresentationTheme, String)
-    case usagePicker(PresentationTheme, InviteLinkUsageLimit)
+    case usagePicker(PresentationTheme, PresentationDateTimeFormat, InviteLinkUsageLimit)
     case usageCustomPicker(PresentationTheme, Int32?, Bool, Bool)
     case usageInfo(PresentationTheme, String)
     
@@ -111,14 +119,14 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .timeExpiryDate(lhsTheme, lhsDate, lhsActive):
-                if case let .timeExpiryDate(rhsTheme, rhsDate, rhsActive) = rhs, lhsTheme === rhsTheme, lhsDate == rhsDate, lhsActive == rhsActive {
+            case let .timeExpiryDate(lhsTheme, lhsDateTimeFormat, lhsDate, lhsActive):
+                if case let .timeExpiryDate(rhsTheme, rhsDateTimeFormat, rhsDate, rhsActive) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsActive == rhsActive {
                     return true
                 } else {
                     return false
                 }
-            case let .timeCustomPicker(lhsTheme, lhsDate):
-                if case let .timeCustomPicker(rhsTheme, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDate == rhsDate {
+            case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate):
+                if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate {
                     return true
                 } else {
                     return false
@@ -135,8 +143,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .usagePicker(lhsTheme, lhsValue):
-                if case let .usagePicker(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+            case let .usagePicker(lhsTheme, lhsDateTimeFormat, lhsValue):
+                if case let .usagePicker(rhsTheme, rhsDateTimeFormat, rhsValue) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -182,10 +190,10 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     })
                 })
-            case let .timeExpiryDate(theme, value, active):
+            case let .timeExpiryDate(theme, dateTimeFormat, value, active):
                 let text: String
                 if let value = value {
-                    text = stringForFullDate(timestamp: value, strings: presentationData.strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."))
+                    text = stringForMediumDate(timestamp: value, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 } else {
                     text = presentationData.strings.InviteLink_Create_TimeLimitExpiryDateNever
                 }
@@ -197,8 +205,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     }
                 })
-            case let .timeCustomPicker(_, date):
-                return ItemListDatePickerItem(presentationData: presentationData, date: date, sectionId: self.section, style: .blocks, updated: { date in
+            case let .timeCustomPicker(_, dateTimeFormat, date):
+                return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, sectionId: self.section, style: .blocks, updated: { date in
                     arguments.updateState({ state in
                         var updatedState = state
                         updatedState.time = .custom(date)
@@ -209,8 +217,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .usageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .usagePicker(_, value):
-                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, value: value, enabled: true, sectionId: self.section, updated: { value in
+            case let .usagePicker(_, dateTimeFormat, value):
+                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, value: value, enabled: true, sectionId: self.section, updated: { value in
                     arguments.dismissInput()
                     arguments.updateState({ state in
                         var updatedState = state
@@ -229,12 +237,13 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     text = focused ? "" : presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsersUnlimited
                 }
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: nil, sectionId: self.section, textUpdated: { updatedText in
-                    guard !updatedText.isEmpty else {
-                        return
-                    }
                     arguments.updateState { state in
                         var updatedState = state
-                        updatedState.usage = InviteLinkUsageLimit(value: Int32(updatedText))
+                        if updatedText.isEmpty {
+                            updatedState.usage = .unlimited
+                        } else if let value = Int32(updatedText) {
+                            updatedState.usage = InviteLinkUsageLimit(value: value)
+                        }
                         return updatedState
                     }
                 }, shouldUpdateText: { text in
@@ -281,14 +290,14 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     } else if let value = state.time.value {
         time = currentTime + value
     }
-    entries.append(.timeExpiryDate(presentationData.theme, time, state.pickingTimeLimit))
+    entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingTimeLimit))
     if state.pickingTimeLimit {
-        entries.append(.timeCustomPicker(presentationData.theme, time ?? currentTime))
+        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time))
     }
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     
     entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
-    entries.append(.usagePicker(presentationData.theme, state.usage))
+    entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage))
     
     var customValue = false
     if case .custom = state.usage {
@@ -358,35 +367,54 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
         guard let invite = invite else {
             return
         }
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationData: presentationData)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
-                ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
-                    dismissAction()
-                    dismissImpl?()
-                    
-                    let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
-                    |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
-                    |> deliverOnMainQueue).start(next: { invite in
-                        completion?(invite)
-                    }, error: { _ in
-                        updateState { state in
-                            var updatedState = state
-                            updatedState.updating = false
-                            return updatedState
-                        }
-                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+        |> deliverOnMainQueue).start(next: { peer in
+            let isGroup: Bool
+            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                isGroup = false
+            } else {
+                isGroup = true
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationData: presentationData)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                        dismissAction()
+                        dismissImpl?()
+                        
+                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
+                        |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                        |> deliverOnMainQueue).start(next: { invite in
+                            switch invite {
+                            case .none:
+                                completion?(nil)
+                            case let .update(invitation):
+                                completion?(invitation)
+                            case let .replace(_, invitation):
+                                completion?(invitation)
+                            }
+                            
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                        }, error: { _ in
+                            updateState { state in
+                                var updatedState = state
+                                updatedState.updating = false
+                                return updatedState
+                            }
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        })
                     })
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, nil)
+                ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            presentControllerImpl?(controller, nil)
+        })
     })
     
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)
@@ -462,6 +490,9 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.beganInteractiveDragging = {
+        dismissInputImpl?()
+    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

@@ -219,7 +219,14 @@ private final class ImportManager {
                 break
             }
             if self.pendingEntries.isEmpty {
-                Logger.shared.log("ChatImportScreen", "updateState no more pending entries, stop searching")
+                Logger.shared.log("ChatImportScreen", "updateState no more pending entries, stop searching (active entries: \(self.activeEntries.keys))")
+                
+                if self.activeEntries.isEmpty {
+                    Logger.shared.log("ChatImportScreen", "no active entries, completing")
+                    self.complete()
+                    return
+                }
+                
                 break
             }
             

@@ -261,34 +261,72 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .channelMigratedFromGroup, .groupMigratedToChannel:
                 attributedString = NSAttributedString(string: "", font: titleFont, textColor: primaryTextColor)
             case let .messageAutoremoveTimeoutUpdated(timeout):
+                let authorString: String
+                if let author = messageMainPeer(message) {
+                    authorString = author.compactDisplayTitle
+                } else {
+                    authorString = ""
+                }
+                
+                let messagePeer = message.peers[message.id.peerId]
+                
                 if timeout > 0 {
-                    let timeValue = timeIntervalString(strings: strings, value: timeout)
+                    let timeValue = timeIntervalString(strings: strings, value: timeout, preferLowerValue: true)
+                    
+                    /*
+                     "Conversation.AutoremoveTimerSetUserYou" = "You set messages to automatically delete after %2$@.";
+                     "Conversation.AutoremoveTimerSetUser" = "%1$@ set messages to automatically delete after %2$@.";
+                     "Conversation.AutoremoveTimerRemovedUserYou" = "You disabled the self-destruct timer";
+                     "Conversation.AutoremoveTimerRemovedUser" = "%1$@ disabled the self-destruct timer";
+                     "Conversation.AutoremoveTimerSetGroup" = "Messages will automatically delete after %1$@.";
+                     "Conversation.AutoremoveTimerRemovedGroup" = "Self-destruct timer was disabled";
+                     */
                     
                     let string: String
-                    if message.author?.id == accountPeerId {
-                        string = strings.Notification_MessageLifetimeChangedOutgoing(timeValue).0
-                    } else {
-                        let authorString: String
-                        if let author = messageMainPeer(message) {
-                            authorString = author.compactDisplayTitle
+                    if let _ = messagePeer as? TelegramUser {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerSetUserYou(timeValue).0
                         } else {
-                            authorString = ""
+                            string = strings.Conversation_AutoremoveTimerSetUser(authorString, timeValue).0
                         }
-                        string = strings.Notification_MessageLifetimeChanged(authorString, timeValue).0
+                    } else if let _ = messagePeer as? TelegramGroup {
+                        string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).0
+                    } else if let channel = messagePeer as? TelegramChannel {
+                        if case .group = channel.info {
+                            string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).0
+                        } else {
+                            string = strings.Conversation_AutoremoveTimerSetChannel(timeValue).0
+                        }
+                    } else {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Notification_MessageLifetimeChangedOutgoing(timeValue).0
+                        } else {
+                            string = strings.Notification_MessageLifetimeChanged(authorString, timeValue).0
+                        }
                     }
                     attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
                 } else {
                     let string: String
-                    if message.author?.id == accountPeerId {
-                        string = strings.Notification_MessageLifetimeRemovedOutgoing
-                    } else {
-                        let authorString: String
-                        if let author = messageMainPeer(message) {
-                            authorString = author.compactDisplayTitle
+                    if let _ = messagePeer as? TelegramUser {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerRemovedUserYou
                         } else {
-                            authorString = ""
+                            string = strings.Conversation_AutoremoveTimerRemovedUser(authorString).0
                         }
-                        string = strings.Notification_MessageLifetimeRemoved(authorString).0
+                    } else if let _ = messagePeer as? TelegramGroup {
+                        string = strings.Conversation_AutoremoveTimerRemovedGroup
+                    } else if let channel = messagePeer as? TelegramChannel {
+                        if case .group = channel.info {
+                            string = strings.Conversation_AutoremoveTimerRemovedGroup
+                        } else {
+                            string = strings.Conversation_AutoremoveTimerRemovedChannel
+                        }
+                    } else {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Notification_MessageLifetimeRemovedOutgoing
+                        } else {
+                            string = strings.Notification_MessageLifetimeRemoved(authorString).0
+                        }
                     }
                     attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
                 }
@@ -413,7 +451,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                    let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
                     let titleString = strings.Notification_VoiceChatStarted(authorName)
                     attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                 }

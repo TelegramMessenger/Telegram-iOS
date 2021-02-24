@@ -931,8 +931,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             var directionIsToRight: Bool?
             if abs(velocity.x) > 10.0 {
                 directionIsToRight = velocity.x < 0.0
-            } else if abs(transitionFraction) > 0.5 {
-                directionIsToRight = transitionFraction < 0.0
+            } else if abs(self.transitionFraction) > 0.5 {
+                directionIsToRight = self.transitionFraction < 0.0
             }
             var updatedIndex = self.currentIndex
             if let directionIsToRight = directionIsToRight {
@@ -2259,6 +2259,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
             let textColor = presentationData.theme.list.itemPrimaryTextColor
             
             self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
+            self.textNode.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
+            self.textNode.tintColor = presentationData.theme.list.itemAccentColor
             
             self.textNode.clipsToBounds = true
             self.textNode.delegate = self

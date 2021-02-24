@@ -39,7 +39,7 @@ public func removeGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) 
                                     return current
                                 }
                             })
-                        } |> mapError { _ -> RemoveGroupAdminError in return .generic }
+                        } |> mapError { _ -> RemoveGroupAdminError in }
                 }
             } else {
                 return .fail(.generic)
@@ -48,7 +48,7 @@ public func removeGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) 
             return .fail(.generic)
         }
     }
-    |> mapError { _ -> RemoveGroupAdminError in return .generic }
+    |> mapError { _ -> RemoveGroupAdminError in }
     |> switchToLatest
 }
 
@@ -108,7 +108,7 @@ public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> 
                                 return current
                             }
                         })
-                    } |> mapError { _ -> AddGroupAdminError in return .generic }
+                    } |> mapError { _ -> AddGroupAdminError in }
                 }
             } else {
                 return .fail(.generic)
@@ -117,7 +117,7 @@ public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> 
             return .fail(.generic)
         }
     }
-    |> mapError { _ -> AddGroupAdminError in return .generic }
+    |> mapError { _ -> AddGroupAdminError in }
     |> switchToLatest
 }
 
@@ -150,10 +150,9 @@ public func fetchChannelParticipant(account: Account, peerId: PeerId, participan
     } |> switchToLatest
 }
 
-public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChatAdminRights, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> {
+public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChatAdminRights?, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> {
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: adminId)
     |> mapError { error -> UpdateChannelAdminRightsError in
-        return .generic
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> in
         return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> in
@@ -162,7 +161,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                     let updatedParticipant: ChannelParticipant
                     if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _, _) = currentParticipant {
                         let adminInfo: ChannelParticipantAdminInfo?
-                        if !rights.flags.isEmpty {
+                        if let rights = rights {
                             adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: currentAdminInfo?.promotedBy ?? account.peerId, canBeEditedByAccountPeer: true)
                         } else {
                             adminInfo = nil
@@ -170,7 +169,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                         updatedParticipant = .member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
                     } else if let currentParticipant = currentParticipant, case .creator = currentParticipant {
                         let adminInfo: ChannelParticipantAdminInfo?
-                        if !rights.flags.isEmpty {
+                        if let rights = rights {
                             adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: account.peerId, canBeEditedByAccountPeer: true)
                         } else {
                             adminInfo = nil
@@ -178,14 +177,14 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                         updatedParticipant = .creator(id: adminId, adminInfo: adminInfo, rank: rank)
                     } else {
                         let adminInfo: ChannelParticipantAdminInfo?
-                        if !rights.flags.isEmpty {
+                        if let rights = rights {
                             adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: account.peerId, canBeEditedByAccountPeer: true)
                         } else {
                             adminInfo = nil
                         }
                         updatedParticipant = .member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil, rank: rank)
                     }
-                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: rank ?? ""))
+                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(flags: 0), rank: rank ?? ""))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], UpdateChannelAdminRightsError> in
                         if error.errorDescription == "USER_NOT_PARTICIPANT" {
@@ -197,7 +196,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                                 return .addMemberError(error)
                             }
                             |> then(
-                                account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: rank ?? ""))
+                                account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(flags: 0), rank: rank ?? ""))
                                 |> mapError { error -> UpdateChannelAdminRightsError in
                                     return .generic
                                 }
@@ -226,14 +225,14 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                                             case .creator:
                                                 wasAdmin = true
                                             case let .member(_, _, adminInfo, _, _):
-                                                if let adminInfo = adminInfo, !adminInfo.rights.isEmpty {
+                                                if let _ = adminInfo {
                                                     wasAdmin = true
                                                 }
                                         }
                                     }
-                                    if wasAdmin && rights.isEmpty {
+                                    if wasAdmin && rights == nil {
                                         updatedAdminCount = max(1, adminCount - 1)
-                                    } else if !wasAdmin && !rights.isEmpty {
+                                    } else if !wasAdmin && rights != nil {
                                         updatedAdminCount = adminCount + 1
                                     }
                                     
@@ -254,7 +253,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                                 }
                             }
                             return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: adminPeer, peers: peers, presences: presences))
-                        } |> mapError { _ -> UpdateChannelAdminRightsError in return .generic }
+                        } |> mapError { _ -> UpdateChannelAdminRightsError in }
                     }
                 } else {
                     return .fail(.generic)
@@ -263,8 +262,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                 return .fail(.generic)
             }
         }
-        |> mapError { _ -> UpdateChannelAdminRightsError in return .generic }
+        |> mapError { _ -> UpdateChannelAdminRightsError in }
         |> switchToLatest
     }
 }
-

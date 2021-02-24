@@ -172,10 +172,18 @@ static CGSize TGFitSize(CGSize size, CGSize maxSize) {
 {
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
     {
+        bool preferAsFile = false;
+#if DEBUG
+        preferAsFile = true;
+#endif
+        
         CGSize maxSize = CGSizeMake(1280.0, 1280.0);
         NSDictionary *imageOptions = @{
             NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:maxSize]
         };
+        if (preferAsFile) {
+            imageOptions = nil;
+        }
         if ([itemProvider hasItemConformingToTypeIdentifier:(NSString *)kUTTypeImage]) {
             [itemProvider loadItemForTypeIdentifier:(NSString *)kUTTypeImage options:imageOptions completionHandler:^(id<NSSecureCoding> _Nullable item, NSError * _Null_unspecified error) {
                 if (error != nil && ![(NSObject *)item respondsToSelector:@selector(CGImage)] && ![(NSObject *)item respondsToSelector:@selector(absoluteString)]) {
@@ -193,44 +201,63 @@ static CGSize TGFitSize(CGSize size, CGSize maxSize) {
                     if ([(NSObject *)item respondsToSelector:@selector(absoluteString)]) {
                         NSURL *url = (NSURL *)item;
                         
-                        CGImageSourceRef src = CGImageSourceCreateWithURL((__bridge CFURLRef) url, NULL);
-
-                        CFDictionaryRef options = (__bridge CFDictionaryRef) @{
-                            (id) kCGImageSourceCreateThumbnailWithTransform : @YES,
-                            (id) kCGImageSourceCreateThumbnailFromImageAlways : @YES,
-                            (id) kCGImageSourceThumbnailMaxPixelSize : @(maxSize.width)
-                        };
-                        
-                        CGImageRef image = CGImageSourceCreateThumbnailAtIndex(src, 0, options);
-                        CFRelease(src);
-                        
-                        if (image == nil) {
-                            [subscriber putError:nil];
-                            return;
-                        }
-                        
-                        NSString *tempPath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"img%d", (int)arc4random()]];
-                        CFURLRef tempUrl = (__bridge CFURLRef)[NSURL fileURLWithPath:tempPath];
-                        CGImageDestinationRef destination = CGImageDestinationCreateWithURL(tempUrl, kUTTypeJPEG, 1, NULL);
-                        NSDictionary *properties = @{ (__bridge NSString *)kCGImageDestinationLossyCompressionQuality: @(0.52)};
-
-                        CGImageDestinationSetProperties(destination, (__bridge CFDictionaryRef)properties);
-                        CGImageDestinationAddImage(destination, image, nil);
-                        
-                        if (!CGImageDestinationFinalize(destination)) {
-                            CFRelease(destination);
-                            
-                            [subscriber putError:nil];
-                            return;
-                        }
-                        
-                        CFRelease(destination);
-                        NSData *resultData = [[NSData alloc] initWithContentsOfFile:tempPath options:NSDataReadingMappedIfSafe error:nil];
-                        if (resultData != nil) {
-                            [subscriber putNext:@{@"scaledImageData": resultData, @"scaledImageDimensions": [NSValue valueWithCGSize:CGSizeMake(CGImageGetWidth(image), CGImageGetHeight(image))]}];
+                        if (preferAsFile) {
+                            NSData *data = [[NSData alloc] initWithContentsOfURL:url options:NSDataReadingMappedIfSafe error:nil];
+                            if (data == nil) {
+                                [subscriber putError:nil];
+                                return;
+                            }
+                            NSString *fileName = [[url pathComponents] lastObject];
+                            if (fileName.length == 0) {
+                                fileName = @"file.bin";
+                            }
+                            NSString *extension = [fileName pathExtension];
+                            NSString *mimeType = [TGMimeTypeMap mimeTypeForExtension:[extension lowercaseString]];
+                            if (mimeType == nil) {
+                                mimeType = @"application/octet-stream";
+                            }
+                            [subscriber putNext:@{@"data": data, @"fileName": fileName, @"mimeType": mimeType, @"treatAsFile": @true}];
                             [subscriber putCompletion];
                         } else {
-                            [subscriber putError:nil];
+                            CGImageSourceRef src = CGImageSourceCreateWithURL((__bridge CFURLRef) url, NULL);
+
+                            CFDictionaryRef options = (__bridge CFDictionaryRef) @{
+                                (id) kCGImageSourceCreateThumbnailWithTransform : @YES,
+                                (id) kCGImageSourceCreateThumbnailFromImageAlways : @YES,
+                                (id) kCGImageSourceThumbnailMaxPixelSize : @(maxSize.width)
+                            };
+                            
+                            CGImageRef image = CGImageSourceCreateThumbnailAtIndex(src, 0, options);
+                            CFRelease(src);
+                            
+                            if (image == nil) {
+                                [subscriber putError:nil];
+                                return;
+                            }
+                            
+                            NSString *tempPath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"img%d", (int)arc4random()]];
+                            CFURLRef tempUrl = (__bridge CFURLRef)[NSURL fileURLWithPath:tempPath];
+                            CGImageDestinationRef destination = CGImageDestinationCreateWithURL(tempUrl, kUTTypeJPEG, 1, NULL);
+                            NSDictionary *properties = @{ (__bridge NSString *)kCGImageDestinationLossyCompressionQuality: @(0.52)};
+
+                            CGImageDestinationSetProperties(destination, (__bridge CFDictionaryRef)properties);
+                            CGImageDestinationAddImage(destination, image, nil);
+                            
+                            if (!CGImageDestinationFinalize(destination)) {
+                                CFRelease(destination);
+                                
+                                [subscriber putError:nil];
+                                return;
+                            }
+                            
+                            CFRelease(destination);
+                            NSData *resultData = [[NSData alloc] initWithContentsOfFile:tempPath options:NSDataReadingMappedIfSafe error:nil];
+                            if (resultData != nil) {
+                                [subscriber putNext:@{@"scaledImageData": resultData, @"scaledImageDimensions": [NSValue valueWithCGSize:CGSizeMake(CGImageGetWidth(image), CGImageGetHeight(image))]}];
+                                [subscriber putCompletion];
+                            } else {
+                                [subscriber putError:nil];
+                            }
                         }
                     } else {
                         [subscriber putNext:@{@"image": item}];

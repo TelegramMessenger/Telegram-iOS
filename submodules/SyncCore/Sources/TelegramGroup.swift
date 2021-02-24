@@ -60,6 +60,8 @@ public struct TelegramGroupFlags: OptionSet {
     }
     
     public static let deactivated = TelegramGroupFlags(rawValue: 1 << 1)
+    public static let hasVoiceChat = TelegramGroupFlags(rawValue: 1 << 2)
+    public static let hasActiveVoiceChat = TelegramGroupFlags(rawValue: 1 << 3)
 }
 
 public struct TelegramGroupToChannelMigrationReference: Equatable {

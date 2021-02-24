@@ -210,17 +210,12 @@ final class WebSearchItemNode: GridItemNode {
         self.updateSelectionState(animated: false)
     }
     
-    @objc func toggleSelection() {
-        if let checkNode = self.checkNode, let item = self.item {
-            checkNode.setIsChecked(!checkNode.isChecked, animated: true)
-            item.controllerInteraction.toggleSelection(item.result, checkNode.isChecked)
-        }
-    }
-    
     func updateSelectionState(animated: Bool) {
         if self.checkNode == nil, let item = self.item, let _ = item.controllerInteraction.selectionState {
-            let checkNode = CheckNode(strokeColor: item.theme.list.itemCheckColors.strokeColor, fillColor: item.theme.list.itemCheckColors.fillColor, foregroundColor: item.theme.list.itemCheckColors.foregroundColor, style: .overlay)
-            checkNode.addTarget(target: self, action: #selector(self.toggleSelection))
+            let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: item.theme, style: .overlay))
+            checkNode.valueChanged = { value in
+                item.controllerInteraction.toggleSelection(item.result, value)
+            }
             self.addSubnode(checkNode)
             self.checkNode = checkNode
             self.setNeedsLayout()
@@ -229,7 +224,7 @@ final class WebSearchItemNode: GridItemNode {
         if let item = self.item {
             if let selectionState = item.controllerInteraction.selectionState {
                 let selected = selectionState.isIdentifierSelected(item.result.id)
-                self.checkNode?.setIsChecked(selected, animated: animated)
+                self.checkNode?.setSelected(selected, animated: animated)
             }
         }
     }
@@ -261,8 +256,8 @@ final class WebSearchItemNode: GridItemNode {
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor))()
         }
         
-        let checkSize = CGSize(width: 32.0, height: 32.0)
-        self.checkNode?.frame = CGRect(origin: CGPoint(x: imageFrame.width - checkSize.width, y: 0.0), size: checkSize)
+        let checkSize = CGSize(width: 28.0, height: 28.0)
+        self.checkNode?.frame = CGRect(origin: CGPoint(x: imageFrame.width - checkSize.width - 2.0, y: 2.0), size: checkSize)
     }
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {

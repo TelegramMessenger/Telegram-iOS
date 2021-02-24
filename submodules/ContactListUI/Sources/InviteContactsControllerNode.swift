@@ -287,11 +287,15 @@ final class InviteContactsControllerNode: ASDisplayNode {
     init(context: AccountContext) {
         self.context = context
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         var shareImpl: (() -> Void)?
         self.countPanelNode = InviteContactsCountPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
@@ -474,7 +478,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         var headerInsets = layout.insets(options: [.input])
         headerInsets.top += actualNavigationBarHeight
         
-        let countPanelHeight = self.countPanelNode.updateLayout(width: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+        let countPanelHeight = self.countPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
         if self.selectionState.selectedContactIndices.isEmpty {
             transition.updateFrame(node: self.countPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: countPanelHeight)))
         } else {

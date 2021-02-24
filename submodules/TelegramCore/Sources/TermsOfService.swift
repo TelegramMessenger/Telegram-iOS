@@ -59,7 +59,7 @@ func managedTermsOfServiceUpdates(postbox: Postbox, network: Network, stateManag
         switch result {
             case let .termsOfServiceUpdate(_, termsOfService):
                 updated = TermsOfServiceUpdate(apiTermsOfService: termsOfService)
-            case let .termsOfServiceUpdateEmpty(expires):
+            case .termsOfServiceUpdateEmpty:
                 break
         }
         stateManager?.modifyTermsOfServiceUpdate { _ in

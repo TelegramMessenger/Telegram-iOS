@@ -14,21 +14,19 @@ final class ChatMessageSelectionNode: ASDisplayNode {
     init(wallpaper: TelegramWallpaper, theme: PresentationTheme, toggle: @escaping (Bool) -> Void) {
         self.toggle = toggle
         
-        let style: CheckNodeStyle
+        let style: CheckNodeTheme.Style
         if wallpaper == theme.chat.defaultWallpaper, case .color = wallpaper {
             style = .plain
         } else {
             style = .overlay
         }
         
-        self.checkNode = CheckNode(strokeColor: theme.list.itemCheckColors.strokeColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: style)
+        self.checkNode = CheckNode(theme: CheckNodeTheme(theme: theme, style: style, hasInset: true))
         self.checkNode.isUserInteractionEnabled = false
         
         super.init()
         
         self.addSubnode(self.checkNode)
-        
-        //self.hitTestSlop = UIEdgeInsetsMake(0.0, 42.0, 0.0, 0.0)
     }
     
     override func didLoad() {
@@ -40,7 +38,7 @@ final class ChatMessageSelectionNode: ASDisplayNode {
     func updateSelected(_ selected: Bool, animated: Bool) {
         if self.selected != selected {
             self.selected = selected
-            self.checkNode.setIsChecked(selected, animated: animated)
+            self.checkNode.setSelected(selected, animated: animated)
         }
     }
     
@@ -51,7 +49,7 @@ final class ChatMessageSelectionNode: ASDisplayNode {
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat) {
-        let checkSize = CGSize(width: 32.0, height: 32.0)
-        self.checkNode.frame = CGRect(origin: CGPoint(x: 4.0 + leftInset, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
+        let checkSize = CGSize(width: 28.0, height: 28.0)
+        self.checkNode.frame = CGRect(origin: CGPoint(x: 6.0 + leftInset, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
     }
 }

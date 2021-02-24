@@ -79,7 +79,7 @@ extension InstantPageTableRow {
 extension InstantPageRelatedArticle {
     convenience init(apiRelatedArticle: Api.PageRelatedArticle) {
         switch apiRelatedArticle {
-            case let .pageRelatedArticle(flags, url, webpageId, title, description, photoId, author, publishedDate):
+            case let .pageRelatedArticle(_, url, webpageId, title, description, photoId, author, publishedDate):
                 var posterPhotoId: MediaId?
                 if let photoId = photoId {
                     posterPhotoId = MediaId(namespace: Namespaces.Media.CloudImage, id: photoId)
@@ -177,14 +177,14 @@ extension InstantPage {
         let url: String
         let views: Int32?
         switch apiPage {
-            case let .page(page):
-                url = page.url
-                blocks = page.blocks
-                photos = page.photos
-                files = page.documents
-                isComplete = (page.flags & (1 << 0)) == 0
-                rtl = (page.flags & (1 << 1)) != 0
-                views = page.views
+            case let .page(flags, pageUrl, pageBlocks, pagePhotos, pageDocuments, pageViews):
+                url = pageUrl
+                blocks = pageBlocks
+                photos = pagePhotos
+                files = pageDocuments
+                isComplete = (flags & (1 << 0)) == 0
+                rtl = (flags & (1 << 1)) != 0
+                views = pageViews
         }
         var media: [MediaId: Media] = [:]
         for photo in photos {

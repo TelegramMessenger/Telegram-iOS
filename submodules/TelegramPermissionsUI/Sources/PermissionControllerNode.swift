@@ -22,7 +22,7 @@ public struct PermissionControllerCustomIcon: Equatable {
 
 public enum PermissionControllerContent: Equatable {
     case permission(PermissionState?)
-    case custom(icon: PermissionControllerCustomIcon, title: String, subtitle: String?, text: String, buttonTitle: String, footerText: String?)
+    case custom(icon: PermissionContentIcon, title: String, subtitle: String?, text: String, buttonTitle: String, secondaryButtonTitle: String?, footerText: String?)
 }
 
 private struct PermissionControllerDataState: Equatable {
@@ -208,7 +208,7 @@ final class PermissionControllerNode: ASDisplayNode {
                                     hasPrivacyPolicy = false
                             }
                             
-                            let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind.rawValue, icon: .image(icon), title: title, text: text, buttonTitle: buttonTitle, buttonAction: { [weak self] in
+                            let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind.rawValue, icon: .image(icon), title: title, text: text, buttonTitle: buttonTitle, secondaryButtonTitle: nil, buttonAction: { [weak self] in
                                 self?.allow?()
                                 }, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
                             self.insertSubnode(contentNode, at: 0)
@@ -233,14 +233,16 @@ final class PermissionControllerNode: ASDisplayNode {
                         transition.updateFrame(node: contentNode, frame: contentFrame)
                         contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: transition)
                     }
-                case let .custom(icon, title, subtitle, text, buttonTitle, footerText):
+                case let .custom(icon, title, subtitle, text, buttonTitle, secondaryButtonTitle, footerText):
                     if let contentNode = self.contentNode {
                         transition.updateFrame(node: contentNode, frame: contentFrame)
                         contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: transition)
                     } else {                        
-                        let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: 0, icon: .icon(icon), title: title, subtitle: subtitle, text: text, buttonTitle: buttonTitle, footerText: footerText, buttonAction: { [weak self] in
+                        let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: 0, icon: icon, title: title, subtitle: subtitle, text: text, buttonTitle: buttonTitle, secondaryButtonTitle: secondaryButtonTitle, footerText: footerText, buttonAction: { [weak self] in
                             self?.allow?()
-                        }, openPrivacyPolicy: nil)
+                        }, openPrivacyPolicy: secondaryButtonTitle != nil ? { [weak self] in
+                            self?.dismiss?()
+                        } : nil)
                         self.insertSubnode(contentNode, at: 0)
                         contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: .immediate)
                         contentNode.frame = contentFrame

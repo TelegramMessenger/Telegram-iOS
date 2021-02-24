@@ -335,8 +335,8 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
 public final class OngoingCallVideoCapturer {
     internal let impl: OngoingCallThreadLocalContextVideoCapturer
     
-    public init() {
-        self.impl = OngoingCallThreadLocalContextVideoCapturer()
+    public init(keepLandscape: Bool = false) {
+        self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: "", keepLandscape: keepLandscape)
     }
     
     public func switchVideoInput(isFront: Bool) {

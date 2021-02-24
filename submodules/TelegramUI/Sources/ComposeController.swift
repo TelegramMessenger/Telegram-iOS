@@ -224,7 +224,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 let controller = PermissionController(context: strongSelf.context, splashScreen: true)
-                controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Chat/Intro/ChannelIntro"), dark: nil), title: presentationData.strings.ChannelIntro_Title, subtitle: nil, text: presentationData.strings.ChannelIntro_Text, buttonTitle: presentationData.strings.ChannelIntro_CreateChannel, footerText: nil), animated: false)
+                controller.setState(.custom(icon: .animation("Channel"), title: presentationData.strings.ChannelIntro_Title, subtitle: nil, text: presentationData.strings.ChannelIntro_Text, buttonTitle: presentationData.strings.ChannelIntro_CreateChannel, secondaryButtonTitle: nil, footerText: nil), animated: false)
                 controller.proceed = { [weak self] result in
                     if let strongSelf = self {
                         (strongSelf.navigationController as? NavigationController)?.replaceTopController(createChannelController(context: strongSelf.context), animated: true)

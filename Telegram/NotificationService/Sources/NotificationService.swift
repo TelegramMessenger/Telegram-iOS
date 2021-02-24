@@ -5,7 +5,7 @@ import NotificationServiceObjC
 
 private let queue = Queue()
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(NotificationService)
 final class NotificationService: UNNotificationServiceExtension {
     private let impl: QueueLocalObject<NotificationServiceImpl>
@@ -18,9 +18,10 @@ final class NotificationService: UNNotificationServiceExtension {
                     f()
                 }
             }, countIncomingMessage: { rootPath, accountId, encryptionParameters, peerId, messageId in
-                SyncProviderImpl.addIncomingMessage(queue: queue, withRootPath: rootPath, accountId: accountId, encryptionParameters: encryptionParameters, peerId: peerId, messageId: messageId, completion: { count in
+                /*SyncProviderImpl.addIncomingMessage(queue: queue, withRootPath: rootPath, accountId: accountId, encryptionParameters: encryptionParameters, peerId: peerId, messageId: messageId, completion: { count in
                     completion?(count)
-                })
+                })*/
+                completion?(0)
             }, isLocked: { rootPath in
                 return SyncProviderImpl.isLocked(withRootPath: rootPath)
             }, lockedMessageText: { rootPath in

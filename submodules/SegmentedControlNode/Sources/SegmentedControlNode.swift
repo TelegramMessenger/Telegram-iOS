@@ -9,7 +9,7 @@ private let selectedTextFont = Font.bold(13.0)
 
 public enum SegmentedControlLayout {
     case stretchToFill(width: CGFloat)
-    case sizeToFit(maximumWidth: CGFloat, minimumWidth: CGFloat)
+    case sizeToFit(maximumWidth: CGFloat, minimumWidth: CGFloat, height: CGFloat)
 }
 
 public final class SegmentedControlTheme: Equatable {
@@ -294,11 +294,14 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         let calculatedWidth: CGFloat = 0.0
         
         let width: CGFloat
+        let height: CGFloat
         switch layout {
             case let .stretchToFill(targetWidth):
                 width = targetWidth
-            case let .sizeToFit(maximumWidth, minimumWidth):
+                height = 32.0
+            case let .sizeToFit(maximumWidth, minimumWidth, targetHeight):
                 width = max(minimumWidth, min(maximumWidth, calculatedWidth))
+                height = targetHeight
         }
 
         let selectedIndex: Int
@@ -308,7 +311,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             selectedIndex = self.selectedIndex
         }
         
-        let size = CGSize(width: width, height: 32.0)
+        let size = CGSize(width: width, height: height)
         if !self.itemNodes.isEmpty {
             let itemSize = CGSize(width: floorToScreenPixels(size.width / CGFloat(self.itemNodes.count)), height: size.height)
             

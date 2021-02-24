@@ -629,7 +629,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 if channel.flags.contains(.isCreator) {
                     accountUserRightsFlags = maskRightsFlags
                 } else if let adminRights = channel.adminRights {
-                    accountUserRightsFlags = maskRightsFlags.intersection(adminRights.flags)
+                    accountUserRightsFlags = maskRightsFlags.intersection(adminRights.rights)
                 } else {
                     accountUserRightsFlags = []
                 }
@@ -638,9 +638,9 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 if let updatedFlags = state.updatedFlags {
                     currentRightsFlags = updatedFlags
                 } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
-                    currentRightsFlags = adminRights.rights.flags
+                    currentRightsFlags = adminRights.rights.rights
                 } else if let initialParticipant = initialParticipant, case let .creator(_, maybeAdminRights, _) = initialParticipant, let adminRights = maybeAdminRights {
-                    currentRightsFlags = adminRights.rights.flags
+                    currentRightsFlags = adminRights.rights.rights
                 } else {
                     currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
                 }
@@ -661,7 +661,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 if channel.flags.contains(.isCreator) {
                     accountUserRightsFlags = maskRightsFlags
                 } else if let adminRights = channel.adminRights {
-                    accountUserRightsFlags = maskRightsFlags.intersection(adminRights.flags)
+                    accountUserRightsFlags = maskRightsFlags.intersection(adminRights.rights)
                 } else {
                     accountUserRightsFlags = []
                 }
@@ -670,7 +670,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 if let updatedFlags = state.updatedFlags {
                     currentRightsFlags = updatedFlags
                 } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
-                    currentRightsFlags = adminRights.rights.flags
+                    currentRightsFlags = adminRights.rights.rights
                 } else {
                     currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
                 }
@@ -691,7 +691,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     canTransfer = true
                 }
             
-                if let initialParticipant = initialParticipant, case let .member(_, _, adminInfoValue, _, _) = initialParticipant, let adminInfo = adminInfoValue, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
+                if let initialParticipant = initialParticipant, case let .member(_, _, adminInfoValue, _, _) = initialParticipant, let adminInfo = adminInfoValue, admin.id != accountPeerId {
                     if channel.flags.contains(.isCreator) {
                         canDismiss = true
                     } else {
@@ -710,7 +710,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminInfo, _, _) = initialParticipant, let adminInfo = maybeAdminInfo {
                 var index = 0
                 for right in rightsOrder {
-                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: channel.defaultBannedRights), right, adminInfo.rights.flags, adminInfo.rights.flags.contains(right), false))
+                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: channel.defaultBannedRights), right, adminInfo.rights.rights, adminInfo.rights.rights.contains(right), false))
                     index += 1
                 }
             }
@@ -783,15 +783,20 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             if let updatedFlags = state.updatedFlags {
                 currentRightsFlags = updatedFlags
             } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
-                currentRightsFlags = adminRights.rights.flags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
+                currentRightsFlags = adminRights.rights.rights.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
             } else {
                 currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
+            }
+            
+            var accountIsCreator = false
+            if case .creator = group.role {
+                accountIsCreator = true
             }
         
             var index = 0
             for right in rightsOrder {
                 if accountUserRightsFlags.contains(right) {
-                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: group.defaultBannedRights), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating))
+                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: group.defaultBannedRights), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating && accountIsCreator))
                     index += 1
                 }
             }
@@ -807,7 +812,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
             entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
             
-            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
+            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, admin.id != accountPeerId {
                 entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
             }
         }
@@ -816,7 +821,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func channelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, updated: @escaping (TelegramChatAdminRights) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, transferedOwnership: @escaping (PeerId) -> Void) -> ViewController {
+public func channelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, updated: @escaping (TelegramChatAdminRights?) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, transferedOwnership: @escaping (PeerId) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminControllerState())
     let updateState: ((ChannelAdminControllerState) -> ChannelAdminControllerState) -> Void = { f in
@@ -924,14 +929,14 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                 updateRightsDisposable.set((removeGroupAdmin(account: context.account, peerId: peerId, adminId: adminId)
                 |> deliverOnMainQueue).start(error: { _ in
                 }, completed: {
-                    updated(TelegramChatAdminRights(flags: []))
+                    updated(nil)
                     dismissImpl?()
                 }))
             } else {
-                updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []), rank: nil) |> deliverOnMainQueue).start(error: { _ in
+                updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: nil, rank: nil) |> deliverOnMainQueue).start(error: { _ in
                     
                 }, completed: {
-                    updated(TelegramChatAdminRights(flags: []))
+                    updated(nil)
                     dismissImpl?()
                 }))
             }
@@ -1006,21 +1011,21 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         switch initialParticipant {
                             case let .creator(_, adminInfo, rank):
                                 currentRank = rank
-                                currentFlags = adminInfo?.rights.flags ?? maskRightsFlags.subtracting(.canBeAnonymous)
+                                currentFlags = adminInfo?.rights.rights ?? maskRightsFlags.subtracting(.canBeAnonymous)
                             case let .member(_, _, adminInfo, _, rank):
                                 if updateFlags == nil {
                                     if adminInfo?.rights == nil {
                                         if channel.flags.contains(.isCreator) {
                                             updateFlags = maskRightsFlags.subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else if let adminRights = channel.adminRights {
-                                            updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting([.canAddAdmins, .canBeAnonymous])
+                                            updateFlags = maskRightsFlags.intersection(adminRights.rights).subtracting([.canAddAdmins, .canBeAnonymous])
                                         } else {
                                             updateFlags = []
                                         }
                                     }
                                 }
                                 currentRank = rank
-                                currentFlags = adminInfo?.rights.flags
+                                currentFlags = adminInfo?.rights.rights
                         }
                         
                         let effectiveRank = updateRank ?? currentRank
@@ -1029,11 +1034,11 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             return
                         }
                         
-                        if let updateFlags = updateFlags {
+                        if updateFlags != currentFlags {
                             updateState { current in
                                 return current.withUpdatedUpdating(true)
                             }
-                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: effectiveRank) |> deliverOnMainQueue).start(error: { error in
+                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags ?? []), rank: effectiveRank) |> deliverOnMainQueue).start(error: { error in
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 var text = presentationData.strings.Login_UnknownError
                                 switch error {
@@ -1061,17 +1066,17 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }, completed: {
-                                updated(TelegramChatAdminRights(flags: updateFlags))
+                                updated(TelegramChatAdminRights(rights: updateFlags ?? []))
                                 dismissImpl?()
                             }))
                         } else if let updateRank = updateRank, let currentFlags = currentFlags {
                             updateState { current in
                                 return current.withUpdatedUpdating(true)
                             }
-                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: currentFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { _ in
+                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: currentFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { _ in
                                 
                             }, completed: {
-                                updated(TelegramChatAdminRights(flags: currentFlags))
+                                updated(TelegramChatAdminRights(rights: currentFlags))
                                 dismissImpl?()
                             }))
                         } else {
@@ -1101,9 +1106,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             }
                             
                             if channel.flags.contains(.isCreator) {
-                                updateFlags = maskRightsFlags.subtracting(.canAddAdmins)
+                                updateFlags = maskRightsFlags.subtracting([.canAddAdmins, .canBeAnonymous])
                             } else if let adminRights = channel.adminRights {
-                                updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting(.canAddAdmins)
+                                updateFlags = maskRightsFlags.intersection(adminRights.rights).subtracting([.canAddAdmins, .canBeAnonymous])
                             } else {
                                 updateFlags = []
                             }
@@ -1113,7 +1118,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             updateState { current in
                                 return current.withUpdatedUpdating(true)
                             }
-                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
+                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
                                 if case let .addMemberError(error) = error, let admin = adminView.peers[adminView.peerId] {
                                     if case .restricted = error {
                                         var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
@@ -1136,7 +1141,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 }
                                 dismissImpl?()
                             }, completed: {
-                                updated(TelegramChatAdminRights(flags: updateFlags))
+                                updated(TelegramChatAdminRights(rights: updateFlags))
                                 dismissImpl?()
                             }))
                         }
@@ -1207,7 +1212,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 guard let upgradedPeerId = upgradedPeerId else {
                                     return .fail(.conversionFailed)
                                 }
-                                return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: updateRank)
+                                return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank)
                                 |> mapError { error -> WrappedUpdateChannelAdminRightsError in
                                     return .direct(error)
                                 }

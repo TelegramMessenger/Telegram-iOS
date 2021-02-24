@@ -14,6 +14,7 @@ import TouchDownGesture
 import ImageTransparency
 import ActivityIndicator
 import AnimationUI
+import Speak
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -678,7 +679,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if let previousAdditionalSideInsets = previousAdditionalSideInsets, previousAdditionalSideInsets.right != additionalSideInsets.right {
             additionalOffset = (previousAdditionalSideInsets.right - additionalSideInsets.right) / 3.0
             
-            if case let .animated(duration, _) = transition {
+            if case .animated = transition {
                 transition = .animated(duration: 0.2, curve: .easeInOut)
             }
         }
@@ -1775,7 +1776,26 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
-       if action == Selector(("_showTextStyleOptions:")) {
+        if action == Selector(("_accessibilitySpeak:")) {
+            if case .format = self.inputMenu.state {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            } else if let textInputNode = self.textInputNode, textInputNode.selectedRange.length > 0 {
+                return ASEditableTextNodeTargetForAction(target: self)
+            } else {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            }
+        } else if action == Selector(("_accessibilitySpeakSpellOut:")) {
+            if case .format = self.inputMenu.state {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            } else if let textInputNode = self.textInputNode, textInputNode.selectedRange.length > 0 {
+                return nil
+            } else {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            }
+        }
+        else if action == Selector("_accessibilitySpeakLanguageSelection:") || action == Selector("_accessibilityPauseSpeaking:") || action == Selector("_accessibilitySpeakSentence:") {
+            return ASEditableTextNodeTargetForAction(target: nil)
+        } else if action == Selector(("_showTextStyleOptions:")) {
             if case .general = self.inputMenu.state {
                 if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)
@@ -1795,6 +1815,22 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             return ASEditableTextNodeTargetForAction(target: nil)
         }
         return nil
+    }
+    
+    @objc func _accessibilitySpeak(_ sender: Any) {
+        var text = ""
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
+            return (current, inputMode)
+        }
+        speakText(text)
+        
+        if #available(iOS 13.0, *) {
+            UIMenuController.shared.hideMenu()
+        } else {
+            UIMenuController.shared.isMenuVisible = false
+            UIMenuController.shared.update()
+        }
     }
     
     @objc func _showTextStyleOptions(_ sender: Any) {

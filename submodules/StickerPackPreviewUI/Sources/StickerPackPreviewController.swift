@@ -75,6 +75,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         
         super.init(navigationBarPresentationData: nil)
         
+        self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true
         self.statusBar.statusBarStyle = .Ignore
         

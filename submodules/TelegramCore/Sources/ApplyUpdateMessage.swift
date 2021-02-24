@@ -74,7 +74,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         } else {
             switch result {
-                case let .updateShortSentMessage(_, _, _, _, date, _, _):
+                case let .updateShortSentMessage(_, _, _, _, date, _, _, _):
                     updatedTimestamp = date
                 default:
                     break
@@ -117,7 +117,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
                 forwardInfo = updatedMessage.forwardInfo
-            } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities) = result {
+            } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities, ttlPeriod) = result {
                 let (mediaValue, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                 if let mediaValue = mediaValue {
                     media = [mediaValue]
@@ -134,6 +134,11 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                         }
                     }
                     updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
+                }
+                
+                updatedAttributes = updatedAttributes.filter({ !($0 is AutoremoveTimeoutMessageAttribute) })
+                if let ttlPeriod = ttlPeriod {
+                    updatedAttributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttlPeriod, countdownBeginTime: updatedTimestamp))
                 }
                 
                 if Namespaces.Message.allScheduled.contains(message.id.namespace) && updatedId.namespace == Namespaces.Message.Cloud {

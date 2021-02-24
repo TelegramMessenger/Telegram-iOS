@@ -60,6 +60,7 @@ public enum AnimatedStickerPlaybackPosition {
 
 public enum AnimatedStickerPlaybackMode {
     case once
+    case count(Int)
     case loop
     case still(AnimatedStickerPlaybackPosition)
 }
@@ -757,6 +758,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var renderer: (AnimationRenderer & ASDisplayNode)?
     
     public var isPlaying: Bool = false
+    private var currentLoopCount: Int = 0
     private var canDisplayFirstFrame: Bool = false
     private var playbackMode: AnimatedStickerPlaybackMode = .loop
     
@@ -913,9 +915,15 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     private var isSetUpForPlayback = false
     
-    public func play(firstFrame: Bool = false) {
-        if case .once = self.playbackMode {
+    public func play(firstFrame: Bool = false, fromFrame: Int = 0) {
+        switch self.playbackMode {
+        case .once:
             self.isPlaying = true
+        case .count:
+            self.currentLoopCount = 0
+            self.isPlaying = true
+        default:
+            break
         }
         if self.isSetUpForPlayback {
             let directData = self.directData
@@ -980,6 +988,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 var stopNow = false
                                 if case .once = strongSelf.playbackMode {
                                     stopNow = true
+                                } else if case let .count(count) = strongSelf.playbackMode {
+                                    strongSelf.currentLoopCount += 1
+                                    if count <= strongSelf.currentLoopCount {
+                                        stopNow = true
+                                    }
                                 } else if strongSelf.stopAtNearestLoop {
                                     stopNow = true
                                 }
@@ -1074,6 +1087,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 var stopNow = false
                                 if case .once = strongSelf.playbackMode {
                                     stopNow = true
+                                } else if case let .count(count) = strongSelf.playbackMode {
+                                    strongSelf.currentLoopCount += 1
+                                    if count <= strongSelf.currentLoopCount {
+                                        stopNow = true
+                                    }
                                 } else if strongSelf.stopAtNearestLoop {
                                     stopNow = true
                                 }
@@ -1117,7 +1135,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.completion = completion
         self.playbackMode = .loop
         if resume {
-            self.play(fromFrame: fromFrame)
+            self.play(firstFrame: false, fromFrame: fromFrame)
         } else {
             self.playIfNeeded()
         }
@@ -1127,7 +1145,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.completion = completion
         self.stopAtFrame = frame
         self.playbackMode = .loop
-        self.play(fromFrame: fromFrame)
+        self.play(firstFrame: false, fromFrame: fromFrame)
     }
     
     public func seekTo(_ position: AnimatedStickerPlaybackPosition) {

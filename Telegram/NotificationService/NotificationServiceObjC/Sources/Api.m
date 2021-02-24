@@ -422,6 +422,33 @@ static const char *Api1__Serializer_Key = "Api1__Serializer";
                return nil;
             return [Api1_PhotoSize photoSizeWithType:type location:location w:w h:h size:size];
         } copy];
+        parsers[@((int32_t)0x5aa86a51)] = [^id (NSData *_data, NSUInteger* _offset, __unused id metaInfo)
+        {
+            NSString * type = nil;
+            if ((type = [Api1__Environment parseObject:_data offset:_offset implicitSignature:(int32_t)0xb5286e24 metaInfo:nil]) == nil)
+               return nil;
+            Api1_FileLocation * location = nil;
+            int32_t location_signature = 0; [_data getBytes:(void *)&location_signature range:NSMakeRange(*_offset, 4)]; *_offset += 4;
+            if ((location = [Api1__Environment parseObject:_data offset:_offset implicitSignature:location_signature metaInfo:nil]) == nil)
+               return nil;
+            NSNumber * w = nil;
+            if ((w = [Api1__Environment parseObject:_data offset:_offset implicitSignature:(int32_t)0xa8509bda metaInfo:nil]) == nil)
+               return nil;
+            NSNumber * h = nil;
+            if ((h = [Api1__Environment parseObject:_data offset:_offset implicitSignature:(int32_t)0xa8509bda metaInfo:nil]) == nil)
+               return nil;
+            
+            NSMutableArray *sizes = [[NSMutableArray alloc] init];
+            *_offset += 4;
+            int32_t count = 0; [_data getBytes:(void *)&count range:NSMakeRange(*_offset, 4)]; *_offset += 4;
+            
+            for (int32_t i = 0; i < count; i++) {
+                int32_t value = 0; [_data getBytes:(void *)&value range:NSMakeRange(*_offset, 4)]; *_offset += 4;
+                [sizes addObject:@(value)];
+            }
+            
+            return [Api1_PhotoSize photoSizeProgressiveWithType:type location:location w:w h:h sizes:sizes];
+        } copy];
         parsers[@((int32_t)0xe9a734fa)] = [^id (NSData *_data, NSUInteger* _offset, __unused id metaInfo)
         {
             NSString * type = nil;
@@ -1079,6 +1106,15 @@ id sizes_result = [Api1__Serializer addSerializerToObject:sizes_copy serializer:
     return _object;
 }
 
++ (Api1_PhotoSize_photoSizeProgressive *)photoSizeProgressiveWithType:(NSString *)type location:(Api1_FileLocation *)location w:(NSNumber *)w h:(NSNumber *)h sizes:(NSArray *)sizes {
+    Api1_PhotoSize_photoSizeProgressive *_object = [[Api1_PhotoSize_photoSizeProgressive alloc] init];
+    _object.type = [Api1__Serializer addSerializerToObject:[type copy] serializer:[[Api1_BuiltinSerializer_String alloc] init]];
+    _object.location = location;
+    _object.w = [Api1__Serializer addSerializerToObject:[[Api1__Number alloc] initWithNumber:w] serializer:[[Api1_BuiltinSerializer_Int alloc] init]];
+    _object.h = [Api1__Serializer addSerializerToObject:[[Api1__Number alloc] initWithNumber:h] serializer:[[Api1_BuiltinSerializer_Int alloc] init]];
+    _object.sizes = sizes;
+    return _object;
+}
 
 @end
 
@@ -1197,7 +1233,23 @@ id sizes_result = [Api1__Serializer addSerializerToObject:sizes_copy serializer:
 @end
 
 
+@implementation Api1_PhotoSize_photoSizeProgressive : Api1_PhotoSize
 
+- (instancetype)init
+{
+    self = [super init];
+    if (self != nil)
+    {
+    }
+    return self;
+}
+
+- (NSString *)description
+{
+    return [[NSString alloc] initWithFormat:@"(photoSizeProgressive type:%d location:%@ w:%@ h:%@ sizes:%@)", (int)[self.type length], self.location, self.w, self.h, self.sizes];
+}
+
+@end
 
 @interface Api1_FileLocation ()
 

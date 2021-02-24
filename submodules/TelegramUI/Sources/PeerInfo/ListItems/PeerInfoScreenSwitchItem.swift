@@ -6,12 +6,14 @@ final class PeerInfoScreenSwitchItem: PeerInfoScreenItem {
     let id: AnyHashable
     let text: String
     let value: Bool
+    let icon: UIImage?
     let toggled: ((Bool) -> Void)?
     
-    init(id: AnyHashable, text: String, value: Bool, toggled: ((Bool) -> Void)?) {
+    init(id: AnyHashable, text: String, value: Bool, icon: UIImage? = nil, toggled: ((Bool) -> Void)?) {
         self.id = id
         self.text = text
         self.value = value
+        self.icon = icon
         self.toggled = toggled
     }
     
@@ -22,6 +24,7 @@ final class PeerInfoScreenSwitchItem: PeerInfoScreenItem {
 
 private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
+    private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
     private let switchNode: SwitchNode
     private let bottomSeparatorNode: ASDisplayNode
@@ -34,6 +37,10 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
     override init() {
         var bringToFrontForHighlightImpl: (() -> Void)?
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displaysAsynchronously = false
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -92,6 +99,8 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         self.selectionNode.pressed = nil
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
+        let leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
+        let rightInset: CGFloat = 56.0 + safeAreaInsets.right
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -104,10 +113,22 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         self.activateArea.accessibilityValue = item.value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
         self.activateArea.accessibilityHint = presentationData.strings.VoiceOver_Common_SwitchHint
         
-        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0 - 56.0, height: .greatestFiniteMagnitude))
-        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 12.0), size: textSize)
+        let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset, height: .greatestFiniteMagnitude))
+        let textFrame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: textSize)
         
         let height = textSize.height + 24.0
+        
+        if let icon = item.icon {
+            if self.iconNode.supernode == nil {
+                self.addSubnode(self.iconNode)
+            }
+            self.iconNode.image = icon
+            let iconFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
+            transition.updateFrame(node: self.iconNode, frame: iconFrame)
+        } else if self.iconNode.supernode != nil {
+            self.iconNode.image = nil
+            self.iconNode.removeFromSupernode()
+        }
         
         transition.updateFrame(node: self.textNode, frame: textFrame)
         

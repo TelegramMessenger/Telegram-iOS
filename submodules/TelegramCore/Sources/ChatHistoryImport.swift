@@ -181,42 +181,58 @@ public enum ChatHistoryImport {
         }
     }
     
+    public enum CheckPeerImportResult {
+        case allowed
+        case alert(String)
+    }
+    
     public enum CheckPeerImportError {
         case generic
+        case chatAdminRequired
+        case invalidChatType
+        case userBlocked
+        case limitExceeded
         case userIsNotMutualContact
     }
     
-    public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<Never, CheckPeerImportError> {
+    public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<CheckPeerImportResult, CheckPeerImportError> {
         return account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)
         }
         |> castError(CheckPeerImportError.self)
-        |> mapToSignal { peer -> Signal<Never, CheckPeerImportError> in
+        |> mapToSignal { peer -> Signal<CheckPeerImportResult, CheckPeerImportError> in
             guard let peer = peer else {
                 return .fail(.generic)
             }
-            if let inputUser = apiInputUser(peer) {
-                return account.network.request(Api.functions.users.getUsers(id: [inputUser]))
-                |> mapError { _ -> CheckPeerImportError in
+            guard let inputPeer = apiInputPeer(peer) else {
+                return .fail(.generic)
+            }
+            
+            return account.network.request(Api.functions.messages.checkHistoryImportPeer(peer: inputPeer))
+            |> mapError { error -> CheckPeerImportError in
+                if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
+                    return .chatAdminRequired
+                } else if error.errorDescription == "IMPORT_PEER_TYPE_INVALID" {
+                    return .invalidChatType
+                } else if error.errorDescription == "USER_IS_BLOCKED" {
+                    return .userBlocked
+                } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
+                    return .userBlocked
+                } else if error.errorDescription == "FLOOD_WAIT" {
+                    return .limitExceeded
+                } else {
                     return .generic
                 }
-                |> mapToSignal { result -> Signal<Never, CheckPeerImportError> in
-                    guard let apiUser = result.first else {
-                        return .fail(.generic)
-                    }
-                    switch apiUser {
-                    case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _):
-                        if (flags & (1 << 12)) == 0 {
-                            // not mutual contact
-                            return .fail(.userIsNotMutualContact)
-                        }
-                        return .complete()
-                    case.userEmpty:
-                        return .fail(.generic)
+            }
+            |> map { result -> CheckPeerImportResult in
+                switch result {
+                case let .checkedHistoryImportPeer(confirmText):
+                    if confirmText.isEmpty {
+                        return .allowed
+                    } else {
+                        return .alert(confirmText)
                     }
                 }
-            } else {
-                return .complete()
             }
         }
     }

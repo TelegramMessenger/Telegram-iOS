@@ -15,16 +15,20 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         return nil
     }
     
-    var isScheduledOrPinnedMessages = false
+    var inhibitTitlePanelDisplay = false
     switch chatPresentationInterfaceState.subject {
     case .scheduledMessages, .pinnedMessages:
-        isScheduledOrPinnedMessages = true
+        inhibitTitlePanelDisplay = true
     default:
         break
     }
+    if case .peer = chatPresentationInterfaceState.chatLocation {
+    } else {
+        inhibitTitlePanelDisplay = true
+    }
     
     var selectedContext: ChatTitlePanelContext?
-    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty && !isScheduledOrPinnedMessages {
+    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty && !inhibitTitlePanelDisplay {
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
             switch context {
                 case .pinnedMessage:
@@ -40,7 +44,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     }
     
     var displayActionsPanel = false
-    if !chatPresentationInterfaceState.peerIsBlocked && !isScheduledOrPinnedMessages, let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+    if !chatPresentationInterfaceState.peerIsBlocked && !inhibitTitlePanelDisplay, let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
         if !peerStatusSettings.flags.isEmpty {
             if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                 displayActionsPanel = true

@@ -17,7 +17,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Set active Xcode path
-        run: sudo xcode-select -s /Applications/Xcode_12.3.app/Contents/Developer
+        run: sudo xcode-select -s /Applications/Xcode_12.4.app/Contents/Developer
 
       - name: Create canonical source directory
         run: |
@@ -40,8 +40,8 @@ jobs:
           # download bazel
           mkdir -p $HOME/bazel-dist
           pushd $HOME/bazel-dist
-          curl -O -L https://github.com/bazelbuild/bazel/releases/download/3.7.0/bazel-3.7.0-darwin-x86_64
-          mv bazel-3.7.0* bazel
+          curl -O -L https://github.com/bazelbuild/bazel/releases/download/4.0.0/bazel-4.0.0-darwin-x86_64
+          mv bazel-4.0.0* bazel
           chmod +x bazel
           ./bazel --version
           popd
@@ -84,6 +84,7 @@ jobs:
             --bazel="$HOME/bazel-dist/bazel" \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
+            --disableParallelSwiftmoduleGeneration \
             --configurationPath="$HOME/telegram-configuration" \
             --buildNumber=$BUILD_NUMBER \
             --configuration=release_universal
