@@ -508,8 +508,9 @@ private struct UrlHandlingConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> UrlHandlingConfiguration {
-        if let data = appConfiguration.data, let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String], let urlAuthDomains = data["url_auth_domains"] as? [String] {
-            return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: urlAuthDomains)
+        //let urlAuthDomains = data["url_auth_domains"] as? [String]
+        if let data = appConfiguration.data, let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
+            return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: [])
         } else {
             return .defaultValue
         }

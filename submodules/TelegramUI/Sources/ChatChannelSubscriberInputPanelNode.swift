@@ -168,7 +168,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         case .join:
             self.activityIndicator.isHidden = false
             self.activityIndicator.startAnimating()
-            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id)
+            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id, hash: nil)
             |> afterDisposed { [weak self] in
                 Queue.mainQueue().async {
                     if let strongSelf = self {

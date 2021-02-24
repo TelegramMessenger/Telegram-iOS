@@ -30,11 +30,11 @@ private final class InviteLinkListControllerArguments {
     let mainLinkContextAction: (ExportedInvitation?, ASDisplayNode, ContextGesture?) -> Void
     let createLink: () -> Void
     let openLink: (ExportedInvitation) -> Void
-    let linkContextAction: (ExportedInvitation?, ASDisplayNode, ContextGesture?) -> Void
+    let linkContextAction: (ExportedInvitation?, Bool, ASDisplayNode, ContextGesture?) -> Void
     let openAdmin: (ExportedInvitationCreator) -> Void
     let deleteAllRevokedLinks: () -> Void
     
-    init(context: AccountContext, shareMainLink: @escaping (ExportedInvitation) -> Void, openMainLink: @escaping (ExportedInvitation) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, mainLinkContextAction: @escaping (ExportedInvitation?, ASDisplayNode, ContextGesture?) -> Void, createLink: @escaping () -> Void, openLink: @escaping (ExportedInvitation?) -> Void, linkContextAction: @escaping (ExportedInvitation?, ASDisplayNode, ContextGesture?) -> Void, openAdmin: @escaping (ExportedInvitationCreator) -> Void, deleteAllRevokedLinks: @escaping () -> Void) {
+    init(context: AccountContext, shareMainLink: @escaping (ExportedInvitation) -> Void, openMainLink: @escaping (ExportedInvitation) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, mainLinkContextAction: @escaping (ExportedInvitation?, ASDisplayNode, ContextGesture?) -> Void, createLink: @escaping () -> Void, openLink: @escaping (ExportedInvitation?) -> Void, linkContextAction: @escaping (ExportedInvitation?, Bool, ASDisplayNode, ContextGesture?) -> Void, openAdmin: @escaping (ExportedInvitationCreator) -> Void, deleteAllRevokedLinks: @escaping () -> Void) {
         self.context = context
         self.shareMainLink = shareMainLink
         self.openMainLink = openMainLink
@@ -65,7 +65,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     
     case linksHeader(PresentationTheme, String)
     case linksCreate(PresentationTheme, String)
-    case link(Int32, PresentationTheme, ExportedInvitation?, Int32?)
+    case link(Int32, PresentationTheme, ExportedInvitation?, Bool, Int32?)
     case linksInfo(PresentationTheme, String)
     
     case revokedLinksHeader(PresentationTheme, String)
@@ -104,7 +104,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 return 4
             case .linksCreate:
                 return 5
-            case let .link(index, _, _, _):
+            case let .link(index, _, _, _, _):
                 return 6 + index
             case .linksInfo:
                 return 10000
@@ -159,8 +159,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .link(lhsIndex, lhsTheme, lhsLink, lhsTick):
-                if case let .link(rhsIndex, rhsTheme, rhsLink, rhsTick) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsLink == rhsLink, lhsTick == rhsTick {
+            case let .link(lhsIndex, lhsTheme, lhsLink, lhsCanEdit, lhsTick):
+                if case let .link(rhsIndex, rhsTheme, rhsLink, rhsCanEdit, rhsTick) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsLink == rhsLink, lhsCanEdit == rhsCanEdit, lhsTick == rhsTick {
                     return true
                 } else {
                     return false
@@ -239,11 +239,11 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createLink()
                 })
-            case let .link(_, _, invite, _):
+            case let .link(_, _, invite, canEdit, _):
                 return ItemListInviteLinkItem(presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
                     arguments.openLink(invite)
                 } contextAction: { invite, node, gesture in
-                    arguments.linkContextAction(invite, node, gesture)
+                    arguments.linkContextAction(invite, canEdit, node, gesture)
                 }
             case let .linksInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -257,7 +257,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 return ItemListInviteLinkItem(presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
                     arguments.openLink(invite)
                 } contextAction: { invite, node, gesture in
-                    arguments.linkContextAction(invite, node, gesture)
+                    arguments.linkContextAction(invite, false, node, gesture)
                 }
             case let .adminsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
@@ -333,16 +333,21 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         entries.append(.linksCreate(presentationData.theme, presentationData.strings.InviteLink_Create))
     }
     
+    var canEditLinks = true
+    if let peer = admin?.peer.peer as? TelegramUser, peer.botInfo != nil {
+        canEditLinks = false
+    }
+    
     if let additionalInvites = additionalInvites {
         var index: Int32 = 0
         for invite in additionalInvites {
-            entries.append(.link(index, presentationData.theme, invite, invite.expireDate != nil ? tick : nil))
+            entries.append(.link(index, presentationData.theme, invite, canEditLinks, invite.expireDate != nil ? tick : nil))
             index += 1
         }
     } else if let admin = admin, admin.count > 1 {
         var index: Int32 = 0
         for _ in 0 ..< admin.count - 1 {
-            entries.append(.link(index, presentationData.theme, nil, nil))
+            entries.append(.link(index, presentationData.theme, nil, false, nil))
             index += 1
         }
     }
@@ -558,7 +563,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             let controller = InviteLinkViewController(context: context, peerId: peerId, invite: invite, invitationsContext: invitesContext, revokedInvitationsContext: revokedInvitesContext, importersContext: nil)
             pushControllerImpl?(controller)
         }
-    }, linkContextAction: { invite, node, gesture in
+    }, linkContextAction: { invite, canEdit, node, gesture in
         guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?(), let invite = invite else {
             return
         }
@@ -615,7 +620,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                 })))
             }
             
-            if !invite.isPermanent {
+            if !invite.isPermanent && canEdit {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextEdit, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
                 }, action: { _, f in

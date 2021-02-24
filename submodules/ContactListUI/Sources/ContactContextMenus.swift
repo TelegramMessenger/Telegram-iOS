@@ -121,10 +121,17 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
         }
         
         if canCall {
-            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_Call, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                if let contactsController = contactsController {
-                    context.requestCall(peerId: peerId, isVideo: false, completion: {})
-                }
+            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_Call, icon: { theme in
+                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                context.requestCall(peerId: peerId, isVideo: false, completion: {})
+                f(.default)
+            })))
+        }
+        if canVideoCall {
+            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_VideoCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VideoCall"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                context.requestCall(peerId: peerId, isVideo: true, completion: {})
                 f(.default)
             })))
         }
