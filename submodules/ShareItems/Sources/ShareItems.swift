@@ -241,13 +241,14 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             let isVoice = ((value["isVoice"] as? NSNumber)?.boolValue ?? false)
             let title = value["title"] as? String
             let artist = value["artist"] as? String
+            let mimeType = value["mimeType"] as? String ?? "audio/ogg"
             
             var waveform: MemoryBuffer?
             if let waveformData = TGItemProviderSignals.audioWaveform(url) {
                 waveform = MemoryBuffer(data: waveformData)
             }
             
-            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: "audio/ogg", attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
             |> mapError { _ -> Void in return Void() }
             |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                 switch event {
