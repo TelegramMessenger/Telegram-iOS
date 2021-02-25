@@ -142,6 +142,12 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 if isLoggedOut {
                     continue
                 }
+                let isHidden = record.attributes.contains(where: { attribute in
+                    return attribute is HiddenAccountAttribute
+                })
+                if isHidden {
+                    continue
+                }
                 /*let isTestingEnvironment = record.attributes.contains(where: { attribute in
                     if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
                         return true
@@ -905,6 +911,12 @@ private final class WidgetIntentHandler {
                 return attribute is LoggedOutAccountAttribute
             })
             if isLoggedOut {
+                continue
+            }
+            let isHidden = record.attributes.contains(where: { attribute in
+                return attribute is HiddenAccountAttribute
+            })
+            if isHidden {
                 continue
             }
             var backupData: AccountBackupData?
