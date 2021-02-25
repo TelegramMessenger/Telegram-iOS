@@ -1147,33 +1147,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
         items[section] = []
     }
     
-//    if let data = data, let notificationSettings = data.notificationSettings {
-//        let notificationsLabel: String
-//        let soundLabel: String
-//        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-//            if until < Int32.max - 1 {
-//                notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
-//            } else {
-//                notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
-//            }
-//        } else {
-//            notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
-//        }
-//
-//        let globalNotificationSettings: GlobalNotificationSettings = data.globalNotificationSettings ?? GlobalNotificationSettings.defaultSettings
-//        soundLabel = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.privateChats.sound)
-//
-//        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .text(notificationsLabel), text: presentationData.strings.GroupInfo_Notifications, action: {
-//            interaction.editingOpenNotificationSettings()
-//        }))
-//        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 1, label: .text(soundLabel), text: presentationData.strings.GroupInfo_Sound, action: {
-//            interaction.editingOpenSoundSettings()
-//        }))
-//        items[.notifications]!.append(PeerInfoScreenSwitchItem(id: 2, text: presentationData.strings.Notification_Exceptions_PreviewAlwaysOn, value: notificationSettings.displayPreviews != .hide, toggled: { value in
-//            interaction.editingToggleShowMessageText(value)
-//        }))
-//    }
-    
     if let data = data {
         if let _ = data.peer as? TelegramUser {
             let ItemDelete = 0
@@ -1194,8 +1167,8 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if channel.flags.contains(.isCreator) {
                     let linkText: String
-                    if let username = channel.username {
-                        linkText = "@\(username)"
+                    if let _ = channel.username {
+                        linkText = presentationData.strings.Channel_Setup_TypePublic
                     } else {
                         linkText = presentationData.strings.Channel_Setup_TypePrivate
                     }
@@ -6589,7 +6562,13 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                         case .notMutualContact:
                             let _ = (context.account.postbox.loadedPeerWithId(memberId)
                             |> deliverOnMainQueue).start(next: { peer in
-                                parentController?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                let text: String
+                                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                    text = presentationData.strings.Channel_AddUserLeftError
+                                } else {
+                                    text = presentationData.strings.GroupInfo_AddUserLeftError
+                                }
+                                parentController?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             })
                             return .complete()
                         case .tooManyChannels:
@@ -6708,7 +6687,14 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                                 break
                         }
                     } else if peers.count == 1, case .notMutualContact = error {
-                        parentController?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        let text: String
+                        if let peer = groupPeer as? TelegramChannel, case .broadcast = peer.info {
+                            text = presentationData.strings.Channel_AddUserLeftError
+                        } else {
+                            text = presentationData.strings.GroupInfo_AddUserLeftError
+                        }
+                        
+                        parentController?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     } else if case .tooMuchJoined = error  {
                         parentController?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }

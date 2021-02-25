@@ -508,7 +508,6 @@ private struct UrlHandlingConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> UrlHandlingConfiguration {
-        //let urlAuthDomains = data["url_auth_domains"] as? [String]
         if let data = appConfiguration.data, let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
             return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: [])
         } else {
@@ -525,8 +524,10 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
         let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
         
         var url = url
-        if !(url.hasPrefix("http") || url.hasPrefix("https")) {
-            url = "http://\(url)"
+        if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
+            if !(url.hasPrefix("http") || url.hasPrefix("https")) {
+                url = "http://\(url)"
+            }
         }
         if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
             if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {

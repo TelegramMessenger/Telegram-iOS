@@ -214,7 +214,7 @@
                     _rotationMode = cropMirrored ? kGPUImageRotateRightFlipHorizontal : kGPUImageRotateRight;
                     break;
                 case UIImageOrientationDown:
-                    _rotationMode = kGPUImageRotate180;
+                    _rotationMode = cropMirrored ? kGPUImageRotate180FlipHorizontal : kGPUImageRotate180;
                     break;
                 case UIImageOrientationUp:
                     if (cropMirrored)

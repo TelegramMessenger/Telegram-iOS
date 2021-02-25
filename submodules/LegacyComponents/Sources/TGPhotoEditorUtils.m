@@ -593,28 +593,30 @@ UIImageOrientation TGVideoOrientationForAsset(AVAsset *asset, bool *mirrored)
 {
     AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] firstObject];
     CGAffineTransform t = videoTrack.preferredTransform;
-    double videoRotation = atan2((float)t.b, (float)t.a);
     
-    if (mirrored != NULL)
-    {
-        CGFloat scaleX = sqrt(t.a * t.a + t.c * t.c);
-        CGFloat scaleY = sqrt(t.b * t.b + t.d * t.d);
-        CGSize scale = CGSizeMake(scaleX, scaleY);
-        
-        *mirrored = (scale.width < 0);
-    }
-    
-    if (fabs(videoRotation - M_PI) < FLT_EPSILON) {
+    if (t.a == -1 && t.d == -1) {
         return UIImageOrientationLeft;
-    } else if (fabs(videoRotation - M_PI_2) < FLT_EPSILON) {
-        if (t.c == 1 && mirrored != NULL) {
+    } else if (t.a == 1 && t.d == 1)  {
+        return UIImageOrientationRight;
+    } else if (t.b == -1 && t.c == 1) {
+        return UIImageOrientationDown;
+    }  else if (t.a == -1 && t.d == 1) {
+        if (mirrored != NULL) {
             *mirrored = true;
         }
-        return UIImageOrientationUp;
-    } else if (fabs(videoRotation + M_PI_2) < FLT_EPSILON) {
-        return UIImageOrientationDown;
-    } else {
+        return UIImageOrientationLeft;
+    } else if (t.a == 1 && t.d == -1)  {
+        if (mirrored != NULL) {
+            *mirrored = true;
+        }
         return UIImageOrientationRight;
+    } else {
+        if (t.c == 1) {
+            if (mirrored != NULL) {
+                *mirrored = true;
+            }
+        }
+        return UIImageOrientationUp;
     }
 }
 
