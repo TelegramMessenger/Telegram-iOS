@@ -6155,3 +6155,6 @@ Sorry for the inconvenience.";
 "Conversation.UploadFileTooLarge" = "File could not be sent, because it is larger than 2 GB.\n\nYou can send as many files as you like, but each must be smaller than 2 GB.";
 
 "Channel.AddUserLeftError" = "Sorry, if a person is no longer part of a channel, you need to be in their Telegram contacts in order to add them back.\n\nNote that they can still join via the channel's invite link as long as they are not in the Removed Users list.";
+
+"Message.ScamAccount" = "Scam";
+"Message.FakeAccount" = "Fake";

@@ -563,6 +563,7 @@ private final class PeerInfoInteraction {
     let logoutAccount: (AccountRecordId) -> Void
     let accountContextMenu: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
     let updateBio: (String) -> Void
+    let openDeletePeer: () -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -599,7 +600,8 @@ private final class PeerInfoInteraction {
         switchToAccount: @escaping (AccountRecordId) -> Void,
         logoutAccount: @escaping (AccountRecordId) -> Void,
         accountContextMenu: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
-        updateBio: @escaping (String) -> Void
+        updateBio: @escaping (String) -> Void,
+        openDeletePeer: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -636,6 +638,7 @@ private final class PeerInfoInteraction {
         self.logoutAccount = logoutAccount
         self.accountContextMenu = accountContextMenu
         self.updateBio = updateBio
+        self.openDeletePeer = openDeletePeer
     }
 }
 
@@ -1140,6 +1143,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
         case groupLocation
         case peerPublicSettings
         case peerSettings
+        case peerActions
     }
     
     var items: [Section: [PeerInfoScreenItem]] = [:]
@@ -1229,14 +1233,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemLinkedChannel = 103
                 let ItemPreHistory = 104
                 let ItemStickerPack = 105
-                let ItemPermissions = 106
-                let ItemMembers = 107
+                let ItemMembers = 106
+                let ItemPermissions = 107
                 let ItemAdmins = 108
                 let ItemRemovedUsers = 109
                 let ItemLocationHeader = 110
                 let ItemLocation = 111
                 let ItemLocationSetup = 112
                 let ItemAutoremove = 113
+                let ItemDeleteGroup = 114
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.username != nil
@@ -1342,25 +1347,28 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             activePermissionCount = count
                         }
                         
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text(cachedData.participantsSummary.memberCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.Group_Info_Members, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                            interaction.openParticipantsSection(.members)
+                        }))
                         if !channel.flags.contains(.isGigagroup) {
                             items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
                                 interaction.openPermissions()
-                            }))
-                        } else {
-                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text(cachedData.participantsSummary.memberCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.Group_Info_Members, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
-                                interaction.openParticipantsSection(.members)
                             }))
                         }
                         
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text(cachedData.participantsSummary.adminCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                             interaction.openParticipantsSection(.admins)
                         }))
-                        
-                        if channel.flags.contains(.isGigagroup) {
-                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
-                                interaction.openParticipantsSection(.banned)
-                            }))
-                        }
+
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
+                            interaction.openParticipantsSection(.banned)
+                        }))
+                    }
+                    
+                    if isCreator {
+                        items[.peerActions]!.append(PeerInfoScreenActionItem(id: ItemDeleteGroup, text: presentationData.strings.Group_DeleteGroup, color: .destructive, icon: nil, alignment: .natural, action: {
+                            interaction.openDeletePeer()
+                        }))
                     }
                 }
             }
@@ -1664,6 +1672,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             },
             updateBio: { [weak self] bio in
                 self?.updateBio(bio)
+            },
+            openDeletePeer: { [weak self] in
+                self?.openDeletePeer()
             }
         )
         

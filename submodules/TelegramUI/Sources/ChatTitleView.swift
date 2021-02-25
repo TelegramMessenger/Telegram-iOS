@@ -240,13 +240,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 
                 if titleFakeIcon != self.titleFakeIcon {
                     self.titleFakeIcon = titleFakeIcon
-                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, type: .regular) : nil
+                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, strings: self.strings, type: .regular) : nil
                     updated = true
                 }
                 
                 if titleScamIcon != self.titleScamIcon {
                     self.titleScamIcon = titleScamIcon
-                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, type: .regular) : nil
+                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, strings: self.strings, type: .regular) : nil
                     updated = true
                 }
                 
