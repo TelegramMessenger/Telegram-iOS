@@ -107,7 +107,7 @@ public enum ChatHistoryImport {
         case chatAdminRequired
     }
     
-    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
+    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, disposeFileAfterDone: Bool, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
         var forceNoBigParts = true
         guard let size = fileSize(file.path), size != 0 else {
             return .single(1.0)
@@ -159,6 +159,11 @@ public enum ChatHistoryImport {
             }
             |> mapToSignal { result -> Signal<Float, UploadMediaError> in
                 return .single(1.0)
+            }
+            |> afterDisposed {
+                if disposeFileAfterDone {
+                    TempBox.shared.dispose(file)
+                }
             }
         }
     }
