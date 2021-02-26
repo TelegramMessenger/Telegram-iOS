@@ -833,7 +833,7 @@ final class ChatEmptyNode: ASDisplayNode {
                 contentType = .secret
             } else if let group = peer as? TelegramGroup, case .creator = group.role {
                 contentType = .group
-            } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isCreator) {
+            } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isCreator) && !channel.flags.contains(.isGigagroup) {
                 contentType = .group
             } else if let _ = interfaceState.peerNearbyData {
                 contentType = .peerNearby
