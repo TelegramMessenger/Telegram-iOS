@@ -100,6 +100,10 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
                     switch results[i].0 {
                     case .image:
                         if let data = results[i].1, data.count != 0 {
+                            if Int(fullRepresentationSize.width) > 100 && i <= 1 && !isLastSize {
+                                continue
+                            }
+                            
                             subscriber.putNext(Tuple4(nil, data, .full, isLastSize))
                             foundData = true
                             if isLastSize {
