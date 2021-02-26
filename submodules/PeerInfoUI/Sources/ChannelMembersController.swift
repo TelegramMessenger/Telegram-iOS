@@ -370,27 +370,30 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                 }
             }).start(error: { [weak contactsController] error in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String
-                switch error {
-                    case .limitExceeded:
-                        text = presentationData.strings.Channel_ErrorAddTooMuch
-                    case .tooMuchJoined:
-                        text = presentationData.strings.Invite_ChannelsTooMuch
-                    case .generic:
-                        text = presentationData.strings.Login_UnknownError
-                    case .restricted:
-                        text = presentationData.strings.Channel_ErrorAddBlocked
-                    case .notMutualContact:
-                        text = presentationData.strings.GroupInfo_AddUserLeftError
-                    case let .bot(memberId):
-                        let _ = (context.account.postbox.transaction { transaction in
-                            return transaction.getPeer(peerId)
-                        }
-                        |> deliverOnMainQueue).start(next: { peer in
+                let _ = (context.account.postbox.transaction { transaction in
+                    return transaction.getPeer(peerId)
+                }
+                |> deliverOnMainQueue).start(next: { peer in
+                    let text: String
+                    switch error {
+                        case .limitExceeded:
+                            text = presentationData.strings.Channel_ErrorAddTooMuch
+                        case .tooMuchJoined:
+                            text = presentationData.strings.Invite_ChannelsTooMuch
+                        case .generic:
+                            text = presentationData.strings.Login_UnknownError
+                        case .restricted:
+                            text = presentationData.strings.Channel_ErrorAddBlocked
+                        case .notMutualContact:
+                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                text = presentationData.strings.Channel_AddUserLeftError
+                            } else {
+                                text = presentationData.strings.GroupInfo_AddUserLeftError
+                            }
+                        case let .bot(memberId):
                             guard let peer = peer as? TelegramChannel else {
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 contactsController?.dismiss()
-                                
                                 return
                             }
                             
@@ -407,15 +410,15 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                             }
                             
                             contactsController?.dismiss()
-                        })
-                        return
-                    case .botDoesntSupportGroups:
-                        text = presentationData.strings.Channel_BotDoesntSupportGroups
-                    case .tooMuchBots:
-                        text = presentationData.strings.Channel_TooMuchBots
-                }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                contactsController?.dismiss()
+                            return
+                        case .botDoesntSupportGroups:
+                            text = presentationData.strings.Channel_BotDoesntSupportGroups
+                        case .tooMuchBots:
+                            text = presentationData.strings.Channel_TooMuchBots
+                    }
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    contactsController?.dismiss()
+                })
             }))
             
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

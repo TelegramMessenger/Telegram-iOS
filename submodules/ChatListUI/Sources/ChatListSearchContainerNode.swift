@@ -166,8 +166,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
                     //                            self?.openPeer(peerId: peerId, navigation: navigation)
                 }, sendFile: nil,
-                   sendSticker: nil,
-                   present: { c, a in
+                sendSticker: nil,
+                requestMessageActionUrlAuth: nil,
+                present: { c, a in
                     present(c, a)
                 }, dismissInput: {
                     self?.dismissInput()

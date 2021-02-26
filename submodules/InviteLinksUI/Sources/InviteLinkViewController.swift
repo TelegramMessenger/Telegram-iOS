@@ -537,8 +537,10 @@ public final class InviteLinkViewController: ViewController {
                                         dismissAction()
                                         self?.controller?.dismiss()
 
-                                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
-                                            
+                                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                            if case let .replace(_, newInvite) = result {
+                                                self?.controller?.invitationsContext?.add(newInvite)
+                                            }
                                         })
                                         
                                         self?.controller?.invitationsContext?.remove(invite)

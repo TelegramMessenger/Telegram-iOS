@@ -309,7 +309,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     @objc func joinPressed() {
         if let peer = self.peer, case .notJoined = self.joinState {
             self.updateJoinState(.inProgress)
-            self.joinDisposable.set((joinChannel(account: self.context.account, peerId: peer.id) |> deliverOnMainQueue).start(error: { [weak self] _ in
+            self.joinDisposable.set((joinChannel(account: self.context.account, peerId: peer.id, hash: nil) |> deliverOnMainQueue).start(error: { [weak self] _ in
                 if let strongSelf = self {
                     if case .inProgress = strongSelf.joinState {
                         strongSelf.updateJoinState(.notJoined)

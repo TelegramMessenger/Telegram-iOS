@@ -623,6 +623,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         super.init()
         
+        self.accessibilityPageScrolledString = { [weak self] row, count in
+            if let strongSelf = self {
+                return strongSelf.currentPresentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            } else {
+                return ""
+            }
+        }
+        
         self.dynamicBounceEnabled = !self.currentPresentationData.disableAnimations
         self.experimentalSnapScrollToItem = true
         

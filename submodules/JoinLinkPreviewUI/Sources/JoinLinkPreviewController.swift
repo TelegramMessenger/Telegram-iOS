@@ -128,22 +128,27 @@ public final class JoinLinkPreviewController: ViewController {
             }
         }, error: { [weak self] error in
             if let strongSelf = self {
-                if case .tooMuchJoined = error {
-                    if let parentNavigationController = strongSelf.parentNavigationController {
-                        let context = strongSelf.context
-                        let link = strongSelf.link
-                        let navigateToPeer = strongSelf.navigateToPeer
-                        let resolvedState = strongSelf.resolvedState
-                        parentNavigationController.pushViewController(oldChannelsController(context: strongSelf.context, intent: .join, completed: { [weak parentNavigationController] value in
-                            if value {
-                                (parentNavigationController?.viewControllers.last as? ViewController)?.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState), in: .window(.root))
-                            }
-                        }))
-                    } else {
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Join_ChannelsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    }
-                    strongSelf.dismiss()
+                switch error {
+                    case .tooMuchJoined:
+                        if let parentNavigationController = strongSelf.parentNavigationController {
+                            let context = strongSelf.context
+                            let link = strongSelf.link
+                            let navigateToPeer = strongSelf.navigateToPeer
+                            let resolvedState = strongSelf.resolvedState
+                            parentNavigationController.pushViewController(oldChannelsController(context: strongSelf.context, intent: .join, completed: { [weak parentNavigationController] value in
+                                if value {
+                                    (parentNavigationController?.viewControllers.last as? ViewController)?.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState), in: .window(.root))
+                                }
+                            }))
+                        } else {
+                            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Join_ChannelsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        }
+                    case .tooMuchUsers:
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_UsersTooMuchError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    case .generic:
+                        break
                 }
+                strongSelf.dismiss()
             }
         }))
     }

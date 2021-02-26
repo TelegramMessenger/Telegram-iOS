@@ -128,7 +128,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
         
         let resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: asset.url.path, adjustments: resourceAdjustments)
-        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 5 * 1024 * 1024)
+        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
         |> mapError { _ -> Void in
             return Void()
         }
@@ -192,7 +192,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                         mimeType = "animation/gif"
                         attributes = [.ImageSize(size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height))), .Animated, .FileName(fileName: fileName ?? "animation.gif")]
                     }
-                    return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 5 * 1024 * 1024)
+                    return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 10 * 1024 * 1024)
                     |> mapError { _ -> Void in return Void() }
                     |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                         switch event {
@@ -223,7 +223,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 thumbnailData = jpegData
             }
             
-            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 5 * 1024 * 1024)
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 10 * 1024 * 1024)
             |> mapError { _ -> Void in return Void() }
             |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                 switch event {
@@ -241,13 +241,14 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             let isVoice = ((value["isVoice"] as? NSNumber)?.boolValue ?? false)
             let title = value["title"] as? String
             let artist = value["artist"] as? String
+            let mimeType = value["mimeType"] as? String ?? "audio/ogg"
             
             var waveform: MemoryBuffer?
             if let waveformData = TGItemProviderSignals.audioWaveform(url) {
                 waveform = MemoryBuffer(data: waveformData)
             }
             
-            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: "audio/ogg", attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 5 * 1024 * 1024)
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
             |> mapError { _ -> Void in return Void() }
             |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                 switch event {

@@ -29,6 +29,8 @@ public final class PeekController: ViewController {
     private let content: PeekControllerContent
     var sourceNode: () -> ASDisplayNode?
     
+    public var visibilityUpdated: ((Bool) -> Void)?
+    
     private var animatedIn = false
     
     public init(theme: PeekControllerTheme, content: PeekControllerContent, sourceNode: @escaping () -> ASDisplayNode?) {
@@ -67,6 +69,8 @@ public final class PeekController: ViewController {
         if !self.animatedIn {
             self.animatedIn = true
             self.controllerNode.animateIn(from: self.getSourceRect())
+            
+            self.visibilityUpdated?(true)
         }
     }
     
@@ -77,6 +81,7 @@ public final class PeekController: ViewController {
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        self.visibilityUpdated?(false)
         self.controllerNode.animateOut(to: self.getSourceRect(), completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })

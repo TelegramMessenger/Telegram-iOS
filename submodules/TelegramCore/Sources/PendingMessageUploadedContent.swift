@@ -623,7 +623,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                     hintFileIsLarge = true
                     break loop
                 default:
-                    break loop
+                    break
             }
         }
         

@@ -240,6 +240,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
                     return sourceNode
                 })
+                controller.visibilityUpdated = { [weak self] visible in
+                    if let strongSelf = self {
+                        strongSelf.contentGridNode.forceHidden = visible
+                    }
+                }
                 strongSelf.presentInGlobalOverlay?(controller, nil)
                 return controller
             }

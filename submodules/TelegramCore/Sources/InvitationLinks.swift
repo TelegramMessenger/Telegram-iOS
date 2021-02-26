@@ -529,7 +529,7 @@ private final class PeerExportedInvitationsContextImpl {
     }
     
     private func updateCache() {
-        guard self.hasLoadedOnce && !self.isLoadingMore else {
+        guard self.isMainList && self.hasLoadedOnce && !self.isLoadingMore else {
             return
         }
         

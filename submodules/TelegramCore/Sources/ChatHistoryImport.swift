@@ -192,7 +192,7 @@ public enum ChatHistoryImport {
         case invalidChatType
         case userBlocked
         case limitExceeded
-        case userIsNotMutualContact
+        case notMutualContact
     }
     
     public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<CheckPeerImportResult, CheckPeerImportError> {
@@ -217,7 +217,7 @@ public enum ChatHistoryImport {
                 } else if error.errorDescription == "USER_IS_BLOCKED" {
                     return .userBlocked
                 } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
-                    return .userBlocked
+                    return .notMutualContact
                 } else if error.errorDescription == "FLOOD_WAIT" {
                     return .limitExceeded
                 } else {
