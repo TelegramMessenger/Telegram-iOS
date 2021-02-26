@@ -1059,6 +1059,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     |> deliverOnMainQueue
     
     let previousHadNamesToRevoke = Atomic<Bool?>(value: nil)
+    let previousInvitation = Atomic<ExportedInvitation?>(value: nil)
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
@@ -1253,6 +1254,15 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         }
         
         var crossfade: Bool = false
+        if let cachedData = view.cachedData as? CachedChannelData {
+            let invitation = cachedData.exportedInvitation
+            let previousInvitation = previousInvitation.swap(invitation)
+            
+            if invitation != previousInvitation {
+                crossfade = true
+            }
+        }
+        
         let hasNamesToRevoke = publicChannelsToRevoke != nil && !publicChannelsToRevoke!.isEmpty
         let hadNamesToRevoke = previousHadNamesToRevoke.swap(hasNamesToRevoke)
         if let peer = view.peers[view.peerId] as? TelegramChannel {
@@ -1273,7 +1283,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 }
             }
             
-            if selectedType == .publicChannel, let hadNamesToRevoke = hadNamesToRevoke {
+            if selectedType == .publicChannel, let hadNamesToRevoke = hadNamesToRevoke, !crossfade {
                 crossfade = hadNamesToRevoke != hasNamesToRevoke
             }
         }
