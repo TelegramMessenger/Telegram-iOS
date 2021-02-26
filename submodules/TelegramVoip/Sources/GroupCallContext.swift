@@ -129,7 +129,7 @@ public final class OngoingGroupCallContext {
         private var broadcastPacketSource: DemoBroadcastPacketSource?
         private var broadcastPacketsDisposable: Disposable?
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void) {
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, demoAudioStream: Bool) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
@@ -204,15 +204,17 @@ public final class OngoingGroupCallContext {
                 }
             })
             
-            let broadcastPacketSource = DemoBroadcastPacketSource(queue: queue)
-            self.broadcastPacketSource = broadcastPacketSource
-            self.broadcastPacketsDisposable = (broadcastPacketSource.packets
-            |> deliverOn(queue)).start(next: { [weak self] packets in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.context.add(packets)
-            })
+            if demoAudioStream {
+                let broadcastPacketSource = DemoBroadcastPacketSource(queue: queue)
+                self.broadcastPacketSource = broadcastPacketSource
+                self.broadcastPacketsDisposable = (broadcastPacketSource.packets
+                |> deliverOn(queue)).start(next: { [weak self] packets in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.context.add(packets)
+                })
+            }
             
             /*var packets: [OngoingGroupCallBroadcastPacket] = []
             for i in 0 ..< 200 {
@@ -466,10 +468,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, demoAudioStream: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, demoAudioStream: demoAudioStream)
         })
     }
     
