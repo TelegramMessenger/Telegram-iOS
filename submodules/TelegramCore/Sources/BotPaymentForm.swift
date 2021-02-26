@@ -341,7 +341,7 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, validated
     }
 }
 
-public struct BotPaymentReceipt {
+public struct BotPaymentReceipt : Equatable {
     public let invoice: BotPaymentInvoice
     public let info: BotPaymentRequestedInfo?
     public let shippingOption: BotPaymentShippingOption?
