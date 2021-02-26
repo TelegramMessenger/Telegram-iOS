@@ -378,19 +378,15 @@ func proxyServerSettingsController(context: AccountContext? = nil, presentationD
     }
     shareImpl = { [weak controller] in
         let state = stateValue.with { $0 }
-        guard let server = proxyServerSettings(with: state), let strongController = controller else {
+        guard let server = proxyServerSettings(with: state) else {
             return
         }
         
         let link = shareLink(for: server)
         controller?.view.endEditing(true)
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            let controller = ShareProxyServerActionSheetController(presentationData: presentationData, updatedPresentationData: updatedPresentationData, link: link)
-            presentControllerImpl?(controller, nil)
-        } else if let context = context {
-            let controller = ShareController(context: context, subject: .url(link), preferredAction: .default, showInChat: nil, externalShare: true, immediateExternalShare: true, switchableAccounts: [])
-            presentControllerImpl?(controller, nil)
-        }
+        
+        let controller = ShareProxyServerActionSheetController(presentationData: presentationData, updatedPresentationData: updatedPresentationData, link: link)
+        presentControllerImpl?(controller, nil)
     }
     
     return controller

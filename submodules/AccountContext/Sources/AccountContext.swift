@@ -162,6 +162,7 @@ public enum ResolvedUrlSettingsSection {
 
 public enum ResolvedUrl {
     case externalUrl(String)
+    case urlAuth(String)
     case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
     case inaccessiblePeer
     case botStart(peerId: PeerId, payload: String)
@@ -603,7 +604,7 @@ public protocol SharedAccountContext: class {
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message], peers: [PeerId: Peer]) -> Signal<ChatAvailableMessageActions, NoError>
     func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError>
-    func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?)
+    func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?)
     func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)

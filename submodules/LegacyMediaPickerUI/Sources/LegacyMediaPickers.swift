@@ -530,7 +530,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     }
                                 }
                             }
-                            if estimatedSize > 5 * 1024 * 1024 {
+                            if estimatedSize > 10 * 1024 * 1024 {
                                 fileAttributes.append(.hintFileIsLarge)
                             }
                             

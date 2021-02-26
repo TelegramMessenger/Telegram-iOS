@@ -27,8 +27,8 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         
         super.init()
         
-        self.containerNode.addSubnode(self.avatarNode)
         self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
         
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self else {

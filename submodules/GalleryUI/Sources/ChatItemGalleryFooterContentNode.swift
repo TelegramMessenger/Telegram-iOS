@@ -504,6 +504,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         if !displayInfo {
             authorNameText = ""
             dateText = ""
+            canEdit = false
         }
         
         var messageText = NSAttributedString(string: "")
@@ -910,15 +911,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 if let strongSelf = self, !messages.isEmpty {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     var generalMessageContentKind: MessageContentKind?
+                    var beganContentKindScanning = false
+                    var messageContentKinds = Set<MessageContentKindKey>()
+                    
                     for message in messages {
                         let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
-                        if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
-                            generalMessageContentKind = currentKind
-                        } else {
+                        if beganContentKindScanning && currentKind != generalMessageContentKind {
                             generalMessageContentKind = nil
-                            break
+                        } else if !beganContentKindScanning || currentKind == generalMessageContentKind {
+                            beganContentKindScanning = true
+                            generalMessageContentKind = currentKind
                         }
+                        messageContentKinds.insert(currentKind.key)
                     }
+                    
                     var preferredAction = ShareControllerPreferredAction.default
                     if let generalMessageContentKind = generalMessageContentKind {
                         switch generalMessageContentKind {
@@ -927,6 +933,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             default:
                                 break
                         }
+                    } else if messageContentKinds.count == 2 && messageContentKinds.contains(.image) && messageContentKinds.contains(.video) {
+                        preferredAction = .saveToCameraRoll
                     }
                     
                     if messages.count == 1 {

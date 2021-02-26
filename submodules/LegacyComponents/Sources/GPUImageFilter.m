@@ -283,6 +283,13 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
         1.0f, 0.0f,
         0.0f, 0.0f,
     };
+    
+    static const GLfloat rotate180HorizontalFlipTextureCoordinates[] = {
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+    };
 
     switch(rotationMode)
     {
@@ -294,6 +301,7 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
         case kGPUImageRotateRightFlipVertical: return rotateRightVerticalFlipTextureCoordinates;
         case kGPUImageRotateRightFlipHorizontal: return rotateRightHorizontalFlipTextureCoordinates;
         case kGPUImageRotate180: return rotate180TextureCoordinates;
+        case kGPUImageRotate180FlipHorizontal: return rotate180HorizontalFlipTextureCoordinates;
     }
 }
 
@@ -640,6 +648,11 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
         case kGPUImageRotate180:
         {
             rotatedPoint.x = 1.0f - pointToRotate.x;
+            rotatedPoint.y = 1.0f - pointToRotate.y;
+        }; break;
+        case kGPUImageRotate180FlipHorizontal:
+        {
+            rotatedPoint.x = pointToRotate.x;
             rotatedPoint.y = 1.0f - pointToRotate.y;
         }; break;
     }

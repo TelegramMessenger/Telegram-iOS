@@ -107,7 +107,7 @@ public enum ChatHistoryImport {
         case chatAdminRequired
     }
     
-    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
+    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, disposeFileAfterDone: Bool, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
         var forceNoBigParts = true
         guard let size = fileSize(file.path), size != 0 else {
             return .single(1.0)
@@ -160,6 +160,11 @@ public enum ChatHistoryImport {
             |> mapToSignal { result -> Signal<Float, UploadMediaError> in
                 return .single(1.0)
             }
+            |> afterDisposed {
+                if disposeFileAfterDone {
+                    TempBox.shared.dispose(file)
+                }
+            }
         }
     }
     
@@ -192,7 +197,7 @@ public enum ChatHistoryImport {
         case invalidChatType
         case userBlocked
         case limitExceeded
-        case userIsNotMutualContact
+        case notMutualContact
     }
     
     public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<CheckPeerImportResult, CheckPeerImportError> {
@@ -217,7 +222,7 @@ public enum ChatHistoryImport {
                 } else if error.errorDescription == "USER_IS_BLOCKED" {
                     return .userBlocked
                 } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
-                    return .userBlocked
+                    return .notMutualContact
                 } else if error.errorDescription == "FLOOD_WAIT" {
                     return .limitExceeded
                 } else {
