@@ -33,7 +33,7 @@ private final class MessageMediaPreuploadManagerContext {
         assert(self.queue.isCurrent())
     }
     
-    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>) {
+    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete:(()->Void)? = nil) {
         let context = MessageMediaPreuploadManagerUploadContext()
         self.uploadContexts[id] = context
         let queue = self.queue
@@ -47,6 +47,7 @@ private final class MessageMediaPreuploadManagerContext {
                         default:
                             print("result")
                             context.result = next
+                            onComplete?()
                     }
                     for subscriber in context.subscribers.copyItems() {
                         subscriber(next)
@@ -112,9 +113,9 @@ public final class MessageMediaPreuploadManager {
         })
     }
     
-    public func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>) {
+    public func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete:(()->Void)? = nil) {
         self.impl.with { context in
-            context.add(network: network, postbox: postbox, id: id, encrypt: encrypt, tag: tag, source: source)
+            context.add(network: network, postbox: postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }
     }
     
