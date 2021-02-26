@@ -181,21 +181,24 @@ public enum MessageActionUrlSubject {
 
 public func requestMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject) -> Signal<MessageActionUrlAuthResult, NoError> {
     let request: Signal<Api.UrlAuthResult?, MTRpcError>
+    var flags: Int32 = 0
     switch subject {
         case let .message(messageId, buttonId):
+            flags |= (1 << 1)
             request = account.postbox.loadedPeerWithId(messageId.peerId)
             |> take(1)
             |> castError(MTRpcError.self)
             |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
                 if let inputPeer = apiInputPeer(peer) {
-                    return account.network.request(Api.functions.messages.requestUrlAuth(peer: inputPeer, msgId: messageId.id, buttonId: buttonId))
+                    return account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil))
                     |> map(Optional.init)
                 } else {
                     return .single(nil)
                 }
             }
         case let .url(url):
-            request = account.network.request(Api.functions.messages.requestUrlAuth(peer: .inputPeerEmpty, msgId: 0, buttonId: 0))
+            flags |= (1 << 2)
+            request = account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url))
             |> map(Optional.init)
     }
     
@@ -227,19 +230,21 @@ public func acceptMessageActionUrlAuth(account: Account, subject: MessageActionU
     let request: Signal<Api.UrlAuthResult?, MTRpcError>
     switch subject {
         case let .message(messageId, buttonId):
+            flags |= (1 << 1)
             request = account.postbox.loadedPeerWithId(messageId.peerId)
             |> take(1)
             |> castError(MTRpcError.self)
             |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
                 if let inputPeer = apiInputPeer(peer) {
-                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId))
+                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil))
                     |> map(Optional.init)
                 } else {
                     return .single(nil)
                 }
             }
         case let .url(url):
-            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: .inputPeerEmpty, msgId: 0, buttonId: 0))
+            flags |= (1 << 2)
+            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url))
             |> map(Optional.init)
     }
     

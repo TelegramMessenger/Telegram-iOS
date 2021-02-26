@@ -250,7 +250,7 @@ func openChatInstantPage(context: AccountContext, message: Message, sourcePeerTy
 func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url, skipUrlAuth: true)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource
@@ -274,7 +274,7 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
 func openChatTheme(context: AccountContext, message: Message, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url, skipUrlAuth: true)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 var file: TelegramMediaFile?
                 var settings: TelegramThemeSettings?

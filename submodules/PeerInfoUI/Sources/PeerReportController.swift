@@ -40,24 +40,32 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
         for option in options {
             let title: String
             let color: ContextMenuActionItemTextColor = .primary
+            var icon: UIImage?
             switch option {
             case .spam:
                 title = presentationData.strings.ReportPeer_ReasonSpam
+                icon = UIImage(bundleImageName: "Chat/Context Menu/Delete")
             case .fake:
                 title = presentationData.strings.ReportPeer_ReasonFake
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportFake")
             case .violence:
                 title = presentationData.strings.ReportPeer_ReasonViolence
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportViolence")
             case .pornography:
                 title = presentationData.strings.ReportPeer_ReasonPornography
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportXxx")
             case .childAbuse:
                 title = presentationData.strings.ReportPeer_ReasonChildAbuse
+                icon = UIImage(bundleImageName: "Chat/Context Menu/Block")
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
+                icon = UIImage(bundleImageName: "Chat/Context Menu/Report")
             }
-            items.append(.action(ContextMenuActionItem(text: title, textColor: color, icon: { _ in
-                return nil
+            items.append(.action(ContextMenuActionItem(text: title, textColor: color, icon: { theme in
+                return generateTintedImage(image: icon, color: theme.contextMenu.primaryColor)
             }, action: { [weak parent] _, f in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 

@@ -1783,6 +1783,20 @@ public struct phone {
 public extension Api {
     public struct functions {
             public struct messages {
+                public static func checkHistoryImportPeer(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.CheckedHistoryImportPeer>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1573261059)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.checkHistoryImportPeer", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.CheckedHistoryImportPeer? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.CheckedHistoryImportPeer?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.CheckedHistoryImportPeer
+                        }
+                        return result
+                    })
+                }
+            
                 public static func getMessages(id: [Api.InputMessage]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1673946374)
@@ -3617,13 +3631,15 @@ public extension Api {
                     })
                 }
             
-                public static func requestUrlAuth(peer: Api.InputPeer, msgId: Int32, buttonId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+                public static func requestUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-482388461)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt32(buttonId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.requestUrlAuth", parameters: [("peer", peer), ("msgId", msgId), ("buttonId", buttonId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+                    buffer.appendInt32(428848198)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {peer!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(msgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(buttonId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.requestUrlAuth", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("buttonId", buttonId), ("url", url)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.UrlAuthResult?
                         if let signature = reader.readInt32() {
@@ -3633,14 +3649,15 @@ public extension Api {
                     })
                 }
             
-                public static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer, msgId: Int32, buttonId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+                public static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-148247912)
+                    buffer.appendInt32(-1322487515)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt32(buttonId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.acceptUrlAuth", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("buttonId", buttonId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+                    if Int(flags) & Int(1 << 1) != 0 {peer!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(msgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(buttonId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.acceptUrlAuth", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("buttonId", buttonId), ("url", url)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.UrlAuthResult?
                         if let signature = reader.readInt32() {
@@ -4118,20 +4135,6 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func checkHistoryImportPeer(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.CheckedHistoryImportPeer>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1573261059)
-                    peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.checkHistoryImportPeer", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.CheckedHistoryImportPeer? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.CheckedHistoryImportPeer?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.CheckedHistoryImportPeer
                         }
                         return result
                     })
