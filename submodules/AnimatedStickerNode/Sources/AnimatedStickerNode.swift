@@ -1003,6 +1003,19 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                                 
                                 strongSelf.completed(stopped)
+                                
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
+                            } else if frame.index == strongSelf.stopAtFrame {
+                                strongSelf.pause()
+                                strongSelf.isPlaying = false
+                                
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
                             }
 
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
@@ -1073,13 +1086,6 @@ public final class AnimatedStickerNode: ASDisplayNode {
 
                             strongSelf.currentFrameIndex = frame.index
                             
-                            if frame.isLastFrame {
-                                if let completion = strongSelf.completion {
-                                    completion()
-                                    strongSelf.completion = nil
-                                }
-                            }
-                            
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
                             
                             if frame.isLastFrame {
@@ -1102,6 +1108,20 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                                 
                                 strongSelf.completed(stopped)
+                                
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
+                                
+                            } else if frame.index == strongSelf.stopAtFrame {
+                                strongSelf.pause()
+                                strongSelf.isPlaying = false
+                                
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
                             }
                                                         
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
