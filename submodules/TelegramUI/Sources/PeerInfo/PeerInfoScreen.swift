@@ -3653,11 +3653,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId)))
                         }
-                    }, error: { _ in
+                    }, error: { error in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        let text: String
+                        switch error {
+                            case .limitExceeded:
+                                text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                            default:
+                                text = strongSelf.presentationData.strings.Login_UnknownError
+                        }
+                        strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }))
                 })]), in: .window(.root))
             }

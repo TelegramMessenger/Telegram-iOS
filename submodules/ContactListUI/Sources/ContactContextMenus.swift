@@ -95,10 +95,17 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
                             if let navigationController = (contactsController?.navigationController as? NavigationController) {
                                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), peekData: nil))
                             }
-                        }, error: { _ in
+                        }, error: { error in
                             if let contactsController = contactsController {
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                contactsController.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        text = presentationData.strings.TwoStepAuth_FloodError
+                                    default:
+                                        text = presentationData.strings.Login_UnknownError
+                                }
+                                contactsController.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }))
                     }
