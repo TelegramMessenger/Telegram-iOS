@@ -13,8 +13,10 @@ swift_library(
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TgVoip:TgVoip",
-        #"//submodules/TgVoipWebrtcCustom:TgVoipWebrtcCustom",
         "//submodules/TgVoipWebrtc:TgVoipWebrtc",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/OpusBinding:OpusBinding",
     ],
     visibility = [
         "//visibility:public",

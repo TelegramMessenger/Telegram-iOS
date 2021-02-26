@@ -1398,6 +1398,22 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
+- (void)addBroadcastPackets:(NSArray<OngoingGroupCallBroadcastPacket *> * _Nonnull)packets {
+    if (!_instance) {
+        return;
+    }
+    
+    std::vector<tgcalls::BroadcastPacket> parsedPackets;
+    for (OngoingGroupCallBroadcastPacket *packet in packets) {
+        tgcalls::BroadcastPacket parsedPacket;
+        parsedPacket.numSamples = packet.numSamples;
+        parsedPacket.data.resize(packet.data.length);
+        [packet.data getBytes:parsedPacket.data.data() length:packet.data.length];
+        parsedPackets.push_back(std::move(parsedPacket));
+    }
+    ((tgcalls::GroupInstanceCustomImpl *)(_instance.get()))->addBroadcastPackets(std::move(parsedPackets));
+}
+
 @end
 
 @implementation OngoingGroupCallParticipantDescription
@@ -1407,6 +1423,19 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     if (self != nil) {
         _audioSsrc = audioSsrc;
         _jsonParams = jsonParams;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallBroadcastPacket
+
+- (instancetype _Nonnull)initWithNumSamples:(int)numSamples data:(NSData * _Nonnull)data {
+    self = [super init];
+    if (self != nil) {
+        _numSamples = numSamples;
+        _data = data;
     }
     return self;
 }

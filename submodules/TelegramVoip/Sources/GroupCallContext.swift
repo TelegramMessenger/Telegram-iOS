@@ -1,6 +1,9 @@
 import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
+import UniversalMediaPlayer
+import AppBundle
+import OpusBinding
 
 private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
@@ -23,6 +26,79 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
     
     func isCurrent() -> Bool {
         return self.queue.isCurrent()
+    }
+}
+
+private final class DemoBroadcastPacketSource {
+    private let queue: Queue
+    
+    private let packetsPipe = ValuePipe<[OngoingGroupCallBroadcastPacket]>()
+    var packets: Signal<[OngoingGroupCallBroadcastPacket], NoError> {
+        return self.packetsPipe.signal()
+    }
+    
+    private var timer: SwiftSignalKit.Timer?
+    
+    private var enqueuedPackets: [OngoingGroupCallBroadcastPacket] = []
+    private var delayTimer: SwiftSignalKit.Timer?
+    
+    private var nextIndex: Int = 0
+    
+    init(queue: Queue) {
+        self.queue = queue
+        
+        self.emitPacketAndStartTimer()
+    }
+    
+    deinit {
+        self.timer?.invalidate()
+        self.delayTimer?.invalidate()
+    }
+    
+    private func emitPacketAndStartTimer() {
+        let demoPacketCount = 200
+        let index = self.nextIndex % demoPacketCount
+        self.nextIndex += 1
+        
+        var packets: [OngoingGroupCallBroadcastPacket] = []
+        
+        let fileName = String(format: "%04d", index)
+        if let path = getAppBundle().path(forResource: fileName, ofType: "ogg") {
+            let source = SoftwareAudioSource(path: path)
+            while true {
+                if let frame = source.readFrame() {
+                    packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(frame.count / 2), data: frame))
+                } else {
+                    break
+                }
+            }
+        }
+        
+        if !packets.isEmpty {
+            self.enqueuedPackets.append(contentsOf: packets)
+            self.startDelayTimer()
+        }
+        
+        let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            self?.emitPacketAndStartTimer()
+        }, queue: self.queue)
+        self.timer = timer
+        timer.start()
+    }
+    
+    private func startDelayTimer() {
+        let delayTimer = SwiftSignalKit.Timer(timeout: Double.random(in: 0.1 ... 0.3), repeat: false, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let packets = strongSelf.enqueuedPackets
+            strongSelf.enqueuedPackets.removeAll()
+            if !packets.isEmpty {
+                strongSelf.packetsPipe.putNext(packets)
+            }
+        }, queue: self.queue)
+        self.delayTimer = delayTimer
+        delayTimer.start()
     }
 }
 
@@ -50,12 +126,14 @@ public final class OngoingGroupCallContext {
         
         let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
         
+        private var broadcastPacketSource: DemoBroadcastPacketSource?
+        private var broadcastPacketsDisposable: Disposable?
+        
         init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
-            var participantDescriptionsRequiredImpl: (([NSNumber]) -> Void)?
             
             let videoSources = self.videoSources
             self.context = GroupCallThreadLocalContext(
@@ -125,6 +203,53 @@ public final class OngoingGroupCallContext {
                     strongSelf.joinPayload.set(.single((payload, ssrc)))
                 }
             })
+            
+            let broadcastPacketSource = DemoBroadcastPacketSource(queue: queue)
+            self.broadcastPacketSource = broadcastPacketSource
+            self.broadcastPacketsDisposable = (broadcastPacketSource.packets
+            |> deliverOn(queue)).start(next: { [weak self] packets in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.context.add(packets)
+            })
+            
+            /*var packets: [OngoingGroupCallBroadcastPacket] = []
+            for i in 0 ..< 200 {
+                let fileName = String(format: "%04d", i)
+                if let path = getAppBundle().path(forResource: fileName, ofType: "ogg") {
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                        if let frames = OggOpusReader.extractFrames(data) {
+                            for frame in frames {
+                                packets.append(OngoingGroupCallBroadcastPacket(numSamples: frame.numSamples, data: frame.data))
+                            }
+                        }
+                    }
+                    continue
+                    
+                    let source = SoftwareAudioSource(path: path)
+                    while true {
+                        if let (frame, numSamples) = source.readEncodedFrame() {
+                            if numSamples != 960 {
+                                continue
+                            }
+                            packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(numSamples), data: frame))
+                        } else {
+                            break
+                        }
+                        /*if let frame = source.readFrame() {
+                            packets.append(frame)
+                        } else {
+                            break
+                        }*/
+                    }
+                }
+            }
+            context.add(packets);*/
+        }
+        
+        deinit {
+            self.broadcastPacketsDisposable?.dispose()
         }
         
         func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
