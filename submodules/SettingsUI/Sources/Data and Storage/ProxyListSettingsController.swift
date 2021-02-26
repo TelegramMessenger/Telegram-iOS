@@ -531,8 +531,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
                     result += string
                 }
                 
-                let controller = ShareController(context: context, subject: .text(result), preferredAction: .default, showInChat: nil, externalShare: true, immediateExternalShare: true, switchableAccounts: [])
-                presentControllerImpl?(controller, nil)
+                presentExternalShare(context: context, text: result, parentController: strongController)
             })
     }
     

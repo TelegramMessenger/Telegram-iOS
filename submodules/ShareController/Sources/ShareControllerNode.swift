@@ -21,10 +21,6 @@ enum ShareExternalState {
     case done
 }
 
-func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
-    
-}
-
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let sharedContext: SharedAccountContext
     private var context: AccountContext?
@@ -175,6 +171,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         super.init()
+        
+        self.isHidden = true
                 
         self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer, search in
             if let strongSelf = self {
@@ -621,6 +619,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func animateIn() {
+        if let completion = self.outCompletion {
+            self.outCompletion = nil
+            completion()
+            return
+        }
         if self.contentNode != nil {
             self.isHidden = false
             
@@ -635,6 +638,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    var outCompletion: (() -> Void)?
     func animateOut(shared: Bool, completion: @escaping () -> Void) {
         if self.contentNode != nil {
             var dimCompleted = false
@@ -664,7 +668,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 internalCompletion()
             })
         } else {
-            completion()
+            self.outCompletion = completion
+            Queue.mainQueue().after(0.2) {
+                if let completion = self.outCompletion {
+                    self.outCompletion = nil
+                    completion()
+                }
+            }
         }
     }
     

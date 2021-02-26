@@ -810,6 +810,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })))
         }
         
+        var isUnremovableAction = false
         if messages.count == 1 {
             let message = messages[0]
             
@@ -826,6 +827,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             if !hasAutoremove {
                 for media in message.media {
+                    if media is TelegramMediaAction {
+                        if let channel = message.peers[message.id.peerId] as? TelegramChannel {
+                            if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canDeleteMessages) == true) {
+                            } else {
+                                isUnremovableAction = true
+                            }
+                        }
+                    }
                     if let file = media as? TelegramMediaFile {
                         if file.isVideo {
                             if file.isAnimated {
@@ -937,7 +946,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         interfaceInteraction.deleteMessages(selectAll ? messages : [message], controller, f)
                     }
                 }), false))
-            } else {
+            } else if !isUnremovableAction {
                 actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                 }, action: { controller, f in

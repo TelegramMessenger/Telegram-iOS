@@ -133,9 +133,9 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
             
             for (entry, disposable) in beginValidateOperations {
                 let signal = synchronizeUnseenPersonalMentionsTag(postbox: postbox, network: network, entry: entry)
-                    |> then(postbox.transaction { transaction -> Void in
-                        transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
-                    })
+                |> then(postbox.transaction { transaction -> Void in
+                    transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                })
                 disposable.set(signal.start())
             }
         })

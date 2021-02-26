@@ -209,7 +209,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     break
                 case let .urlAuth(url, buttonId):
                     if let message = self.message {
-                        self.controllerInteraction.requestMessageActionUrlAuth(url, message.id, buttonId)
+                        self.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: message.id, buttonId: buttonId))
                     }
                 case let .setupPoll(isQuiz):
                     self.controllerInteraction.openPollCreation(isQuiz)

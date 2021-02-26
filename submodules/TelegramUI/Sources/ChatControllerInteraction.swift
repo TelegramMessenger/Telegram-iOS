@@ -64,7 +64,7 @@ public final class ChatControllerInteraction {
     let sendGif: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
     let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
-    let requestMessageActionUrlAuth: (String, MessageId, Int32) -> Void
+    let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     let activateSwitchInline: (PeerId?, String) -> Void
     let openUrl: (String, Bool, Bool?, Message?) -> Void
     let shareCurrentLocation: () -> Void
@@ -154,7 +154,7 @@ public final class ChatControllerInteraction {
         sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
-        requestMessageActionUrlAuth: @escaping (String, MessageId, Int32) -> Void,
+        requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String) -> Void,
         openUrl: @escaping (String, Bool, Bool?, Message?) -> Void,
         shareCurrentLocation: @escaping () -> Void,
@@ -298,7 +298,7 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {

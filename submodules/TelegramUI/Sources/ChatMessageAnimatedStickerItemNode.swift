@@ -178,6 +178,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var highlightedState: Bool = false
     
+    private var forceStopAnimations = false
+    
     private var haptic: EmojiHaptic?
     private var mediaPlayer: MediaPlayer?
     private let mediaStatusDisposable = MetaDisposable()
@@ -489,7 +491,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let animationNode = self.animationNode as? AnimatedStickerNode {
-            let isPlaying = self.visibilityStatus
+            let isPlaying = self.visibilityStatus && !self.forceStopAnimations
             if self.isPlaying != isPlaying {
                 self.isPlaying = isPlaying
                 
@@ -550,7 +552,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func updateStickerSettings() {
+    override func updateStickerSettings(forceStopAnimations: Bool) {
+        self.forceStopAnimations = forceStopAnimations
         self.updateVisibility()
     }
     

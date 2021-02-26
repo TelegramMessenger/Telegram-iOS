@@ -473,7 +473,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
-            if case .user = kind {
+            if [.user, .bot].contains(kind) {
                 groupsInCommon = GroupsInCommonContext(account: context.account, peerId: userPeerId)
             } else {
                 groupsInCommon = nil
@@ -984,7 +984,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if isOpenedFromChat {
             result.append(.search)
         }
-        if isSecretChat && !isContact {
+        if (isSecretChat && !isContact) || user.flags.contains(.isSupport) {
         } else {
             result.append(.more)
         }
@@ -1043,7 +1043,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
             canReport = false
         }
-        if !canReport && !canViewStats && displayLeave {
+        if !canReport && !canViewStats {
             displayMore = false
         }
         if displayMore {

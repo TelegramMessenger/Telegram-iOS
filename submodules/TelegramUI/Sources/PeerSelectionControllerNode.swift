@@ -67,7 +67,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.filter = filter
         self.hasGlobalSearch = hasGlobalSearch
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         if hasChatListSelector && hasContactSelector {
             self.toolbarBackgroundNode = ASDisplayNode()
@@ -106,6 +107,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        
+        self.chatListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.chatListNode.activateSearch = { [weak self] in
             self?.requestActivateSearch?()

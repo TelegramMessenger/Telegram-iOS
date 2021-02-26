@@ -665,7 +665,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 playing = true
                             case let .buffering(_, whilePlaying, _, display):
                                 displayProgress = display
-                                initialBuffering = true
+                                initialBuffering = !whilePlaying
                                 isPaused = !whilePlaying
                                 var isStreaming = false
                                 if let fetchStatus = strongSelf.fetchStatus {

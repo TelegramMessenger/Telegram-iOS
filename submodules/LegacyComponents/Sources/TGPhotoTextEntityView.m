@@ -187,7 +187,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
     _style = style;
     switch (_style) {
         case TGPhotoPaintTextEntityStyleRegular:
-            _textView.layer.shadowColor = [[UIColor blackColor] CGColor];
+            _textView.layer.shadowColor = [UIColorRGB(0x000000) CGColor];
             _textView.layer.shadowOffset = CGSizeMake(0.0f, 4.0f);
             _textView.layer.shadowOpacity = 0.4f;
             _textView.layer.shadowRadius = 4.0f;
@@ -218,7 +218,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
             
         case TGPhotoPaintTextEntityStyleOutlined:
         {
-            _textView.textColor = [UIColor whiteColor];
+            _textView.textColor = UIColorRGB(0xffffff);
             _textView.strokeColor = _swatch.color;
             _textView.frameColor = nil;
         }
@@ -238,9 +238,9 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
             }
             
             if (lightness > 0.87) {
-                _textView.textColor = [UIColor blackColor];
+                _textView.textColor = UIColorRGB(0x000000);
             } else {
-                _textView.textColor = [UIColor whiteColor];
+                _textView.textColor = UIColorRGB(0xffffff);
             }
             _textView.strokeColor = nil;
             _textView.frameColor = _swatch.color;
@@ -484,6 +484,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 @implementation TGPhotoTextView
 {
     UIFont *_font;
+    UIColor *_forcedTextColor;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -564,6 +565,11 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
     self.layoutManager.textContainers.firstObject.lineFragmentPadding = floor(font.pointSize * 0.3);
 }
 
+- (void)setTextColor:(UIColor *)textColor {
+    _forcedTextColor = textColor;
+    [super setTextColor:textColor];
+}
+
 - (void)insertText:(NSString *)text {
     [self fixTypingAttributes];
     [super insertText:text];
@@ -577,9 +583,14 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 }
 
 - (void)fixTypingAttributes {
+    NSMutableDictionary *attributes = [[NSMutableDictionary alloc] init];
     if (_font != nil) {
-        self.typingAttributes = @{NSFontAttributeName: _font};
+        attributes[NSFontAttributeName] = _font;
     }
+    if (_forcedTextColor != nil) {
+        attributes[NSForegroundColorAttributeName] = _forcedTextColor;
+    }
+    self.typingAttributes = attributes;
 }
 
 @end
