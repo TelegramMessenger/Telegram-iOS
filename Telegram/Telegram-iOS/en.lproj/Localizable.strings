@@ -6158,3 +6158,13 @@ Sorry for the inconvenience.";
 
 "Message.ScamAccount" = "Scam";
 "Message.FakeAccount" = "Fake";
+
+"InstantPage.FontSanFrancisco" = "San Francisco";
+"InstantPage.FontNewYork" = "New York";
+"InstantPage.Search" = "Search";
+"InstantPage.OpenInBrowser" = "Open in %@";
+"InstantPage.VoiceOver.IncreaseFontSize" = "Increase Font Size";
+"InstantPage.VoiceOver.DecreaseFontSize" = "Decrease Font Size";
+"InstantPage.VoiceOver.ResetFontSize" = "Reset Font Size";
+
+"Contacts.VoiceOver.AddContact" = "Add Contact";

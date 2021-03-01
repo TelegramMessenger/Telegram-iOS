@@ -264,14 +264,11 @@ private func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramC
         result.insert(.banSendStickers)
         result.insert(.banSendGifs)
         result.insert(.banSendGames)
+        result.insert(.banSendInline)
     } else {
         result.remove(.banSendStickers)
         result.remove(.banSendGifs)
         result.remove(.banSendGames)
-    }
-    if result.contains(.banEmbedLinks) {
-        result.insert(.banSendInline)
-    } else {
         result.remove(.banSendInline)
     }
     return result
