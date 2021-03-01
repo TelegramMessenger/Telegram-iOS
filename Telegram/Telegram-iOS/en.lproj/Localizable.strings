@@ -4683,6 +4683,16 @@ Sorry for the inconvenience.";
 "VoiceOver.MessageContextReply" = "Reply";
 "VoiceOver.MessageContextOpenMessageMenu" = "Open message menu";
 
+"VoiceOver.Keyboard" = "Keyboard";
+"VoiceOver.Stickers" = "Stickers";
+"VoiceOver.ScheduledMessages" = "Scheduled Messages";
+"VoiceOver.BotCommands" = "Bot Commands";
+"VoiceOver.BotKeyboard" = "Bot Keyboard";
+"VoiceOver.SilentPostOn" = "Silent Broadcast On";
+"VoiceOver.SilentPostOff" = "Silent Broadcast Off";
+"VoiceOver.SelfDestructTimerOn" = "Self-destruct Timer: %@";
+"VoiceOver.SelfDestructTimerOff" = "Self-destruct Timer Off";
+
 "ProxyServer.VoiceOver.Active" = "Active";
 
 "Conversation.ScheduleMessage.Title" = "Schedule Message";
