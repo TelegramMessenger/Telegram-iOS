@@ -895,7 +895,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     let doubleBottomTimestampSignal = context.account.postbox.transaction({ transaction -> Int64 in
         var value = transaction.getPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp) as? DoubleBottomHideTimestamp ?? DoubleBottomHideTimestamp.defaultValue
         if value.timestamp == 0 {
-            value.timestamp = Int64(Date().timeIntervalSince1970) + 60
+            value.timestamp = Int64(Date().timeIntervalSince1970) + 600
             transaction.setPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp, value: value)
         }
         return value.timestamp
