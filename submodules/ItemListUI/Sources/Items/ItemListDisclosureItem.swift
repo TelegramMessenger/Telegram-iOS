@@ -324,6 +324,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             case let .coloredText(color):
                 labelBadgeColor = color
                 labelFont = titleFont
+            case .monospaceText:
+                labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
+                labelFont = Font.monospace(item.presentationData.fontSize.itemListBaseFontSize)
             default:
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = titleFont
