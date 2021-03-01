@@ -2987,7 +2987,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         })
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, _, _):
+                        case let .groupCall(flags, _, _, _, _, _, _, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             let defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)

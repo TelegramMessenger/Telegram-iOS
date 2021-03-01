@@ -1,8 +1,8 @@
 import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
-import UniversalMediaPlayer
-import AppBundle
+//import UniversalMediaPlayer
+//import AppBundle
 import OpusBinding
 
 private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
@@ -62,17 +62,17 @@ private final class DemoBroadcastPacketSource {
         
         var packets: [OngoingGroupCallBroadcastPacket] = []
         
-        let fileName = String(format: "%04d", index)
-        if let path = getAppBundle().path(forResource: fileName, ofType: "ogg") {
-            let source = SoftwareAudioSource(path: path)
-            while true {
-                if let frame = source.readFrame() {
-                    packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(frame.count / 2), data: frame))
-                } else {
-                    break
-                }
-            }
-        }
+//        let fileName = String(format: "%04d", index)
+//        if let path = getAppBundle().path(forResource: fileName, ofType: "ogg") {
+//            let source = SoftwareAudioSource(path: path)
+//            while true {
+//                if let frame = source.readFrame() {
+//                    packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(frame.count / 2), data: frame))
+//                } else {
+//                    break
+//                }
+//            }
+//        }
         
         if !packets.isEmpty {
             self.enqueuedPackets.append(contentsOf: packets)
