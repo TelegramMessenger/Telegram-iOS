@@ -1022,6 +1022,19 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         var topHasOpaque = false
         var foundControllerInFocus = false
+        
+        for container in self.globalOverlayContainers.reversed() {
+            let controller = container.controller
+            if topHasOpaque {
+                controller.displayNode.accessibilityElementsHidden = true
+            } else {
+                if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                    topHasOpaque = true
+                }
+                controller.displayNode.accessibilityElementsHidden = false
+            }
+        }
+        
         for container in self.overlayContainers.reversed() {
             if foundControllerInFocus {
                 container.controller.isInFocus = false

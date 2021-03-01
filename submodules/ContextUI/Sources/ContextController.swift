@@ -1593,6 +1593,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.statusBar.statusBarStyle = .Hide
         }
         self.lockOrientation = true
+        self.blocksBackgroundWhenInOverlay = true
     }
     
     required init(coder aDecoder: NSCoder) {
