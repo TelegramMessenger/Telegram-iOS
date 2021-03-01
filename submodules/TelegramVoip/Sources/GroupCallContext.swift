@@ -64,12 +64,24 @@ private final class DemoBroadcastPacketSource {
         
         let fileName = String(format: "%04d", index)
         if let path = getAppBundle().path(forResource: fileName, ofType: "ogg") {
-            let source = SoftwareAudioSource(path: path)
+            let source1 = SoftwareAudioSource(path: path)
+            let source2 = SoftwareAudioSource(path: path)
+            let frames = OggOpusReader.extractFrames(try! Data(contentsOf: URL(fileURLWithPath: path)))!
             while true {
-                if let frame = source.readFrame() {
-                    packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(frame.count / 2), data: frame))
+                if true {
+                    if let (frame, numSamples) = source1.readEncodedFrame() {
+                        let decodedFrame = source2.readFrame()!
+                        
+                        packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(numSamples), data: frames[packets.count].data, decodedData: decodedFrame))
+                    } else {
+                        break
+                    }
                 } else {
-                    break
+                    if let frame = source2.readFrame() {
+                        packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(frame.count / 2), data: frame, decodedData: frame))
+                    } else {
+                        break
+                    }
                 }
             }
         }

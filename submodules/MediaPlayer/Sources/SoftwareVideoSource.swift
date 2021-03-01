@@ -435,7 +435,7 @@ public final class SoftwareAudioSource {
         
         let (decodableFrame, _) = self.readDecodableFrame()
         if let decodableFrame = decodableFrame {
-            return (decodableFrame.copyPacketData(), Int(decodableFrame.packet.duration - max(0, -decodableFrame.packet.pts)))
+            return (decodableFrame.copyPacketData(), Int(decodableFrame.packet.duration))
         } else {
             return nil
         }

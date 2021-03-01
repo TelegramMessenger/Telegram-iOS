@@ -169,8 +169,9 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 @property (nonatomic, readonly) int numSamples;
 @property (nonatomic, strong, readonly) NSData * _Nonnull data;
+@property (nonatomic, strong, readonly) NSData * _Nonnull decodedData;
 
-- (instancetype _Nonnull)initWithNumSamples:(int)numSamples data:(NSData * _Nonnull)data;
+- (instancetype _Nonnull)initWithNumSamples:(int)numSamples data:(NSData * _Nonnull)data decodedData:(NSData * _Nonnull)decodedData;
 
 @end
 

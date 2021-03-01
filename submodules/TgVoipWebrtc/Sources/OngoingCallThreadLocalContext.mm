@@ -1407,8 +1407,13 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     for (OngoingGroupCallBroadcastPacket *packet in packets) {
         tgcalls::BroadcastPacket parsedPacket;
         parsedPacket.numSamples = packet.numSamples;
+        
         parsedPacket.data.resize(packet.data.length);
         [packet.data getBytes:parsedPacket.data.data() length:packet.data.length];
+        
+        parsedPacket.decodedData.resize(packet.decodedData.length);
+        [packet.decodedData getBytes:parsedPacket.decodedData.data() length:packet.decodedData.length];
+        
         parsedPackets.push_back(std::move(parsedPacket));
     }
     ((tgcalls::GroupInstanceCustomImpl *)(_instance.get()))->addBroadcastPackets(std::move(parsedPackets));
@@ -1431,11 +1436,12 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 @implementation OngoingGroupCallBroadcastPacket
 
-- (instancetype _Nonnull)initWithNumSamples:(int)numSamples data:(NSData * _Nonnull)data {
+- (instancetype _Nonnull)initWithNumSamples:(int)numSamples data:(NSData * _Nonnull)data decodedData:(NSData * _Nonnull)decodedData {
     self = [super init];
     if (self != nil) {
         _numSamples = numSamples;
         _data = data;
+        _decodedData = decodedData;
     }
     return self;
 }
