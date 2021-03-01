@@ -267,6 +267,21 @@ public final class HiddenAccountManagerImpl: HiddenAccountManager {
         }
     }
     
+    public func hiddenAccounts(accountManager: AccountManager) -> Signal<[AccountRecordId], NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords()
+                .filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
+                .map { $0.id }
+        }
+    }
+    
+    public func isAccountHidden(accountRecordId: AccountRecordId,accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords()
+                .contains { $0.id == accountRecordId && $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
+        }
+    }
+    
     deinit {
         unlockedHiddenAccountRecordIdDisposable?.dispose()
     }

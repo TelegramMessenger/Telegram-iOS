@@ -31,6 +31,8 @@ public protocol HiddenAccountManager {
     
     func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError>
     func configureHiddenAccountsAccessChallengeData(accountManager: AccountManager)
+    func hiddenAccounts(accountManager: AccountManager) -> Signal<[AccountRecordId], NoError>
+    func isAccountHidden(accountRecordId: AccountRecordId,accountManager: AccountManager) -> Signal<Bool, NoError>
 }
 
 final class AccountManagerImpl {
