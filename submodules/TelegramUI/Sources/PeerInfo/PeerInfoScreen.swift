@@ -563,6 +563,7 @@ private final class PeerInfoInteraction {
     let logoutAccount: (AccountRecordId) -> Void
     let accountContextMenu: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
     let updateBio: (String) -> Void
+    let openDeletePeer: () -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -599,7 +600,8 @@ private final class PeerInfoInteraction {
         switchToAccount: @escaping (AccountRecordId) -> Void,
         logoutAccount: @escaping (AccountRecordId) -> Void,
         accountContextMenu: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
-        updateBio: @escaping (String) -> Void
+        updateBio: @escaping (String) -> Void,
+        openDeletePeer: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -636,6 +638,7 @@ private final class PeerInfoInteraction {
         self.logoutAccount = logoutAccount
         self.accountContextMenu = accountContextMenu
         self.updateBio = updateBio
+        self.openDeletePeer = openDeletePeer
     }
 }
 
@@ -1140,39 +1143,13 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
         case groupLocation
         case peerPublicSettings
         case peerSettings
+        case peerActions
     }
     
     var items: [Section: [PeerInfoScreenItem]] = [:]
     for section in Section.allCases {
         items[section] = []
     }
-    
-//    if let data = data, let notificationSettings = data.notificationSettings {
-//        let notificationsLabel: String
-//        let soundLabel: String
-//        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-//            if until < Int32.max - 1 {
-//                notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
-//            } else {
-//                notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
-//            }
-//        } else {
-//            notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
-//        }
-//
-//        let globalNotificationSettings: GlobalNotificationSettings = data.globalNotificationSettings ?? GlobalNotificationSettings.defaultSettings
-//        soundLabel = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.privateChats.sound)
-//
-//        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .text(notificationsLabel), text: presentationData.strings.GroupInfo_Notifications, action: {
-//            interaction.editingOpenNotificationSettings()
-//        }))
-//        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 1, label: .text(soundLabel), text: presentationData.strings.GroupInfo_Sound, action: {
-//            interaction.editingOpenSoundSettings()
-//        }))
-//        items[.notifications]!.append(PeerInfoScreenSwitchItem(id: 2, text: presentationData.strings.Notification_Exceptions_PreviewAlwaysOn, value: notificationSettings.displayPreviews != .hide, toggled: { value in
-//            interaction.editingToggleShowMessageText(value)
-//        }))
-//    }
     
     if let data = data {
         if let _ = data.peer as? TelegramUser {
@@ -1194,8 +1171,8 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if channel.flags.contains(.isCreator) {
                     let linkText: String
-                    if let username = channel.username {
-                        linkText = "@\(username)"
+                    if let _ = channel.username {
+                        linkText = presentationData.strings.Channel_Setup_TypePublic
                     } else {
                         linkText = presentationData.strings.Channel_Setup_TypePrivate
                     }
@@ -1256,14 +1233,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemLinkedChannel = 103
                 let ItemPreHistory = 104
                 let ItemStickerPack = 105
-                let ItemPermissions = 106
-                let ItemMembers = 107
+                let ItemMembers = 106
+                let ItemPermissions = 107
                 let ItemAdmins = 108
                 let ItemRemovedUsers = 109
                 let ItemLocationHeader = 110
                 let ItemLocation = 111
                 let ItemLocationSetup = 112
                 let ItemAutoremove = 113
+                let ItemDeleteGroup = 114
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.username != nil
@@ -1369,25 +1347,28 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             activePermissionCount = count
                         }
                         
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text(cachedData.participantsSummary.memberCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.Group_Info_Members, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                            interaction.openParticipantsSection(.members)
+                        }))
                         if !channel.flags.contains(.isGigagroup) {
                             items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode"), action: {
                                 interaction.openPermissions()
-                            }))
-                        } else {
-                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text(cachedData.participantsSummary.memberCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.Group_Info_Members, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
-                                interaction.openParticipantsSection(.members)
                             }))
                         }
                         
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text(cachedData.participantsSummary.adminCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                             interaction.openParticipantsSection(.admins)
                         }))
-                        
-                        if channel.flags.contains(.isGigagroup) {
-                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
-                                interaction.openParticipantsSection(.banned)
-                            }))
-                        }
+
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
+                            interaction.openParticipantsSection(.banned)
+                        }))
+                    }
+                    
+                    if isCreator {
+                        items[.peerActions]!.append(PeerInfoScreenActionItem(id: ItemDeleteGroup, text: presentationData.strings.Group_DeleteGroup, color: .destructive, icon: nil, alignment: .natural, action: {
+                            interaction.openDeletePeer()
+                        }))
                     }
                 }
             }
@@ -1691,6 +1672,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             },
             updateBio: { [weak self] bio in
                 self?.updateBio(bio)
+            },
+            openDeletePeer: { [weak self] in
+                self?.openDeletePeer()
             }
         )
         
@@ -3669,11 +3653,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId)))
                         }
-                    }, error: { _ in
+                    }, error: { error in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        let text: String
+                        switch error {
+                            case .limitExceeded:
+                                text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                            default:
+                                text = strongSelf.presentationData.strings.Login_UnknownError
+                        }
+                        strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }))
                 })]), in: .window(.root))
             }
@@ -6589,7 +6580,13 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                         case .notMutualContact:
                             let _ = (context.account.postbox.loadedPeerWithId(memberId)
                             |> deliverOnMainQueue).start(next: { peer in
-                                parentController?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                let text: String
+                                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                    text = presentationData.strings.Channel_AddUserLeftError
+                                } else {
+                                    text = presentationData.strings.GroupInfo_AddUserLeftError
+                                }
+                                parentController?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             })
                             return .complete()
                         case .tooManyChannels:
@@ -6708,7 +6705,14 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                                 break
                         }
                     } else if peers.count == 1, case .notMutualContact = error {
-                        parentController?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        let text: String
+                        if let peer = groupPeer as? TelegramChannel, case .broadcast = peer.info {
+                            text = presentationData.strings.Channel_AddUserLeftError
+                        } else {
+                            text = presentationData.strings.GroupInfo_AddUserLeftError
+                        }
+                        
+                        parentController?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     } else if case .tooMuchJoined = error  {
                         parentController?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }

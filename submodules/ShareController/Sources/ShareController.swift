@@ -469,7 +469,7 @@ public final class ShareController: ViewController {
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, shares: self.shares, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme)
-        self.controllerNode.completed = completed
+        self.controllerNode.completed = self.completed
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             self?.dismissed?(shared)
@@ -721,13 +721,18 @@ public final class ShareController: ViewController {
                                     })
                                     activities = [shareToInstagram]
                                 }
-                                let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
                                 
-                                if let window = strongSelf.view.window, let rootViewController = window.rootViewController {
-                                    activityController.popoverPresentationController?.sourceView = window
-                                    activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-                                    rootViewController.present(activityController, animated: true, completion: nil)
-                                }
+                                let _ = (strongSelf.didAppearPromise.get()
+                                |> filter { $0 }
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                    let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
+                                    if let strongSelf = self, let window = strongSelf.view.window, let rootViewController = window.rootViewController {
+                                        activityController.popoverPresentationController?.sourceView = window
+                                        activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                                        rootViewController.present(activityController, animated: true, completion: nil)
+                                    }
+                                })
                             }
                             return .done
                     }
@@ -785,12 +790,16 @@ public final class ShareController: ViewController {
         super.loadView()
     }
     
+    let didAppearPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if !self.animatedIn {
             self.animatedIn = true
-            self.controllerNode.animateIn()
+            self.didAppearPromise.set(true)
+            if !self.immediateExternalShare {
+                self.controllerNode.animateIn()
+            }
         }
     }
     

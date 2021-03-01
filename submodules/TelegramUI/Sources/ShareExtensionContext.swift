@@ -744,7 +744,7 @@ public class ShareRootControllerImpl {
                                                                     errorText = presentationData.strings.ChatImportActivity_ErrorUserBlocked
                                                                 case .limitExceeded:
                                                                     errorText = presentationData.strings.ChatImportActivity_ErrorLimitExceeded
-                                                                case .userIsNotMutualContact:
+                                                                case .notMutualContact:
                                                                     errorText = presentationData.strings.ChatImport_UserErrorNotMutual
                                                                 }
                                                                 let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
@@ -868,7 +868,7 @@ public class ShareRootControllerImpl {
                                                                 errorText = presentationData.strings.ChatImportActivity_ErrorUserBlocked
                                                             case .limitExceeded:
                                                                 errorText = presentationData.strings.ChatImportActivity_ErrorLimitExceeded
-                                                            case .userIsNotMutualContact:
+                                                            case .notMutualContact:
                                                                 errorText = presentationData.strings.ChatImport_UserErrorNotMutual
                                                             }
                                                             let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
@@ -989,7 +989,7 @@ public class ShareRootControllerImpl {
                                                                 errorText = presentationData.strings.ChatImportActivity_ErrorUserBlocked
                                                             case .limitExceeded:
                                                                 errorText = presentationData.strings.ChatImportActivity_ErrorLimitExceeded
-                                                            case .userIsNotMutualContact:
+                                                            case .notMutualContact:
                                                                 errorText = presentationData.strings.ChatImport_UserErrorNotMutual
                                                             }
                                                             let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {

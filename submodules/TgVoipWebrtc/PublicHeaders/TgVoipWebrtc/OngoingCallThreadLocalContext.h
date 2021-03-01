@@ -165,6 +165,15 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 @end
 
+@interface OngoingGroupCallBroadcastPacket : NSObject
+
+@property (nonatomic, readonly) int numSamples;
+@property (nonatomic, strong, readonly) NSData * _Nonnull data;
+
+- (instancetype _Nonnull)initWithNumSamples:(int)numSamples data:(NSData * _Nonnull)data;
+
+@end
+
 @interface GroupCallThreadLocalContext : NSObject
 
 - (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired;
@@ -185,6 +194,8 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 - (void)makeIncomingVideoViewWithSsrc:(uint32_t)ssrc completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
+
+- (void)addBroadcastPackets:(NSArray<OngoingGroupCallBroadcastPacket *> * _Nonnull)packets;
 
 @end
 

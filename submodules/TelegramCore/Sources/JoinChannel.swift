@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import MtProtoKit
 
 import SyncCore
 
@@ -11,13 +12,19 @@ public enum JoinChannelError {
     case tooMuchUsers
 }
 
-public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
+public func joinChannel(account: Account, peerId: PeerId, hash: String?) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
     return account.postbox.loadedPeerWithId(peerId)
     |> take(1)
     |> castError(JoinChannelError.self)
     |> mapToSignal { peer -> Signal<RenderedChannelParticipant?, JoinChannelError> in
         if let inputChannel = apiInputChannel(peer) {
-            return account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
+            let request: Signal<Api.Updates, MTRpcError>
+            if let hash = hash {
+                request = account.network.request(Api.functions.messages.importChatInvite(hash: hash))
+            } else {
+                request = account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
+            }
+            return request
             |> mapError { error -> JoinChannelError in
                 switch error.errorDescription {
                     case "CHANNELS_TOO_MUCH":

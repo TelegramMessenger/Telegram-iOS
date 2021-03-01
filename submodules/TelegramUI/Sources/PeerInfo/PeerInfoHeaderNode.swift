@@ -2810,9 +2810,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let peer = peer {
                 self.initializedCredibilityIcon = true
                 if peer.isFake {
-                    image = PresentationResourcesChatList.fakeIcon(presentationData.theme, type: .regular)
+                    image = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
                 } else if peer.isScam {
-                    image = PresentationResourcesChatList.scamIcon(presentationData.theme, type: .regular)
+                    image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
                 } else if peer.isVerified {
                     if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
                         image = generateImage(sourceImage.size, contextGenerator: { size, context in

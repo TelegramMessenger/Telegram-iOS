@@ -845,7 +845,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         strongSelf.maybeRequestParticipants(ssrcs: ssrcs)
                     }
-                })
+                }, demoAudioStream: self.accountContext.sharedContext.immediateExperimentalUISettings.demoAudioStream)
                 self.incomingVideoSourcePromise.set(callContext.videoSources
                 |> deliverOnMainQueue
                 |> map { [weak self] sources -> [PeerId: UInt32] in

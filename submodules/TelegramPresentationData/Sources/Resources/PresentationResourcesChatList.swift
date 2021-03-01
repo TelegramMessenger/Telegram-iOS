@@ -212,7 +212,7 @@ public struct PresentationResourcesChatList {
         })
     }
 
-    public static func scamIcon(_ theme: PresentationTheme, type: ScamIconType) -> UIImage? {
+    public static func scamIcon(_ theme: PresentationTheme, strings: PresentationStrings, type: ScamIconType) -> UIImage? {
         let key: PresentationResourceKey
         let color: UIColor
         switch type {
@@ -227,7 +227,10 @@ public struct PresentationResourcesChatList {
                 color = theme.chat.serviceMessage.components.withDefaultWallpaper.scam
         }
         return theme.image(key.rawValue, { theme in
-            return generateImage(CGSize(width: 37.0, height: 16.0), contextGenerator: { size, context in
+            let titleString = NSAttributedString(string: strings.Message_ScamAccount.uppercased(), font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
+            let stringRect = titleString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+            
+            return generateImage(CGSize(width: floor(stringRect.width) + 11.0, height: 16.0), contextGenerator: { size, context in
                 let bounds = CGRect(origin: CGPoint(), size: size)
                 context.clear(bounds)
                 
@@ -240,7 +243,6 @@ public struct PresentationResourcesChatList {
                 
                 let titlePath = CGMutablePath()
                 titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
-                let titleString = NSAttributedString(string: "SCAM", font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
                 let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
                 let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
                 CTFrameDraw(titleFrame, context)
@@ -248,7 +250,7 @@ public struct PresentationResourcesChatList {
         })
     }
     
-    public static func fakeIcon(_ theme: PresentationTheme, type: ScamIconType) -> UIImage? {
+    public static func fakeIcon(_ theme: PresentationTheme, strings: PresentationStrings, type: ScamIconType) -> UIImage? {
         let key: PresentationResourceKey
         let color: UIColor
         switch type {
@@ -263,7 +265,10 @@ public struct PresentationResourcesChatList {
                 color = theme.chat.serviceMessage.components.withDefaultWallpaper.scam
         }
         return theme.image(key.rawValue, { theme in
-            return generateImage(CGSize(width: 37.0, height: 16.0), contextGenerator: { size, context in
+            let titleString = NSAttributedString(string: strings.Message_FakeAccount.uppercased(), font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
+            let stringRect = titleString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+            
+            return generateImage(CGSize(width: floor(stringRect.width) + 11.0, height: 16.0), contextGenerator: { size, context in
                 let bounds = CGRect(origin: CGPoint(), size: size)
                 context.clear(bounds)
                 
@@ -276,7 +281,6 @@ public struct PresentationResourcesChatList {
                 
                 let titlePath = CGMutablePath()
                 titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
-                let titleString = NSAttributedString(string: "FAKE", font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
                 let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
                 let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
                 CTFrameDraw(titleFrame, context)

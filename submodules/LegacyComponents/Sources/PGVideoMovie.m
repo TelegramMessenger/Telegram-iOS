@@ -118,16 +118,20 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 - (GPUImageRotationMode)rotationForTrack:(AVAsset *)asset {
     AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
-    CGAffineTransform trackTransform = [videoTrack preferredTransform];
+    CGAffineTransform t = [videoTrack preferredTransform];
     
-    if (trackTransform.a == -1 && trackTransform.d == -1) {
+    if (t.a == -1 && t.d == -1) {
         return kGPUImageRotate180;
-    } else if (trackTransform.a == 1 && trackTransform.d == 1)  {
+    } else if (t.a == 1 && t.d == 1)  {
         return kGPUImageNoRotation;
-    } else if (trackTransform.b == -1 && trackTransform.c == 1) {
+    } else if (t.b == -1 && t.c == 1) {
         return kGPUImageRotateLeft;
+    } else if (t.a == -1 && t.d == 1) {
+        return kGPUImageFlipHorizonal;
+    } else if (t.a == 1 && t.d == -1)  {
+        return kGPUImageRotate180FlipHorizontal;
     } else {
-        if (trackTransform.c == 1) {
+        if (t.c == 1) {
             return kGPUImageRotateRightFlipVertical;
         } else {
             return kGPUImageRotateRight;

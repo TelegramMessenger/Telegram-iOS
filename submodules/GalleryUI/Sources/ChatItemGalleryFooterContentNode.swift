@@ -663,12 +663,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         transition.updateAlpha(node: self.textNode, alpha: displayCaption ? 1.0 : 0.0)
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
-        self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
-        self.editButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - 50.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        
+        let deleteFrame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        var editFrame = CGRect(origin: CGPoint(x: width - 44.0 - 50.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        if self.deleteButton.isHidden {
+            editFrame = deleteFrame
+        }
+        self.deleteButton.frame = deleteFrame
+        self.editButton.frame = editFrame
 
         if let image = self.backwardButton.image(for: .normal) {
             self.backwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) - 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
-        
         }
         if let image = self.forwardButton.image(for: .normal) {
             self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
@@ -911,15 +916,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 if let strongSelf = self, !messages.isEmpty {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     var generalMessageContentKind: MessageContentKind?
+                    var beganContentKindScanning = false
+                    var messageContentKinds = Set<MessageContentKindKey>()
+                    
                     for message in messages {
                         let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
-                        if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
-                            generalMessageContentKind = currentKind
-                        } else {
+                        if beganContentKindScanning && currentKind != generalMessageContentKind {
                             generalMessageContentKind = nil
-                            break
+                        } else if !beganContentKindScanning || currentKind == generalMessageContentKind {
+                            beganContentKindScanning = true
+                            generalMessageContentKind = currentKind
                         }
+                        messageContentKinds.insert(currentKind.key)
                     }
+                    
                     var preferredAction = ShareControllerPreferredAction.default
                     if let generalMessageContentKind = generalMessageContentKind {
                         switch generalMessageContentKind {
@@ -928,6 +938,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             default:
                                 break
                         }
+                    } else if messageContentKinds.count == 2 && messageContentKinds.contains(.image) && messageContentKinds.contains(.video) {
+                        preferredAction = .saveToCameraRoll
                     }
                     
                     if messages.count == 1 {
