@@ -43,7 +43,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     private let openMentionDisposable = MetaDisposable()
     
     private var presentationDataDisposable: Disposable?
-    
+        
     public var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? {
         didSet {
             if self.isNodeLoaded {

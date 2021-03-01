@@ -6151,3 +6151,5 @@ Sorry for the inconvenience.";
 "VoiceOver.ScrollStatus" = "Row %1$@ of %2$@";
 
 "Conversation.UsersTooMuchError" = "Sorry, this group is full.";
+
+"Conversation.UploadFileTooLarge" = "File could not be sent, because it is larger than 2 GB.\n\nYou can send as many files as you like, but each must be smaller than 2 GB.";

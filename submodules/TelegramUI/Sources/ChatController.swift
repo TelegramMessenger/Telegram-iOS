@@ -306,6 +306,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     private var automaticMediaDownloadSettingsDisposable: Disposable?
     
+    private var disableStickerAnimationsPromise = ValuePromise<Bool>(false)
+    private var disableStickerAnimationsValue = false
+    var disableStickerAnimations: Bool {
+        get {
+            return self.disableStickerAnimationsValue
+        } set {
+            self.disableStickerAnimationsPromise.set(newValue)
+        }
+    }
     private var stickerSettings: ChatInterfaceStickerSettings
     private var stickerSettingsDisposable: Disposable?
     
@@ -1163,124 +1172,122 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-        }, requestMessageActionUrlAuth: { [weak self] defaultUrl, messageId, buttonId in
+        }, requestMessageActionUrlAuth: { [weak self] defaultUrl, subject in
             if let strongSelf = self {
                 guard strongSelf.presentationInterfaceState.subject != .scheduledMessages else {
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_BotActionUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
-                if let _ = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                        return $0.updatedTitlePanelContext {
-                            if !$0.contains(where: {
-                                switch $0 {
-                                    case .requestInProgress:
-                                        return true
-                                    default:
-                                        return false
-                                }
-                            }) {
-                                var updatedContexts = $0
-                                updatedContexts.append(.requestInProgress)
-                                return updatedContexts.sorted()
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    return $0.updatedTitlePanelContext {
+                        if !$0.contains(where: {
+                            switch $0 {
+                                case .requestInProgress:
+                                    return true
+                                default:
+                                    return false
                             }
-                            return $0
+                        }) {
+                            var updatedContexts = $0
+                            updatedContexts.append(.requestInProgress)
+                            return updatedContexts.sorted()
                         }
-                    })
-                    strongSelf.messageActionUrlAuthDisposable.set(((combineLatest(strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId), requestMessageActionUrlAuth(account: strongSelf.context.account, messageId: messageId, buttonId: buttonId) |> afterDisposed {
-                        Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                    return $0.updatedTitlePanelContext {
-                                        if let index = $0.firstIndex(where: {
-                                            switch $0 {
-                                                case .requestInProgress:
-                                                    return true
-                                                default:
-                                                    return false
-                                            }
-                                        }) {
-                                            var updatedContexts = $0
-                                            updatedContexts.remove(at: index)
-                                            return updatedContexts
+                        return $0
+                    }
+                })
+                strongSelf.messageActionUrlAuthDisposable.set(((combineLatest(strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId), requestMessageActionUrlAuth(account: strongSelf.context.account, subject: subject) |> afterDisposed {
+                    Queue.mainQueue().async {
+                        if let strongSelf = self {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                return $0.updatedTitlePanelContext {
+                                    if let index = $0.firstIndex(where: {
+                                        switch $0 {
+                                            case .requestInProgress:
+                                                return true
+                                            default:
+                                                return false
                                         }
-                                        return $0
+                                    }) {
+                                        var updatedContexts = $0
+                                        updatedContexts.remove(at: index)
+                                        return updatedContexts
+                                    }
+                                    return $0
+                                }
+                            })
+                        }
+                    }
+                })) |> deliverOnMainQueue).start(next: { peer, result in
+                    if let strongSelf = self {
+                        switch result {
+                            case .default:
+                                strongSelf.openUrl(defaultUrl, concealed: false)
+                            case let .request(domain, bot, requestWriteAccess):
+                                let controller = chatMessageActionUrlAuthController(context: strongSelf.context, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), open: { [weak self] authorize, allowWriteAccess in
+                                    if let strongSelf = self {
+                                        if authorize {
+                                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                return $0.updatedTitlePanelContext {
+                                                    if !$0.contains(where: {
+                                                        switch $0 {
+                                                            case .requestInProgress:
+                                                                return true
+                                                            default:
+                                                                return false
+                                                        }
+                                                    }) {
+                                                        var updatedContexts = $0
+                                                        updatedContexts.append(.requestInProgress)
+                                                        return updatedContexts.sorted()
+                                                    }
+                                                    return $0
+                                                }
+                                            })
+                                            
+                                            strongSelf.messageActionUrlAuthDisposable.set(((acceptMessageActionUrlAuth(account: strongSelf.context.account, subject: subject, allowWriteAccess: allowWriteAccess) |> afterDisposed {
+                                                Queue.mainQueue().async {
+                                                    if let strongSelf = self {
+                                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                            return $0.updatedTitlePanelContext {
+                                                                if let index = $0.firstIndex(where: {
+                                                                    switch $0 {
+                                                                        case .requestInProgress:
+                                                                            return true
+                                                                        default:
+                                                                            return false
+                                                                    }
+                                                                }) {
+                                                                    var updatedContexts = $0
+                                                                    updatedContexts.remove(at: index)
+                                                                    return updatedContexts
+                                                                }
+                                                                return $0
+                                                            }
+                                                        })
+                                                    }
+                                                }
+                                            }) |> deliverOnMainQueue).start(next: { [weak self] result in
+                                                if let strongSelf = self {
+                                                    switch result {
+                                                        case let .accepted(url):
+                                                            strongSelf.openUrl(url, concealed: false)
+                                                        default:
+                                                            strongSelf.openUrl(defaultUrl, concealed: false)
+                                                    }
+                                                }
+                                            }))
+                                        } else {
+                                            strongSelf.openUrl(defaultUrl, concealed: false)
+                                        }
                                     }
                                 })
-                            }
+                                strongSelf.chatDisplayNode.dismissInput()
+                                strongSelf.present(controller, in: .window(.root))
+                            case let .accepted(url):
+                                strongSelf.openUrl(url, concealed: false)
                         }
-                    })) |> deliverOnMainQueue).start(next: { peer, result in
-                        if let strongSelf = self {
-                            switch result {
-                                case .default:
-                                    strongSelf.openUrl(defaultUrl, concealed: false)
-                                case let .request(domain, bot, requestWriteAccess):
-                                    let controller = chatMessageActionUrlAuthController(context: strongSelf.context, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), open: { [weak self] authorize, allowWriteAccess in
-                                        if let strongSelf = self {
-                                            if authorize {
-                                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                                    return $0.updatedTitlePanelContext {
-                                                        if !$0.contains(where: {
-                                                            switch $0 {
-                                                                case .requestInProgress:
-                                                                    return true
-                                                                default:
-                                                                    return false
-                                                            }
-                                                        }) {
-                                                            var updatedContexts = $0
-                                                            updatedContexts.append(.requestInProgress)
-                                                            return updatedContexts.sorted()
-                                                        }
-                                                        return $0
-                                                    }
-                                                })
-                                                
-                                                strongSelf.messageActionUrlAuthDisposable.set(((acceptMessageActionUrlAuth(account: strongSelf.context.account, messageId: messageId, buttonId: buttonId, allowWriteAccess: allowWriteAccess) |> afterDisposed {
-                                                    Queue.mainQueue().async {
-                                                        if let strongSelf = self {
-                                                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                                                return $0.updatedTitlePanelContext {
-                                                                    if let index = $0.firstIndex(where: {
-                                                                        switch $0 {
-                                                                            case .requestInProgress:
-                                                                                return true
-                                                                            default:
-                                                                                return false
-                                                                        }
-                                                                    }) {
-                                                                        var updatedContexts = $0
-                                                                        updatedContexts.remove(at: index)
-                                                                        return updatedContexts
-                                                                    }
-                                                                    return $0
-                                                                }
-                                                            })
-                                                        }
-                                                    }
-                                                }) |> deliverOnMainQueue).start(next: { [weak self] result in
-                                                    if let strongSelf = self {
-                                                        switch result {
-                                                            case let .accepted(url):
-                                                                strongSelf.openUrl(url, concealed: false)
-                                                            default:
-                                                                strongSelf.openUrl(defaultUrl, concealed: false)
-                                                        }
-                                                    }
-                                                }))
-                                            } else {
-                                                strongSelf.openUrl(defaultUrl, concealed: false)
-                                            }
-                                        }
-                                    })
-                                    strongSelf.chatDisplayNode.dismissInput()
-                                    strongSelf.present(controller, in: .window(.root))
-                                case let .accepted(url):
-                                    strongSelf.openUrl(url, concealed: false)
-                            }
-                        }
-                    }))
-                }
+                    }
+                }))
             }
         }, activateSwitchInline: { [weak self] peerId, inputString in
             guard let strongSelf = self else {
@@ -2578,7 +2585,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         self.chatTitleView?.longPressed = { [weak self] in
-            self?.interfaceInteraction?.beginMessageSearch(.everything, "")
+            if let strongSelf = self, let peerView = strongSelf.peerView, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
+                strongSelf.interfaceInteraction?.beginMessageSearch(.everything, "")
+            }
         }
         
         let chatInfoButtonItem: UIBarButtonItem
@@ -3440,20 +3449,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        self.stickerSettingsDisposable = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings])
-        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+        self.stickerSettingsDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]), self.disableStickerAnimationsPromise.get()).start(next: { [weak self] sharedData, disableStickerAnimations in
             var stickerSettings = StickerSettings.defaultSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
                 stickerSettings = value
             }
             
             let chatStickerSettings = ChatInterfaceStickerSettings(stickerSettings: stickerSettings)
-            
-            if let strongSelf = self, strongSelf.stickerSettings != chatStickerSettings {
+            if let strongSelf = self, strongSelf.stickerSettings != chatStickerSettings || strongSelf.disableStickerAnimationsValue != disableStickerAnimations {
                 strongSelf.stickerSettings = chatStickerSettings
+                strongSelf.disableStickerAnimationsValue = disableStickerAnimations
                 strongSelf.controllerInteraction?.stickerSettings = chatStickerSettings
                 if strongSelf.isNodeLoaded {
-                    strongSelf.chatDisplayNode.updateStickerSettings(chatStickerSettings)
+                    strongSelf.chatDisplayNode.updateStickerSettings(chatStickerSettings, forceStopAnimations: disableStickerAnimations)
                 }
             }
         })
@@ -7144,6 +7152,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func inFocusUpdated(isInFocus: Bool) {
+        self.disableStickerAnimationsPromise.set(!isInFocus)
         self.chatDisplayNode.inFocusUpdated(isInFocus: isInFocus)
     }
     
@@ -8496,6 +8505,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> deliverOnMainQueue).start(next: { results in
                                 if let strongSelf = self {
                                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                                    
+                                    for item in results {
+                                        if let item = item, item.fileSize > 2000 * 1024 * 1024 {
+                                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Conversation_UploadFileTooLarge, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            return
+                                        }
+                                    }
                                     
                                     var groupingKey: Int64?
                                     var fileTypes: (music: Bool, other: Bool) = (false, false)
@@ -11079,6 +11095,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, sendFile: nil,
             sendSticker: { [weak self] f, sourceNode, sourceRect in
             return self?.interfaceInteraction?.sendSticker(f, sourceNode, sourceRect) ?? false
+        }, requestMessageActionUrlAuth: { [weak self] subject in
+            if case let .url(url) = subject {
+                self?.controllerInteraction?.requestMessageActionUrlAuth(url, subject)
+            }
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in

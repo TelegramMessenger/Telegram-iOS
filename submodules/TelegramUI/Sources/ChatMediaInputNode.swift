@@ -448,6 +448,8 @@ final class ChatMediaInputNode: ChatInputNode {
     private var currentView: ItemCollectionsView?
     private let dismissedPeerSpecificStickerPack = Promise<Bool>()
     
+    var requestDisableStickerAnimations: ((Bool) -> Void)?
+    
     private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState, DeviceMetrics, Bool)?
     private var paneArrangement: ChatMediaInputPaneArrangement
     private var initializedArrangement = false
@@ -1242,6 +1244,10 @@ final class ChatMediaInputNode: ChatInputNode {
                 let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
                     return sourceNode
                 })
+                controller.visibilityUpdated = { [weak self] visible in
+                    self?.requestDisableStickerAnimations?(visible)
+                    self?.simulateUpdateLayout(isVisible: !visible)
+                }
                 strongSelf.controllerInteraction.presentGlobalOverlayController(controller, nil)
                 return controller
             }

@@ -1204,7 +1204,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                  
-                if  (channel.flags.contains(.isCreator) && (channel.username?.isEmpty ?? true)) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+                if (channel.flags.contains(.isCreator) && (channel.username?.isEmpty ?? true)) || (!channel.flags.contains(.isCreator) && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
                         invitesText = "\(count)"
@@ -1987,7 +1987,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, sendBotContextResultAsGif: { _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in
-        }, requestMessageActionUrlAuth: { _, _, _ in
+        }, requestMessageActionUrlAuth: { _, _ in
         }, activateSwitchInline: { _, _ in
         }, openUrl: { [weak self] url, concealed, external, _ in
             guard let strongSelf = self else {
@@ -2726,6 +2726,29 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, ignoreGroupInCommon: ignoreGroupInCommon)
+            
+            self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in
+                guard let strongSelf = self, let peer = strongSelf.data?.peer else {
+                    return
+                }
+                
+                let items: [ContextMenuItem] = [
+                    .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ReportProfilePhoto, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { [weak self] c, f in                        
+                        if let strongSelf = self, let parent = strongSelf.controller {
+                            presentPeerReportOptions(context: context, parent: parent, contextController: c, subject: .profilePhoto(peer.id, 0), completion: { _, _ in })
+                        }
+                    }))
+                ]
+                
+                let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
+                }, synchronousLoad: true)
+                galleryController.setHintWillBePresentedInPreviewingContext(true)
+                
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+                strongSelf.controller?.presentInGlobalOverlay(contextController)
+            }
         }
         
         self.headerNode.avatarListNode.listContainerNode.currentIndexUpdated = { [weak self] in
@@ -3024,10 +3047,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }, sendFile: nil,
             sendSticker: { [weak self] f, sourceNode, sourceRect in
             return false
-        }, present: { [weak self] c, a in
+        }, requestMessageActionUrlAuth: nil, present: { [weak self] c, a in
             self?.controller?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in
-            
+            self?.view.endEditing(true)
         }, contentContext: nil)
     }
     
@@ -3044,8 +3067,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, openPeer: { peerId, navigation in
                 self?.openPeer(peerId: peerId, navigation: navigation)
             }, sendFile: nil,
-               sendSticker: nil,
-               present: { c, a in
+            sendSticker: nil,
+            requestMessageActionUrlAuth: nil,
+            present: { c, a in
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, dismissInput: {
                 self?.view.endEditing(true)
@@ -4091,6 +4115,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: self.context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, openPeer: { id, navigation in
         }, sendFile: nil,
         sendSticker: nil,
+        requestMessageActionUrlAuth: nil,
         present: { [weak controller] c, a in
             controller?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak controller] in
@@ -4921,7 +4946,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     resolvedUrl = .instantView(webPage, customAnchor)
                 }
                 strongSelf.context.sharedContext.openResolvedUrl(resolvedUrl, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, openPeer: { peer, navigation in
-                }, sendFile: nil, sendSticker: nil, present: { [weak self] controller, arguments in
+                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, present: { [weak self] controller, arguments in
                     self?.controller?.push(controller)
                 }, dismissInput: {}, contentContext: nil)
             }

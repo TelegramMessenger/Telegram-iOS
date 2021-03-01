@@ -615,24 +615,26 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextEdit, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
-                f(.default)
-            
-                let controller = inviteLinkEditController(context: context, peerId: peerId, invite: invite, completion: { invite in
-                    if let invite = invite {
-                        if invite.isRevoked {
-                            invitesContext.remove(invite)
-                            revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
-                        } else {
-                            invitesContext.update(invite)
+            if !invite.isPermanent {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextEdit, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
+                
+                    let controller = inviteLinkEditController(context: context, peerId: peerId, invite: invite, completion: { invite in
+                        if let invite = invite {
+                            if invite.isRevoked {
+                                invitesContext.remove(invite)
+                                revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
+                            } else {
+                                invitesContext.update(invite)
+                            }
                         }
-                    }
-                })
-                controller.navigationPresentation = .modal
-                pushControllerImpl?(controller)
-            })))
+                    })
+                    controller.navigationPresentation = .modal
+                    pushControllerImpl?(controller)
+                })))
+            }
         }
         
         if invite.isRevoked {

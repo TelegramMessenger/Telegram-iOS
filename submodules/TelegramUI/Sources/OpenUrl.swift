@@ -213,6 +213,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 }, sendFile: nil,
                 sendSticker: nil,
+                requestMessageActionUrlAuth: nil,
                 present: { c, a in
                     context.sharedContext.applicationBindings.dismissNativeController()
                     

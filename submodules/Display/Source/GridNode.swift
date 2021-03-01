@@ -1249,11 +1249,16 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
+    public var forceHidden = false {
+        didSet {
+            self.updateItemNodeVisibilititesAndScrolling()
+        }
+    }
     private func updateItemNodeVisibilititesAndScrolling() {
         let visibleRect = self.scrollView.bounds
         let isScrolling = self.scrollView.isDragging || self.scrollView.isDecelerating
         for (_, itemNode) in self.itemNodes {
-            let visible = itemNode.frame.intersects(visibleRect)
+            let visible = itemNode.frame.intersects(visibleRect) && !self.forceHidden
             if itemNode.isVisibleInGrid != visible {
                 itemNode.isVisibleInGrid = visible
             }
