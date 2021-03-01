@@ -12,6 +12,7 @@ import AccountContext
 import TelegramUIPreferences
 import LocalAuth
 import TelegramCore
+import WidgetKit
 
 public class FlowViewController: ViewController {
     weak var nextController: ViewController?
@@ -210,7 +211,7 @@ final class DoubleBottomFlow {
         accountContext.appLockContext.lock()
         context.rootController.allowInteractiveDismissal = true
         doubleBottomContext = nil
-        (accountContext.appLockContext.lockingIsCompletePromise
+        _ = (accountContext.appLockContext.lockingIsCompletePromise
             .get()
             |> distinctUntilChanged
             |> mapToSignal { [weak accountContext, weak self] complete -> Signal<Void, NoError> in
@@ -219,6 +220,9 @@ final class DoubleBottomFlow {
                 return accountContext.accountManager.transaction({ transaction -> Void in
                     if let publicId = transaction.getRecords().first(where: { $0.isPublic })?.id {
                         transaction.setCurrentId(publicId)
+                    }
+                    if #available(iOS 14.0, *) {
+                        WidgetCenter.shared.reloadAllTimelines()
                     }
                     self?.finish()
                 })
