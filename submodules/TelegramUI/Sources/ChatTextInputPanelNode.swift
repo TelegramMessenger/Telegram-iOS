@@ -401,6 +401,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textPlaceholderNode.isUserInteractionEnabled = false
         self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle)
         self.attachmentButton.accessibilityLabel = presentationInterfaceState.strings.VoiceOver_AttachMedia
+        self.attachmentButton.accessibilityTraits = [.button]
         self.attachmentButton.isAccessibilityElement = true
         self.attachmentButtonDisabledNode = HighlightableButtonNode()
         self.searchLayoutClearButton = HighlightableButton()
@@ -716,6 +717,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.4)
         self.attachmentButton.isEnabled = isMediaEnabled
+        self.attachmentButton.accessibilityTraits = (!isSlowmodeActive || isMediaEnabled) ? [.button] : [.button, .notEnabled]
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
         if self.presentationInterfaceState != interfaceState {

@@ -32,6 +32,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
                         self?.isEnabled = value
                     }
                     self.accessibilityHint = item.accessibilityHint
+                    self.accessibilityLabel = item.accessibilityLabel
                 }
             }
         }
@@ -194,6 +195,8 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         self.hitTestSlop = UIEdgeInsets(top: -16.0, left: -10.0, bottom: -16.0, right: -10.0)
         self.displaysAsynchronously = false
         
+        self.verticalAlignment = .middle
+        
         self.accessibilityTraits = .button
     }
     
@@ -213,7 +216,8 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
     }
     
     override func updateLayout(_ constrainedSize: CGSize) -> CGSize {
-        let superSize = super.updateLayout(constrainedSize)
+        var superSize = super.updateLayout(constrainedSize)
+        superSize.height = max(44.0, superSize.height)
         
         if let node = self.node {
             let nodeSize = node.measure(constrainedSize)

@@ -294,6 +294,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                         }
                         value += string
                     }
+                    strongSelf.activateArea.accessibilityValue = value
                     
                     if item.enabled {
                         strongSelf.activateArea.accessibilityTraits = []
