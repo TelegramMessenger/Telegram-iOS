@@ -1382,6 +1382,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.effectiveNavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                strongSelf.chatDisplayNode.dismissInput()
                 openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
                 
                 if case .overlay = strongSelf.presentationInterfaceState.mode {
@@ -2646,7 +2647,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
-        chatInfoButtonItem.accessibilityLabel = self.presentationData.strings.Conversation_Info
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo(expandAvatar: true), buttonItem: chatInfoButtonItem)
         
         self.navigationItem.titleView = self.chatTitleView
@@ -2801,6 +2801,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: imageOverride)
                                     (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
+                                    strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = presentationInterfaceState.strings.Conversation_ContextMenuOpenProfile
                                 }
                             }
                         }
@@ -8465,6 +8466,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 legacyController?.dismiss()
             }
         
+            legacyController.blocksBackgroundWhenInOverlay = true
             strongSelf.present(legacyController, in: .window(.root))
             controller.present(in: emptyController, sourceView: nil, animated: true)
             
@@ -11641,12 +11643,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var latestNode: (Int32, ASDisplayNode)?
         self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, let statusNode = itemNode.getStatusNode() {
-                if let (latestTimestamp, _) = latestNode {
-                    if item.message.timestamp > latestTimestamp {
+                if !item.content.effectivelyIncoming(self.context.account.peerId) {
+                    if let (latestTimestamp, _) = latestNode {
+                        if item.message.timestamp > latestTimestamp {
+                            latestNode = (item.message.timestamp, statusNode)
+                        }
+                    } else {
                         latestNode = (item.message.timestamp, statusNode)
                     }
-                } else {
-                    latestNode = (item.message.timestamp, statusNode)
                 }
             }
         }

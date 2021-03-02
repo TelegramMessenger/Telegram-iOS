@@ -161,6 +161,11 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.modeButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - 53.0), size: CGSize(width: layout.size.width, height: 44.0)))
     }
     
+    override func didLoad() {
+        super.didLoad()
+        self.view.disablesInteractiveKeyboardGestureRecognizer = true
+    }
+    
     func updateMode(_ mode: PasscodeSetupControllerMode) {
         self.mode = mode
         self.inputFieldNode.reset()

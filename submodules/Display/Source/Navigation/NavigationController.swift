@@ -563,7 +563,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
             }
         }
-        
+                
         var previousOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.overlayContainers.count).reversed() {
             let overlayContainer = self.overlayContainers[i]
@@ -1020,13 +1020,37 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.statusBarHost?.setStatusBarHidden(statusBarHidden, animated: animateStatusBarStyleTransition)
         }
         
+        var topHasOpaque = false
         var foundControllerInFocus = false
+        
+        for container in self.globalOverlayContainers.reversed() {
+            let controller = container.controller
+            if topHasOpaque {
+                controller.displayNode.accessibilityElementsHidden = true
+            } else {
+                if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                    topHasOpaque = true
+                }
+                controller.displayNode.accessibilityElementsHidden = false
+            }
+        }
+        
         for container in self.overlayContainers.reversed() {
             if foundControllerInFocus {
                 container.controller.isInFocus = false
             } else if container.controller.acceptsFocusWhenInOverlay {
                 foundControllerInFocus = true
                 container.controller.isInFocus = true
+            }
+            
+            let controller = container.controller
+            if topHasOpaque {
+                controller.displayNode.accessibilityElementsHidden = true
+            } else {
+                if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                    topHasOpaque = true
+                }
+                controller.displayNode.accessibilityElementsHidden = false
             }
         }
         
@@ -1036,6 +1060,17 @@ open class NavigationController: UINavigationController, ContainableController, 
             } else {
                 foundControllerInFocus = true
                 container.container.isInFocus = true
+            }
+            
+            if let controller = container.container.controllers.last {
+                if topHasOpaque {
+                    controller.displayNode.accessibilityElementsHidden = true
+                } else {
+                    if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                        topHasOpaque = true
+                    }
+                    controller.displayNode.accessibilityElementsHidden = false
+                }
             }
         }
         
@@ -1048,12 +1083,44 @@ open class NavigationController: UINavigationController, ContainableController, 
                     foundControllerInFocus = true
                     container.isInFocus = true
                 }
+                
+                if let controller = container.controllers.last {
+                    if topHasOpaque {
+                        controller.displayNode.accessibilityElementsHidden = true
+                    } else {
+                        if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                            topHasOpaque = true
+                        }
+                        controller.displayNode.accessibilityElementsHidden = false
+                    }
+                }
             case let .split(split):
                 if foundControllerInFocus {
                     split.isInFocus = false
                 } else {
                     foundControllerInFocus = true
                     split.isInFocus = true
+                }
+                
+                if let controller = split.masterControllers.last {
+                    if topHasOpaque {
+                        controller.displayNode.accessibilityElementsHidden = true
+                    } else {
+                        if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                            topHasOpaque = true
+                        }
+                        controller.displayNode.accessibilityElementsHidden = false
+                    }
+                }
+                if let controller = split.detailControllers.last {
+                    if topHasOpaque {
+                        controller.displayNode.accessibilityElementsHidden = true
+                    } else {
+                        if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                            topHasOpaque = true
+                        }
+                        controller.displayNode.accessibilityElementsHidden = false
+                    }
                 }
             }
         }

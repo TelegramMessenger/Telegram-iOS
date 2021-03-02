@@ -82,6 +82,7 @@ public class ContactsController: ViewController {
     private var presentationDataDisposable: Disposable?
     private var authorizationDisposable: Disposable?
     private let sortOrderPromise = Promise<ContactsSortOrder>()
+    private let isInVoiceOver = ValuePromise<Bool>(false)
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
@@ -117,6 +118,7 @@ public class ContactsController: ViewController {
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
+        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_VoiceOver_AddContact
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -199,11 +201,20 @@ public class ContactsController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         if self.navigationItem.rightBarButtonItem != nil {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
+            self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_VoiceOver_AddContact
         }
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContactsControllerNode(context: self.context, sortOrder: sortOrderPromise.get() |> distinctUntilChanged, present: { [weak self] c, a in
+        let sortOrderSignal: Signal<ContactsSortOrder, NoError> = combineLatest(self.sortOrderPromise.get(), self.isInVoiceOver.get())
+        |> map { sortOrder, isInVoiceOver in
+            if isInVoiceOver {
+                return .natural
+            } else {
+                return sortOrder
+            }
+        }
+        self.displayNode = ContactsControllerNode(context: self.context, sortOrder: sortOrderSignal |> distinctUntilChanged, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, controller: self)
         self._ready.set(self.contactsNode.contactListNode.ready)
@@ -403,6 +414,8 @@ public class ContactsController: ViewController {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.isInVoiceOver.set(layout.inVoiceOver)
         
         self.validLayout = layout
         

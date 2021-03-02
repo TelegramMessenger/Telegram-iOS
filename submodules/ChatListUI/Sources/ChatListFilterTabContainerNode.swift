@@ -142,6 +142,8 @@ private final class ItemNode: ASDisplayNode {
         
         super.init()
         
+        self.isAccessibilityElement = true
+        
         self.extractedContainerNode.contentNode.addSubnode(self.extractedBackgroundNode)
         self.extractedContainerNode.contentNode.addSubnode(self.titleContainer)
         self.titleContainer.addSubnode(self.titleNode)
@@ -495,6 +497,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         super.init()
         
         self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.scrollsToTop = false
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.canCancelContentTouches = true

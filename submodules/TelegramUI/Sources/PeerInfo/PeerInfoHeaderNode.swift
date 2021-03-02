@@ -2437,6 +2437,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
                 self.addSubnode(self.avatarButtonNode)
             }
             self.avatarTextNode.attributedText = NSAttributedString(string: presentationData.strings.Settings_SetNewProfilePhotoOrVideo, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
+            self.avatarButtonNode.accessibilityLabel = self.avatarTextNode.attributedText?.string
             
             let avatarTextSize = self.avatarTextNode.updateLayout(CGSize(width: width, height: 32.0))
             transition.updateFrame(node: self.avatarTextNode, frame: CGRect(origin: CGPoint(), size: avatarTextSize))

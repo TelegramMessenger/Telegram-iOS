@@ -4637,6 +4637,12 @@ Sorry for the inconvenience.";
 "VoiceOver.Chat.FileFrom" = "File, from: %@";
 "VoiceOver.Chat.File" = "File";
 "VoiceOver.Chat.YourFile" = "Your file";
+"VoiceOver.Chat.StickerFrom" = "Sticker, from: %@";
+"VoiceOver.Chat.Sticker" = "Sticker";
+"VoiceOver.Chat.YourSticker" = "Your sticker";
+"VoiceOver.Chat.AnimatedStickerFrom" = "Animated sticker, from: %@";
+"VoiceOver.Chat.AnimatedSticker" = "Animated sticker";
+"VoiceOver.Chat.YourAnimatedSticker" = "Your animated sticker";
 "VoiceOver.Chat.ContactFrom" = "Shared contact, from: %@";
 "VoiceOver.Chat.Contact" = "Shared contact";
 "VoiceOver.Chat.ContactPhoneNumberCount_1" = "%@ phone number";
@@ -4676,6 +4682,16 @@ Sorry for the inconvenience.";
 "VoiceOver.MessageContextSend" = "Send";
 "VoiceOver.MessageContextReply" = "Reply";
 "VoiceOver.MessageContextOpenMessageMenu" = "Open message menu";
+
+"VoiceOver.Keyboard" = "Keyboard";
+"VoiceOver.Stickers" = "Stickers";
+"VoiceOver.ScheduledMessages" = "Scheduled Messages";
+"VoiceOver.BotCommands" = "Bot Commands";
+"VoiceOver.BotKeyboard" = "Bot Keyboard";
+"VoiceOver.SilentPostOn" = "Silent Broadcast On";
+"VoiceOver.SilentPostOff" = "Silent Broadcast Off";
+"VoiceOver.SelfDestructTimerOn" = "Self-destruct Timer: %@";
+"VoiceOver.SelfDestructTimerOff" = "Self-destruct Timer Off";
 
 "ProxyServer.VoiceOver.Active" = "Active";
 
@@ -6158,3 +6174,13 @@ Sorry for the inconvenience.";
 
 "Message.ScamAccount" = "Scam";
 "Message.FakeAccount" = "Fake";
+
+"InstantPage.FontSanFrancisco" = "San Francisco";
+"InstantPage.FontNewYork" = "New York";
+"InstantPage.Search" = "Search";
+"InstantPage.OpenInBrowser" = "Open in %@";
+"InstantPage.VoiceOver.IncreaseFontSize" = "Increase Font Size";
+"InstantPage.VoiceOver.DecreaseFontSize" = "Decrease Font Size";
+"InstantPage.VoiceOver.ResetFontSize" = "Reset Font Size";
+
+"Contacts.VoiceOver.AddContact" = "Add Contact";
