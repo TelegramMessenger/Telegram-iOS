@@ -993,6 +993,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var canViewStats = false
         var hasDiscussion = false
         var hasVoiceChat = false
+        var canStartVoiceChat = false
         if let cachedChannelData = cachedData as? CachedChannelData {
             canViewStats = cachedChannelData.flags.contains(.canViewStats)
         }
@@ -1011,6 +1012,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             }
             if channel.flags.contains(.hasVoiceChat) {
                 hasVoiceChat = true
+            }
+            if !hasVoiceChat && (channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls)) {
+                canStartVoiceChat = true
             }
         }
         switch channel.participationStatus {
@@ -1043,7 +1047,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
             canReport = false
         }
-        if !canReport && !canViewStats {
+        if !canReport && !canViewStats && !canStartVoiceChat {
             displayMore = false
         }
         if displayMore {

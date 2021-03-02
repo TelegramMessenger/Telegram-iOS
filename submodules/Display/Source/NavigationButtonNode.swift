@@ -217,7 +217,6 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
     
     override func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         var superSize = super.updateLayout(constrainedSize)
-        superSize.height = max(44.0, superSize.height)
         
         if let node = self.node {
             let nodeSize = node.measure(constrainedSize)
@@ -231,6 +230,8 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             imageNode.frame = imageFrame
             self.imageRippleNode.frame = imageFrame
             return size
+        } else {
+            superSize.height = max(44.0, superSize.height)
         }
         return superSize
     }
