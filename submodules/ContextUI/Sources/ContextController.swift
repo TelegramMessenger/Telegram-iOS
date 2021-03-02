@@ -124,6 +124,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let dimNode: ASDisplayNode
     private let withoutBlurDimNode: ASDisplayNode
     private let dismissNode: ASDisplayNode
+    private let dismissAccessibilityArea: AccessibilityAreaNode
     
     private let clippingNode: ASDisplayNode
     private let scrollNode: ASScrollNode
@@ -184,9 +185,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.withoutBlurDimNode.alpha = 0.0
         
         self.dismissNode = ASDisplayNode()
-        self.dismissNode.isAccessibilityElement = true
-        self.dismissNode.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
-        self.dismissNode.accessibilityTraits = .button
+        self.dismissAccessibilityArea = AccessibilityAreaNode()
+        self.dismissAccessibilityArea.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
+        self.dismissAccessibilityArea.accessibilityTraits = .button
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -242,6 +243,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.clippingNode.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.dismissNode)
+        self.scrollNode.addSubnode(self.dismissAccessibilityArea)
         
         self.scrollNode.addSubnode(self.actionsContainerNode)
         self.reactionContextNode.flatMap(self.addSubnode)
@@ -439,6 +441,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.initializeContent()
+        
+        self.dismissAccessibilityArea.activate = { [weak self] in
+            self?.dimNodeTapped()
+            return true
+        }
     }
     
     deinit {
@@ -1406,7 +1413,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
-        transition.updateFrame(node: self.dismissNode, frame: CGRect(origin: CGPoint(), size: scrollNode.view.contentSize))
+        transition.updateFrame(node: self.dismissNode, frame: CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize))
+        self.dismissAccessibilityArea.frame =  CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -1593,6 +1601,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.statusBar.statusBarStyle = .Hide
         }
         self.lockOrientation = true
+        self.blocksBackgroundWhenInOverlay = true
     }
     
     required init(coder aDecoder: NSCoder) {

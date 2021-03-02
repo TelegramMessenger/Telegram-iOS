@@ -54,6 +54,11 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.addTarget(self, action: #selector(self.callButtonPressed), forControlEvents: .touchUpInside)
     }
     
+    override func accessibilityActivate() -> Bool {
+        self.callButtonPressed()
+        return true
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }

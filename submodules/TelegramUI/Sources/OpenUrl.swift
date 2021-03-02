@@ -581,6 +581,25 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/addtheme/\(parameter)"
                         }
                     }
+                } else if parsedUrl.host == "privatepost" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var channelId: Int64?
+                        var postId: Int32?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "channel" {
+                                        channelId = Int64(value)
+                                    } else if queryItem.name == "post" {
+                                        postId = Int32(value)
+                                    }
+                                }
+                            }
+                        }
+                        if let channelId = channelId, let postId = postId {
+                            convertedUrl = "https://t.me/c/\(channelId)/\(postId)"
+                        }
+                    }
                 }
                 
                 if parsedUrl.host == "resolve" {

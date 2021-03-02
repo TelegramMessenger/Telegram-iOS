@@ -892,7 +892,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         var clearCacheAsDelete = false
-        if message.id.peerId.namespace == Namespaces.Peer.CloudChannel && !isMigrated {
+        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, !isMigrated {
             var views: Int = 0
             for attribute in message.attributes {
                 if let attribute = attribute as? ViewCountMessageAttribute {

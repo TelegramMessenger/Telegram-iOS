@@ -144,7 +144,6 @@ private let voiceMessageDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
     formatter.allowedUnits = [.minute, .second]
-    formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
 
@@ -152,7 +151,6 @@ private let musicDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
     formatter.allowedUnits = [.hour, .minute, .second]
-    formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
 
@@ -232,6 +230,30 @@ final class ChatMessageAccessibilityData {
                     var isSpecialFile = false
                     for attribute in file.attributes {
                         switch attribute {
+                            case let .Sticker(displayText, packReference, _):
+                                isSpecialFile = true
+                                text = displayText
+                                if file.mimeType == "application/x-tgsticker" {
+                                    if isIncoming {
+                                        if announceIncomingAuthors, let authorName = authorName {
+                                            label = item.presentationData.strings.VoiceOver_Chat_AnimatedStickerFrom(authorName).0
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_AnimatedSticker
+                                        }
+                                    } else {
+                                        label = item.presentationData.strings.VoiceOver_Chat_YourAnimatedSticker
+                                    }
+                                } else {
+                                    if isIncoming {
+                                        if announceIncomingAuthors, let authorName = authorName {
+                                            label = item.presentationData.strings.VoiceOver_Chat_StickerFrom(authorName).0
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_Sticker
+                                        }
+                                    } else {
+                                        label = item.presentationData.strings.VoiceOver_Chat_YourSticker
+                                    }
+                                }
                             case let .Audio(audio):
                                 isSpecialFile = true
                                 if isSelected == nil {

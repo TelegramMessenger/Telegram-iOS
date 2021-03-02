@@ -931,9 +931,8 @@ typedef enum
         else
             _sheetView.menuWidth = referenceSize.width;
         
-        [self repositionMenuWithReferenceSize:referenceSize];
-        
         [_sheetView layoutSubviews];
+        [self repositionMenuWithReferenceSize:referenceSize];
     }
     
     [_sheetView didChangeAbsoluteFrame];
