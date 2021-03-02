@@ -285,6 +285,13 @@
         0.0f, 1.0f,
     };
     
+    static const GLfloat rotate180HorizontalFlipTextureCoordinates[] = {
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+    };
+    
     switch(rotationMode)
     {
         case kGPUImageNoRotation: return noRotationTextureCoordinates;
@@ -295,6 +302,7 @@
         case kGPUImageRotateRightFlipVertical: return rotateRightVerticalFlipTextureCoordinates;
         case kGPUImageRotateRightFlipHorizontal: return rotateRightHorizontalFlipTextureCoordinates;
         case kGPUImageRotate180: return rotate180TextureCoordinates;
+        case kGPUImageRotate180FlipHorizontal: return rotate180HorizontalFlipTextureCoordinates;
     }
 }
 

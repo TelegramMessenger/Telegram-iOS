@@ -126,6 +126,22 @@ public func reportPeer(account: Account, peerId: PeerId, reason: ReportReason, m
     } |> switchToLatest
 }
 
+public func reportPeerPhoto(account: Account, peerId: PeerId, reason: ReportReason, message: String) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.account.reportProfilePhoto(peer: inputPeer, photoId: .inputPhotoEmpty, reason: reason.apiReason, message: message))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 public func reportPeerMessages(account: Account, messageIds: [MessageId], reason: ReportReason, message: String) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         let groupedIds = messagesIdsGroupedByPeerId(messageIds)
@@ -144,22 +160,6 @@ public func reportPeerMessages(account: Account, messageIds: [MessageId], reason
         
         return combineLatest(signals)
         |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
-        }
-    } |> switchToLatest
-}
-
-public func reportSupergroupPeer(account: Account, peerId: PeerId, memberId: PeerId, messageIds: [MessageId]) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputChannel(peer), let memberPeer = transaction.getPeer(memberId), let inputMember = apiInputUser(memberPeer) {
-            return account.network.request(Api.functions.channels.reportSpam(channel: inputPeer, userId: inputMember, id: messageIds.map({$0.id})))
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
-            }
-        } else {
             return .complete()
         }
     } |> switchToLatest

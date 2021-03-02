@@ -95,10 +95,17 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
                             if let navigationController = (contactsController?.navigationController as? NavigationController) {
                                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), peekData: nil))
                             }
-                        }, error: { _ in
+                        }, error: { error in
                             if let contactsController = contactsController {
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                contactsController.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        text = presentationData.strings.TwoStepAuth_FloodError
+                                    default:
+                                        text = presentationData.strings.Login_UnknownError
+                                }
+                                contactsController.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }))
                     }
@@ -121,10 +128,17 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
         }
         
         if canCall {
-            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_Call, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                if let contactsController = contactsController {
-                    context.requestCall(peerId: peerId, isVideo: false, completion: {})
-                }
+            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_Call, icon: { theme in
+                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                context.requestCall(peerId: peerId, isVideo: false, completion: {})
+                f(.default)
+            })))
+        }
+        if canVideoCall {
+            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_VideoCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VideoCall"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                context.requestCall(peerId: peerId, isVideo: true, completion: {})
                 f(.default)
             })))
         }

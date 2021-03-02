@@ -261,7 +261,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
-        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
+        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -852,6 +852,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 self?.view.endEditing(true)
                             })
                         }
+                    case .urlAuth:
+                        break
                     case let .peer(peerId, _):
                         if let peerId = peerId {
                             strongSelf.openPeer(peerId: peerId, peer: nil)
@@ -890,6 +892,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             }
                         }, sendFile: nil,
                         sendSticker: nil,
+                        requestMessageActionUrlAuth: nil,
                         present: { c, a in
                             self?.presentController(c, a)
                         }, dismissInput: {

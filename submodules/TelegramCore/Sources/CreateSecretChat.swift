@@ -6,6 +6,7 @@ import MtProtoKit
 
 public enum CreateSecretChatError {
     case generic
+    case limitExceeded
 }
 
 public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
@@ -29,9 +30,13 @@ public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId,
                         return .fail(.generic)
                     }
                     
-                    return account.network.request(Api.functions.messages.requestEncryption(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gA: Buffer(data: ga)))
-                        |> mapError { _ -> CreateSecretChatError in
-                            return .generic
+                    return account.network.request(Api.functions.messages.requestEncryption(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gA: Buffer(data: ga)), automaticFloodWait: false)
+                        |> mapError { error -> CreateSecretChatError in
+                            if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+                                return .limitExceeded
+                            } else {
+                                return .generic
+                            }
                         }
                         |> mapToSignal { result -> Signal<PeerId, CreateSecretChatError> in
                             return account.postbox.transaction { transaction -> PeerId in

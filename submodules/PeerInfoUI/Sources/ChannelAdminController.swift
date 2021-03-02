@@ -1049,11 +1049,20 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     case .tooMuchJoined:
                                         text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
                                     case .restricted:
-                                        if let peer = adminView.peers[adminView.peerId] {
-                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0
+                                        if let admin = adminView.peers[adminView.peerId] {
+                                            switch channel.info {
+                                                case .broadcast:
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                                case .group:
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                            }
                                         }
                                     case .notMutualContact:
-                                        text = presentationData.strings.GroupInfo_AddUserLeftError
+                                        if case .broadcast = channel.info {
+                                            text = presentationData.strings.Channel_AddUserLeftError
+                                        } else {
+                                            text = presentationData.strings.GroupInfo_AddUserLeftError
+                                        }
                                     default:
                                         break
                                     }
@@ -1119,17 +1128,28 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 return current.withUpdatedUpdating(true)
                             }
                             updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
-                                if case let .addMemberError(error) = error, let admin = adminView.peers[adminView.peerId] {
-                                    if case .restricted = error {
-                                        var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
-                                        if case .group = channel.info {
-                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
-                                        }
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                                    } else if case .tooMuchJoined = error {
-                                        let text = presentationData.strings.Invite_ChannelsTooMuch
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                if case let .addMemberError(addMemberError) = error, let admin = adminView.peers[adminView.peerId] {
+                                    var text = presentationData.strings.Login_UnknownError
+                                    switch addMemberError {
+                                        case .tooMuchJoined:
+                                            text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                                        case .restricted:
+                                            switch channel.info {
+                                                case .broadcast:
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                                case .group:
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                            }
+                                        case .notMutualContact:
+                                            if case .broadcast = channel.info {
+                                                text = presentationData.strings.Channel_AddUserLeftError
+                                            } else {
+                                                text = presentationData.strings.GroupInfo_AddUserLeftError
+                                            }
+                                        default:
+                                            break
                                     }
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 } else if case .adminsTooMuch = error {
                                     let text: String
                                     if case .broadcast = channel.info {
@@ -1146,7 +1166,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             }))
                         }
                     }
-                } else if let group = channelView.peers[channelView.peerId] as? TelegramGroup {
+                } else if let _ = channelView.peers[channelView.peerId] as? TelegramGroup {
                     var updateFlags: TelegramChatAdminRightsFlags?
                     var updateRank: String?
                     updateState { current in
@@ -1163,12 +1183,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                     }
                     
                     let maskRightsFlags: TelegramChatAdminRightsFlags = .groupSpecific
-                    let defaultFlags: TelegramChatAdminRightsFlags
-                    if case .creator = group.role {
-                        defaultFlags = maskRightsFlags.subtracting(.canBeAnonymous)
-                    } else {
-                        defaultFlags = maskRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
-                    }
+                    let defaultFlags = maskRightsFlags.subtracting([.canBeAnonymous, .canAddAdmins])
                     
                     if updateFlags == nil {
                         updateFlags = defaultFlags

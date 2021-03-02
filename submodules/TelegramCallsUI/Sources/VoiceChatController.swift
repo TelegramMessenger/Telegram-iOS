@@ -887,7 +887,11 @@ public final class VoiceChatController: ViewController {
                                             case .restricted:
                                                 text = presentationData.strings.Channel_ErrorAddBlocked
                                             case .notMutualContact:
-                                                text = presentationData.strings.GroupInfo_AddUserLeftError
+                                                if case .broadcast = groupPeer.info {
+                                                    text = presentationData.strings.Channel_AddUserLeftError
+                                                } else {
+                                                    text = presentationData.strings.GroupInfo_AddUserLeftError
+                                                }
                                             case .botDoesntSupportGroups:
                                                 text = presentationData.strings.Channel_BotDoesntSupportGroups
                                             case .tooMuchBots:
@@ -952,15 +956,9 @@ public final class VoiceChatController: ViewController {
                                                 self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                             })
                                         case .notMutualContact:
-                                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
-                                            |> deliverOnMainQueue).start(next: { peer in
-                                                self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                            })
+                                            strongSelf.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         case .tooManyChannels:
-                                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
-                                            |> deliverOnMainQueue).start(next: { peer in
-                                                self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                            })
+                                            strongSelf.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         case .groupFull, .generic:
                                             strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         }

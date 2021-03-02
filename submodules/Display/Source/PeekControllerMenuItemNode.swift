@@ -100,8 +100,9 @@ final class PeekControllerMenuItemNode: HighlightTrackingButtonNode {
     }
     
     @objc func buttonPressed() {
+        self.activatedAction()
         if self.item.action(self, self.bounds) {
-            self.activatedAction()
+            
         }
     }
 }
