@@ -7728,6 +7728,21 @@ public extension Api {
                     })
                 }
             
+                public static func toggleGroupCallRecord(call: Api.InputGroupCall, start: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1990430344)
+                    call.serialize(buffer, true)
+                    start.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.toggleGroupCallRecord", parameters: [("call", call), ("start", start)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
                 public static func editGroupCallParticipant(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer, volume: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1192486819)

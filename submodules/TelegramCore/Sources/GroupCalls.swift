@@ -11,13 +11,15 @@ public struct GroupCallInfo: Equatable {
     public var clientParams: String?
     public var streamDcId: Int32?
     public var title: String?
+    public var recordStartDate: Int32?
     public init(
         id: Int64,
         accessHash: Int64,
         participantCount: Int,
         clientParams: String?,
         streamDcId: Int32?,
-        title: String?
+        title: String?,
+        recordStartDate: Int32?
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -25,6 +27,7 @@ public struct GroupCallInfo: Equatable {
         self.clientParams = clientParams
         self.title = title
         self.streamDcId = streamDcId
+        self.recordStartDate = recordStartDate
     }
 }
 
@@ -36,7 +39,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(_, id, accessHash, participantCount, params, title, streamDcId, _):
+        case let .groupCall(_, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -50,7 +53,8 @@ extension GroupCallInfo {
                 participantCount: Int(participantCount),
                 clientParams: clientParams,
                 streamDcId: streamDcId,
-                title: title
+                title: title,
+                recordStartDate: recordStartDate
             )
         case .groupCallDiscarded:
             return nil
@@ -472,7 +476,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                         maybeParsedCall = GroupCallInfo(call)
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, _, _, _, _):
+                        case let .groupCall(flags, _, _, _, _, _, _, _, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             state.defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)
@@ -1632,6 +1636,62 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
     |> mapToSignal { result -> Signal<Never, EditGroupCallTitleError> in
         account.stateManager.addUpdates(result)
         return .complete()
+    }
+}
+
+
+public struct GroupCallDisplayAsList : Equatable {
+    public fileprivate(set) var count:Int
+    public fileprivate(set) var peers:[FoundPeer]
+    
+    public var isLoaded: Bool {
+        return peers.count >= count
+    }
+}
+
+public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox) -> Signal<GroupCallDisplayAsList, NoError> {
+    return network.request(Api.functions.channels.getAdminedPublicChannels(flags: 1 << 2))
+        |> retryRequest
+        |> mapToSignal { result in
+        
+        let totalCount: Int
+        let chats:[Api.Chat]
+        switch result {
+        case let .chatsSlice(count, c):
+            totalCount = Int(count)
+            chats = c
+        case let .chats(c):
+            chats = c
+            totalCount = c.count
+        }
+        var subscribers: [PeerId: Int32] = [:]
+        let peers = chats.compactMap(parseTelegramGroupOrChannel)
+        for chat in chats {
+            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                switch chat {
+                    case let .channel(channel):
+                        if let participantsCount = channel.participantsCount {
+                            subscribers[groupOrChannel.id] = participantsCount
+                        }
+                case let .chat(chat):
+                    subscribers[groupOrChannel.id] = chat.participantsCount
+                default:
+                    break
+                }
+            }
+        }
+            
+            
+            
+        return postbox.transaction { transaction -> [Peer] in
+            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                return updated
+            })
+            return peers
+        } |> map { peers -> GroupCallDisplayAsList in
+            return GroupCallDisplayAsList(count: totalCount, peers: peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) })
+        }
+        
     }
 }
 
