@@ -24,7 +24,7 @@ public struct BotPaymentInvoiceFields: OptionSet {
     public static let flexibleShipping = BotPaymentInvoiceFields(rawValue: 1 << 4)
 }
 
-public struct BotPaymentPrice {
+public struct BotPaymentPrice : Equatable {
     public let label: String
     public let amount: Int64
     
@@ -34,14 +34,14 @@ public struct BotPaymentPrice {
     }
 }
 
-public struct BotPaymentInvoice {
+public struct BotPaymentInvoice : Equatable {
     public let isTest: Bool
     public let requestedFields: BotPaymentInvoiceFields
     public let currency: String
     public let prices: [BotPaymentPrice]
 }
 
-public struct BotPaymentNativeProvider {
+public struct BotPaymentNativeProvider : Equatable {
     public let name: String
     public let params: String
 }
@@ -62,28 +62,6 @@ public struct BotPaymentShippingAddress: Equatable {
         self.countryIso2 = countryIso2
         self.postCode = postCode
     }
-    
-    public static func ==(lhs: BotPaymentShippingAddress, rhs: BotPaymentShippingAddress) -> Bool {
-        if lhs.streetLine1 != rhs.streetLine1 {
-            return false
-        }
-        if lhs.streetLine2 != rhs.streetLine2 {
-            return false
-        }
-        if lhs.city != rhs.city {
-            return false
-        }
-        if lhs.state != rhs.state {
-            return false
-        }
-        if lhs.countryIso2 != rhs.countryIso2 {
-            return false
-        }
-        if lhs.postCode != rhs.postCode {
-            return false
-        }
-        return true
-    }
 }
 
 public struct BotPaymentRequestedInfo: Equatable {
@@ -97,22 +75,6 @@ public struct BotPaymentRequestedInfo: Equatable {
         self.phone = phone
         self.email = email
         self.shippingAddress = shippingAddress
-    }
-    
-    public static func ==(lhs: BotPaymentRequestedInfo, rhs: BotPaymentRequestedInfo) -> Bool {
-        if lhs.name != rhs.name {
-            return false
-        }
-        if lhs.phone != rhs.phone {
-            return false
-        }
-        if lhs.email != rhs.email {
-            return false
-        }
-        if lhs.shippingAddress != rhs.shippingAddress {
-            return false
-        }
-        return true
     }
 }
 
@@ -131,7 +93,7 @@ public enum BotPaymentSavedCredentials: Equatable {
     }
 }
 
-public struct BotPaymentForm {
+public struct BotPaymentForm : Equatable {
     public let canSaveCredentials: Bool
     public let passwordMissing: Bool
     public let invoice: BotPaymentInvoice
@@ -243,13 +205,13 @@ public enum ValidateBotPaymentFormError {
     case phoneInvalid
 }
 
-public struct BotPaymentShippingOption {
+public struct BotPaymentShippingOption : Equatable {
     public let id: String
     public let title: String
     public let prices: [BotPaymentPrice]
 }
 
-public struct BotPaymentValidatedFormInfo {
+public struct BotPaymentValidatedFormInfo : Equatable {
     public let id: String?
     public let shippingOptions: [BotPaymentShippingOption]?
 }
@@ -379,7 +341,7 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, validated
     }
 }
 
-public struct BotPaymentReceipt {
+public struct BotPaymentReceipt : Equatable {
     public let invoice: BotPaymentInvoice
     public let info: BotPaymentRequestedInfo?
     public let shippingOption: BotPaymentShippingOption?

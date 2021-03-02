@@ -370,6 +370,7 @@ public final class VoiceChatController: ViewController {
             }
             
             var peer: Peer
+            var myPeerId: PeerId
             var ssrc: UInt32
             var presence: TelegramUserPresence?
             var activityTimestamp: Int32
@@ -385,6 +386,9 @@ public final class VoiceChatController: ViewController {
             
             static func ==(lhs: PeerEntry, rhs: PeerEntry) -> Bool {
                 if !lhs.peer.isEqual(rhs.peer) {
+                    return false
+                }
+                if lhs.myPeerId != rhs.myPeerId {
                     return false
                 }
                 if lhs.ssrc != rhs.ssrc {
@@ -540,7 +544,7 @@ public final class VoiceChatController: ViewController {
                         
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: peer.id != context.account.peerId || peerEntry.canManageCall, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: peer.id != peerEntry.myPeerId || peerEntry.canManageCall, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
                             return interaction.getPeerVideo(peerEntry.ssrc)
                         }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                             interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
@@ -608,7 +612,6 @@ public final class VoiceChatController: ViewController {
         private var currentSpeakingPeers: Set<PeerId>?
         private var currentContentOffset: CGFloat?
         private var ignoreScrolling = false
-        private var accountPeer: Peer?
         private var currentAudioButtonColor: UIColor?
         
         private var currentEntries: [ListEntry] = []
@@ -824,7 +827,7 @@ public final class VoiceChatController: ViewController {
                         }
                         
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        if peer.id == strongSelf.context.account.peerId {
+                        if peer.id == strongSelf.call.myPeerId {
                             return
                         }
                         if let participant = participant {
@@ -1047,7 +1050,7 @@ public final class VoiceChatController: ViewController {
                         f(.default)
                     })))*/
                     
-                    if peer.id != strongSelf.context.account.peerId {
+                    if peer.id != strongSelf.call.myPeerId {
                         if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
                             if callState.adminIds.contains(peer.id) {
                                 if let _ = muteState {
@@ -1296,8 +1299,8 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.peerViewDisposable = (combineLatest(self.context.account.viewTracker.peerView(self.call.peerId), self.context.account.postbox.loadedPeerWithId(self.context.account.peerId))
-            |> deliverOnMainQueue).start(next: { [weak self] view, accountPeer in
+            self.peerViewDisposable = (self.context.account.viewTracker.peerView(self.call.peerId)
+            |> deliverOnMainQueue).start(next: { [weak self] view in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1307,7 +1310,6 @@ public final class VoiceChatController: ViewController {
                     strongSelf.currentTitle = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
                 }
                 if !strongSelf.didSetDataReady {
-                    strongSelf.accountPeer = accountPeer
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
                     
                     strongSelf.didSetDataReady = true
@@ -1337,7 +1339,7 @@ public final class VoiceChatController: ViewController {
                 }
                 var levels = levels
                 if strongSelf.effectiveMuteState != nil {
-                    levels = levels.filter { $0.0 != strongSelf.context.account.peerId }
+                    levels = levels.filter { $0.0 != strongSelf.call.myPeerId }
                 }
                 
                 var maxLevelWithVideo: (PeerId, UInt32, Float)?
@@ -1455,6 +1457,15 @@ public final class VoiceChatController: ViewController {
                             action()
                         })])
                         strongSelf.controller?.present(alert, in: .window(.root))
+                    })))
+                    
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: callState.recordingStartTimestamp == nil ? "Begin Recording" : "End Recording", textColor: .destructive, icon: { _ in
+                        return nil
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        
+                        strongSelf.call.setShouldBeRecording(callState.recordingStartTimestamp == nil ? true : false)
                     })))
                 }
                 
@@ -1747,7 +1758,7 @@ public final class VoiceChatController: ViewController {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
                     }
                     
-                    self.itemInteraction?.updateAudioLevels([(self.context.account.peerId, 0, 0.0, false)], reset: true)
+                    self.itemInteraction?.updateAudioLevels([(self.call.myPeerId, 0, 0.0, false)], reset: true)
                                         
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
@@ -2497,7 +2508,7 @@ public final class VoiceChatController: ViewController {
                 
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
-                if member.peer.id == self.context.account.peerId {
+                if member.peer.id == self.call.myPeerId {
                     if muteState == nil {
                         memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
                     } else {
@@ -2511,6 +2522,7 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(.peer(PeerEntry(
                     peer: member.peer,
+                    myPeerId: self.call.myPeerId,
                     ssrc: member.ssrc,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
@@ -2522,19 +2534,6 @@ public final class VoiceChatController: ViewController {
                 index += 1
             }
             
-            if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
-                entries.insert(.peer(PeerEntry(
-                    peer: accountPeer,
-                    ssrc: 0,
-                    presence: nil,
-                    activityTimestamp: Int32.max - 1 - index,
-                    state: .listening,
-                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
-                    canManageCall: self.callState?.canManageCall ?? false,
-                    volume: nil
-                )), at: 1)
-            }
-            
             for peer in invitedPeers {
                 if processedPeerIds.contains(peer.id) {
                     continue
@@ -2543,6 +2542,7 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(.peer(PeerEntry(
                     peer: peer,
+                    myPeerId: self.call.myPeerId,
                     ssrc: 0,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,

@@ -405,6 +405,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     }
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
+                        joinAsPeerId: nil,
                         info: groupCallPanelData.info
                     )
                 })
@@ -851,7 +852,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         })]
     }
     
-    open func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
-        self.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+    open func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, info: GroupCallInfo) {
+        self.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
     }
 }
