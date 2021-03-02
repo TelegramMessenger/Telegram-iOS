@@ -28,6 +28,11 @@ public enum ContextMenuActionResult {
     case custom(ContainedViewLayoutTransition)
 }
 
+public enum ContextMenuActionItemFont {
+    case regular
+    case custom(UIFont)
+}
+
 public struct ContextMenuActionItemIconSource {
     public let size: CGSize
     public let signal: Signal<UIImage?, NoError>
@@ -56,15 +61,17 @@ public struct ContextMenuActionBadge {
 public final class ContextMenuActionItem {
     public let text: String
     public let textColor: ContextMenuActionItemTextColor
+    public let textFont: ContextMenuActionItemFont
     public let textLayout: ContextMenuActionItemTextLayout
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
     public let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void
     
-    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.text = text
         self.textColor = textColor
+        self.textFont = textFont
         self.textLayout = textLayout
         self.badge = badge
         self.icon = icon
@@ -1583,7 +1590,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.displayTextSelectionTip = displayTextSelectionTip
         
         super.init(navigationBarPresentationData: nil)
-        
+                
         if case let .extracted(extractedSource) = source {
             if !extractedSource.blurBackground {
                 self.statusBar.statusBarStyle = .Ignore

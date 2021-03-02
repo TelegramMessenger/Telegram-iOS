@@ -59,7 +59,16 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         case .destructive:
             textColor = presentationData.theme.contextMenu.destructiveColor
         }
-        self.textNode.attributedText = NSAttributedString(string: action.text, font: textFont, textColor: textColor)
+        
+        let titleFont: UIFont
+        switch action.textFont {
+        case .regular:
+            titleFont = textFont
+        case let .custom(customFont):
+            titleFont = customFont
+        }
+        
+        self.textNode.attributedText = NSAttributedString(string: action.text, font: titleFont, textColor: textColor)
         
         switch action.textLayout {
         case .singleLine:
@@ -260,8 +269,15 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         }
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+        let titleFont: UIFont
+        switch self.action.textFont {
+        case .regular:
+            titleFont = textFont
+        case let .custom(customFont):
+            titleFont = customFont
+        }
         
-        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: textFont, textColor: textColor)
+        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: titleFont, textColor: textColor)
         
         switch self.action.textLayout {
         case let .secondLineWithValue(value):

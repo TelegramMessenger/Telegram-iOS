@@ -6184,3 +6184,22 @@ Sorry for the inconvenience.";
 "InstantPage.VoiceOver.ResetFontSize" = "Reset Font Size";
 
 "Contacts.VoiceOver.AddContact" = "Add Contact";
+
+"VoiceChat.InviteLinks.Speaker" = "Speaker";
+"VoiceChat.InviteLinks.Listener" = "Listener";
+"VoiceChat.InviteLinks.CopySpeakerLink" = "Copy Speaker Link";
+"VoiceChat.InviteLinks.CopyListenerLink" = "Copy Listener Link";
+
+"VoiceChat.InviteLink.InviteSpeakers_0" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_1" = "[%@] Invite Speaker";
+"VoiceChat.InviteLink.InviteSpeakers_2" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_3_10" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_many" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_any" = "[%@] Invite Speakers";
+
+"VoiceChat.InviteLink.InviteListeners_0" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_1" = "[%@] Invite Listener";
+"VoiceChat.InviteLink.InviteListeners_2" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_3_10" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_many" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_any" = "[%@] Invite Listeners";
