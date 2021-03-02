@@ -1611,13 +1611,13 @@ public struct photos {
 public extension Api {
 public struct phone {
     public enum GroupCall: TypeConstructorDescription {
-        case groupCall(call: Api.GroupCall, participants: [Api.GroupCallParticipant], participantsNextOffset: String, users: [Api.User])
+        case groupCall(call: Api.GroupCall, participants: [Api.GroupCallParticipant], participantsNextOffset: String, chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCall(let call, let participants, let participantsNextOffset, let users):
+                case .groupCall(let call, let participants, let participantsNextOffset, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(1722485756)
+                        buffer.appendInt32(-1636664659)
                     }
                     call.serialize(buffer, true)
                     buffer.appendInt32(481674261)
@@ -1626,6 +1626,11 @@ public struct phone {
                         item.serialize(buffer, true)
                     }
                     serializeString(participantsNextOffset, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -1637,8 +1642,8 @@ public struct phone {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCall(let call, let participants, let participantsNextOffset, let users):
-                return ("groupCall", [("call", call), ("participants", participants), ("participantsNextOffset", participantsNextOffset), ("users", users)])
+                case .groupCall(let call, let participants, let participantsNextOffset, let chats, let users):
+                return ("groupCall", [("call", call), ("participants", participants), ("participantsNextOffset", participantsNextOffset), ("chats", chats), ("users", users)])
     }
     }
     
@@ -1653,16 +1658,21 @@ public struct phone {
             }
             var _3: String?
             _3 = parseString(reader)
-            var _4: [Api.User]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, users: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, chats: _4!, users: _5!)
             }
             else {
                 return nil
@@ -1671,13 +1681,13 @@ public struct phone {
     
     }
     public enum GroupParticipants: TypeConstructorDescription {
-        case groupParticipants(count: Int32, participants: [Api.GroupCallParticipant], nextOffset: String, users: [Api.User], version: Int32)
+        case groupParticipants(count: Int32, participants: [Api.GroupCallParticipant], nextOffset: String, chats: [Api.Chat], users: [Api.User], version: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupParticipants(let count, let participants, let nextOffset, let users, let version):
+                case .groupParticipants(let count, let participants, let nextOffset, let chats, let users, let version):
                     if boxed {
-                        buffer.appendInt32(-1661028051)
+                        buffer.appendInt32(-193506890)
                     }
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -1686,6 +1696,11 @@ public struct phone {
                         item.serialize(buffer, true)
                     }
                     serializeString(nextOffset, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -1698,8 +1713,8 @@ public struct phone {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupParticipants(let count, let participants, let nextOffset, let users, let version):
-                return ("groupParticipants", [("count", count), ("participants", participants), ("nextOffset", nextOffset), ("users", users), ("version", version)])
+                case .groupParticipants(let count, let participants, let nextOffset, let chats, let users, let version):
+                return ("groupParticipants", [("count", count), ("participants", participants), ("nextOffset", nextOffset), ("chats", chats), ("users", users), ("version", version)])
     }
     }
     
@@ -1712,19 +1727,24 @@ public struct phone {
             }
             var _3: String?
             _3 = parseString(reader)
-            var _4: [Api.User]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _5: Int32?
-            _5 = reader.readInt32()
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: Int32?
+            _6 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, nextOffset: _3!, users: _4!, version: _5!)
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, nextOffset: _3!, chats: _4!, users: _5!, version: _6!)
             }
             else {
                 return nil

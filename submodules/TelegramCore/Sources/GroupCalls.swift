@@ -73,7 +73,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
     }
     |> mapToSignal { result -> Signal<GroupCallSummary?, GetCurrentGroupCallError> in
         switch result {
-        case let .groupCall(call, participants, _, users):
+        case let .groupCall(call, participants, _, chats, users):
             return account.postbox.transaction { transaction -> GroupCallSummary? in
                 guard let info = GroupCallInfo(call) else {
                     return nil
@@ -89,6 +89,8 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                         peerPresences[telegramUser.id] = presence
                     }
                 }
+                
+                peers.append(contentsOf: chats.compactMap(parseTelegramGroupOrChannel))
                 
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                     return updated
@@ -240,7 +242,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
             let nextParticipantsFetchOffset: String?
             
             switch result {
-            case let .groupParticipants(count, participants, nextOffset, users, apiVersion):
+            case let .groupParticipants(count, participants, nextOffset, chats, users, apiVersion):
                 totalCount = Int(count)
                 version = apiVersion
                 
@@ -260,6 +262,8 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                         peerPresences[telegramUser.id] = presence
                     }
                 }
+                
+                peers.append(contentsOf: chats.compactMap(parseTelegramGroupOrChannel))
                 
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                     return updated
@@ -502,7 +506,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 state.adminIds = adminIds
                 
                 switch result {
-                case let .groupCall(call, _, _, users):
+                case let .groupCall(call, _, _, chats, users):
                     guard let _ = GroupCallInfo(call) else {
                         return .fail(.generic)
                     }
@@ -519,6 +523,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                             peerPresences[telegramUser.id] = presence
                         }
                     }
+                    
+                    peers.append(contentsOf: chats.compactMap(parseTelegramGroupOrChannel))
                     
                     return account.postbox.transaction { transaction -> JoinGroupCallResult in
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
@@ -1640,29 +1646,19 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
 }
 
 
-public struct GroupCallDisplayAsList : Equatable {
-    public fileprivate(set) var count:Int
-    public fileprivate(set) var peers:[FoundPeer]
-    
-    public var isLoaded: Bool {
-        return peers.count >= count
-    }
-}
 
-public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox) -> Signal<GroupCallDisplayAsList, NoError> {
+
+public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox) -> Signal<[FoundPeer], NoError> {
     return network.request(Api.functions.channels.getAdminedPublicChannels(flags: 1 << 2))
         |> retryRequest
         |> mapToSignal { result in
         
-        let totalCount: Int
         let chats:[Api.Chat]
         switch result {
-        case let .chatsSlice(count, c):
-            totalCount = Int(count)
+        case let .chatsSlice(_, c):
             chats = c
         case let .chats(c):
             chats = c
-            totalCount = c.count
         }
         var subscribers: [PeerId: Int32] = [:]
         let peers = chats.compactMap(parseTelegramGroupOrChannel)
@@ -1688,8 +1684,8 @@ public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox)
                 return updated
             })
             return peers
-        } |> map { peers -> GroupCallDisplayAsList in
-            return GroupCallDisplayAsList(count: totalCount, peers: peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) })
+        } |> map { peers -> [FoundPeer] in
+            return peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) }
         }
         
     }
