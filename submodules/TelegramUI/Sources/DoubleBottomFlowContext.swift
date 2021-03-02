@@ -96,11 +96,9 @@ final class DoubleBottomFlowContext {
             let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
         }
         
-        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedApplicationContext.sharedContext.accountManager, { [weak self] settings in
-            guard let strongSelf = self else { return settings }
-            
+        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedApplicationContext.sharedContext.accountManager, { settings in
             var settings = settings
-            settings.enableSystemIntegration = strongSelf.shouldEnableNotification
+            settings.enableSystemIntegration = false
             return settings
         }).start()
     }
