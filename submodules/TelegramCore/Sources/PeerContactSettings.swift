@@ -30,6 +30,9 @@ extension PeerStatusSettings {
                 if (flags & (1 << 7)) != 0 {
                     result.insert(.autoArchived)
                 }
+                if (flags & (1 << 8)) != 0 {
+                    result.insert(.suggestAddMembers)
+                }
                 self = PeerStatusSettings(flags: result, geoDistance: geoDistance)
         }
     }

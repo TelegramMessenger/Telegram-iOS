@@ -267,6 +267,11 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
 public final class PeerChannelMemberCategoriesContextsManager {
     private let impl: QueueLocalObject<PeerChannelMemberCategoriesContextsManagerImpl>
     
+    private let removedChannelMembersPipe = ValuePipe<[(PeerId, PeerId)]>()
+    public var removedChannelMembers: Signal<[(PeerId, PeerId)], NoError> {
+        return self.removedChannelMembersPipe.signal()
+    }
+    
     public init() {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return PeerChannelMemberCategoriesContextsManagerImpl()
@@ -363,6 +368,9 @@ public final class PeerChannelMemberCategoriesContextsManager {
                         }
                     }
                 }
+                if !isMember {
+                    strongSelf.removedChannelMembersPipe.putNext([(peerId, memberId)])
+                }
             }
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
@@ -370,7 +378,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
+    public func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights?, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
         return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights, rank: rank)
         |> map(Optional.init)
         |> deliverOnMainQueue

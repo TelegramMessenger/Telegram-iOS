@@ -19,10 +19,11 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     
     private var customTitle: String?
     
-    public var peerSelected: ((PeerId) -> Void)?
+    public var peerSelected: ((Peer) -> Void)?
     private let filter: ChatListNodePeersFilter
     
     private let attemptSelection: ((Peer) -> Void)?
+    private let createNewGroup: (() -> Void)?
     
     public var inProgress: Bool = false {
         didSet {
@@ -40,6 +41,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         }
     }
     
+    public var customDismiss: (() -> Void)?
+    
     private var peerSelectionNode: PeerSelectionControllerNode {
         return super.displayNode as! PeerSelectionControllerNode
     }
@@ -51,16 +54,37 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         return self._ready
     }
     
+    private let hasChatListSelector: Bool
     private let hasContactSelector: Bool
+    private let hasGlobalSearch: Bool
+    private let pretendPresentedInModal: Bool
+    
+    override public var _presentedInModal: Bool {
+        get {
+            if self.pretendPresentedInModal {
+                return true
+            } else {
+                return super._presentedInModal
+            }
+        } set(value) {
+            if !self.pretendPresentedInModal {
+                super._presentedInModal = value
+            }
+        }
+    }
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
     public init(_ params: PeerSelectionControllerParams) {
         self.context = params.context
         self.filter = params.filter
+        self.hasChatListSelector = params.hasChatListSelector
         self.hasContactSelector = params.hasContactSelector
+        self.hasGlobalSearch = params.hasGlobalSearch
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.attemptSelection = params.attemptSelection
+        self.createNewGroup = params.createNewGroup
+        self.pretendPresentedInModal = params.pretendPresentedInModal
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -120,7 +144,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasContactSelector: hasContactSelector, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -136,9 +160,9 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             self?.activateSearch()
         }
         
-        self.peerSelectionNode.requestOpenPeer = { [weak self] peerId in
+        self.peerSelectionNode.requestOpenPeer = { [weak self] peer in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(peerId)
+                peerSelected(peer)
             }
         }
         
@@ -159,7 +183,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 }
                 strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf, let peerSelected = strongSelf.peerSelected {
-                        peerSelected(peer.id)
+                        peerSelected(peer)
                     }
                 }))
             }
@@ -197,7 +221,11 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     }
     
     @objc func cancelPressed() {
-        self.dismiss()
+        if let customDismiss = self.customDismiss {
+            customDismiss()
+        } else {
+            self.dismiss()
+        }
     }
     
     private func activateSearch() {

@@ -9,6 +9,7 @@
 {
     UIImageView *_backgroundView;
     UILabel *_label;
+    UILabel *_valueLabel;
 }
 @end
 
@@ -41,12 +42,37 @@
         _backgroundView.image = background;
         [self addSubview:_backgroundView];
         
+        UIFont *font;
+        
+        if (iosMajorVersion() >= 13) {
+            UIFontDescriptor *fontDescriptor = [UIFont systemFontOfSize:14.0f weight:UIFontWeightMedium].fontDescriptor;
+            NSArray *monospacedSetting = @[@{UIFontFeatureTypeIdentifierKey: @(kNumberSpacingType),
+                                             UIFontFeatureSelectorIdentifierKey: @(kMonospacedNumbersSelector)}];
+            UIFontDescriptor *updatedDescriptor = [fontDescriptor fontDescriptorByAddingAttributes:@{
+                UIFontDescriptorFeatureSettingsAttribute: monospacedSetting
+            }];
+            if (updatedDescriptor != nil) {
+                font = [UIFont fontWithDescriptor:updatedDescriptor size:14.0];
+            } else {
+                font = [UIFont systemFontOfSize:14];
+            }
+        } else {
+            font = [UIFont systemFontOfSize:14];
+        }
+        
         _label = [[UILabel alloc] initWithFrame:CGRectZero];
         _label.backgroundColor = [UIColor clearColor];
-        _label.font = TGSystemFontOfSize(14);
-        _label.textAlignment = NSTextAlignmentCenter;
+        _label.font = [UIFont systemFontOfSize:14];
+        _label.textAlignment = NSTextAlignmentLeft;
         _label.textColor = [UIColor whiteColor];
         [_backgroundView addSubview:_label];
+        
+        _valueLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        _valueLabel.backgroundColor = [UIColor clearColor];
+        _valueLabel.font = font;
+        _valueLabel.textAlignment = NSTextAlignmentRight;
+        _valueLabel.textColor = [TGPhotoEditorInterfaceAssets accentColor];
+        [_backgroundView addSubview:_valueLabel];
     }
     return self;
 }
@@ -62,21 +88,26 @@
     _label.text = text;
     [_label sizeToFit];
     
+    _valueLabel.hidden = true;
+    
     [self setNeedsLayout];
     
     [self setHidden:false animated:true];
 }
 
-- (void)setAttributedText:(NSAttributedString *)text
+- (void)setTitle:(NSString *)title value:(NSString *)value
 {
-    if (text.length == 0)
+    if (title.length == 0)
     {
         [self setHidden:true animated:true];
         return;
     }
     
-    _label.attributedText = text;
+    _label.text = title;
     [_label sizeToFit];
+    
+    _valueLabel.text = value;
+    [_valueLabel sizeToFit];
     
     [self setNeedsLayout];
     
@@ -104,7 +135,15 @@
     
     _label.frame = CGRectMake(padding, 6.0f, CGCeil(_label.frame.size.width), CGCeil(_label.frame.size.height));
     
-    CGFloat width = _label.frame.size.width + 2.0f * padding;
+    CGFloat width;
+    if (_valueLabel.isHidden) {
+        width = _label.frame.size.width + 2.0f * padding;
+    } else {
+        width = 2.0f * padding + _label.frame.size.width + 50.0f + 3.0f;
+    }
+    
+    _valueLabel.frame = CGRectMake(width - padding - 50.0f, 6.0f, 50.0f, CGCeil(_valueLabel.frame.size.height));
+    
     _backgroundView.frame = CGRectMake((self.frame.size.width - width) / 2, 15, width, 30);
 }
 

@@ -78,6 +78,8 @@ private final class ItemNode: ASDisplayNode {
     private var deleteButtonNode: ItemNodeDeleteButtonNode?
     private let buttonNode: HighlightTrackingButtonNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var selectionFraction: CGFloat = 0.0
     private(set) var unreadCount: Int = 0
     
@@ -136,6 +138,8 @@ private final class ItemNode: ASDisplayNode {
         
         self.buttonNode = HighlightTrackingButtonNode()
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init()
         
         self.extractedContainerNode.contentNode.addSubnode(self.extractedBackgroundNode)
@@ -154,6 +158,8 @@ private final class ItemNode: ASDisplayNode {
         self.containerNode.addSubnode(self.extractedContainerNode)
         self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
         self.addSubnode(self.containerNode)
+    
+        self.addSubnode(self.activateArea)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
@@ -184,12 +190,19 @@ private final class ItemNode: ASDisplayNode {
         self.pressed()
     }
     
-    func updateText(title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func updateText(strings: PresentationStrings, title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
             self.badgeBackgroundActiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeActiveBackgroundColor)
             self.badgeBackgroundInactiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor)
+        }
+        
+        self.activateArea.accessibilityLabel = title
+        if unreadCount > 0 {
+            self.activateArea.accessibilityValue = strings.VoiceOver_Chat_UnreadMessages(Int32(unreadCount))
+        } else {
+            self.activateArea.accessibilityValue = ""
         }
         
         self.containerNode.isGestureEnabled = !isEditing && !isReordering
@@ -308,11 +321,12 @@ private final class ItemNode: ASDisplayNode {
         transition.updateAlpha(node: self.shortTitleContainer, alpha: useShortTitle ? 1.0 : 0.0)
         
         self.buttonNode.frame = CGRect(origin: CGPoint(x: -sideInset, y: 0.0), size: CGSize(width: size.width + sideInset * 2.0, height: size.height))
-        
+                
         self.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: size)
         self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
         self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundNode.frame.minX, y: 0.0), size: CGSize(width:self.extractedBackgroundNode.frame.width, height: size.height))
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.activateArea.frame = CGRect(origin: CGPoint(), size: size)
         
         self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -sideInset, bottom: 0.0, right: -sideInset)
         self.extractedContainerNode.hitTestSlop = self.hitTestSlop
@@ -738,7 +752,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 selectionFraction = 0.0
             }
             
-            itemNode.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
+            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
         for (id, _) in self.itemNodes {

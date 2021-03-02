@@ -333,10 +333,10 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
 }
 
 public final class OngoingCallVideoCapturer {
-    fileprivate let impl: OngoingCallThreadLocalContextVideoCapturer
+    internal let impl: OngoingCallThreadLocalContextVideoCapturer
     
-    public init() {
-        self.impl = OngoingCallThreadLocalContextVideoCapturer()
+    public init(keepLandscape: Bool = false) {
+        self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: "", keepLandscape: keepLandscape)
     }
     
     public func switchVideoInput(isFront: Bool) {
@@ -472,7 +472,7 @@ public enum OngoingCallVideoOrientation {
     case rotation270
 }
 
-private extension OngoingCallVideoOrientation {
+extension OngoingCallVideoOrientation {
     init(_ orientation: OngoingCallVideoOrientationWebrtc) {
         switch orientation {
         case .orientation0:
@@ -557,6 +557,11 @@ public final class OngoingCallContext {
     private let receptionPromise = Promise<Int32?>(nil)
     public var reception: Signal<Int32?, NoError> {
         return self.receptionPromise.get()
+    }
+    
+    private let audioLevelPromise = Promise<Float>(0.0)
+    public var audioLevel: Signal<Float, NoError> {
+        return self.audioLevelPromise.get()
     }
     
     private let audioSessionDisposable = MetaDisposable()
@@ -686,6 +691,9 @@ public final class OngoingCallContext {
                     strongSelf.receptionPromise.set(.single(4))
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))
+                    }
+                    context.audioLevelUpdated = { level in
+                        self?.audioLevelPromise.set(.single(level))
                     }
                     
                     strongSelf.networkTypeDisposable = (updatedNetworkType

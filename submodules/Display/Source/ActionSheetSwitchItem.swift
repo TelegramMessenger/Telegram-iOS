@@ -26,6 +26,7 @@ public class ActionSheetSwitchItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -99,19 +100,11 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
             accessibilityTraits.insert(.selected)
         }
         self.accessibilityArea.accessibilityTraits = accessibilityTraits
-        
-        self.setNeedsLayout()
     }
     
-    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 57.0)
-    }
-    
-    public override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
-        
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 57.0)
+       
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
         let labelSize = self.label.updateLayout(CGSize(width: max(1.0, size.width - 51.0 - 16.0 * 2.0), height: size.height))
@@ -121,6 +114,9 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
         self.switchNode.frame = CGRect(origin: CGPoint(x: size.width - 16.0 - switchSize.width, y: floor((size.height - switchSize.height) / 2.0)), size: switchSize)
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
     
     @objc func buttonPressed() {

@@ -1,5 +1,5 @@
 function initialize() {
-    var controls = document.getElementsByClassName("controls")[0];
+    var controls = document.getElementsByClassName("vp-controls-wrapper")[0];
     if (controls != null) {
         controls.style.display = "none";
     }

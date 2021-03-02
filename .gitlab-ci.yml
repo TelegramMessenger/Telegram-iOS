@@ -23,8 +23,9 @@ internal:
   environment:
     name: internal
   artifacts:
+    when: always
     paths:
-      - build/artifacts/Telegram.DSYMs.zip
+      - build/artifacts
     expire_in: 1 week
 
 experimental:
@@ -32,7 +33,7 @@ experimental:
     - ios_internal
   stage: build
   only:
-    - experimental
+    - experimental-3
   except:
     - tags
   script:

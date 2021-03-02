@@ -531,7 +531,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.selectPeer()
                 })
             case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.updateRevealedPeerId(peerId)
@@ -716,7 +716,10 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         self.stateValue = Atomic(value: NotificationExceptionState(mode: mode))
         self.listNode = ListView()
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
-        //self.listNode.keepBottomItemOverscrollBackground = presentationData.theme.chatList.backgroundColor
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         super.init()
         
         let stateValue = self.stateValue
@@ -891,7 +894,9 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     filter.insert(.onlyChannels)
             }
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
-            controller.peerSelected = { [weak controller] peerId in
+            controller.peerSelected = { [weak controller] peer in
+                let peerId = peer.id
+                
                 presentPeerSettings(peerId, {
                     controller?.dismiss()
                 })
@@ -1162,7 +1167,8 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
     }
     
     init(context: AccountContext, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -1170,6 +1176,9 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         

@@ -17,6 +17,9 @@ public enum MusicPlaybackSettingsLooping: Int32 {
 public enum AudioPlaybackRate: Int32 {
     case x1 = 1000
     case x2 = 2000
+    case x4 = 4000
+    case x8 = 8000
+    case x16 = 16000
     
     var doubleValue: Double {
         return Double(self.rawValue) / 1000.0

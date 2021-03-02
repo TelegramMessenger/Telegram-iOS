@@ -114,8 +114,6 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
     |> map { chats, users, channels, contactsJoinedMuted in
         let chatsSettings: MessageNotificationSettings
         switch chats {
-            case .peerNotifySettingsEmpty:
-                chatsSettings = MessageNotificationSettings.defaultSettings
             case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
                 let enabled: Bool
                 if muteUntil != nil && muteUntil != 0 {
@@ -134,8 +132,6 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
         
         let userSettings: MessageNotificationSettings
         switch users {
-            case .peerNotifySettingsEmpty:
-                userSettings = MessageNotificationSettings.defaultSettings
             case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
                 let enabled: Bool
                 if muteUntil != nil && muteUntil != 0 {
@@ -154,8 +150,6 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
         
         let channelSettings: MessageNotificationSettings
         switch channels {
-            case .peerNotifySettingsEmpty:
-                channelSettings = MessageNotificationSettings.defaultSettings
             case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
                 let enabled: Bool
                 if muteUntil != nil && muteUntil != 0 {

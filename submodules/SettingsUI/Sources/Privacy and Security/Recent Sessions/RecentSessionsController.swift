@@ -63,6 +63,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     case currentSession(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, RecentAccountSession)
     case terminateOtherSessions(PresentationTheme, String)
     case terminateAllWebSessions(PresentationTheme, String)
+    case currentAddDevice(PresentationTheme, String)
     case currentSessionInfo(PresentationTheme, String)
     case pendingSessionsHeader(PresentationTheme, String)
     case pendingSession(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
@@ -75,12 +76,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .currentSessionHeader, .currentSession, .terminateOtherSessions, .terminateAllWebSessions, .currentSessionInfo:
-            return RecentSessionsSection.currentSession.rawValue
-        case .pendingSessionsHeader, .pendingSession, .pendingSessionsInfo:
-            return RecentSessionsSection.pendingSessions.rawValue
-        case .otherSessionsHeader, .addDevice, .session, .website, .devicesInfo:
-            return RecentSessionsSection.otherSessions.rawValue
+            case .currentSessionHeader, .currentSession, .terminateOtherSessions, .terminateAllWebSessions, .currentAddDevice, .currentSessionInfo:
+                return RecentSessionsSection.currentSession.rawValue
+            case .pendingSessionsHeader, .pendingSession, .pendingSessionsInfo:
+                return RecentSessionsSection.pendingSessions.rawValue
+            case .otherSessionsHeader, .addDevice, .session, .website, .devicesInfo:
+                return RecentSessionsSection.otherSessions.rawValue
         }
     }
     
@@ -94,18 +95,20 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return .index(2)
         case .terminateAllWebSessions:
             return .index(3)
+        case .currentAddDevice:
+            return .index(3)
         case .currentSessionInfo:
-            return .index(4)
-        case .pendingSessionsHeader:
             return .index(5)
+        case .pendingSessionsHeader:
+            return .index(6)
         case let .pendingSession(_, _, _, _, session, _, _, _):
             return .session(session.hash)
         case .pendingSessionsInfo:
-            return .index(6)
-        case .otherSessionsHeader:
             return .index(7)
-        case .addDevice:
+        case .otherSessionsHeader:
             return .index(8)
+        case .addDevice:
+            return .index(9)
         case let .session(_, _, _, _, session, _, _, _):
             return .session(session.hash)
         case let .website(_, _, _, _, _, website, _, _, _, _):
@@ -131,6 +134,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             }
         case let .terminateAllWebSessions(lhsTheme, lhsText):
             if case let .terminateAllWebSessions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .currentAddDevice(lhsTheme, lhsText):
+            if case let .currentAddDevice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
             } else {
                 return false
@@ -257,39 +266,48 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! RecentSessionsControllerArguments
         switch self {
-        case let .currentSessionHeader(theme, text):
+        case let .currentSessionHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .currentSession(theme, strings, dateTimeFormat, session):
+        case let .currentSession(_, strings, dateTimeFormat, session):
             return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: true, editable: false, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
             }, removeSession: { _ in
             })
-        case let .terminateOtherSessions(theme, text):
+        case let .terminateOtherSessions(_, text):
             return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.terminateOtherSessions()
             })
-        case let .terminateAllWebSessions(theme, text):
+        case let .terminateAllWebSessions(_, text):
             return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.terminateAllWebSessions()
             })
-        case let .currentSessionInfo(theme, text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .pendingSessionsHeader(theme, text):
+        case let .currentAddDevice(_, text):
+            return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.addDevice()
+            })
+        case let .currentSessionInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { action in
+                switch action {
+                case .tap:
+                    arguments.openOtherAppsUrl()
+                }
+            })
+        case let .pendingSessionsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .pendingSession(_, theme, strings, dateTimeFormat, session, enabled, editing, revealed):
+        case let .pendingSession(_, _, _, dateTimeFormat, session, enabled, editing, revealed):
             return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                 arguments.setSessionIdWithRevealedOptions(previousId, id)
             }, removeSession: { id in
                 arguments.removeSession(id)
             })
-        case let .pendingSessionsInfo(theme, text):
+        case let .pendingSessionsInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .otherSessionsHeader(theme, text):
+        case let .otherSessionsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .addDevice(theme, text):
+        case let .addDevice(_, text):
             return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.addDevice()
             })
-        case let .session(_, theme, strings, dateTimeFormat, session, enabled, editing, revealed):
+        case let .session(_, _, _, dateTimeFormat, session, enabled, editing, revealed):
             return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                 arguments.setSessionIdWithRevealedOptions(previousId, id)
             }, removeSession: { id in
@@ -301,7 +319,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             }, removeSession: { id in
                 arguments.removeWebSession(id)
             })
-        case let .devicesInfo(theme, text):
+        case let .devicesInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { action in
                 switch action {
                 case .tap:
@@ -377,10 +395,17 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             entries.append(.currentSession(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
         
+        var hasAddDevice = false
         if sessionsState.sessions.count > 1 || enableQRLogin {
-            entries.append(.terminateOtherSessions(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessions))
-            entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
-        
+            if sessionsState.sessions.count > 1 {
+                entries.append(.terminateOtherSessions(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessions))
+                entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
+            } else if enableQRLogin {
+                hasAddDevice = true
+                entries.append(.currentAddDevice(presentationData.theme, presentationData.strings.AuthSessions_AddDevice))
+                entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_OtherDevices))
+            }
+            
             let filteredPendingSessions: [RecentAccountSession] = sessionsState.sessions.filter({ $0.flags.contains(.passwordPending) })
             if !filteredPendingSessions.isEmpty {
                 entries.append(.pendingSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_IncompleteAttempts))
@@ -393,9 +418,11 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 entries.append(.pendingSessionsInfo(presentationData.theme, presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
             
-            entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
+            if sessionsState.sessions.count > 1 {
+                entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
+            }
             
-            if enableQRLogin {
+            if enableQRLogin && !hasAddDevice {
                 entries.append(.addDevice(presentationData.theme, presentationData.strings.AuthSessions_AddDevice))
             }
             
@@ -410,7 +437,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 }
             }
             
-            if enableQRLogin {
+            if enableQRLogin && !hasAddDevice {
                 entries.append(.devicesInfo(presentationData.theme, presentationData.strings.AuthSessions_OtherDevices))
             }
         }
@@ -654,7 +681,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             }
         }
         
-        let emptyStateItem: ItemListControllerEmptyStateItem? = nil
+        let emptyStateItem: ItemListControllerEmptyStateItem?
+        if sessionsState.sessions.count == 1 && mode == .sessions {
+            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+        } else {
+            emptyStateItem = nil
+        }
         
         let title: ItemListControllerTitle
         let entries: [RecentSessionsEntry]

@@ -187,6 +187,7 @@ public enum TextSelectionAction {
     case copy
     case share
     case lookup
+    case speak
 }
 
 public final class TextSelectionNode: ASDisplayNode {
@@ -503,10 +504,17 @@ public final class TextSelectionNode: ASDisplayNode {
             self?.performAction(attributedText, .lookup)
             self?.dismissSelection()
         }))
+        if isSpeakSelectionEnabled() {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
+                self?.performAction(attributedText, .speak)
+                self?.dismissSelection()
+            }))
+        }
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             self?.performAction(attributedText, .share)
             self?.dismissSelection()
         }))
+        
         self.present(ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
             guard let strongSelf = self, let rootNode = strongSelf.rootNode else {
                 return nil

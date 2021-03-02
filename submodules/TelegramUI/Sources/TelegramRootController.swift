@@ -13,6 +13,7 @@ import CallListUI
 import ChatListUI
 import SettingsUI
 import AppBundle
+import DatePickerNode
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -156,7 +157,7 @@ public final class TelegramRootController: NavigationController {
             sharedContext.switchingData = (nil, nil, nil)
         }
         
-        let accountSettingsController = PeerInfoScreen(context: self.context, peerId: self.context.account.peerId, avatarInitiallyExpanded: false, isOpenedFromChat: false, nearbyPeerDistance: nil, callMessages: [], isSettings: true)
+        let accountSettingsController = PeerInfoScreenImpl(context: self.context, peerId: self.context.account.peerId, avatarInitiallyExpanded: false, isOpenedFromChat: false, nearbyPeerDistance: nil, callMessages: [], isSettings: true)
         accountSettingsController.tabBarItemDebugTapAction = { [weak self, weak accountSettingsController] in
             guard let strongSelf = self, let accountSettingsController = accountSettingsController else {
                 return
@@ -190,7 +191,7 @@ public final class TelegramRootController: NavigationController {
         rootTabController.setControllers(controllers, selectedIndex: nil)
     }
     
-    public func openChatsController(activateSearch: Bool) {
+    public func openChatsController(activateSearch: Bool, filter: ChatListSearchFilter = .chats, query: String? = nil) {
         guard let rootTabController = self.rootTabController else {
             return
         }
@@ -204,7 +205,7 @@ public final class TelegramRootController: NavigationController {
         }
         
         if activateSearch {
-            self.chatListController?.activateSearch()
+            self.chatListController?.activateSearch(filter: filter, query: query)
         }
     }
     

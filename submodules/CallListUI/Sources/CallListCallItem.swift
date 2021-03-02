@@ -12,6 +12,7 @@ import PresentationDataUtils
 import AvatarNode
 import TelegramStringFormatting
 import AccountContext
+import ChatListSearchItemHeader
 
 private func callDurationString(strings: PresentationStrings, duration: Int32) -> String {
     if duration < 60 {
@@ -78,7 +79,7 @@ class CallListCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
+    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, displayHeader: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.context = context
@@ -90,7 +91,11 @@ class CallListCallItem: ListViewItem {
         self.interaction = interaction
         
         self.headerAccessoryItem = nil
-        self.header = nil
+        if displayHeader {
+            self.header = ChatListSearchItemHeader(type: .recentCalls, theme: presentationData.theme, strings: presentationData.strings)
+        } else {
+            self.header = nil
+        }
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -250,7 +255,6 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             for media in item.topMessage.media {
                 if let action = media as? TelegramMediaAction {
                     if case let .phoneCall(_, _, _, isVideoValue) = action.action {
-                        break
                         isVideo = isVideoValue
                     }
                 }
@@ -319,7 +323,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 updatedInfoIcon = true
             }
             
-            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let titleFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
             let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             let avatarDiameter = min(40.0, floor(item.presentationData.fontSize.itemListBaseFontSize * 40.0 / 17.0))
@@ -363,6 +367,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
+            
+            var statusAccessibilityString = ""
             
             var titleColor = item.presentationData.theme.list.itemPrimaryTextColor
             var hasMissed = false
@@ -426,19 +432,26 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 
                 if hasMissed {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallMissedShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallMissed : item.presentationData.strings.Call_VoiceOver_VoiceCallMissed
                 } else if hasIncoming && hasOutgoing {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallOutgoingShort + ", " + item.presentationData.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    statusAccessibilityString = isVideo ? (item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing + ", " + item.presentationData.strings.Call_VoiceOver_VideoCallIncoming) : (item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing + ", " + item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming)
                 } else if hasIncoming {
                     if let callDuration = callDuration, callDuration != 0 {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallIncomingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallIncoming : item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0
+                        
                     } else {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallIncoming : item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming
                     }
                 } else {
                     if let callDuration = callDuration, callDuration != 0 {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallOutgoingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing : item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0
                     } else {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallOutgoingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing : item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing
                     }
                 }
             }
@@ -605,9 +618,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             
                             strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                             
-                            strongSelf.accessibilityArea.accessibilityTraits = .button
                             strongSelf.accessibilityArea.accessibilityLabel = titleAttributedString?.string
-                            strongSelf.accessibilityArea.accessibilityValue = statusAttributedString?.string
+                            strongSelf.accessibilityArea.accessibilityValue = statusAccessibilityString
                             strongSelf.accessibilityArea.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                             
                             strongSelf.infoButtonNode.accessibilityLabel = item.presentationData.strings.Conversation_Info
@@ -690,7 +702,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 infoIconRightInset -= 36.0
             }
             
-            transition.updateFrameAdditive(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
+            var avatarFrame = self.avatarNode.frame
+            avatarFrame.origin.x = revealOffset + leftInset - 52.0
+            transition.updateFrameAdditive(node: self.avatarNode, frame: avatarFrame)
             
             transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
             

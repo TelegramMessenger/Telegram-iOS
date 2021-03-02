@@ -138,7 +138,9 @@
             if (strongSelf == nil)
                 return;
             
-            [strongSelf.window endEditing:true];    
+            [strongSelf.window endEditing:true];
+            strongSelf->_portraitToolbarView.doneButton.userInteractionEnabled = false;
+            strongSelf->_landscapeToolbarView.doneButton.userInteractionEnabled = false;
             strongSelf->_donePressed(strongSelf->_currentItem);
         };
         void(^toolbarDoneLongPressed)(id) = ^(id sender)
@@ -591,6 +593,8 @@
     [_muteButton setImage:muteIcon forState:UIControlStateNormal];
     [_muteButton setImage:muteActiveIcon forState:UIControlStateSelected];
     [_muteButton setImage:muteActiveIcon forState:UIControlStateSelected | UIControlStateHighlighted];
+    
+    [self setNeedsLayout];
 }
 
 - (TGPhotoEditorTab)currentTabs
@@ -1305,6 +1309,22 @@
         [_portraitToolbarView transitionInAnimated:animated transparent:true];
         [_landscapeToolbarView transitionInAnimated:animated transparent:true];
     }
+}
+
+- (void)immediateEditorTransitionIn {
+    [self setSelectionInterfaceHidden:true animated:false];
+    _captionMixin.inputPanel.alpha = 0.0f;
+    _portraitToolbarView.doneButton.alpha = 0.0f;
+    _landscapeToolbarView.doneButton.alpha = 0.0f;
+    
+    _portraitToolbarView.hidden = true;
+    _landscapeToolbarView.hidden = true;
+    
+    TGDispatchAfter(0.5, dispatch_get_main_queue(), ^
+    {
+        _portraitToolbarView.hidden = false;
+        _landscapeToolbarView.hidden = false;
+    });
 }
 
 - (void)editorTransitionIn

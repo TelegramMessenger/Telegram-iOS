@@ -399,7 +399,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
             }
         case let .enableContacts(enableFor, disableFor):
             if !enableFor.isEmpty && !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(enableFor))", "\(countForSelectivePeers(disableFor))").0
+                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").0
             } else if !enableFor.isEmpty {
                 return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").0
             } else if !disableFor.isEmpty {
@@ -549,7 +549,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 return .single(false)
             }
         } else {
-            return .complete()
+            return .single(hasTwoStepAuth)
         }
     }
     
@@ -895,7 +895,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     let doubleBottomTimestampSignal = context.account.postbox.transaction({ transaction -> Int64 in
         var value = transaction.getPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp) as? DoubleBottomHideTimestamp ?? DoubleBottomHideTimestamp.defaultValue
         if value.timestamp == 0 {
-            value.timestamp = Int64(Date().timeIntervalSince1970) + 60
+            value.timestamp = Int64(Date().timeIntervalSince1970) + 600
             transaction.setPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp, value: value)
         }
         return value.timestamp

@@ -345,6 +345,11 @@
 
 - (void)presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)item tab:(TGPhotoEditorTab)tab
 {
+    [self presentPhotoEditorForItem:item tab:tab snapshots:@[]];
+}
+
+- (void)presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)item tab:(TGPhotoEditorTab)tab snapshots:(NSArray *)snapshots
+{
     __weak TGMediaPickerGalleryModel *weakSelf = self;
     
     if (_itemBeingEdited != nil)
@@ -604,6 +609,15 @@
     
     [self.controller addChildViewController:controller];
     [self.controller.view addSubview:controller.view];
+    
+    for (UIView *view in snapshots) {
+        [self.controller.view addSubview:view];
+        [UIView animateWithDuration:0.3 animations:^{
+            view.alpha = 0.0;
+        } completion:^(__unused BOOL finished) {
+            [view removeFromSuperview];
+        }];
+    }
 }
 
 - (void)_replaceItems:(NSArray *)items focusingOnItem:(id<TGModernGalleryItem>)item

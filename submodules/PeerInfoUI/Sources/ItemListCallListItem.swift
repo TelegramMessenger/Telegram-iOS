@@ -72,13 +72,13 @@ private func stringForCallType(message: Message, strings: PresentationStrings) -
                         let incoming = message.flags.contains(.Incoming)
                         if let discardReason = discardReason {
                             switch discardReason {
-                            case .busy, .disconnect:
+                            case .disconnect:
                                 if isVideo {
                                     string = strings.Notification_VideoCallCanceled
                                 } else {
                                     string = strings.Notification_CallCanceled
                                 }
-                            case .missed:
+                            case .missed, .busy:
                                 if incoming {
                                     if isVideo {
                                         string = strings.Notification_VideoCallMissed

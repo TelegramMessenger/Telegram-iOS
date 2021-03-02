@@ -10,3 +10,14 @@ swift_library(
         "//visibility:public",
     ],
 )
+
+swift_library(
+    name = "WidgetItems_iOS14",
+    module_name = "WidgetItems_iOS14",
+    srcs = glob([
+		"Sources/**/*.swift",
+    ]),
+    visibility = [
+        "//visibility:public",
+    ],
+)

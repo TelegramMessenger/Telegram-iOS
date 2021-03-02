@@ -25,6 +25,7 @@ enum PeerInfoHeaderButtonKey: Hashable {
     case discussion
     case call
     case videoCall
+    case voiceChat
     case mute
     case more
     case addMember
@@ -36,6 +37,7 @@ enum PeerInfoHeaderButtonIcon {
     case message
     case call
     case videoCall
+    case voiceChat
     case mute
     case unmute
     case more
@@ -68,6 +70,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.textNode.displaysAsynchronously = false
         
         super.init()
+        
+        self.accessibilityTraits = .button
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
@@ -110,6 +114,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     imageName = "Peer Info/ButtonCall"
                 case .videoCall:
                     imageName = "Peer Info/ButtonVideo"
+                case .voiceChat:
+                    imageName = "Peer Info/ButtonVoiceChat"
                 case .mute:
                     imageName = "Peer Info/ButtonMute"
                 case .unmute:
@@ -132,6 +138,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         }
         
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.accessibilityLabel = text
         let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -280,10 +287,10 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             }
             if isLoading, let progress = progress {
                 strongSelf.hasProgress = true
-                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false), completion: {})
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false, animateRotation: true), completion: {})
             } else if strongSelf.hasProgress {
                 strongSelf.hasProgress = false
-                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: false), completion: { [weak self] in
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: false, animateRotation: true), completion: { [weak self] in
                      guard let strongSelf = self else {
                         return
                     }
@@ -924,8 +931,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             var directionIsToRight: Bool?
             if abs(velocity.x) > 10.0 {
                 directionIsToRight = velocity.x < 0.0
-            } else if abs(transitionFraction) > 0.5 {
-                directionIsToRight = transitionFraction < 0.0
+            } else if abs(self.transitionFraction) > 0.5 {
+                directionIsToRight = self.transitionFraction < 0.0
             }
             var updatedIndex = self.currentIndex
             if let directionIsToRight = directionIsToRight {
@@ -1510,7 +1517,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             if let updatingAvatar = updatingAvatar {
                 overlayHidden = false
                 
-                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true))
+                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true, animateRotation: true))
                 
                 if case let .image(representation) = updatingAvatar {
                     if representation != self.currentRepresentation {
@@ -1838,6 +1845,9 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         
         super.init(pointerStyle: .default)
         
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
+        
         self.addSubnode(self.regularTextNode)
         self.addSubnode(self.whiteTextNode)
         self.addSubnode(self.iconNode)
@@ -1874,6 +1884,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                 case .editVideo:
                     text = presentationData.strings.Settings_EditVideo
             }
+            self.accessibilityLabel = text
             
             let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
             
@@ -2009,7 +2020,6 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                     }
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
-                    
                     
                     var buttonTransition = transition
                     if case let .animated(duration, curve) = buttonTransition, alphaFactor == 0.0 {
@@ -2249,6 +2259,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
             let textColor = presentationData.theme.list.itemPrimaryTextColor
             
             self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
+            self.textNode.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
+            self.textNode.tintColor = presentationData.theme.list.itemAccentColor
             
             self.textNode.clipsToBounds = true
             self.textNode.delegate = self
@@ -2744,7 +2756,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
     
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+    var initializedCredibilityIcon = false
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
         self.avatarListNode.listContainerNode.peer = peer
@@ -2765,19 +2778,35 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         
-        if themeUpdated {
-            if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
-                let image = generateImage(sourceImage.size, contextGenerator: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
-                    context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                    context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
-                    context.fill(CGRect(origin: CGPoint(), size: size))
-                })
-                self.titleCredibilityIconNode.image = image
-                self.titleExpandedCredibilityIconNode.image = image
+        if themeUpdated || !initializedCredibilityIcon {
+            let image: UIImage?
+            if let peer = peer {
+                self.initializedCredibilityIcon = true
+                if peer.isFake {
+                    image = PresentationResourcesChatList.fakeIcon(presentationData.theme, type: .regular)
+                } else if peer.isScam {
+                    image = PresentationResourcesChatList.scamIcon(presentationData.theme, type: .regular)
+                } else if peer.isVerified {
+                    if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
+                        image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
+                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
+                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                            context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
+                        })
+                    } else {
+                        image = nil
+                    }
+                } else {
+                    image = nil
+                }
+            } else {
+                image = nil
             }
+            self.titleCredibilityIconNode.image = image
+            self.titleExpandedCredibilityIconNode.image = image
         }
         
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
@@ -2838,7 +2867,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
         
-        let buttonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled)
+        let buttonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: isSecretChat, isContact: isContact)
         
         var isVerified = false
         let titleString: NSAttributedString
@@ -2894,17 +2923,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: titleString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
+        self.titleNode.accessibilityLabel = titleString.string
         
         let subtitleNodeLayout = self.subtitleNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: subtitleString, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: subtitleString, constrainedSize: CGSize(width: titleConstrainedSize.width - 82.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
+        self.subtitleNode.accessibilityLabel = subtitleString.string
         
         let usernameNodeLayout = self.usernameNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
-                
+        self.usernameNode.accessibilityLabel = usernameString.string
+        
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
         
@@ -2915,10 +2947,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if let image = self.titleCredibilityIconNode.image {
             transition.updateFrame(node: self.titleCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
-            self.titleCredibilityIconNode.isHidden = !isVerified
             
             transition.updateFrame(node: self.titleExpandedCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
-            self.titleExpandedCredibilityIconNode.isHidden = !isVerified
         }
         
         let titleFrame: CGRect
@@ -3131,7 +3161,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
                 transition.updateSublayerTransformScale(node: self.usernameNodeContainer, scale: subtitleScale)
-
             } else {
                 let titleScale: CGFloat
                 let subtitleScale: CGFloat
@@ -3268,6 +3297,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             case .videoCall:
                 buttonText = presentationData.strings.PeerInfo_ButtonVideoCall
                 buttonIcon = .videoCall
+            case .voiceChat:
+                buttonText = presentationData.strings.PeerInfo_ButtonVoiceChat
+                buttonIcon = .voiceChat
             case .mute:
                 if let notificationSettings = notificationSettings, case .muted = notificationSettings.muteState {
                     buttonText = presentationData.strings.PeerInfo_ButtonUnmute

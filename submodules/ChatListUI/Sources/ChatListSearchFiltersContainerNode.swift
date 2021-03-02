@@ -6,38 +6,7 @@ import SyncCore
 import Postbox
 import TelegramCore
 import TelegramPresentationData
-
-enum ChatListSearchFilter: Equatable {
-    case chats
-    case media
-    case links
-    case files
-    case music
-    case voice
-    case peer(PeerId, Bool, String, String)
-    case date(Int32?, Int32, String)
-    
-    var id: Int32 {
-        switch self {
-            case .chats:
-                return 0
-            case .media:
-                return 1
-            case .links:
-                return 2
-            case .files:
-                return 3
-            case .music:
-                return 4
-            case .voice:
-                return 5
-            case let .peer(peerId, _, _, _):
-                return peerId.id
-            case let .date(_, date, _):
-                return date
-        }
-    }
-}
+import AccountContext
 
 private final class ItemNode: ASDisplayNode {
     private let pressed: () -> Void

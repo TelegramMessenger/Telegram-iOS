@@ -279,7 +279,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     }
     
     open func setControlsHidden(_ hidden: Bool, animated: Bool) {
-        guard self.areControlsHidden != hidden else {
+        guard self.areControlsHidden != hidden && (!self.isDismissed || hidden) else {
             return
         }
         self.areControlsHidden = hidden

@@ -51,7 +51,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     private var currentState: (Account, HorizontalStickerGridItem, CGSize)?
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
-    private var placeholderNode: ShimmerEffectNode?
+    private var placeholderNode: StickerShimmerEffectNode?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
@@ -81,7 +81,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     override init() {
         self.imageNode = TransformImageNode()
-        self.placeholderNode = ShimmerEffectNode()
+        self.placeholderNode = StickerShimmerEffectNode()
         
         super.init()
         
@@ -114,9 +114,11 @@ final class HorizontalStickerGridItemNode: GridItemNode {
             if !animated {
                 placeholderNode.removeFromSupernode()
             } else {
+                placeholderNode.allowsGroupOpacity = true
                 placeholderNode.alpha = 0.0
                 placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
                     placeholderNode?.removeFromSupernode()
+                    placeholderNode?.allowsGroupOpacity = false
                 })
             }
         }
@@ -185,11 +187,10 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         let boundingSize = bounds.insetBy(dx: 2.0, dy: 2.0).size
         
         if let placeholderNode = self.placeholderNode {
-            let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
             placeholderNode.frame = bounds
             
-            if let theme = self.currentState?.1.theme {
-                placeholderNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor.mixedWith(theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 10.0)], size: bounds.size)
+            if let theme = self.currentState?.1.theme, let file = self.currentState?.1.file {
+                placeholderNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor.mixedWith(theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: file.immediateThumbnailData, size: bounds.size)
             }
         }
         

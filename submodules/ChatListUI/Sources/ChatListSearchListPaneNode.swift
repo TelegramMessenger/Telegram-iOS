@@ -26,6 +26,7 @@ import GalleryData
 import AppBundle
 import ShimmerEffect
 import ChatListSearchRecentPeersNode
+import UndoUI
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -205,7 +206,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     }
                 }, deletePeer: deletePeer, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        if let chatPeer = peer.peer.peers[peer.peer.peerId], chatPeer.id.namespace != Namespaces.Peer.SecretChat {
+                        if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                             peerContextAction(chatPeer, .recentSearch, node, gesture)
                         } else {
                             gesture?.cancel()
@@ -429,7 +430,13 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     case .collapse:
                         actionTitle = strings.ChatList_Search_ShowLess
                     }
-                    header = ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
+                    let headerType: ChatListSearchItemHeaderType
+                    if filter.contains(.onlyGroups) {
+                        headerType = .chats
+                    } else {
+                        headerType = .localPeers
+                    }
+                    header = ChatListSearchItemHeader(type: headerType, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
                         toggleExpandLocalResults()
                     })
                 }
@@ -728,7 +735,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         self.tagMask = tagMask
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.presentationDataPromise.set(.single(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)))
         
         self.searchStatePromise.set(self.searchStateValue)
@@ -737,13 +745,20 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         self.recentListNode = ListView()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.recentListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.shimmerNode = ChatListSearchShimmerNode(key: key)
         self.shimmerNode.isUserInteractionEnabled = false
+        self.shimmerNode.allowsGroupOpacity = true
             
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
-        
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+    
         var openMediaMessageImpl: ((Message, ChatControllerInteractionOpenMessageMode) -> Void)?
         var transitionNodeImpl: ((MessageId, Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?)?
         var addToTransitionSurfaceImpl: ((UIView) -> Void)?
@@ -784,13 +799,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         self.addSubnode(self.mediaNode)
-        self.addSubnode(self.shimmerNode)
-        self.addSubnode(self.mediaAccessoryPanelContainer)
         
         self.addSubnode(self.emptyResultsAnimationNode)
         self.addSubnode(self.emptyResultsTitleNode)
         self.addSubnode(self.emptyResultsTextNode)
 
+        self.addSubnode(self.shimmerNode)
+        self.addSubnode(self.mediaAccessoryPanelContainer)
+        
         let searchContext = Promise<ChatListSearchMessagesContext?>(nil)
         let searchContextValue = self.searchContextValue
         let updateSearchContext: ((ChatListSearchMessagesContext?) -> (ChatListSearchMessagesContext?, Bool)) -> Void = { f in
@@ -1528,7 +1544,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             loadMore()
         }
         
-        if tagMask == .music || tagMask == .voiceOrInstantVideo {
+        if [.file, .music, .voiceOrInstantVideo].contains(tagMask) {
             self.mediaStatusDisposable = (context.sharedContext.mediaManager.globalMediaPlayerState
             |> mapToSignal { playlistStateAndType -> Signal<(Account, SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> in
                 if let (account, state, type) = playlistStateAndType {
@@ -1542,6 +1558,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 }
                             case .music:
                                 if tagMask != .music {
+                                    return .single(nil) |> delay(0.2, queue: .mainQueue())
+                                }
+                            case .file:
+                                if tagMask != .file {
                                     return .single(nil) |> delay(0.2, queue: .mainQueue())
                                 }
                             }
@@ -1725,6 +1745,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 nextRate = .x2
                             case .x2:
                                 nextRate = .x1
+                            default:
+                                nextRate = .x1
                         }
                         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
                             return settings.withUpdatedVoicePlaybackRate(nextRate)
@@ -1736,6 +1758,35 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             return
                         }
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
+                        
+                        if let controller = strongSelf.navigationController?.topViewController as? ViewController {
+                            var hasTooltip = false
+                            controller.forEachController({ controller in
+                                if let controller = controller as? UndoOverlayController {
+                                    hasTooltip = true
+                                    controller.dismissWithCommitAction()
+                                }
+                                return true
+                            })
+                            
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            let slowdown = baseRate == .x1
+                            controller.present(
+                                UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .audioRate(
+                                        slowdown: slowdown,
+                                        text: slowdown ? presentationData.strings.Conversation_AudioRateTooltipNormal : presentationData.strings.Conversation_AudioRateTooltipSpeedUp
+                                    ),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: hasTooltip,
+                                    action: { action in
+                                        return true
+                                    }
+                                ),
+                                in: .current
+                            )
+                        }
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in
@@ -1887,8 +1938,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
         let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
-        var emptyAnimationHeight = self.animationSize.height
-        var emptyAnimationSpacing: CGFloat = 8.0
+        let emptyAnimationHeight = self.animationSize.height
+        let emptyAnimationSpacing: CGFloat = 8.0
 //        if case .landscape = layout.orientation, case .compact = layout.metrics.widthClass {
 //            emptyAnimationHeight = 0.0
 //            emptyAnimationSpacing = 0.0
@@ -2069,10 +2120,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     strongSelf.emptyResultsAnimationNode.visibility = emptyResults
                                              
                     let displayPlaceholder = transition.isLoading && (strongSelf.key != .chats || (strongSelf.currentEntries?.isEmpty ?? true))
-                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(node: strongSelf.shimmerNode, alpha: displayPlaceholder ? 1.0 : 0.0)
+
+                    let targetAlpha: CGFloat = displayPlaceholder ? 1.0 : 0.0
+                    if strongSelf.shimmerNode.alpha != targetAlpha {
+                        let transition: ContainedViewLayoutTransition = displayPlaceholder ? .immediate : .animated(duration: 0.2, curve: .linear)
+                        transition.updateAlpha(node: strongSelf.shimmerNode, alpha: targetAlpha, delay: 0.1)
+                    }
            
                     strongSelf.recentListNode.isHidden = displayingResults || strongSelf.peersFilter.contains(.excludeRecent)
-//                    strongSelf.dimNode.isHidden = displayingResults
                     strongSelf.backgroundColor = !displayingResults && strongSelf.peersFilter.contains(.excludeRecent) ? nil : strongSelf.presentationData.theme.chatList.backgroundColor
                     
                     if !strongSelf.didSetReady && strongSelf.recentListNode.isHidden {
@@ -2174,7 +2229,7 @@ private final class ShimmerEffectNode: ASDisplayNode {
     }
     
     func update(backgroundColor: UIColor, foregroundColor: UIColor) {
-        if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor) {
+        if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.argb == backgroundColor.argb, let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.argb == foregroundColor.argb {
             return
         }
         self.currentBackgroundColor = backgroundColor

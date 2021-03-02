@@ -8,7 +8,7 @@ public struct MessageNotificationSettings: PostboxCoding, Equatable {
     public static var defaultSettings: MessageNotificationSettings {
         return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: .bundledModern(id: 0))
     }
-
+    
     public init(enabled: Bool, displayPreviews: Bool, sound: PeerMessageSound) {
         self.enabled = enabled
         self.displayPreviews = displayPreviews

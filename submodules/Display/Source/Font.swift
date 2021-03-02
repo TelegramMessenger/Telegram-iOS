@@ -33,7 +33,7 @@ public struct Font {
         case bold
     }
     
-    public static func with(size: CGFloat, design: Design = .regular, traits: Traits = []) -> UIFont {
+    public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, traits: Traits = []) -> UIFont {
         if #available(iOS 13.0, *) {
             let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
             var symbolicTraits = descriptor.symbolicTraits
@@ -45,7 +45,7 @@ public struct Font {
             }
             var updatedDescriptor: UIFontDescriptor? = descriptor.withSymbolicTraits(symbolicTraits)
             if traits.contains(.monospacedNumbers) {
-                updatedDescriptor = descriptor.addingAttributes([
+                updatedDescriptor = updatedDescriptor?.addingAttributes([
                 UIFontDescriptor.AttributeName.featureSettings: [
                   [UIFontDescriptor.FeatureKey.featureIdentifier:
                    kNumberSpacingType,
@@ -63,6 +63,25 @@ public struct Font {
                 default:
                     updatedDescriptor = updatedDescriptor?.withDesign(.default)
             }
+            if weight != .regular {
+                let fontWeight: UIFont.Weight
+                switch weight {
+                    case .light:
+                        fontWeight = .light
+                    case .medium:
+                        fontWeight = .medium
+                    case .semibold:
+                        fontWeight = .semibold
+                    case .bold:
+                        fontWeight = .bold
+                    default:
+                        fontWeight = .regular
+                }
+                updatedDescriptor = updatedDescriptor?.addingAttributes([
+                    UIFontDescriptor.AttributeName.traits: [UIFontDescriptor.TraitKey.weight: fontWeight]
+                ])
+            }
+         
             if let updatedDescriptor = updatedDescriptor {
                 return UIFont(descriptor: updatedDescriptor, size: size)
             } else {

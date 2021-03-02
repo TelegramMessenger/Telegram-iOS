@@ -611,7 +611,8 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.3),
         pageIndicatorInactiveColor: mainSecondaryTextColor.withAlphaComponent(0.4),
         inputClearButtonColor: mainSecondaryColor,
-        itemBarChart: PresentationThemeItemBarChart(color1: accentColor, color2: mainSecondaryTextColor.withAlphaComponent(0.5), color3: accentColor.withMultiplied(hue: 1.038, saturation: 0.329, brightness: 0.33))
+        itemBarChart: PresentationThemeItemBarChart(color1: accentColor, color2: mainSecondaryTextColor.withAlphaComponent(0.5), color3: accentColor.withMultiplied(hue: 1.038, saturation: 0.329, brightness: 0.33)),
+        itemInputField: PresentationInputFieldTheme(backgroundColor: mainInputColor, strokeColor: mainInputColor, placeholderColor: mainSecondaryColor, primaryColor: UIColor(rgb: 0xffffff), controlColor: mainSecondaryColor)
     )
     
     let chatList = PresentationThemeChatList(
@@ -667,7 +668,9 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         mediaOverlayControlColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x000000, alpha: 0.6), foregroundColor: .white),
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: accentColor, strokeColor: .white, foregroundColor: .white),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff6767), foregroundColor: .white),
-        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
+        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
+        stickerPlaceholderColor: PresentationThemeVariableColor(color: mainBackgroundColor.withAlphaComponent(0.5)),
+        stickerPlaceholderShimmerColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff, alpha: 0.05))
     )
     
     let serviceMessage = PresentationThemeServiceMessage(

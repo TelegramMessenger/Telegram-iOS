@@ -1,4 +1,4 @@
-import PostboxDataTypes
+/*import PostboxDataTypes
 import PostboxCoding
 
 public enum TelegramChannelInfo: Int32 {
@@ -36,3 +36,4 @@ public final class TelegramChannel: Peer {
         return true
     }
 }
+*/

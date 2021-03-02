@@ -135,20 +135,21 @@ public struct PresentationResourcesChatList {
         })
     }
     
-    public static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState) -> UIImage? {
+    public static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState, voiceChat: Bool = false) -> UIImage? {
         let key: PresentationResourceKey
         switch state {
             case .regular:
-                key = PresentationResourceKey.chatListRecentStatusOnlineIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatIcon : PresentationResourceKey.chatListRecentStatusOnlineIcon
             case .highlighted:
-                key = PresentationResourceKey.chatListRecentStatusOnlineHighlightedIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatHighlightedIcon : PresentationResourceKey.chatListRecentStatusOnlineHighlightedIcon
             case .pinned:
-                key = PresentationResourceKey.chatListRecentStatusOnlinePinnedIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatPinnedIcon : PresentationResourceKey.chatListRecentStatusOnlinePinnedIcon
             case .panel:
-                key = PresentationResourceKey.chatListRecentStatusOnlinePanelIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatPanelIcon : PresentationResourceKey.chatListRecentStatusOnlinePanelIcon
         }
         return theme.image(key.rawValue, { theme in
-            return generateImage(CGSize(width: 14.0, height: 14.0), rotatedContext: { size, context in
+            let size: CGFloat = voiceChat ? 22.0 : 14.0
+            return generateImage(CGSize(width: size, height: size), rotatedContext: { size, context in
                 let bounds = CGRect(origin: CGPoint(), size: size)
                 context.clear(bounds)
                 switch state {
@@ -240,6 +241,42 @@ public struct PresentationResourcesChatList {
                 let titlePath = CGMutablePath()
                 titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
                 let titleString = NSAttributedString(string: "SCAM", font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
+                let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
+                let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
+                CTFrameDraw(titleFrame, context)
+            })
+        })
+    }
+    
+    public static func fakeIcon(_ theme: PresentationTheme, type: ScamIconType) -> UIImage? {
+        let key: PresentationResourceKey
+        let color: UIColor
+        switch type {
+            case .regular:
+                key = PresentationResourceKey.chatListFakeRegularIcon
+                color = theme.chat.message.incoming.scamColor
+            case .outgoing:
+                key = PresentationResourceKey.chatListFakeOutgoingIcon
+                color = theme.chat.message.outgoing.scamColor
+            case .service:
+                key = PresentationResourceKey.chatListFakeServiceIcon
+                color = theme.chat.serviceMessage.components.withDefaultWallpaper.scam
+        }
+        return theme.image(key.rawValue, { theme in
+            return generateImage(CGSize(width: 37.0, height: 16.0), contextGenerator: { size, context in
+                let bounds = CGRect(origin: CGPoint(), size: size)
+                context.clear(bounds)
+                
+                context.setFillColor(color.cgColor)
+                context.setStrokeColor(color.cgColor)
+                context.setLineWidth(1.0)
+                
+                context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 2.0).cgPath)
+                context.strokePath()
+                
+                let titlePath = CGMutablePath()
+                titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
+                let titleString = NSAttributedString(string: "FAKE", font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
                 let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
                 let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
                 CTFrameDraw(titleFrame, context)

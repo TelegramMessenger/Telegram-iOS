@@ -130,6 +130,7 @@ public func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActio
 public enum MediaManagerPlayerType {
     case voice
     case music
+    case file
 }
 
 public protocol MediaManager: class {
@@ -139,7 +140,7 @@ public protocol MediaManager: class {
     var overlayMediaManager: OverlayMediaManager { get }
     
     var globalMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> { get }
-    var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> { get }
+    var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> { get }
     var activeGlobalMediaPlayerAccountId: Signal<(AccountRecordId, Bool)?, NoError> { get }
     
     func setPlaylist(_ playlist: (Account, SharedMediaPlaylist)?, type: MediaManagerPlayerType, control: SharedMediaPlayerControlAction)

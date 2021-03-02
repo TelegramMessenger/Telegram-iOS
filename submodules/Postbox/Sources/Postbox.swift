@@ -127,6 +127,11 @@ public final class Transaction {
         self.postbox?.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: forEachMedia)
     }
     
+    public func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags) {
+        assert(!self.disposed)
+        self.postbox?.removeAllMessagesWithGlobalTag(tag: tag)
+    }
+    
     public func removeAllMessagesWithForwardAuthor(_ peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace, forEachMedia: (Media) -> Void) {
         assert(!self.disposed)
         self.postbox?.removeAllMessagesWithForwardAuthor(peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, forEachMedia: forEachMedia)
@@ -760,16 +765,6 @@ public final class Transaction {
         self.postbox?.operationLogEnumerateEntries(peerId: peerId, tag: tag, f)
     }
     
-    public func addTimestampBasedMessageAttribute(tag: UInt16, timestamp: Int32, messageId: MessageId) {
-        assert(!self.disposed)
-        self.postbox?.addTimestampBasedMessageAttribute(tag: tag, timestamp: timestamp, messageId: messageId)
-    }
-    
-    public func removeTimestampBasedMessageAttribute(tag: UInt16, messageId: MessageId) {
-        assert(!self.disposed)
-        self.postbox?.removeTimestampBasedMessageAttribute(tag: tag, messageId: messageId)
-    }
-    
     public func enumeratePreferencesEntries(_ f: (PreferencesEntry) -> Bool) {
         assert(!self.disposed)
         self.postbox?.enumeratePreferencesEntries(f)
@@ -1009,7 +1004,7 @@ public final class Transaction {
             view = next.0
         }, error: { _ in }, completed: {})
         
-        let disposable = postbox.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: input, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: nil, namespaces: namespaces, orderStatistics: MessageHistoryViewOrderStatistics(), additionalData: [])
+        let disposable = postbox.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: input, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: nil, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: MessageHistoryViewOrderStatistics(), additionalData: [])
         disposable.dispose()
         
         return view!
@@ -1063,6 +1058,25 @@ public final class Transaction {
         return postbox.chatListTable.getNamespaceEntries(groupId: groupId, namespace: namespace, summaryTag: summaryTag, messageIndexTable: postbox.messageHistoryIndexTable, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, readStateTable: postbox.readStateTable, summaryTable: postbox.messageHistoryTagsSummaryTable)
     }
     
+    public func getTopChatListEntries(groupId: PeerGroupId, count: Int) -> [RenderedPeer] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: nil, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: count).compactMap { entry -> RenderedPeer? in
+            switch entry {
+            case let .message(index, _):
+                if let peer = self.getPeer(index.messageIndex.id.peerId) {
+                    return RenderedPeer(peer: peer)
+                } else {
+                    return nil
+                }
+            case .hole:
+                return nil
+            }
+        }
+    }
+    
     public func addHolesEverywhere(peerNamespaces: [PeerId.Namespace], holeNamespace: MessageId.Namespace) {
         assert(!self.disposed)
         self.postbox?.addHolesEverywhere(peerNamespaces: peerNamespaces, holeNamespace: holeNamespace)
@@ -1072,11 +1086,17 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.reindexUnreadCounters()
     }
+    
+    public func searchPeers(query: String) -> [RenderedPeer] {
+        assert(!self.disposed)
+        return self.postbox?.searchPeers(query: query) ?? []
+    }
 }
 
 public enum PostboxResult {
     case upgrading(Float)
     case postbox(Postbox)
+    case error
 }
 
 func debugSaveState(basePath:String, name: String) {
@@ -1105,11 +1125,37 @@ func debugRestoreState(basePath:String, name: String) {
 
 private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool, useCopy: Bool) -> Signal<PostboxResult, NoError> {
     let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+            
+            var tempDir: TempBoxDirectory?
+            let dbBasePath: String
+            if useCopy {
+                let directory = TempBox.shared.tempDirectory()
+                tempDir = directory
+                
+                let originalBasePath = basePath + "/db"
+                if let originalFiles = try? FileManager.default.contentsOfDirectory(atPath: originalBasePath) {
+                    do {
+                        for fileName in originalFiles {
+                            try FileManager.default.copyItem(atPath: originalBasePath + "/" + fileName, toPath: directory.path + "/" + fileName)
+                        }
+                    } catch let e {
+                        postboxLog("openPostbox useCopy error: \(e)")
+                        subscriber.putNext(.error)
+                        return
+                    }
+                } else {
+                    subscriber.putNext(.error)
+                    return
+                }
+                dbBasePath = directory.path
+            } else {
+                dbBasePath = basePath + "/db"
+            }
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
@@ -1118,9 +1164,12 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             
             let startTime = CFAbsoluteTimeGetCurrent()
             
-            var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+            guard var valueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                 subscriber.putNext(.upgrading(progress))
-            })
+            }) else {
+                subscriber.putNext(.error)
+                return
+            }
             
             loop: while true {
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
@@ -1130,43 +1179,60 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
-                        if userVersion > currentUserVersion {
-                            postboxLog("Version \(userVersion) is newer than supported")
-                            assertionFailure("Version \(userVersion) is newer than supported")
-                            valueBox.drop()
-                            valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
-                                subscriber.putNext(.upgrading(progress))
-                            })
+                        if isTemporary {
+                            subscriber.putNext(.error)
+                            return
                         } else {
-                            if let operation = registeredUpgrades()[userVersion] {
-                                switch operation {
-                                    case let .inplace(f):
-                                        valueBox.begin()
-                                        f(metadataTable, valueBox, { progress in
-                                            subscriber.putNext(.upgrading(progress))
-                                        })
-                                        valueBox.commit()
-                                    case let .standalone(f):
-                                        let updatedPath = f(queue, basePath, valueBox, encryptionParameters, { progress in
-                                            subscriber.putNext(.upgrading(progress))
-                                        })
-                                        if let updatedPath = updatedPath {
-                                            valueBox.internalClose()
-                                            let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
-                                            let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
-                                            valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                            if userVersion > currentUserVersion {
+                                postboxLog("Version \(userVersion) is newer than supported")
+                                assertionFailure("Version \(userVersion) is newer than supported")
+                                valueBox.drop()
+                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                    subscriber.putNext(.upgrading(progress))
+                                }) else {
+                                    subscriber.putNext(.error)
+                                    return
+                                }
+                                valueBox = updatedValueBox
+                            } else {
+                                if let operation = registeredUpgrades()[userVersion] {
+                                    switch operation {
+                                        case let .inplace(f):
+                                            valueBox.begin()
+                                            f(metadataTable, valueBox, { progress in
                                                 subscriber.putNext(.upgrading(progress))
                                             })
-                                        }
+                                            valueBox.commit()
+                                        case let .standalone(f):
+                                            let updatedPath = f(queue, basePath, valueBox, encryptionParameters, { progress in
+                                                subscriber.putNext(.upgrading(progress))
+                                            })
+                                            if let updatedPath = updatedPath {
+                                                valueBox.internalClose()
+                                                let _ = try? FileManager.default.removeItem(atPath: dbBasePath)
+                                                let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: dbBasePath)
+                                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                                    subscriber.putNext(.upgrading(progress))
+                                                }) else {
+                                                    subscriber.putNext(.error)
+                                                    return
+                                                }
+                                                valueBox = updatedValueBox
+                                            }
+                                    }
+                                    continue loop
+                                } else {
+                                    assertionFailure("Couldn't find any upgrade for \(userVersion)")
+                                    postboxLog("Couldn't find any upgrade for \(userVersion)")
+                                    valueBox.drop()
+                                    guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                        subscriber.putNext(.upgrading(progress))
+                                    }) else {
+                                        subscriber.putNext(.error)
+                                        return
+                                    }
+                                    valueBox = updatedValueBox
                                 }
-                                continue loop
-                            } else {
-                                assertionFailure("Couldn't find any upgrade for \(userVersion)")
-                                postboxLog("Couldn't find any upgrade for \(userVersion)")
-                                valueBox.drop()
-                                valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
-                                    subscriber.putNext(.upgrading(progress))
-                                })
                             }
                         }
                     }
@@ -1177,7 +1243,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 let endTime = CFAbsoluteTimeGetCurrent()
                 print("Postbox load took \((endTime - startTime) * 1000.0) ms")
                 
-                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations)))
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations, isTemporary: isTemporary, tempDir: tempDir)))
                 subscriber.putCompletion()
                 break
             }
@@ -1192,6 +1258,7 @@ public final class Postbox {
     public let seedConfiguration: SeedConfiguration
     private let basePath: String
     let valueBox: SqliteValueBox
+    private let tempDir: TempBoxDirectory?
     
     private let ipcNotificationsDisposable = MetaDisposable()
     
@@ -1330,7 +1397,7 @@ public final class Postbox {
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32) {
+    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, tempDir: TempBoxDirectory?) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1338,6 +1405,7 @@ public final class Postbox {
         self.queue = queue
         self.basePath = basePath
         self.seedConfiguration = seedConfiguration
+        self.tempDir = tempDir
         
         print("MediaBox path: \(self.basePath + "/media")")
         
@@ -1384,7 +1452,7 @@ public final class Postbox {
         self.timestampBasedMessageAttributesTable = TimestampBasedMessageAttributesTable(valueBox: self.valueBox, table: TimestampBasedMessageAttributesTable.tableSpec(34), indexTable: self.timestampBasedMessageAttributesIndexTable)
         self.textIndexTable = MessageHistoryTextIndexTable(valueBox: self.valueBox, table: MessageHistoryTextIndexTable.tableSpec(41))
         self.additionalChatListItemsTable = AdditionalChatListItemsTable(valueBox: self.valueBox, table: AdditionalChatListItemsTable.tableSpec(55))
-        self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, table: MessageHistoryTable.tableSpec(7), seedConfiguration: seedConfiguration, messageHistoryIndexTable: self.messageHistoryIndexTable, messageHistoryHoleIndexTable: self.messageHistoryHoleIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable, unsentTable: self.messageHistoryUnsentTable, failedTable: self.messageHistoryFailedTable, tagsTable: self.messageHistoryTagsTable, threadsTable: self.messageHistoryThreadsTable, globalTagsTable: self.globalMessageHistoryTagsTable, localTagsTable: self.localMessageHistoryTagsTable, readStateTable: self.readStateTable, synchronizeReadStateTable: self.synchronizeReadStateTable, textIndexTable: self.textIndexTable, summaryTable: self.messageHistoryTagsSummaryTable, pendingActionsTable: self.pendingMessageActionsTable)
+        self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, table: MessageHistoryTable.tableSpec(7), seedConfiguration: seedConfiguration, messageHistoryIndexTable: self.messageHistoryIndexTable, messageHistoryHoleIndexTable: self.messageHistoryHoleIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable, unsentTable: self.messageHistoryUnsentTable, failedTable: self.messageHistoryFailedTable, tagsTable: self.messageHistoryTagsTable, threadsTable: self.messageHistoryThreadsTable, globalTagsTable: self.globalMessageHistoryTagsTable, localTagsTable: self.localMessageHistoryTagsTable, timeBasedAttributesTable: self.timestampBasedMessageAttributesTable, readStateTable: self.readStateTable, synchronizeReadStateTable: self.synchronizeReadStateTable, textIndexTable: self.textIndexTable, summaryTable: self.messageHistoryTagsSummaryTable, pendingActionsTable: self.pendingMessageActionsTable)
         self.peerChatStateTable = PeerChatStateTable(valueBox: self.valueBox, table: PeerChatStateTable.tableSpec(13))
         self.peerNameTokenIndexTable = ReverseIndexReferenceTable<PeerIdReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<PeerIdReverseIndexReference>.tableSpec(26))
         self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox, table: PeerNameIndexTable.tableSpec(27), peerTable: self.peerTable, peerNameTokenIndexTable: self.peerNameTokenIndexTable)
@@ -1481,27 +1549,13 @@ public final class Postbox {
         
         self.transactionStateVersion = self.metadataTable.transactionStateVersion()
         
-        self.viewTracker = ViewTracker(queue: self.queue, renderMessage: self.renderIntermediateMessage, getPeer: { peerId in
-            return self.peerTable.get(peerId)
-        }, getPeerNotificationSettings: { peerId in
-            return self.peerNotificationSettingsTable.getEffective(peerId)
-        }, getCachedPeerData: { peerId in
-            return self.cachedPeerDataTable.get(peerId)
-        }, getPeerPresence: { peerId in
-            return self.peerPresenceTable.get(peerId)
-        }, getPeerReadState: { peerId in
-            return self.readStateTable.getCombinedState(peerId)
-        }, operationLogGetOperations: { tag, fromIndex, limit in
-            return self.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: fromIndex, limit: limit)
-        }, operationLogGetTailIndex: { tag in
-            return self.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
-        }, getTimestampBasedMessageAttributesHead: { tag in
-            return self.timestampBasedMessageAttributesTable.head(tag: tag)
-        }, getPreferencesEntry: { key in
-            return self.preferencesTable.get(key: key)
-        }, unsentMessageIds: self.messageHistoryUnsentTable.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
-            return self.readStateTable.getCombinedState(peerId)
-        }))
+        self.viewTracker = ViewTracker(
+            queue: self.queue,
+            unsentMessageIds: self.messageHistoryUnsentTable.get(),
+            synchronizePeerReadStateOperations: self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
+                return self.readStateTable.getCombinedState(peerId)
+            })
+        )
         
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
@@ -1512,10 +1566,12 @@ public final class Postbox {
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCountsState(value: reindexUnreadVersion)
             }
             //#if DEBUG
-            self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
+            if !isTemporary {
+                self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
+            }
             //#endif
             
-            if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
+            if !isTemporary && self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
                 let startTime = CFAbsoluteTimeGetCurrent()
                 let (totalStates, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
@@ -1531,31 +1587,35 @@ public final class Postbox {
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: false)
             }
             
-            for id in self.messageHistoryUnsentTable.get() {
-                transaction.updateMessage(id, update: { message in
-                    if !message.flags.contains(.Failed) {
-                        if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
+            if !isTemporary {
+                for id in self.messageHistoryUnsentTable.get() {
+                    transaction.updateMessage(id, update: { message in
+                        if !message.flags.contains(.Failed) {
+                            if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
+                                return .skip
+                            }
+                            var flags = StoreMessageFlags(message.flags)
+                            flags.remove(.Unsent)
+                            flags.remove(.Sending)
+                            flags.insert(.Failed)
+                            var storeForwardInfo: StoreMessageForwardInfo?
+                            if let forwardInfo = message.forwardInfo {
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                            }
+                            return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
+                        } else {
                             return .skip
                         }
-                        var flags = StoreMessageFlags(message.flags)
-                        flags.remove(.Unsent)
-                        flags.remove(.Sending)
-                        flags.insert(.Failed)
-                        var storeForwardInfo: StoreMessageForwardInfo?
-                        if let forwardInfo = message.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
-                        }
-                        return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
-                    } else {
-                        return .skip
-                    }
-                })
+                    })
+                }
             }
         }).start()
     }
     
     deinit {
-        assert(true)
+        if let tempDir = self.tempDir {
+            TempBox.shared.dispose(tempDir)
+        }
     }
     
     private func takeNextViewId() -> Int {
@@ -1628,7 +1688,7 @@ public final class Postbox {
     
     fileprivate func addMessages(transaction: Transaction, messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
         var addedMessagesByPeerId: [PeerId: [StoreMessage]] = [:]
-        let addResult = self.messageHistoryTable.addMessages(messages: messages, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, processMessages: { messagesByPeerId in
+        let addResult = self.messageHistoryTable.addMessages(messages: messages, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, processMessages: { messagesByPeerId in
             addedMessagesByPeerId = messagesByPeerId
         })
         
@@ -1701,11 +1761,11 @@ public final class Postbox {
     }
     
     fileprivate func deleteMessages(_ messageIds: [MessageId], forEachMedia: (Media) -> Void) {
-        self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
+        self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
     }
     
     fileprivate func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id, forEachMedia: (Media) -> Void) {
-        self.messageHistoryTable.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
+        self.messageHistoryTable.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
     }
     
     fileprivate func withAllMessages(peerId: PeerId, namespace: MessageId.Namespace?, _ f: (Message) -> Bool) {
@@ -1721,18 +1781,22 @@ public final class Postbox {
     }
     
     fileprivate func clearHistory(_ peerId: PeerId, namespaces: MessageIdNamespaces, forEachMedia: (Media) -> Void) {
-        self.messageHistoryTable.clearHistory(peerId: peerId, namespaces: namespaces, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
+        self.messageHistoryTable.clearHistory(peerId: peerId, namespaces: namespaces, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
         for namespace in self.messageHistoryHoleIndexTable.existingNamespaces(peerId: peerId, holeSpace: .everywhere) where namespaces.contains(namespace) {
             self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max - 1, operations: &self.currentPeerHoleOperations)
         }
     }
     
     fileprivate func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: (Media) -> Void) {
-        self.messageHistoryTable.removeAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
+        self.messageHistoryTable.removeAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
+    }
+    
+    fileprivate func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags) {
+        self.messageHistoryTable.removeAllMessagesWithGlobalTag(tag: tag, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: { _ in })
     }
     
     fileprivate func removeAllMessagesWithForwardAuthor(_ peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace, forEachMedia: (Media) -> Void) {
-        self.messageHistoryTable.removeAllMessagesWithForwardAuthor(peerId: peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
+        self.messageHistoryTable.removeAllMessagesWithForwardAuthor(peerId: peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
     }
     
     fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
@@ -2160,13 +2224,13 @@ public final class Postbox {
         if let index = self.messageHistoryIndexTable.getIndex(id), let intermediateMessage = self.messageHistoryTable.getMessage(index) {
             let message = self.renderIntermediateMessage(intermediateMessage)
             if case let .update(updatedMessage) = update(message) {
-                self.messageHistoryTable.updateMessage(id, message: updatedMessage, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
+                self.messageHistoryTable.updateMessage(id, message: updatedMessage, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations)
             }
         }
     }
     
     fileprivate func offsetPendingMessagesTimestamps(lowerBound: MessageId, excludeIds: Set<MessageId>, timestamp: Int32) {
-        self.messageHistoryTable.offsetPendingMessagesTimestamps(lowerBound: lowerBound, excludeIds: excludeIds, timestamp: timestamp, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
+        self.messageHistoryTable.offsetPendingMessagesTimestamps(lowerBound: lowerBound, excludeIds: excludeIds, timestamp: timestamp, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations)
     }
     
     fileprivate func updateMessageGroupingKeysAtomically(_ ids: [MessageId], groupingKey: Int64) {
@@ -2460,7 +2524,7 @@ public final class Postbox {
         return peerIds
     }
     
-    public func aroundMessageOfInterestHistoryViewForChatLocation(_ chatLocation: ChatLocationInput, count: Int, clipHoles: Bool = true, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageOfInterestHistoryViewForChatLocation(_ chatLocation: ChatLocationInput, count: Int, clipHoles: Bool = true, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.resolvedChatLocationInput(chatLocation: chatLocation)
         |> mapToSignal { chatLocationData in
             let (chatLocation, isHoleFill) = chatLocationData
@@ -2516,7 +2580,7 @@ public final class Postbox {
                         anchor = .upperBound
                     }
                 }
-                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
+                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
             })
                 
             return signal
@@ -2530,13 +2594,13 @@ public final class Postbox {
         }
     }
     
-    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, count: Int, clipHoles: Bool = true, ignoreRelatedChats: Bool = false, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, count: Int, clipHoles: Bool = true, ignoreRelatedChats: Bool = false, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.resolvedChatLocationInput(chatLocation: chatLocation)
         |> mapToSignal { chatLocationData in
             let (chatLocation, isHoleFill) = chatLocationData
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = self.transactionSignal { subscriber, transaction in
                 let peerIds = self.peerIdsForLocation(chatLocation, ignoreRelatedChats: ignoreRelatedChats)
-                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: .message(messageId), fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
+                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: .message(messageId), fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
             }
                 
             return signal
@@ -2550,14 +2614,14 @@ public final class Postbox {
         }
     }
     
-    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, anchor: HistoryViewInputAnchor, count: Int, clipHoles: Bool = true, ignoreRelatedChats: Bool = false, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, anchor: HistoryViewInputAnchor, count: Int, clipHoles: Bool = true, ignoreRelatedChats: Bool = false, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.resolvedChatLocationInput(chatLocation: chatLocation)
         |> mapToSignal { chatLocationData -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
             let (chatLocation, isHoleFill) = chatLocationData
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = self.transactionSignal { subscriber, transaction in
                 let peerIds = self.peerIdsForLocation(chatLocation, ignoreRelatedChats: ignoreRelatedChats)
                 
-                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
+                return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
             }
                 
             return signal
@@ -2572,7 +2636,7 @@ public final class Postbox {
         }
     }
     
-    fileprivate func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewInput, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
+    fileprivate func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewInput, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
         var mainPeerIdForTopTaggedMessages: PeerId?
         switch peerIds {
@@ -2668,7 +2732,7 @@ public final class Postbox {
             readStates = transientReadStates
         }
         
-        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, clipHoles: clipHoles, peerIds: peerIds, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tagMask, namespaces: namespaces, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
+        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, clipHoles: clipHoles, peerIds: peerIds, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
             if let tagMask = tagMask {
                 return Int32(self.messageHistoryTable.getMessageCountInRange(peerId: lowerBound.id.peerId, namespace: lowerBound.id.namespace, tag: tagMask, lowerBound: lowerBound, upperBound: upperBound))
             } else {
@@ -2778,9 +2842,7 @@ public final class Postbox {
     public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents)
-            mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in
-                return self.peerTable.get(id)
-            }, getPeerNotificationSettings: { self.peerNotificationSettingsTable.getEffective($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
+            mutableView.render(postbox: self)
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
             
@@ -2880,52 +2942,56 @@ public final class Postbox {
     
     public func searchPeers(query: String) -> Signal<[RenderedPeer], NoError> {
         return self.transaction { transaction -> Signal<[RenderedPeer], NoError> in
-            var peerIds = Set<PeerId>()
-            var chatPeers: [RenderedPeer] = []
-            
-            var (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
-            
-            var additionalChatPeerIds: [PeerId] = []
-            for peerId in chatPeerIds {
-                for associatedId in self.reverseAssociatedPeerTable.get(peerId: peerId) {
-                    let inclusionIndex = self.chatListIndexTable.get(peerId: associatedId)
-                    if inclusionIndex.includedIndex(peerId: associatedId) != nil {
-                        additionalChatPeerIds.append(associatedId)
-                    }
+            return .single(transaction.searchPeers(query: query))
+        } |> switchToLatest
+    }
+    
+    fileprivate func searchPeers(query: String) -> [RenderedPeer] {
+        var peerIds = Set<PeerId>()
+        var chatPeers: [RenderedPeer] = []
+        
+        var (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
+        
+        var additionalChatPeerIds: [PeerId] = []
+        for peerId in chatPeerIds {
+            for associatedId in self.reverseAssociatedPeerTable.get(peerId: peerId) {
+                let inclusionIndex = self.chatListIndexTable.get(peerId: associatedId)
+                if inclusionIndex.includedIndex(peerId: associatedId) != nil {
+                    additionalChatPeerIds.append(associatedId)
                 }
             }
-            chatPeerIds.append(contentsOf: additionalChatPeerIds)
-            
-            for peerId in chatPeerIds {
+        }
+        chatPeerIds.append(contentsOf: additionalChatPeerIds)
+        
+        for peerId in chatPeerIds {
+            if let peer = self.peerTable.get(peerId) {
+                var peers = SimpleDictionary<PeerId, Peer>()
+                peers[peer.id] = peer
+                if let associatedPeerId = peer.associatedPeerId {
+                    if let associatedPeer = self.peerTable.get(associatedPeerId) {
+                        peers[associatedPeer.id] = associatedPeer
+                    }
+                }
+                chatPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
+                peerIds.insert(peerId)
+            }
+        }
+        
+        var contactPeers: [RenderedPeer] = []
+        for peerId in contactPeerIds {
+            if !peerIds.contains(peerId) {
                 if let peer = self.peerTable.get(peerId) {
                     var peers = SimpleDictionary<PeerId, Peer>()
                     peers[peer.id] = peer
-                    if let associatedPeerId = peer.associatedPeerId {
-                        if let associatedPeer = self.peerTable.get(associatedPeerId) {
-                            peers[associatedPeer.id] = associatedPeer
-                        }
-                    }
-                    chatPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
-                    peerIds.insert(peerId)
+                    contactPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
                 }
             }
-            
-            var contactPeers: [RenderedPeer] = []
-            for peerId in contactPeerIds {
-                if !peerIds.contains(peerId) {
-                    if let peer = self.peerTable.get(peerId) {
-                        var peers = SimpleDictionary<PeerId, Peer>()
-                        peers[peer.id] = peer
-                        contactPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
-                    }
-                }
-            }
-            
-            contactPeers.sort(by: { lhs, rhs in
-                lhs.peers[lhs.peerId]!.indexName.indexName(.lastNameFirst) < rhs.peers[rhs.peerId]!.indexName.indexName(.lastNameFirst)
-            })
-            return .single(chatPeers + contactPeers)
-        } |> switchToLatest
+        }
+        
+        contactPeers.sort(by: { lhs, rhs in
+            lhs.peers[lhs.peerId]!.indexName.indexName(.lastNameFirst) < rhs.peers[rhs.peerId]!.indexName.indexName(.lastNameFirst)
+        })
+        return chatPeers + contactPeers
     }
     
     public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
@@ -3118,11 +3184,7 @@ public final class Postbox {
     
     public func mergedOperationLogView(tag: PeerOperationLogTag, limit: Int) -> Signal<PeerMergedOperationLogView, NoError> {
         return self.transactionSignal { subscriber, transaction in
-            let view = MutablePeerMergedOperationLogView(tag: tag, limit: limit, getOperations: { tag, fromIndex, limit in
-                return self.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: fromIndex, limit: limit)
-            }, getTailIndex: { tag in
-                return self.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
-            })
+            let view = MutablePeerMergedOperationLogView(postbox: self, tag: tag, limit: limit)
             
             subscriber.putNext(PeerMergedOperationLogView(view))
             
@@ -3145,9 +3207,7 @@ public final class Postbox {
     
     public func timestampBasedMessageAttributesView(tag: UInt16) -> Signal<TimestampBasedMessageAttributesView, NoError> {
         return self.transactionSignal { subscriber, transaction in
-            let view = MutableTimestampBasedMessageAttributesView(tag: tag, getHead: { tag in
-                return self.timestampBasedMessageAttributesTable.head(tag: tag)
-            })
+            let view = MutableTimestampBasedMessageAttributesView(postbox: self, tag: tag)
             let (index, signal) = self.viewTracker.addTimestampBasedMessageAttributesView(view)
             
             subscriber.putNext(TimestampBasedMessageAttributesView(view))
@@ -3193,14 +3253,6 @@ public final class Postbox {
     
     fileprivate func operationLogEnumerateEntries(peerId: PeerId, tag: PeerOperationLogTag, _ f: (PeerOperationLogEntry) -> Bool) {
         self.peerOperationLogTable.enumerateEntries(peerId: peerId, tag: tag, f)
-    }
-    
-    fileprivate func addTimestampBasedMessageAttribute(tag: UInt16, timestamp: Int32, messageId: MessageId) {
-        self.timestampBasedMessageAttributesTable.set(tag: tag, id: messageId, timestamp: timestamp, operations: &self.currentTimestampBasedMessageAttributesOperations)
-    }
-    
-    fileprivate func removeTimestampBasedMessageAttribute(tag: UInt16, messageId: MessageId) {
-        self.timestampBasedMessageAttributesTable.remove(tag: tag, id: messageId, operations: &self.currentTimestampBasedMessageAttributesOperations)
     }
     
     public func messageView(_ messageId: MessageId) -> Signal<MessageView, NoError> {

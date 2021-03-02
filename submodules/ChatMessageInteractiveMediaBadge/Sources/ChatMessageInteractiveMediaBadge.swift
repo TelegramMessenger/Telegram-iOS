@@ -279,7 +279,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         isCompact = true
                         originY = -1.0 - UIScreenPixel
                     case .compactFetching:
-                        state = .progress(color: .white, lineWidth: nil, value: 0.0, cancelEnabled: true)
+                        state = .progress(color: .white, lineWidth: nil, value: 0.0, cancelEnabled: true, animateRotation: true)
                         isCompact = true
                         originY = -1.0
                 }

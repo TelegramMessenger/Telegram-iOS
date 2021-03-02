@@ -12,6 +12,7 @@ import AccountContext
 import TelegramUIPreferences
 import LocalAuth
 import TelegramCore
+import WidgetKit
 
 public class FlowViewController: ViewController {
     weak var nextController: ViewController?
@@ -94,6 +95,14 @@ final class DoubleBottomFlowContext {
         } else {
             let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
         }
+        
+        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedApplicationContext.sharedContext.accountManager, { [weak self] settings in
+            guard let strongSelf = self else { return settings }
+            
+            var settings = settings
+            settings.enableSystemIntegration = strongSelf.shouldEnableNotification
+            return settings
+        }).start()
     }
 }
 
@@ -202,7 +211,7 @@ final class DoubleBottomFlow {
         accountContext.appLockContext.lock()
         context.rootController.allowInteractiveDismissal = true
         doubleBottomContext = nil
-        (accountContext.appLockContext.lockingIsCompletePromise
+        _ = (accountContext.appLockContext.lockingIsCompletePromise
             .get()
             |> distinctUntilChanged
             |> mapToSignal { [weak accountContext, weak self] complete -> Signal<Void, NoError> in
@@ -211,6 +220,11 @@ final class DoubleBottomFlow {
                 return accountContext.accountManager.transaction({ transaction -> Void in
                     if let publicId = transaction.getRecords().first(where: { $0.isPublic })?.id {
                         transaction.setCurrentId(publicId)
+                    }
+                    if #available(iOS 14.0, *) {
+                        #if arch(arm64) || arch(i386) || arch(x86_64)
+                        WidgetCenter.shared.reloadAllTimelines()
+                        #endif
                     }
                     self?.finish()
                 })

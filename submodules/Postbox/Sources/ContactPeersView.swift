@@ -15,7 +15,7 @@ final class MutableContactPeersView {
         self.includePresences = includePresences
     }
     
-    func replay(replacePeerIds: Set<PeerId>?, updatedPeerPresences: [PeerId: PeerPresence], getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) -> Bool {
+    func replay(postbox: Postbox, replacePeerIds: Set<PeerId>?, updatedPeerPresences: [PeerId: PeerPresence]) -> Bool {
         var updated = false
         if let replacePeerIds = replacePeerIds {
             let removedPeerIds = self.peerIds.subtracting(replacePeerIds)
@@ -29,11 +29,11 @@ final class MutableContactPeersView {
             }
             
             for peerId in addedPeerIds {
-                if let peer = getPeer(peerId) {
+                if let peer = postbox.peerTable.get(peerId) {
                     self.peers[peerId] = peer
                 }
                 if self.includePresences {
-                    if let presence = getPeerPresence(peerId) {
+                    if let presence = postbox.peerPresenceTable.get(peerId) {
                         self.peerPresences[peerId] = presence
                     }
                 }

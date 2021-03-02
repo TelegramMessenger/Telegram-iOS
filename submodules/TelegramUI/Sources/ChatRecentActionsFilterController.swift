@@ -209,23 +209,23 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChatRecentActionsFilterControllerArguments
         switch self {
-            case let .actionsTitle(theme, text):
+            case let .actionsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .allActions(theme, text, value):
+            case let .allActions(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAllActions(value)
                 })
-            case let .actionItem(theme, _, events, text, value):
+            case let .actionItem(_, _, events, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .right, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.toggleAction(events)
                 })
-            case let .adminsTitle(theme, text):
+            case let .adminsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .allAdmins(theme, text, value):
+            case let .allAdmins(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAllAdmins(value)
                 })
-            case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, participant, checked):
+            case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, participant, checked):
                 let peerText: String
                 switch participant.participant {
                     case .creator:
@@ -233,7 +233,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                     case .member:
                         peerText = strings.ChatAdmins_AdminLabel.capitalized
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.toggleAdmin(participant.peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in })
@@ -285,22 +285,26 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
     let order: [([AdminLogEventsFlags], String)]
     if isGroup {
         order = [
-            ([.ban, .unban], presentationData.strings.Channel_AdminLogFilter_EventsRestrictions),
+            ([.ban, .unban, .kick, .unkick], presentationData.strings.Channel_AdminLogFilter_EventsRestrictions),
             ([.promote, .demote], presentationData.strings.Channel_AdminLogFilter_EventsAdmins),
             ([.invite, .join], presentationData.strings.Channel_AdminLogFilter_EventsNewMembers),
-            ([.info], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
+            ([.info, .settings], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
+            ([.invites], presentationData.strings.Channel_AdminLogFilter_EventsInviteLinks),
             ([.deleteMessages], presentationData.strings.Channel_AdminLogFilter_EventsDeletedMessages),
             ([.editMessages], presentationData.strings.Channel_AdminLogFilter_EventsEditedMessages),
             ([.pinnedMessages], presentationData.strings.Channel_AdminLogFilter_EventsPinned),
             ([.leave], presentationData.strings.Channel_AdminLogFilter_EventsLeaving),
+            ([.calls], presentationData.strings.Channel_AdminLogFilter_EventsCalls)
         ]
     } else {
         order = [
             ([.promote, .demote], presentationData.strings.Channel_AdminLogFilter_EventsAdmins),
             ([.invite, .join], presentationData.strings.Channel_AdminLogFilter_EventsNewMembers),
-            ([.info], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
+            ([.info, .settings], isGroup ? presentationData.strings.Channel_AdminLogFilter_EventsInfo : presentationData.strings.Channel_AdminLogFilter_ChannelEventsInfo),
+            ([.invites], presentationData.strings.Channel_AdminLogFilter_EventsInviteLinks),
             ([.deleteMessages], presentationData.strings.Channel_AdminLogFilter_EventsDeletedMessages),
             ([.editMessages], presentationData.strings.Channel_AdminLogFilter_EventsEditedMessages),
+            ([.pinnedMessages], presentationData.strings.Channel_AdminLogFilter_EventsPinned),
             ([.leave], presentationData.strings.Channel_AdminLogFilter_EventsLeaving),
         ]
     }

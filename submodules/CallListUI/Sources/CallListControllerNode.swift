@@ -63,13 +63,15 @@ final class CallListNodeInteraction {
     let openInfo: (PeerId, [Message]) -> Void
     let delete: ([MessageId]) -> Void
     let updateShowCallsTab: (Bool) -> Void
+    let openGroupCall: (PeerId) -> Void
     
-    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void) {
+    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void, openGroupCall: @escaping (PeerId) -> Void) {
         self.setMessageIdWithRevealedOptions = setMessageIdWithRevealedOptions
         self.call = call
         self.openInfo = openInfo
         self.delete = delete
         self.updateShowCallsTab = updateShowCallsTab
+        self.openGroupCall = openGroupCall
     }
 }
 
@@ -112,14 +114,16 @@ struct CallListNodeState: Equatable {
 private func mappedInsertEntries(context: AccountContext, presentationData: ItemListPresentationData, showSettings: Bool, nodeInteraction: CallListNodeInteraction, entries: [CallListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
-            case let .displayTab(theme, text, value):
+            case let .displayTab(_, text, value):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
-            case let .displayTabInfo(theme, text):
+            case let .displayTabInfo(_, text):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
-            case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .groupCall(peer, _, isActive):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListGroupCallItem(presentationData: presentationData, context: context, style: showSettings ? .blocks : .plain, peer: peer, isActive: isActive, editing: false, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .messageEntry(topMessage, messages, _, _, dateTimeFormat, editing, hasActiveRevealControls, displayHeader, _):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, displayHeader: displayHeader, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
@@ -129,14 +133,16 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
 private func mappedUpdateEntries(context: AccountContext, presentationData: ItemListPresentationData, showSettings: Bool, nodeInteraction: CallListNodeInteraction, entries: [CallListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
-            case let .displayTab(theme, text, value):
+            case let .displayTab(_, text, value):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
-            case let .displayTabInfo(theme, text):
+            case let .displayTabInfo(_, text):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
-            case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .groupCall(peer, _, isActive):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListGroupCallItem(presentationData: presentationData, context: context, style: showSettings ? .blocks : .plain, peer: peer, isActive: isActive, editing: false, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .messageEntry(topMessage, messages, _, _, dateTimeFormat, editing, hasActiveRevealControls, displayHeader, _):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, displayHeader: displayHeader, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
@@ -156,6 +162,7 @@ private final class CallListOpaqueTransactionState {
 }
 
 final class CallListControllerNode: ASDisplayNode {
+    private weak var controller: CallListController?
     private let context: AccountContext
     private let mode: CallListControllerMode
     private var presentationData: PresentationData
@@ -197,7 +204,10 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyStatePromise = Promise<Bool>()
     private let emptyStateDisposable = MetaDisposable()
     
-    init(context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+    private let openGroupCallDisposable = MetaDisposable()
+    
+    init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+        self.controller = controller
         self.context = context
         self.mode = mode
         self.presentationData = presentationData
@@ -210,6 +220,10 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.leftOverlayNode = ASDisplayNode()
         self.leftOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode = ASDisplayNode()
@@ -253,9 +267,49 @@ final class CallListControllerNode: ASDisplayNode {
         }, openInfo: { [weak self] peerId, messages in
             self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in
-            if let strongSelf = self {
-                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messageIds, type: .forLocalPeer).start()
+            guard let strongSelf = self, let peerId = messageIds.first?.peerId else {
+                return
             }
+            
+            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(peerId)
+            }
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let strongSelf = self, let peer = peer else {
+                    return
+                }
+                
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                var items: [ActionSheetItem] = []
+                
+                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messageIds, type: .forEveryone).start()
+                }))
+                
+                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messageIds, type: .forLocalPeer).start()
+                }))
+                    
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                strongSelf.controller?.present(actionSheet, in: .window(.root))
+            })
         }, updateShowCallsTab: { [weak self] value in
             if let strongSelf = self {
                 let _ = updateCallListSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, {
@@ -266,6 +320,63 @@ final class CallListControllerNode: ASDisplayNode {
                     let _ = ApplicationSpecificNotice.incrementCallsTabTips(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).start()
                 }
             }
+        }, openGroupCall: { [weak self] peerId in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let disposable = strongSelf.openGroupCallDisposable
+            
+            let account = strongSelf.context.account
+            var signal: Signal<CachedChannelData.ActiveCall?, NoError> = strongSelf.context.account.postbox.transaction { transaction -> CachedChannelData.ActiveCall? in
+                return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.activeCall
+            }
+            |> mapToSignal { activeCall -> Signal<CachedChannelData.ActiveCall?, NoError> in
+                if let activeCall = activeCall {
+                    return .single(activeCall)
+                } else {
+                    return updatedCurrentPeerGroupCall(account: account, peerId: peerId)
+                }
+            }
+            
+            var cancelImpl: (() -> Void)?
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                if let strongSelf = self {
+                    strongSelf.controller?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            signal = signal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            cancelImpl = {
+                disposable.set(nil)
+            }
+            disposable.set((signal
+            |> deliverOnMainQueue).start(next: { activeCall in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if let activeCall = activeCall {
+                    strongSelf.context.joinGroupCall(peerId: peerId, activeCall: activeCall)
+                }
+            }))
         })
         
         let viewProcessingQueue = self.viewProcessingQueue
@@ -295,9 +406,56 @@ final class CallListControllerNode: ASDisplayNode {
             return value
         }
         
-        let callListNodeViewTransition = combineLatest(callListViewUpdate, self.statePromise.get(), showCallsTab)
-        |> mapToQueue { (update, state, showCallsTab) -> Signal<CallListNodeListViewTransition, NoError> in
-            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(update.view, state: state, showSettings: showSettings, showCallsTab: showCallsTab), presentationData: state.presentationData)
+        let currentGroupCallPeerId: Signal<PeerId?, NoError>
+        if let callManager = context.sharedContext.callManager {
+            currentGroupCallPeerId = callManager.currentGroupCallSignal
+            |> map { call -> PeerId? in
+                call?.peerId
+            }
+            |> distinctUntilChanged
+        } else {
+            currentGroupCallPeerId = .single(nil)
+        }
+        
+        let groupCalls = context.account.postbox.tailChatListView(groupId: .root, count: 100, summaryComponents: ChatListEntrySummaryComponents())
+        |> map { view -> [Peer] in
+            var result: [Peer] = []
+            for entry in view.0.entries {
+                switch entry {
+                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                    if let channel = renderedPeer.peer as? TelegramChannel, channel.flags.contains(.hasActiveVoiceChat) {
+                        result.append(channel)
+                    }
+                default:
+                    break
+                }
+            }
+            return result.sorted(by: { lhs, rhs in
+                let lhsTitle = lhs.compactDisplayTitle
+                let rhsTitle = rhs.compactDisplayTitle
+                if lhsTitle != rhsTitle {
+                    return lhsTitle < rhsTitle
+                }
+                return lhs.id < rhs.id
+            })
+        }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs.count != rhs.count {
+                return false
+            }
+            for i in 0 ..< lhs.count {
+                if !lhs[i].isEqual(rhs[i]) {
+                    return false
+                }
+            }
+            return true
+        })
+        
+        let callListNodeViewTransition = combineLatest(callListViewUpdate, self.statePromise.get(), groupCalls, showCallsTab, currentGroupCallPeerId)
+        |> mapToQueue { (updateAndType, state, groupCalls, showCallsTab, currentGroupCallPeerId) -> Signal<CallListNodeListViewTransition, NoError> in
+            let (update, type) = updateAndType
+            
+            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(view: update.view, groupCalls: groupCalls, state: state, showSettings: showSettings, showCallsTab: showCallsTab, isRecentCalls: type == .all, currentGroupCallPeerId: currentGroupCallPeerId), presentationData: state.presentationData)
             let previous = previousView.swap(processedView)
             
             let reason: CallListNodeViewTransitionReason
@@ -386,6 +544,7 @@ final class CallListControllerNode: ASDisplayNode {
     deinit {
         self.callListDisposable.dispose()
         self.emptyStateDisposable.dispose()
+        self.openGroupCallDisposable.dispose()
     }
     
     func updateThemeAndStrings(presentationData: PresentationData) {

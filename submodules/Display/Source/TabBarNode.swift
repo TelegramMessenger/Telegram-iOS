@@ -326,7 +326,7 @@ class TabBarNode: ASDisplayNode {
     private let swipeAction: (Int, TabBarItemSwipeDirection) -> Void
     
     private var theme: TabBarControllerTheme
-    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, UIEdgeInsets, CGFloat)?
     private var horizontal: Bool = false
     private var centered: Bool = false
     
@@ -405,7 +405,7 @@ class TabBarNode: ASDisplayNode {
             }
             
             if let validLayout = self.validLayout {
-                self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate)
+                self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, bottomInset: validLayout.4, transition: .immediate)
             }
         }
     }
@@ -513,7 +513,7 @@ class TabBarNode: ASDisplayNode {
             
             if previousImageSize != updatedImageSize || previousTextImageSize != updatedTextImageSize {
                 if let validLayout = self.validLayout, layout {
-                    self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate)
+                    self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, bottomInset: validLayout.4, transition: .immediate)
                 }
             }
         }
@@ -523,7 +523,7 @@ class TabBarNode: ASDisplayNode {
         self.tabBarNodeContainers[index].badgeValue = value
         if self.tabBarNodeContainers[index].badgeValue != self.tabBarNodeContainers[index].appliedBadgeValue {
             if let validLayout = self.validLayout {
-                self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate)
+                self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, bottomInset: validLayout.4, transition: .immediate)
             }
         }
     }
@@ -532,13 +532,13 @@ class TabBarNode: ASDisplayNode {
         self.tabBarNodeContainers[index].titleValue = value
         if self.tabBarNodeContainers[index].titleValue != self.tabBarNodeContainers[index].appliedTitleValue {
             if let validLayout = self.validLayout {
-                self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate)
+                self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, bottomInset: validLayout.4, transition: .immediate)
             }
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, leftInset, rightInset, bottomInset)
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, leftInset, rightInset, additionalSideInsets, bottomInset)
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight), size: CGSize(width: size.width, height: separatorHeight)))
         
@@ -551,13 +551,36 @@ class TabBarNode: ASDisplayNode {
         }
         
         if self.tabBarNodeContainers.count != 0 {
-            let distanceBetweenNodes = size.width / CGFloat(self.tabBarNodeContainers.count)
+            var tabBarNodeContainers = self.tabBarNodeContainers
+            var width = size.width
             
-            let internalWidth = distanceBetweenNodes * CGFloat(self.tabBarNodeContainers.count - 1)
-            let leftNodeOriginX = (size.width - internalWidth) / 2.0
+            var callsTabBarNodeContainer: TabBarNodeContainer?
+            if tabBarNodeContainers.count == 4 {
+                callsTabBarNodeContainer = tabBarNodeContainers[1]
+            }
             
-            for i in 0 ..< self.tabBarNodeContainers.count {
-                let container = self.tabBarNodeContainers[i]
+            if additionalSideInsets.right > 0.0 {
+                width -= additionalSideInsets.right
+                
+                if let callsTabBarNodeContainer = callsTabBarNodeContainer {
+                    tabBarNodeContainers.remove(at: 1)
+                    transition.updateAlpha(node: callsTabBarNodeContainer.imageNode, alpha: 0.0)
+                    callsTabBarNodeContainer.imageNode.isUserInteractionEnabled = false
+                }
+            } else {
+                if let callsTabBarNodeContainer = callsTabBarNodeContainer {
+                    transition.updateAlpha(node: callsTabBarNodeContainer.imageNode, alpha: 1.0)
+                    callsTabBarNodeContainer.imageNode.isUserInteractionEnabled = true
+                }
+            }
+            
+            let distanceBetweenNodes = width / CGFloat(tabBarNodeContainers.count)
+            
+            let internalWidth = distanceBetweenNodes * CGFloat(tabBarNodeContainers.count - 1)
+            let leftNodeOriginX = (width - internalWidth) / 2.0
+            
+            for i in 0 ..< tabBarNodeContainers.count {
+                let container = tabBarNodeContainers[i]
                 let node = container.imageNode
                 let nodeSize = node.textImageNode.image?.size ?? CGSize()
                 
@@ -612,7 +635,7 @@ class TabBarNode: ASDisplayNode {
     }
     
     private func tapped(at location: CGPoint, longTap: Bool) {
-        if let bottomInset = self.validLayout?.3 {
+        if let bottomInset = self.validLayout?.4 {
             if location.y > self.bounds.size.height - bottomInset {
                 return
             }
@@ -620,6 +643,9 @@ class TabBarNode: ASDisplayNode {
             
             for i in 0 ..< self.tabBarNodeContainers.count {
                 let node = self.tabBarNodeContainers[i].imageNode
+                if !node.isUserInteractionEnabled {
+                    continue
+                }
                 let distance = abs(location.x - node.position.x)
                 if let previousClosestNode = closestNode {
                     if previousClosestNode.1 > distance {

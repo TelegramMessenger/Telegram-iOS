@@ -11,6 +11,11 @@ import TextFormat
 import Postbox
 import UrlEscaping
 
+public protocol TooltipCustomContentNode: ASDisplayNode {
+    func animateIn()
+    func updateLayout(size: CGSize) -> CGSize
+}
+
 public enum TooltipActiveTextItem {
     case url(String, Bool)
     case mention(PeerId, String)
@@ -27,6 +32,7 @@ public enum TooltipActiveTextAction {
 private final class TooltipScreenNode: ViewControllerTracingNode {
     private let tooltipStyle: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
+    private let customContentNode: TooltipCustomContentNode?
     private let location: TooltipScreen.Location
     private let displayDuration: TooltipScreen.DisplayDuration
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
@@ -47,9 +53,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
+    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
         self.tooltipStyle = style
         self.icon = icon
+        self.customContentNode = customContentNode
         self.location = location
         self.displayDuration = displayDuration
         self.shouldDismissOnTouch = shouldDismissOnTouch
@@ -500,6 +507,7 @@ public final class TooltipScreen: ViewController {
     public let textEntities: [MessageTextEntity]
     private let style: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
+    private let customContentNode: TooltipCustomContentNode?
     private let location: TooltipScreen.Location
     private let displayDuration: DisplayDuration
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
@@ -517,11 +525,12 @@ public final class TooltipScreen: ViewController {
     
     private var dismissTimer: Foundation.Timer?
     
-    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
+    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
         self.text = text
         self.textEntities = textEntities
         self.style = style
         self.icon = icon
+        self.customContentNode = customContentNode
         self.location = location
         self.displayDuration = displayDuration
         self.shouldDismissOnTouch = shouldDismissOnTouch
@@ -580,7 +589,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, location: self.location, displayDuration: self.displayDuration, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, customContentNode: self.customContentNode, location: self.location, displayDuration: self.displayDuration, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

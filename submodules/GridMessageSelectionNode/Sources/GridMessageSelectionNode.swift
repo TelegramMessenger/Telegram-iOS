@@ -13,7 +13,7 @@ public final class GridMessageSelectionNode: ASDisplayNode {
     
     public init(theme: PresentationTheme, toggle: @escaping (Bool) -> Void) {
         self.toggle = toggle
-        self.checkNode = CheckNode(strokeColor: theme.list.itemCheckColors.strokeColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: .overlay)
+        self.checkNode = CheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay, hasInset: true))
         self.checkNode.isUserInteractionEnabled = false
         
         super.init()
@@ -42,7 +42,7 @@ public final class GridMessageSelectionNode: ASDisplayNode {
     public func updateSelected(_ selected: Bool, animated: Bool) {
         if self.selected != selected {
             self.selected = selected
-            self.checkNode.setIsChecked(selected, animated: animated)
+            self.checkNode.setSelected(selected, animated: animated)
         }
     }
     
@@ -55,7 +55,7 @@ public final class GridMessageSelectionNode: ASDisplayNode {
     override public func layout() {
         super.layout()
         
-        let checkSize = CGSize(width: 32.0, height: 32.0)
-        self.checkNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - checkSize.width, y: 0.0), size: checkSize)
+        let checkSize = CGSize(width: 28.0, height: 28.0)
+        self.checkNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - checkSize.width - 2.0, y: 2.0), size: checkSize)
     }
 }

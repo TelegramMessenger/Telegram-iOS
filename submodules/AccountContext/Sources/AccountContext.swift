@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -10,10 +11,6 @@ import AsyncDisplayKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
-
-#if ENABLE_WALLET
-import WalletCore
-#endif
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -205,19 +202,29 @@ public final class ChatPeekTimeout {
 
 public final class ChatPeerNearbyData: Equatable {
     public static func == (lhs: ChatPeerNearbyData, rhs: ChatPeerNearbyData) -> Bool {
+        return lhs.distance == rhs.distance
+    }
+    
+    public let distance: Int32
+    
+    public init(distance: Int32) {
+        self.distance = distance
+    }
+}
+
+public final class ChatGreetingData: Equatable {
+    public static func == (lhs: ChatGreetingData, rhs: ChatGreetingData) -> Bool {
         if let lhsSticker = lhs.sticker, let rhsSticker = rhs.sticker, !lhsSticker.isEqual(to: rhsSticker) {
             return false
         } else if (lhs.sticker == nil) != (rhs.sticker == nil) {
             return false
         }
-        return lhs.distance == rhs.distance
+        return true
     }
     
-    public let distance: Int32
     public let sticker: TelegramMediaFile?
     
-    public init(distance: Int32, sticker: TelegramMediaFile?) {
-        self.distance = distance
+    public init(sticker: TelegramMediaFile?) {
         self.sticker = sticker
     }
 }
@@ -273,12 +280,14 @@ public final class NavigateToChatControllerParams {
     public let activateMessageSearch: (ChatSearchDomain, String)?
     public let peekData: ChatPeekTimeout?
     public let peerNearbyData: ChatPeerNearbyData?
+    public let greetingData: ChatGreetingData?
+    public let reportReason: ReportReason?
     public let animated: Bool
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, greetingData: ChatGreetingData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -295,6 +304,8 @@ public final class NavigateToChatControllerParams {
         self.activateMessageSearch = activateMessageSearch
         self.peekData = peekData
         self.peerNearbyData = peerNearbyData
+        self.greetingData = greetingData
+        self.reportReason = reportReason
         self.animated = animated
         self.options = options
         self.parentGroupId = parentGroupId
@@ -386,11 +397,13 @@ public struct ContactListAdditionalOption: Equatable {
     public let title: String
     public let icon: ContactListActionItemIcon
     public let action: () -> Void
+    public let clearHighlightAutomatically: Bool
     
-    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void) {
+    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void, clearHighlightAutomatically: Bool = false) {
         self.title = title
         self.icon = icon
         self.action = action
+        self.clearHighlightAutomatically = clearHighlightAutomatically
     }
     
     public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
@@ -469,6 +482,38 @@ public final class ContactSelectionControllerParams {
     }
 }
 
+public enum ChatListSearchFilter: Equatable {
+    case chats
+    case media
+    case links
+    case files
+    case music
+    case voice
+    case peer(PeerId, Bool, String, String)
+    case date(Int32?, Int32, String)
+    
+    public var id: Int32 {
+        switch self {
+            case .chats:
+                return 0
+            case .media:
+                return 1
+            case .links:
+                return 2
+            case .files:
+                return 3
+            case .music:
+                return 4
+            case .voice:
+                return 5
+            case let .peer(peerId, _, _, _):
+                return peerId.id
+            case let .date(_, date, _):
+                return date
+        }
+    }
+}
+
 #if ENABLE_WALLET
 public enum OpenWalletContext {
     case generic
@@ -533,6 +578,7 @@ public protocol SharedAccountContext: class {
     func updateNotificationTokensRegistration()
     func setAccountUserInterfaceInUse(_ id: AccountRecordId) -> Disposable
     func handleTextLinkAction(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem)
+    func openSearch(filter: ChatListSearchFilter, query: String?)
     func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?)
     func openChatMessage(_ params: OpenChatMessageParams) -> Bool
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
@@ -648,16 +694,21 @@ public final class TonContext {
 
 #endif
 
+public protocol ComposeController: ViewController {
+}
+
 public protocol ChatLocationContextHolder: class {
+}
+
+public protocol AccountGroupCallContext: class {
+}
+
+public protocol AccountGroupCallContextCache: class {
 }
 
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
-    
-    #if ENABLE_WALLET
-    var tonContext: StoredTonContext? { get }
-    #endif
     
     var liveLocationManager: LiveLocationManager? { get }
     var peersNearbyManager: PeersNearbyManager? { get }
@@ -667,14 +718,11 @@ public protocol AccountContext: class {
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
     
-    #if ENABLE_WALLET
-    var hasWallets: Signal<Bool, NoError> { get }
-    var hasWalletAccess: Signal<Bool, NoError> { get }
-    #endif
-    
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
+    
+    var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
@@ -682,4 +730,7 @@ public protocol AccountContext: class {
     func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput
     func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
+    
+    func joinGroupCall(peerId: PeerId, activeCall: CachedChannelData.ActiveCall)
+    func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
 }

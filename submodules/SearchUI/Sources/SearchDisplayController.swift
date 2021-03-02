@@ -12,9 +12,22 @@ public enum SearchDisplayControllerMode {
 }
 
 public final class SearchDisplayController {
+    private final class BackgroundNode: ASDisplayNode {
+        var isTransparent: Bool = false
+        
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = self.view.hitTest(point, with: event)
+            if self.isTransparent, result === self.view {
+                return nil
+            } else {
+                return result
+            }
+        }
+    }
+    
     private let searchBar: SearchBarNode
     private let mode: SearchDisplayControllerMode
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: BackgroundNode
     public let contentNode: SearchDisplayControllerContentNode
     private var hasSeparator: Bool
     
@@ -26,7 +39,7 @@ public final class SearchDisplayController {
     
     public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, hasSeparator: Bool = false, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: hasSeparator), strings: presentationData.strings, fieldStyle: .modern, forceSeparator: hasSeparator)
-        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode = BackgroundNode()
         self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
         self.backgroundNode.allowsGroupOpacity = true
         
@@ -93,8 +106,10 @@ public final class SearchDisplayController {
         
         if self.contentNode.hasDim {
             self.backgroundNode.backgroundColor = .clear
+            self.backgroundNode.isTransparent = true
         } else {
             self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
+            self.backgroundNode.isTransparent = false
         }
     }
     
@@ -135,7 +150,7 @@ public final class SearchDisplayController {
         safeInsets.left += 20.0
         safeInsets.right += 20.0
         
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
     public func activate(insertSubnode: @escaping (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?) {
@@ -148,8 +163,10 @@ public final class SearchDisplayController {
         
         if self.contentNode.hasDim {
             self.backgroundNode.backgroundColor = .clear
+            self.backgroundNode.isTransparent = true
         } else {
             self.backgroundNode.alpha = 0.0
+            self.backgroundNode.isTransparent = false
         }
         
         var size = layout.size
@@ -160,7 +177,7 @@ public final class SearchDisplayController {
         var safeInsets = layout.safeInsets
         safeInsets.left += 20.0
         safeInsets.right += 20.0
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         var contentNavigationBarHeight = navigationBarHeight
         if layout.statusBarHeight == nil {

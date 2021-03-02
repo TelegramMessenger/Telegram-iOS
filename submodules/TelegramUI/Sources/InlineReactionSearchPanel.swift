@@ -91,7 +91,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                             var menuItems: [PeekControllerMenuItem] = []
                             menuItems = [
                                 PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { _, _ in
-                                    return controllerInteraction.sendSticker(.standalone(media: item.file), true, itemNode, itemNode.bounds)
+                                    return controllerInteraction.sendSticker(.standalone(media: item.file), nil, true, itemNode, itemNode.bounds)
                                 }),
                                 PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                     if let strongSelf = self {
@@ -111,7 +111,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                 if let packReference = packReference {
                                                     let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
-                                                            return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
+                                                            return controllerInteraction.sendSticker(file, nil, true, sourceNode, sourceRect)
                                                         } else {
                                                             return false
                                                         }
@@ -392,6 +392,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
     var controllerInteraction: ChatControllerInteraction?
     
     private var validLayout: (CGSize, CGFloat)?
+    private var query: String?
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.containerNode = ASDisplayNode()
@@ -472,7 +473,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf.controllerInteraction?.sendSticker(file, true, node, rect)
+            let _ = strongSelf.controllerInteraction?.sendSticker(file, strongSelf.query, true, node, rect)
         }
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
@@ -484,7 +485,8 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
     }
     
-    func updateResults(results: [TelegramMediaFile]) {
+    func updateResults(results: [TelegramMediaFile], query: String?) {
+        self.query = query
         self.stickersNode.updateItems(items: results)
     }
     

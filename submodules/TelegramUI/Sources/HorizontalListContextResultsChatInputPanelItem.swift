@@ -12,17 +12,21 @@ import StickerResources
 import PhotoResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import TelegramPresentationData
 import AccountContext
+import ShimmerEffect
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
+    let theme: PresentationTheme
     let result: ChatContextResult
     let resultSelected: (ChatContextResult, ASDisplayNode, CGRect) -> Bool
     
     let selectable: Bool = true
     
-    public init(account: Account, result: ChatContextResult, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) {
+    public init(account: Account, theme: PresentationTheme,  result: ChatContextResult, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) {
         self.account = account
+        self.theme = theme
         self.result = result
         self.resultSelected = resultSelected
     }
@@ -84,6 +88,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
+    private var placeholderNode: StickerShimmerEffectNode?
     private var videoLayer: (SoftwareVideoThumbnailNode, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
@@ -153,6 +158,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         self.imageNodeBackground = ASDisplayNode()
         self.imageNodeBackground.isLayerBacked = true
         
+        self.placeholderNode = StickerShimmerEffectNode()
+        
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
@@ -170,6 +177,22 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
         self.addSubnode(self.imageNode)
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+            self.addSubnode(placeholderNode)
+        }
     }
     
     deinit {
@@ -179,6 +202,22 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         }
         self.statusDisposable.dispose()
         self.fetchDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.allowsGroupOpacity = true
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                    placeholderNode?.allowsGroupOpacity = false
+                })
+            }
+        }
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -385,7 +424,11 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                 animationNode = AnimatedStickerNode()
                                 animationNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                                 animationNode.visibility = true
-                                strongSelf.addSubnode(animationNode)
+                                if let placeholderNode = strongSelf.placeholderNode {
+                                    strongSelf.insertSubnode(animationNode, belowSubnode: placeholderNode)
+                                } else {
+                                    strongSelf.addSubnode(animationNode)
+                                }
                                 strongSelf.animationNode = animationNode
                             }
                             animationNode.started = { [weak self] in
@@ -406,7 +449,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     
                     strongSelf.statusNode.frame = progressFrame
 
-                    
                     if let updatedStatusSignal = updatedStatusSignal {
                         strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
                             displayLinkDispatcher.dispatch {
@@ -418,7 +460,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                     
                                     switch status {
                                         case let .Fetching(_, progress):
-                                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false, animateRotation: true)
                                         case .Remote:
                                             //state = .download(statusForegroundColor)
                                             state = .none
@@ -445,6 +487,18 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         animationNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
                         animationNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
                         animationNode.updateLayout(size: croppedImageDimensions)
+                    }
+                    
+                    var immediateThumbnailData: Data?
+                    if case let .internalReference(internalReference) = item.result, internalReference.file?.isSticker == true {
+                        immediateThumbnailData = internalReference.file?.immediateThumbnailData
+                    }
+                    
+                    if let placeholderNode = strongSelf.placeholderNode {
+                        placeholderNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
+                        placeholderNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
+                        
+                        placeholderNode.update(backgroundColor: item.theme.list.plainBackgroundColor, foregroundColor: item.theme.list.mediaPlaceholderColor.mixedWith(item.theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: item.theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
                     }
                 }
             })

@@ -46,7 +46,7 @@ private final class PeerInputActivityContext {
                 record.timer.invalidate()
                 var updateId = record.updateId
                 var recordTimestamp = record.timestamp
-                if record.activity != activity || record.timestamp + 4.0 < timestamp {
+                if record.activity != activity || record.timestamp + 1.0 < timestamp {
                     updated = true
                     updateId = nextUpdateId
                     recordTimestamp = timestamp
@@ -83,7 +83,7 @@ private final class PeerInputActivityContext {
             }, queue: self.queue)
             let updateId = nextUpdateId
             nextUpdateId += 1
-            self.activities.insert(ActivityRecord(peerId: peerId, activity: activity, id: activityId, timer: timer, episodeId: episodeId, timestamp: timestamp, updateId: updateId), at: 0)
+            self.activities.append(ActivityRecord(peerId: peerId, activity: activity, id: activityId, timer: timer, episodeId: episodeId, timestamp: timestamp, updateId: updateId))
             timer.start()
         }
         
@@ -329,7 +329,16 @@ final class PeerInputActivityManager {
                 })
                 self.contexts[chatPeerId] = context
             }
-            context.addActivity(peerId: peerId, activity: activity, timeout: 8.0, episodeId: episodeId, nextUpdateId: &self.nextUpdateId)
+            
+            let timeout: Double
+            switch activity {
+            case .speakingInGroupCall:
+                timeout = 3.0
+            default:
+                timeout = 8.0
+            }
+            
+            context.addActivity(peerId: peerId, activity: activity, timeout: timeout, episodeId: episodeId, nextUpdateId: &self.nextUpdateId)
             
             if let globalContext = self.globalContext {
                 let activities = self.collectActivities()
@@ -381,7 +390,15 @@ final class PeerInputActivityManager {
                 self?.addActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity, episodeId: episodeId)
             }
             
-            let timer = SignalKitTimer(timeout: 5.0, repeat: true, completion: {
+            let timeout: Double
+            switch activity {
+            case .speakingInGroupCall:
+                timeout = 2.0
+            default:
+                timeout = 5.0
+            }
+            
+            let timer = SignalKitTimer(timeout: timeout, repeat: true, completion: {
                 update()
             }, queue: queue)
             timer.start()

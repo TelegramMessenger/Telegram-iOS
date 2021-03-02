@@ -1,5 +1,5 @@
 import Foundation
-import PostboxCoding
+/*import PostboxCoding
 import PreferencesTable
 import MessageHistoryMetadataTable
 import PostboxDataTypes
@@ -103,3 +103,4 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         }
     }
 }
+*/

@@ -63,6 +63,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     
     private var linkHighlightingNode: LinkHighlightingNode?
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var item: PeerInfoScreenLabeledValueItem?
     private var theme: PresentationTheme?
     
@@ -90,6 +92,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         self.expandButonNode = HighlightTrackingButtonNode()
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init()
         
         bringToFrontForHighlightImpl = { [weak self] in
@@ -103,6 +107,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         self.addSubnode(self.expandNode)
         self.addSubnode(self.expandButonNode)
+        
+        self.addSubnode(self.activateArea)
         
         self.expandButonNode.addTarget(self, action: #selector(self.expandPressed), forControlEvents: .touchUpInside)
         self.expandButonNode.highligthedChanged = { [weak self] highlighted in
@@ -260,6 +266,11 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset, height: UIScreenPixel)))
         transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
+        
+        
+        self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
+        self.activateArea.accessibilityLabel = item.label
+        self.activateArea.accessibilityValue = item.text
         
         return height
     }

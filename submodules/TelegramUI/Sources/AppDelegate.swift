@@ -22,23 +22,16 @@ import UndoUI
 import LegacyUI
 import PassportUI
 import WatchBridge
-import LegacyDataImport
 import SettingsUI
 import AppBundle
-#if ENABLE_WALLET
-import WalletUI
-#endif
 import UrlHandling
-#if ENABLE_WALLET
-import WalletUrl
-import WalletCore
-#endif
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
 import CoreSpotlight
+import LightweightAccountData
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -674,7 +667,7 @@ final class SharedApplicationContext {
         
         let hiddenAccountManager = HiddenAccountManagerImpl()
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager)
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager, isTemporary: false, isReadOnly: false)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -821,8 +814,13 @@ final class SharedApplicationContext {
             |> map { _, accounts, _ -> [Account] in
                 return accounts.map({ $0.1 })
             }
-            let _ = (sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
-            |> deliverOn(Queue())).start(next: { infos in
+            let storeQueue = Queue()
+            let _ = (
+                sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
+                |> then(Signal<StoredAccountInfos, NoError>.complete() |> delay(10.0, queue: storeQueue))
+                |> restart
+                |> deliverOn(storeQueue)
+            ).start(next: { infos in
                 storeAccountsData(rootPath: rootPath, accounts: infos)
             })
             
@@ -917,68 +915,7 @@ final class SharedApplicationContext {
             Logger.shared.logToConsole = loggingSettings.logToConsole
             Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
             
-            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: sharedApplicationContext.sharedContext.accountManager, encryptionParameters: encryptionParameters, present: { controller in
-                self.window?.rootViewController?.present(controller, animated: true, completion: nil)
-            })
-            |> `catch` { _ -> Signal<ImportedLegacyAccountEvent, NoError> in
-                return Signal { subscriber in
-                    let alertView = UIAlertView(title: "", message: "An error occured while trying to upgrade application data. Would you like to logout?", delegate: self, cancelButtonTitle: "No", otherButtonTitles: "Yes")
-                    self.alertActions = (primary: {
-                        let statusPath = appGroupUrl.path + "/Documents/importcompleted"
-                        let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
-                        let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
-                        subscriber.putNext(.result(nil))
-                        subscriber.putCompletion()
-                    }, other: {
-                        exit(0)
-                    })
-                    alertView.show()
-                    
-                    return EmptyDisposable
-                } |> runOn(Queue.mainQueue())
-            }
-            |> mapToSignal { event -> Signal<SharedApplicationContext, NoError> in
-                switch event {
-                    case let .progress(type, value):
-                        Queue.mainQueue().async {
-                            if self.dataImportSplash == nil {
-                                self.dataImportSplash = makeLegacyDataImportSplash(theme: nil, strings: nil)
-                                self.dataImportSplash?.serviceAction = {
-                                    self.debugPressed()
-                                }
-                                self.mainWindow.coveringView = self.dataImportSplash
-                            }
-                            self.dataImportSplash?.progress = (type, value)
-                        }
-                        return .complete()
-                    case let .result(temporaryId):
-                        Queue.mainQueue().async {
-                            if let _ = self.dataImportSplash {
-                                self.dataImportSplash = nil
-                                self.mainWindow.coveringView = nil
-                            }
-                        }
-                        if let temporaryId = temporaryId {
-                            Queue.mainQueue().after(1.0, {
-                                let statusPath = appGroupUrl.path + "/Documents/importcompleted"
-                                let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
-                                let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
-                            })
-                            return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> SharedApplicationContext in
-                                transaction.setCurrentId(temporaryId)
-                                transaction.updateRecord(temporaryId, { record in
-                                    if let record = record {
-                                        return AccountRecord(id: record.id, attributes: record.attributes, temporarySessionId: nil)
-                                    }
-                                    return record
-                                })
-                                return sharedApplicationContext
-                            }
-                        } else {
-                            return .single(sharedApplicationContext)
-                        }
-                }
-            }
+            return .single(sharedApplicationContext)
         })
         
         let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
@@ -1182,7 +1119,7 @@ final class SharedApplicationContext {
                 context.context.account.postbox.transaction({ transaction -> Void in
                     var value = transaction.getPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp) as? DoubleBottomHideTimestamp ?? DoubleBottomHideTimestamp.defaultValue
                     if value.timestamp == 0 {
-                        value.timestamp = Int64(Date().timeIntervalSince1970) + 60
+                        value.timestamp = Int64(Date().timeIntervalSince1970) + 600
                         transaction.setPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp, value: value)
                     }
                     }).start()
@@ -1273,11 +1210,7 @@ final class SharedApplicationContext {
             |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
                 return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
-        }).start(next: { [weak self] accountManager, loggedOutAccountPeerIds in
-            guard let strongSelf = self else {
-                return
-            }
-
+        }).start(next: { accountManager, loggedOutAccountPeerIds in
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
@@ -1765,12 +1698,6 @@ final class SharedApplicationContext {
                 } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                     authContext.rootController.applyConfirmationCode(confirmationCode)
                 }
-                #if ENABLE_WALLET
-                if let _ = parseWalletUrl(url) {
-                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
-                }
-                #endif
             }
         })
     }
@@ -1932,7 +1859,7 @@ final class SharedApplicationContext {
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedContext in
             let type = ApplicationShortcutItemType(rawValue: shortcutItem.type)
-            var immediately = type == .account
+            let immediately = type == .account
             let proceed: () -> Void = {
                 let _ = (self.context.get()
                 |> take(1)
@@ -2165,6 +2092,9 @@ final class SharedApplicationContext {
                         var authorizationOptions: UNAuthorizationOptions = [.badge, .sound, .alert, .carPlay]
                         if #available(iOS 12.0, *) {
                             authorizationOptions.insert(.providesAppNotificationSettings)
+                        }
+                        if #available(iOS 13.0, *) {
+                            authorizationOptions.insert(.announcement)
                         }
                         notificationCenter.requestAuthorization(options: authorizationOptions, completionHandler: { result, _ in
                             completion(result)

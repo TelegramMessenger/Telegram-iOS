@@ -16,7 +16,7 @@ public final class TextFieldNodeView: UITextField {
     }
     
     override public func placeholderRect(forBounds bounds: CGRect) -> CGRect {
-        return self.editingRect(forBounds: bounds.offsetBy(dx: 0.0, dy: -1.0))
+        return self.editingRect(forBounds: bounds.offsetBy(dx: 0.0, dy: 0.0))
     }
     
     override public func deleteBackward() {

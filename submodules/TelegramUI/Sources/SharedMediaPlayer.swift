@@ -77,7 +77,7 @@ private enum SharedMediaPlaybackItem: Equatable {
     func togglePlayPause() {
         switch self {
             case let .audio(player):
-                player.togglePlayPause()
+                player.togglePlayPause(faded: true)
             case let .instantVideo(node):
                 node.togglePlayPause()
         }
@@ -178,7 +178,9 @@ final class SharedMediaPlayer {
     private var currentPrefetchItems: (SharedMediaPlaybackDataSource, SharedMediaPlaybackDataSource)?
     private let prefetchDisposable = MetaDisposable()
     
-    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool) {
+    let type: MediaManagerPlayerType
+    
+    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool, type: MediaManagerPlayerType) {
         self.mediaManager = mediaManager
         self.account = account
         self.audioSession = audioSession
@@ -189,6 +191,7 @@ final class SharedMediaPlayer {
         self.playerIndex = playerIndex
         self.playbackRate = initialPlaybackRate
         self.controlPlaybackWithProximity = controlPlaybackWithProximity
+        self.type = type
         
         if controlPlaybackWithProximity {
             self.forceAudioToSpeaker = !DeviceProximityManager.shared().currentValue()
@@ -224,6 +227,8 @@ final class SharedMediaPlayer {
                                     rateValue = 1.0
                                 case .x2:
                                     rateValue = 1.8
+                                default:
+                                    rateValue = 1.0
                             }
                         }
                         
@@ -443,6 +448,12 @@ final class SharedMediaPlayer {
                             rateValue = 1.0
                         case .x2:
                             rateValue = 1.8
+                        case .x4:
+                            rateValue = 4.0
+                        case .x8:
+                            rateValue = 8.0
+                        case .x16:
+                            rateValue = 16.0
                     }
                     switch playbackItem {
                         case let .audio(player):

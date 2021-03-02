@@ -110,7 +110,9 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             }
         }
         var finalDuration: Double = CMTimeGetSeconds(asset.duration)
-        let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium)
+        
+        let preset = adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium
+        let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: preset)
         
         var resourceAdjustments: VideoMediaResourceAdjustments?
         if let adjustments = adjustments {
@@ -123,8 +125,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
         }
         
+        let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
+        
         let resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: asset.url.path, adjustments: resourceAdjustments)
-        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: finalDuration > 3.0 * 60.0)
+        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 5 * 1024 * 1024)
         |> mapError { _ -> Void in
             return Void()
         }
@@ -140,7 +144,12 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         let fileName = value["fileName"] as? String
         let mimeType = (value["mimeType"] as? String) ?? "application/octet-stream"
         
-        if let image = UIImage(data: data) {
+        var treatAsFile = false
+        if let boolValue = value["treatAsFile"] as? Bool, boolValue {
+            treatAsFile = true
+        }
+        
+        if !treatAsFile, let image = UIImage(data: data) {
             var isGif = false
             if data.count > 4 {
                 data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
@@ -229,7 +238,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         if let audioData = try? Data(contentsOf: url, options: [.mappedIfSafe]) {
             let fileName = url.lastPathComponent
             let duration = (value["duration"] as? NSNumber)?.doubleValue ?? 0.0
-            let isVoice = ((value["isVoice"] as? NSNumber)?.boolValue ?? false) || (duration.isZero && duration < 30.0)
+            let isVoice = ((value["isVoice"] as? NSNumber)?.boolValue ?? false)
             let title = value["title"] as? String
             let artist = value["artist"] as? String
             
@@ -356,29 +365,36 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
 public func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShareItemContent]) -> Signal<Float, Void> {
     var messages: [EnqueueMessage] = []
     var groupingKey: Int64?
-    var mediaTypes: (photo: Bool, video: Bool, music: Bool, other: Bool) = (false, false, false, false)
-    for item in items {
-        if case let .media(result) = item, case let .media(media) = result {
-            if media.media is TelegramMediaImage {
-                mediaTypes.photo = true
-            } else if let media = media.media as? TelegramMediaFile {
-                if media.isVideo {
-                    mediaTypes.video = true
-                } else if let fileName = media.fileName, fileName.hasPrefix("mp3") || fileName.hasPrefix("m4a") {
-                    mediaTypes.music = true
+    var mediaTypes: (photo: Int, video: Int, music: Int, other: Int) = (0, 0, 0, 0)
+    if items.count > 1 {
+        for item in items {
+            if case let .media(result) = item, case let .media(media) = result {
+                if media.media is TelegramMediaImage {
+                    mediaTypes.photo += 1
+                } else if let media = media.media as? TelegramMediaFile {
+                    if media.isVideo {
+                        mediaTypes.video += 1
+                    } else if media.isVoice || media.isAnimated || media.isSticker {
+                        mediaTypes = (0, 0, 0, 0)
+                        break
+                    } else if media.isMusic {
+                        mediaTypes.music += 1
+                    } else if let fileName = media.fileName?.lowercased(), fileName.hasPrefix(".mp3") || fileName.hasPrefix("m4a") {
+                        mediaTypes.music += 1
+                    } else {
+                        mediaTypes.other += 1
+                    }
                 } else {
-                    mediaTypes.other = true
+                    mediaTypes = (0, 0, 0, 0)
+                    break
                 }
-            } else {
-                mediaTypes = (false, false, false, false)
-                break
             }
         }
     }
     
-    if (mediaTypes.photo || mediaTypes.video) && !(mediaTypes.music || mediaTypes.other) {
+    if ((mediaTypes.photo + mediaTypes.video) > 1) && (mediaTypes.music == 0 && mediaTypes.other == 0) {
         groupingKey = arc4random64()
-    } else if !(mediaTypes.photo || mediaTypes.video) && (mediaTypes.music != mediaTypes.other) {
+    } else if ((mediaTypes.photo + mediaTypes.video) == 0) && ((mediaTypes.music > 1 && mediaTypes.other == 0) || (mediaTypes.music == 0 && mediaTypes.other > 1)) {
         groupingKey = arc4random64()
     }
     

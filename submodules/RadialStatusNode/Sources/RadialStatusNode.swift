@@ -7,7 +7,7 @@ public enum RadialStatusNodeState: Equatable {
     case download(UIColor)
     case play(UIColor)
     case pause(UIColor)
-    case progress(color: UIColor, lineWidth: CGFloat?, value: CGFloat?, cancelEnabled: Bool)
+    case progress(color: UIColor, lineWidth: CGFloat?, value: CGFloat?, cancelEnabled: Bool, animateRotation: Bool)
     case cloudProgress(color: UIColor, strokeBackgroundColor: UIColor, lineWidth: CGFloat, value: CGFloat?)
     case check(UIColor)
     case customIcon(UIImage)
@@ -39,8 +39,8 @@ public enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
-            case let .progress(lhsColor, lhsLineWidth, lhsValue, lhsCancelEnabled):
-                if case let .progress(rhsColor, rhsLineWidth, rhsValue, rhsCancelEnabled) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsLineWidth == rhsLineWidth, lhsCancelEnabled == rhsCancelEnabled {
+            case let .progress(lhsColor, lhsLineWidth, lhsValue, lhsCancelEnabled, lhsAnimateRotation):
+                if case let .progress(rhsColor, rhsLineWidth, rhsValue, rhsCancelEnabled, rhsAnimateRotation) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsLineWidth == rhsLineWidth, lhsCancelEnabled == rhsCancelEnabled, lhsAnimateRotation == rhsAnimateRotation {
                     return true
                 } else {
                     return false
@@ -98,8 +98,8 @@ public enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
-            case let .progress(lhsColor, lhsLineWidth, lhsValue, lhsCancelEnabled):
-                if case let .progress(rhsColor, rhsLineWidth, rhsValue, rhsCancelEnabled) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsLineWidth == rhsLineWidth, lhsCancelEnabled == rhsCancelEnabled {
+            case let .progress(lhsColor, lhsLineWidth, lhsValue, lhsCancelEnabled, lhsAnimateRotation):
+                if case let .progress(rhsColor, rhsLineWidth, rhsValue, rhsCancelEnabled, rhsAnimateRotation) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsLineWidth == rhsLineWidth, lhsCancelEnabled == rhsCancelEnabled, lhsAnimateRotation == rhsAnimateRotation {
                     return true
                 } else {
                     return false
@@ -154,15 +154,15 @@ public enum RadialStatusNodeState: Equatable {
                 return RadialStatusIconContentNode(icon: .custom(image), synchronous: synchronous)
             case let .check(color):
                 return RadialCheckContentNode(color: color)
-            case let .progress(color, lineWidth, value, cancelEnabled):
-                if let current = current as? RadialProgressContentNode, current.displayCancel == cancelEnabled {
+            case let .progress(color, lineWidth, value, cancelEnabled, animateRotation):
+                if let current = current as? RadialProgressContentNode, current.displayCancel == cancelEnabled, current.animateRotation == animateRotation {
                     if !current.color.isEqual(color) {
                         current.color = color
                     }
                     current.progress = value
                     return current
                 } else {
-                    let node = RadialProgressContentNode(color: color, lineWidth: lineWidth, displayCancel: cancelEnabled)
+                    let node = RadialProgressContentNode(color: color, lineWidth: lineWidth, displayCancel: cancelEnabled, animateRotation: animateRotation)
                     node.progress = value
                     return node
                 }

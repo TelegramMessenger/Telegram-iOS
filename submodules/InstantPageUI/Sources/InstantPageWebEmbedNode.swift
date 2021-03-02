@@ -56,6 +56,7 @@ final class InstantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
         configuration.userContentController = userController
         
         let webView = WKWebView(frame: CGRect(origin: CGPoint(), size: frame.size), configuration: configuration)
+        webView.allowsBackForwardNavigationGestures = false
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             webView.allowsLinkPreview = false
         }

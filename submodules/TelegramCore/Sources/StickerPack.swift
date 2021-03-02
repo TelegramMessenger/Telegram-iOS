@@ -5,39 +5,44 @@ import SwiftSignalKit
 import SyncCore
 import MtProtoKit
 
-func telegramStickerPackThumbnailRepresentationFromApiSize(datacenterId: Int32, size: Api.PhotoSize) -> TelegramMediaImageRepresentation? {
-    switch size {
-        case let .photoCachedSize(_, location, w, h, _):
-            switch location {
-                case let .fileLocationToBeDeprecated(volumeId, localId):
-                    let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
-                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [])
-            }
-        case let .photoSize(_, location, w, h, _):
-            switch location {
-                case let .fileLocationToBeDeprecated(volumeId, localId):
-                    let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
-                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [])
-            }
-        case let .photoSizeProgressive(_, location, w, h, sizes):
-            switch location {
-                case let .fileLocationToBeDeprecated(volumeId, localId):
-                    let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
-                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes)
-            }
-        case let .photoPathSize(_, data):
-            return nil
-        case .photoStrippedSize:
-            return nil
-        case .photoSizeEmpty:
-            return nil
+func telegramStickerPackThumbnailRepresentationFromApiSizes(datacenterId: Int32, sizes: [Api.PhotoSize]) -> (immediateThumbnail: Data?, representations: [TelegramMediaImageRepresentation]) {
+    var immediateThumbnailData: Data?
+    var representations: [TelegramMediaImageRepresentation] = []
+    for size in sizes {
+        switch size {
+            case let .photoCachedSize(_, location, w, h, _):
+                switch location {
+                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                        let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: []))
+                }
+            case let .photoSize(_, location, w, h, _):
+                switch location {
+                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                        let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: []))
+                }
+            case let .photoSizeProgressive(_, location, w, h, sizes):
+                switch location {
+                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                        let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes))
+                }
+            case let .photoPathSize(_, data):
+                immediateThumbnailData = data.makeData()
+            case .photoStrippedSize:
+                break
+            case .photoSizeEmpty:
+                break
+        }
     }
+    return (immediateThumbnailData, representations)
 }
 
 extension StickerPackCollectionInfo {
     convenience init(apiSet: Api.StickerSet, namespace: ItemCollectionId.Namespace) {
         switch apiSet {
-            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumb, thumbDcId, count, nHash):
+            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumbs, thumbDcId, count, nHash):
                 var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
                 if (flags & (1 << 2)) != 0 {
                     setFlags.insert(.isOfficial)
@@ -50,11 +55,14 @@ extension StickerPackCollectionInfo {
                 }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
-                if let thumb = thumb, let thumbDcId = thumbDcId {
-                    thumbnailRepresentation = telegramStickerPackThumbnailRepresentationFromApiSize(datacenterId: thumbDcId, size: thumb)
+                var immediateThumbnailData: Data?
+                if let thumbs = thumbs, let thumbDcId = thumbDcId {
+                    let (data, representations) = telegramStickerPackThumbnailRepresentationFromApiSizes(datacenterId: thumbDcId, sizes: thumbs)
+                    thumbnailRepresentation = representations.first
+                    immediateThumbnailData = data
                 }
                 
-                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, hash: nHash, count: count)
+                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, immediateThumbnailData: immediateThumbnailData, hash: nHash, count: count)
         }
     }
 }
@@ -80,10 +88,10 @@ public func stickerPacksAttachedToMedia(account: Account, media: AnyMediaReferen
         |> mapToSignal { reference -> Signal<[Api.StickerSetCovered], MTRpcError> in
             let inputMedia: Api.InputStickeredMedia
             if let resource = reference.updatedResource as? TelegramCloudMediaResourceWithFileReference, let updatedReference = resource.fileReference {
-                if let imageReference = media.concrete(TelegramMediaImage.self), let reference = imageReference.media.reference, case let .cloud(imageId, accessHash, fileReference) = reference, let representation = largestImageRepresentation(imageReference.media.representations) {
-                    inputMedia = .inputStickeredMediaPhoto(id: Api.InputPhoto.inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: updatedReference ?? Data())))
+                if let imageReference = media.concrete(TelegramMediaImage.self), let reference = imageReference.media.reference, case let .cloud(imageId, accessHash, _) = reference, let representation = largestImageRepresentation(imageReference.media.representations) {
+                    inputMedia = .inputStickeredMediaPhoto(id: Api.InputPhoto.inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: updatedReference)))
                 } else if let fileReference = media.concrete(TelegramMediaFile.self), let resource = fileReference.media.resource as? CloudDocumentMediaResource {
-                    inputMedia = .inputStickeredMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: updatedReference ?? Data())))
+                    inputMedia = .inputStickeredMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: updatedReference)))
                 } else {
                     return .single([])
                 }

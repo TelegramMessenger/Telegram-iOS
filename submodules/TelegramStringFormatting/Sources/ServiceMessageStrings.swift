@@ -27,11 +27,11 @@ private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, P
     return result
 }
 
-public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> String? {
-    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId)?.string
+public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> String? {
+    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: forChatList)?.string
 }
 
-public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
     let primaryTextColor: UIColor
@@ -57,7 +57,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if isChannel {
                     attributedString = NSAttributedString(string: strings.Notification_CreatedChannel, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_CreatedChatWithTitle(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    if forChatList {
+                        attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_CreatedChatWithTitle(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    }
                 }
             case let .addedMembers(peerIds):
                 if let peerId = peerIds.first, peerId == message.author?.id {
@@ -257,34 +261,72 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .channelMigratedFromGroup, .groupMigratedToChannel:
                 attributedString = NSAttributedString(string: "", font: titleFont, textColor: primaryTextColor)
             case let .messageAutoremoveTimeoutUpdated(timeout):
+                let authorString: String
+                if let author = messageMainPeer(message) {
+                    authorString = author.compactDisplayTitle
+                } else {
+                    authorString = ""
+                }
+                
+                let messagePeer = message.peers[message.id.peerId]
+                
                 if timeout > 0 {
-                    let timeValue = timeIntervalString(strings: strings, value: timeout)
+                    let timeValue = timeIntervalString(strings: strings, value: timeout, preferLowerValue: true)
+                    
+                    /*
+                     "Conversation.AutoremoveTimerSetUserYou" = "You set messages to automatically delete after %2$@.";
+                     "Conversation.AutoremoveTimerSetUser" = "%1$@ set messages to automatically delete after %2$@.";
+                     "Conversation.AutoremoveTimerRemovedUserYou" = "You disabled the self-destruct timer";
+                     "Conversation.AutoremoveTimerRemovedUser" = "%1$@ disabled the self-destruct timer";
+                     "Conversation.AutoremoveTimerSetGroup" = "Messages will automatically delete after %1$@.";
+                     "Conversation.AutoremoveTimerRemovedGroup" = "Self-destruct timer was disabled";
+                     */
                     
                     let string: String
-                    if message.author?.id == accountPeerId {
-                        string = strings.Notification_MessageLifetimeChangedOutgoing(timeValue).0
-                    } else {
-                        let authorString: String
-                        if let author = messageMainPeer(message) {
-                            authorString = author.compactDisplayTitle
+                    if let _ = messagePeer as? TelegramUser {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerSetUserYou(timeValue).0
                         } else {
-                            authorString = ""
+                            string = strings.Conversation_AutoremoveTimerSetUser(authorString, timeValue).0
                         }
-                        string = strings.Notification_MessageLifetimeChanged(authorString, timeValue).0
+                    } else if let _ = messagePeer as? TelegramGroup {
+                        string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).0
+                    } else if let channel = messagePeer as? TelegramChannel {
+                        if case .group = channel.info {
+                            string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).0
+                        } else {
+                            string = strings.Conversation_AutoremoveTimerSetChannel(timeValue).0
+                        }
+                    } else {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Notification_MessageLifetimeChangedOutgoing(timeValue).0
+                        } else {
+                            string = strings.Notification_MessageLifetimeChanged(authorString, timeValue).0
+                        }
                     }
                     attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
                 } else {
                     let string: String
-                    if message.author?.id == accountPeerId {
-                        string = strings.Notification_MessageLifetimeRemovedOutgoing
-                    } else {
-                        let authorString: String
-                        if let author = messageMainPeer(message) {
-                            authorString = author.compactDisplayTitle
+                    if let _ = messagePeer as? TelegramUser {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerRemovedUserYou
                         } else {
-                            authorString = ""
+                            string = strings.Conversation_AutoremoveTimerRemovedUser(authorString).0
                         }
-                        string = strings.Notification_MessageLifetimeRemoved(authorString).0
+                    } else if let _ = messagePeer as? TelegramGroup {
+                        string = strings.Conversation_AutoremoveTimerRemovedGroup
+                    } else if let channel = messagePeer as? TelegramChannel {
+                        if case .group = channel.info {
+                            string = strings.Conversation_AutoremoveTimerRemovedGroup
+                        } else {
+                            string = strings.Conversation_AutoremoveTimerRemovedChannel
+                        }
+                    } else {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Notification_MessageLifetimeRemovedOutgoing
+                        } else {
+                            string = strings.Notification_MessageLifetimeRemoved(authorString).0
+                        }
                     }
                     attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
                 }
@@ -395,15 +437,24 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 if let discardReason = discardReason {
                     switch discardReason {
-                    case .busy, .disconnect:
+                    case .disconnect:
                         titleString = strings.Notification_CallCanceled
-                    case .missed:
+                    case .missed, .busy:
                         titleString = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
                     case .hangup:
                         break
                     }
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+            case let .groupPhoneCall(_, _, duration):
+                if let duration = duration {
+                    let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
+                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                } else {
+                    let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                    let titleString = strings.Notification_VoiceChatStarted(authorName)
+                    attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                }
             case let .customText(text, entities):
                 attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false)
             case let .botDomainAccessGranted(domain):
@@ -451,6 +502,22 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReached(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId), (2, toId)]))
                 }
+            case let .inviteToGroupPhoneCall(_, _, peerIds):
+                var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                let resultTitleString: (String, [(Int, NSRange)])
+                if peerIds.count == 1 {
+                    if peerIds[0] == accountPeerId {
+                        attributePeerIds.append((1, peerIds.first))
+                        resultTitleString = strings.Notification_VoiceChatInvitationForYou(authorName)
+                    } else {
+                        attributePeerIds.append((1, peerIds.first))
+                        resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                    }
+                } else {
+                    resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                }
+                
+                attributedString = addAttributesToStringWithRanges(resultTitleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case .unknown:
                 attributedString = nil
             }

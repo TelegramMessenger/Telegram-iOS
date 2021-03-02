@@ -28,6 +28,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface AccountDatacenterInfo: NSObject
 
 @property (nonatomic, strong, readonly) AccountDatacenterKey *masterKey;
+@property (nonatomic, strong, readonly) AccountDatacenterKey *ephemeralMainKey;
+@property (nonatomic, strong, readonly) AccountDatacenterKey *ephemeralMediaKey;
 @property (nonatomic, strong, readonly) NSArray<AccountDatacenterAddress *> *addressList;
 
 @end

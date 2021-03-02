@@ -90,6 +90,9 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.listView.accessibilityPageScrolledString = { row, count in
+            return strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.stickersInteraction = StickersChatInputContextPanelInteraction()
         
@@ -130,7 +133,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                 var menuItems: [PeekControllerMenuItem] = []
                                 menuItems = [
                                     PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {  _, _ in
-                                        return controllerInteraction.sendSticker(.standalone(media: item.file), true, itemNode, itemNode.bounds)
+                                        return controllerInteraction.sendSticker(.standalone(media: item.file), nil, true, itemNode, itemNode.bounds)
                                     }),
                                     PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                         if let strongSelf = self {
@@ -150,7 +153,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                     if let packReference = packReference {
                                                         let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                                                return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
+                                                                return controllerInteraction.sendSticker(file, nil, true, sourceNode, sourceRect)
                                                             } else {
                                                                 return false
                                                             }

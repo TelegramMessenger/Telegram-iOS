@@ -129,9 +129,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     private var pendingPanes: [ChatListSearchPaneKey: ChatListSearchPendingPane] = [:]
     
     private var transitionFraction: CGFloat = 0.0
-        
-    var openPeerContextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
-    
+            
     var currentPaneUpdated: ((ChatListSearchPaneKey?, CGFloat, ContainedViewLayoutTransition) -> Void)?
     var requestExpandTabs: (() -> Bool)?
     
@@ -316,7 +314,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                 self.currentPaneKey = nil
                 self.pendingSwitchToPaneKey = nil
             }
-        } else if self.currentPaneKey == nil {
+        } else if self.currentPaneKey == nil && self.pendingSwitchToPaneKey == nil {
             self.pendingSwitchToPaneKey = availablePanes.first
         }
         

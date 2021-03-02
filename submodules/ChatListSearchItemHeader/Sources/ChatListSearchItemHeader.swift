@@ -22,6 +22,10 @@ public enum ChatListSearchItemHeaderType {
     case chatTypes
     case faq
     case messages
+    case groupMembers
+    case activeVoiceChats
+    case recentCalls
+    case orImportIntoAnExistingGroup
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -57,8 +61,16 @@ public enum ChatListSearchItemHeaderType {
                 return strings.ChatList_ChatTypesSection
             case .faq:
                 return strings.Settings_FrequentlyAskedQuestions
-            case let .messages:
+            case .messages:
                 return strings.DialogList_SearchSectionMessages
+            case .groupMembers:
+                return strings.Group_GroupMembersHeader
+            case .activeVoiceChats:
+                return strings.CallList_ActiveVoiceChatsHeader
+            case .recentCalls:
+                return strings.CallList_RecentCallsHeader
+            case .orImportIntoAnExistingGroup:
+                return strings.ChatList_HeaderImportIntoAnExistingGroup
         }
     }
     
@@ -98,6 +110,14 @@ public enum ChatListSearchItemHeaderType {
                 return .faq
             case .messages:
                 return .messages
+            case .groupMembers:
+                return .groupMembers
+            case .activeVoiceChats:
+                return .activeVoiceChats
+            case .recentCalls:
+                return .recentCalls
+            case .orImportIntoAnExistingGroup:
+                return .orImportIntoAnExistingGroup
         }
     }
 }
@@ -124,6 +144,10 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case links
     case files
     case music
+    case groupMembers
+    case activeVoiceChats
+    case recentCalls
+    case orImportIntoAnExistingGroup
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {

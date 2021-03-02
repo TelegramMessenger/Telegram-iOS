@@ -18,6 +18,7 @@ import OpenInExternalAppUI
 import AppBundle
 import LocalizedPeerData
 import TextSelectionNode
+import UrlEscaping
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -331,20 +332,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             return nil
         }
-        self.textNode.tapAttributeAction = { [weak self] attributes, _ in
-            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
+        self.textNode.tapAttributeAction = { [weak self] attributes, index in
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index) {
                 strongSelf.performAction?(action)
             }
         }
-        self.textNode.longTapAttributeAction = { [weak self] attributes, _ in
-            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
+        self.textNode.longTapAttributeAction = { [weak self] attributes, index in
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index) {
                 strongSelf.openActionOptions?(action)
             }
         }
         
         self.contentNode.view.addSubview(self.deleteButton)
         self.contentNode.view.addSubview(self.actionButton)
-//        self.contentNode.view.addSubview(self.editButton)
+        self.contentNode.view.addSubview(self.editButton)
         self.contentNode.addSubnode(self.scrollWrapperNode)
         self.scrollWrapperNode.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.textNode)
@@ -391,9 +392,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.scrollNode.view.showsVerticalScrollIndicator = false
     }
     
-    private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any]) -> GalleryControllerInteractionTapAction? {
+    private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any], _ index: Int) -> GalleryControllerInteractionTapAction? {
         if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-            return .url(url: url, concealed: false)
+            var concealed = true
+            if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
+            }
+            return .url(url: url, concealed: concealed)
         } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
             return .peerMention(peerMention.peerId, peerMention.mention)
         } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
@@ -441,6 +446,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         if origin == nil {
+            self.editButton.isHidden = true
             self.deleteButton.isHidden = true
             self.editButton.isHidden = true
         }
@@ -450,7 +456,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.currentMessage = message
         
         let canDelete: Bool
-        var canShare = !message.containsSecretMedia && !Namespaces.Message.allScheduled.contains(message.id.namespace)
+        var canShare = !message.containsSecretMedia
         
         var canEdit = false
         for media in message.media {
@@ -469,7 +475,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             } else if let channel = peer as? TelegramChannel {
                 if message.flags.contains(.Incoming) {
                     canDelete = channel.hasPermission(.deleteAllMessages)
-                    canEdit = canEdit && channel.hasPermission(.editAllMessages)
+                    canEdit = canEdit && channel.hasPermission(.sendMessages)
                 } else {
                     canDelete = true
                 }
@@ -485,7 +491,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         
         var authorNameText: String?
-        if let author = message.effectiveAuthor {
+        if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
+            authorNameText = authorSignature
+        } else if let author = message.effectiveAuthor {
             authorNameText = author.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         } else if let peer = message.peers[message.id.peerId] {
             authorNameText = peer.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
@@ -517,9 +525,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
         }
-                
-        self.editButton.isHidden = message.containsSecretMedia
-        
+                        
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
             self.currentMessageText = messageText
             

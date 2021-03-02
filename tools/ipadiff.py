@@ -24,12 +24,16 @@ def remove_codesign_dirs(dirs):
     for dir in dirs:
         if dir == 'SC_Info':
             continue
-        if re.match('Watch/.*\\.appex/SC_Info', dir):
+        if re.match('^Watch/.*\\.appex/SC_Info', dir):
             continue
-        if re.match('PlugIns/.*\\.appex/SC_Info', dir):
+        if re.match('^PlugIns/.*\\.appex/SC_Info', dir):
             continue
-        if re.match('Frameworks/.*\\.framework/SC_Info', dir):
+        if re.match('^Frameworks/.*\\.framework/SC_Info', dir):
             continue
+        if re.match('^Watch(/.*)?', dir):
+        	continue
+        if re.match('^com\\.apple\\.WatchPlaceholder(/.*)?', dir):
+        	continue
         result.add(dir)
     return result
 
@@ -39,18 +43,20 @@ def remove_codesign_files(files):
     for f in files:
         if f == 'embedded.mobileprovision':
             continue
-        if re.match('.*/.*\\.appex/embedded.mobileprovision', f):
+        if re.match('^.*/.*\\.appex/embedded.mobileprovision', f):
             continue
         if f == '_CodeSignature/CodeResources':
             continue
         if f == 'CrackerXI':
             continue
-        if re.match('Watch/.*\\.app/embedded.mobileprovision', f):
+        if re.match('^Watch/.*\\.app/embedded.mobileprovision', f):
             continue
-        if re.match('PlugIns/.*\\.appex/_CodeSignature/CodeResources', f):
+        if re.match('^PlugIns/.*\\.appex/_CodeSignature/CodeResources', f):
             continue
-        if re.match('Frameworks/.*\\.framework/_CodeSignature/CodeResources', f):
+        if re.match('^Frameworks/.*\\.framework/_CodeSignature/CodeResources', f):
             continue
+        if re.match('^Frameworks/libswift*', f):
+        	continue
         result.add(f)
     return result
 
@@ -59,8 +65,10 @@ def remove_watch_files(files):
     result = set()
     excluded = set()
     for f in files:
-        if re.match('Watch/.*', f):
+        if re.match('^Watch/.*', f):
             excluded.add(f)
+        elif re.match('^com\\.apple\\.WatchPlaceholder/.*', f):
+        	excluded.add(f)
         else:
             result.add(f)
     return (result, excluded)
@@ -70,7 +78,7 @@ def remove_plugin_files(files):
     result = set()
     excluded = set()
     for f in files:
-        if False and re.match('PlugIns/.*', f):
+        if False and re.match('^PlugIns/.*', f):
             excluded.add(f)
         else:
             result.add(f)
@@ -81,7 +89,7 @@ def remove_asset_files(files):
     result = set()
     excluded = set()
     for f in files:
-        if re.match('.*\\.car', f):
+        if re.match('^.*\\.car', f):
             excluded.add(f)
         else:
             result.add(f)
@@ -92,7 +100,7 @@ def remove_nib_files(files):
     result = set()
     excluded = set()
     for f in files:
-        if re.match('.*\\.nib', f):
+        if re.match('^.*\\.nib', f):
             excluded.add(f)
         else:
             result.add(f)
@@ -125,7 +133,7 @@ def is_binary(file):
 
 
 def is_xcconfig(file):
-    if re.match('.*\\.xcconfig', file):
+    if re.match('^.*\\.xcconfig', file):
         return True
     else:
         return False
@@ -161,7 +169,7 @@ def is_plist(file1):
 
 
 def diff_plists(file1, file2):
-    remove_properties = ['UISupportedDevices', 'DTAppStoreToolsBuild', 'MinimumOSVersion', 'BuildMachineOSBuild', 'CFBundleVersion']
+    remove_properties = ['UISupportedDevices', 'DTAppStoreToolsBuild', 'MinimumOSVersion', 'BuildMachineOSBuild', 'CFBundleVersion', 'ITSDRMScheme']
 
     clean1_properties = ''
     clean2_properties = ''
@@ -237,6 +245,8 @@ def ipadiff(self_base_path, ipa1, ipa2):
     ipa1_dir = tempdir + '/ipa1'
     ipa2_dir = tempdir + '/ipa2'
 
+    print('ipa1_dir = {}'.format(ipa1_dir))
+
     ZipFile(ipa1, 'r').extractall(path=ipa1_dir)
     ZipFile(ipa2, 'r').extractall(path=ipa2_dir)
     (ipa1_dirs, ipa1_files) = get_file_list(base_app_dir(ipa1_dir))
@@ -248,11 +258,11 @@ def ipadiff(self_base_path, ipa1, ipa2):
     clean_ipa1_files = remove_codesign_files(ipa1_files)
     clean_ipa2_files = remove_codesign_files(ipa2_files)
 
-    diff_dirs(ipa1, clean_ipa1_dirs, ipa2, clean_ipa2_dirs)
-    diff_files(ipa1, clean_ipa1_files, ipa2, clean_ipa2_files)
-
     clean_ipa1_files, watch_ipa1_files = remove_watch_files(clean_ipa1_files)
     clean_ipa2_files, watch_ipa2_files = remove_watch_files(clean_ipa2_files)
+
+    diff_dirs(ipa1, clean_ipa1_dirs, ipa2, clean_ipa2_dirs)
+    diff_files(ipa1, clean_ipa1_files, ipa2, clean_ipa2_files)
 
     clean_ipa1_files, plugin_ipa1_files = remove_plugin_files(clean_ipa1_files)
     clean_ipa2_files, plugin_ipa2_files = remove_plugin_files(clean_ipa2_files)
@@ -307,4 +317,8 @@ if len(sys.argv) != 3:
     print('Usage: ipadiff ipa1 ipa2')
     sys.exit(1)
 
-ipadiff(os.path.dirname(sys.argv[0]), sys.argv[1], sys.argv[2])
+my_path = os.path.abspath(os.path.expanduser(sys.argv[0]))
+print('path={}'.format(os.path.dirname(my_path)))
+
+
+ipadiff(os.path.dirname(my_path), sys.argv[1], sys.argv[2])

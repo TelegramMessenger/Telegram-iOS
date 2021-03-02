@@ -23,6 +23,7 @@ swift_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/AppBundle:AppBundle",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

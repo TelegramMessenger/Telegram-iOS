@@ -13,7 +13,7 @@ enum WallpaperOptionButtonValue {
 
 final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     private let backgroundNode: ASDisplayNode
-    private let checkNode: ModernCheckNode
+    private let checkNode: CheckNode
     private let colorNode: ASImageNode
     private let textNode: ASTextNode
     
@@ -45,7 +45,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         self.backgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
         self.backgroundNode.cornerRadius = 14.0
         
-        self.checkNode = ModernCheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, hasShadow: false))
+        self.checkNode = CheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false, borderWidth: 1.5))
         self.checkNode.isUserInteractionEnabled = false
         
         self.colorNode = ASImageNode()

@@ -303,6 +303,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
     private let emptyQueryDisposable = MetaDisposable()
     private let searchDisposable = MetaDisposable()
     
+    private let forceTheme: PresentationTheme?
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
@@ -310,16 +311,34 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
     
     private let presentationDataPromise: Promise<PresentationData>
     
-    public init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
+    private var _hasDim: Bool = false
+    override public var hasDim: Bool {
+        return _hasDim
+    }
+    
+    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.mode = mode
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
+        
+        self.forceTheme = forceTheme
+        if let forceTheme = self.forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
+        }
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.emptyQueryListNode = ListView()
+        self.emptyQueryListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         
@@ -328,7 +347,17 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
         
-        self.addSubnode(self.emptyQueryListNode)
+        if !filters.contains(where: { filter in
+            if case .excludeBots = filter {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            self.addSubnode(self.emptyQueryListNode)
+        } else {
+            self._hasDim = true
+        }
         self.addSubnode(self.listNode)
         
         let statePromise = ValuePromise(ChannelMembersSearchContainerState(), ignoreRepeated: true)
@@ -388,7 +417,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                         if case .searchAdmins = mode {
-                            return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: memberId, adminRights: TelegramChatAdminRights(flags: []), rank: nil)
+                            return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: memberId, adminRights: nil, rank: nil)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
                             }
@@ -622,9 +651,20 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
                 switch mode {
                     case .inviteActions, .banAndPromoteActions:
-                        foundContacts = context.account.postbox.searchContacts(query: query.lowercased())
-                        foundRemotePeers = .single(([], [])) |> then(searchPeers(account: context.account, query: query)
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                        if filters.contains(where: { filter in
+                            if case .excludeNonMembers = filter {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }) {
+                            foundContacts = .single(([], [:]))
+                            foundRemotePeers = .single(([], []))
+                        } else {
+                            foundContacts = context.account.postbox.searchContacts(query: query.lowercased())
+                            foundRemotePeers = .single(([], [])) |> then(searchPeers(account: context.account, query: query)
+                            |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                        }
                     case .searchMembers, .searchBanned, .searchKicked, .searchAdmins:
                         foundContacts = .single(([], [:]))
                         foundRemotePeers = .single(([], []))
@@ -635,12 +675,15 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     var entries: [ChannelMembersSearchEntry] = []
                     
                     var existingPeerIds = Set<PeerId>()
+                    var excludeBots = false
                     for filter in filters {
                         switch filter {
                             case let .exclude(ids):
                                 existingPeerIds = existingPeerIds.union(ids)
-                            case .disable:
+                            case .disable, .excludeNonMembers:
                                 break
+                            case .excludeBots:
+                                excludeBots = true
                         }
                     }
                     switch mode {
@@ -654,6 +697,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for participant in foundGroupMembers {
                         if participant.peer.isDeleted {
+                            continue
+                        }
+                        
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
                             continue
                         }
                         
@@ -791,6 +838,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     for participant in foundMembers {
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection
@@ -820,6 +871,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     for peer in foundContacts.0 {
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .contacts, dateTimeFormat: presentationData.dateTimeFormat))
@@ -829,6 +884,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.0 {
                         let peer = foundPeer.peer
+                        
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
@@ -838,6 +898,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.1 {
                         let peer = foundPeer.peer
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
@@ -886,7 +950,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                             peers[creator.id] = creator
                                         }
                                         peers[peer.id] = peer
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .groupSpecific), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
                                     case .member:
                                         var peers: [PeerId: Peer] = [:]
                                         peers[peer.id] = peer
@@ -923,12 +987,15 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     var entries: [ChannelMembersSearchEntry] = []
                     
                     var existingPeerIds = Set<PeerId>()
+                    var excludeBots = false
                     for filter in filters {
                         switch filter {
                         case let .exclude(ids):
                             existingPeerIds = existingPeerIds.union(ids)
-                        case .disable:
+                        case .disable, .excludeNonMembers:
                             break
+                        case .excludeBots:
+                            excludeBots = true
                         }
                     }
                     switch mode {
@@ -941,6 +1008,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     var index = 0
                     
                     for participant in foundGroupMembers {
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection
@@ -1071,6 +1142,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     for participant in foundMembers {
+                        if excludeBots, let user = participant.peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection
@@ -1101,6 +1176,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.0 {
                         let peer = foundPeer.peer
+                        
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
@@ -1110,6 +1190,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     for foundPeer in foundRemotePeers.1 {
                         let peer = foundPeer.peer
+                        
+                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
@@ -1157,8 +1242,14 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                var presentationData = presentationData
+                
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
+                
+                if let forceTheme = strongSelf.forceTheme {
+                    presentationData = presentationData.withUpdated(theme: forceTheme)
+                }
                 
                 strongSelf.presentationData = presentationData
                 
@@ -1292,5 +1383,15 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         if case .ended = recognizer.state {
             self.cancel?()
         }
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let result = self.view.hitTest(point, with: event) else {
+            return nil
+        }
+        if result === self.view {
+            return nil
+        }
+        return result
     }
 }

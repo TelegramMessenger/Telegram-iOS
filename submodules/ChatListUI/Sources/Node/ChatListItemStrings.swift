@@ -220,13 +220,13 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 let incoming = message.flags.contains(.Incoming)
                                 if let discardReason = discardReason {
                                     switch discardReason {
-                                        case .busy, .disconnect:
+                                        case .disconnect:
                                             if isVideo {
                                                 messageText = strings.Notification_VideoCallCanceled
                                             } else {
                                                 messageText = strings.Notification_CallCanceled
                                             }
-                                        case .missed:
+                                        case .missed, .busy:
                                             if incoming {
                                                 if isVideo {
                                                     messageText = strings.Notification_VideoCallMissed
@@ -262,12 +262,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 }
                             default:
                                 hideAuthor = true
-                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) {
+                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: true) {
                                     messageText = text
                                 }
                         }
                     case _ as TelegramMediaExpiredContent:
-                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) {
+                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: true) {
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:

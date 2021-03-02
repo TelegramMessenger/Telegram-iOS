@@ -12,6 +12,7 @@ import PresentationDataUtils
 import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ShimmerEffect
 
 public struct ItemListStickerPackItemEditing: Equatable {
     public var editable: Bool
@@ -149,6 +150,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     
     fileprivate let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
+    private var placeholderNode: StickerShimmerEffectNode?
     private let unreadNode: ASImageNode
     private let titleNode: TextNode
     private let statusNode: TextNode
@@ -160,6 +162,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     
     private var editableControlNode: ItemListEditableControlNode?
     private var reorderControlNode: ItemListEditableReorderControlNode?
+    
+    private let activateArea: AccessibilityAreaNode
     
     private let fetchDisposable = MetaDisposable()
     
@@ -200,6 +204,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.imageNode = TransformImageNode()
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.isUserInteractionEnabled = false
+        
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
@@ -229,15 +236,22 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        if let placeholderNode = self.placeholderNode {
+            self.addSubnode(placeholderNode)
+        }
         self.addSubnode(self.imageNode)
+        
         self.addSubnode(self.titleNode)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.unreadNode)
         self.addSubnode(self.installationActionImageNode)
         self.addSubnode(self.installationActionNode)
         self.addSubnode(self.selectionIconNode)
+        self.addSubnode(self.activateArea)
         
         self.installationActionNode.addTarget(self, action: #selector(self.installationActionPressed), forControlEvents: .touchUpInside)
         self.installationActionNode.highligthedChanged = { [weak self] highlighted in
@@ -251,10 +265,48 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 }
             }
         }
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            firstTime = false
+        }
     }
     
     deinit {
         self.fetchDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.allowsGroupOpacity = true
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                    placeholderNode?.allowsGroupOpacity = false
+                })
+            }
+        }
+    }
+    
+    private var absoluteLocation: (CGRect, CGSize)?
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteLocation = (rect, containerSize)
+        if let placeholderNode = placeholderNode {
+            placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
+        }
     }
     
     func asyncLayout() -> (_ item: ItemListStickerPackItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -397,14 +449,14 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         
                         if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource)
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource, nilIfEmpty: true)
                         }
                     case let .animated(resource):
                         imageSize = imageBoundingSize
                     
                         if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageBoundingSize, boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: resource, animated: true)
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: resource, animated: true, nilIfEmpty: true)
                         }
                 }
                 if fileUpdated, let resourceReference = resourceReference {
@@ -418,7 +470,16 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, neighbors)
-            
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = titleAttributedString?.string ?? ""
+                    strongSelf.activateArea.accessibilityValue = statusAttributedString?.string ?? ""
+                    if item.enabled {
+                        strongSelf.activateArea.accessibilityTraits = []
+                    } else {
+                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                    }
+                    
                     if fileUpdated {
                         strongSelf.currentThumbnailItem = thumbnailItem
                     }
@@ -610,6 +671,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     animationNode = AnimatedStickerNode()
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
+                                    
                                     animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource), width: 80, height: 80, mode: .cached)
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
@@ -618,6 +680,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 if let animationNode = strongSelf.animationNode {
                                     transition.updateFrame(node: animationNode, frame: imageFrame)
                                 }
+                        }
+                        
+                        if let placeholderNode = strongSelf.placeholderNode {
+                            placeholderNode.frame = imageFrame
+                            
+                            placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.packInfo.immediateThumbnailData, size: imageFrame.size, imageSize: CGSize(width: 100.0, height: 100.0))
                         }
                     }
                     

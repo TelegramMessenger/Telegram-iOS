@@ -11,9 +11,11 @@ import AccountContext
 
 public enum DeleteChatPeerAction {
     case delete
-    case clearHistory
+    case deleteAndLeave
+    case clearHistory(canClearCache: Bool)
     case clearCache
     case clearCacheSuggestion
+    case removeFromGroup
 }
 
 private let avatarFont = avatarPlaceholderFont(size: 26.0)
@@ -56,7 +58,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.theme = theme
         self.strings = strings
         
-        let peerFont = Font.regular(floor(theme.baseFontSize * 14.0 / 17.0))
+        let textFont = Font.regular(floor(theme.baseFontSize * 14.0 / 17.0))
+        let boldFont = Font.semibold(floor(theme.baseFontSize * 14.0 / 17.0))
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isAccessibilityElement = false
@@ -92,9 +95,9 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         case .clearCache, .clearCacheSuggestion:
             switch action {
             case .clearCache:
-                attributedText = NSAttributedString(string: strings.ClearCache_Description, font: peerFont, textColor: theme.primaryTextColor)
+                attributedText = NSAttributedString(string: strings.ClearCache_Description, font: textFont, textColor: theme.primaryTextColor)
             case .clearCacheSuggestion:
-                attributedText = NSAttributedString(string: strings.ClearCache_FreeSpaceDescription, font: peerFont, textColor: theme.primaryTextColor)
+                attributedText = NSAttributedString(string: strings.ClearCache_FreeSpaceDescription, font: textFont, textColor: theme.primaryTextColor)
             default:
                 break
             }
@@ -113,15 +116,39 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 } else {
                     text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
-            case .clearHistory:
-                text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+            case .deleteAndLeave:
+                if chatPeer.id == context.account.peerId {
+                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
+                } else if let chatPeer = chatPeer as? TelegramGroup {
+                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
+                } else if let chatPeer = chatPeer as? TelegramChannel {
+                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
+                } else if chatPeer is TelegramSecretChat {
+                    text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                } else {
+                    text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                }
+            case let .clearHistory(canClearCache):
+                if peer.id == context.account.peerId {
+                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
+                } else if peer is TelegramUser {
+                    text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                } else {
+                    text = strings.Conversation_DeleteAllMessagesInChat(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                }
+                
+                if canClearCache {
+                    text?.0 += "\n\n\(strings.Conversation_AlsoClearCacheTitle)"
+                }
+            case .removeFromGroup:
+                text = strings.VoiceChat_RemovePeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
             default:
                 break
             }
             if let text = text {
-                var formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: peerFont, textColor: theme.primaryTextColor))
+                var formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: textFont, textColor: theme.primaryTextColor))
                 for (_, range) in text.1 {
-                    formattedAttributedText.addAttribute(.font, value: peerFont, range: range)
+                    formattedAttributedText.addAttribute(.font, value: boldFont, range: range)
                 }
                 attributedText = formattedAttributedText
             }
@@ -135,7 +162,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedSize.width - 20.0, height: .greatestFiniteMagnitude))
         
         let topInset: CGFloat = 16.0
@@ -149,10 +176,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         let size = CGSize(width: constrainedSize.width, height: topInset + avatarSize + textSpacing + textSize.height + bottomInset)
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
         
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
-    }
-    
-    override func layout() {
-        super.layout()
     }
 }

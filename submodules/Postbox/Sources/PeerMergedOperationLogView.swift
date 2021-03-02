@@ -6,14 +6,14 @@ final class MutablePeerMergedOperationLogView {
     var tailIndex: Int32?
     let limit: Int
     
-    init(tag: PeerOperationLogTag, limit: Int, getOperations: (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], getTailIndex: (PeerOperationLogTag) -> Int32?) {
+    init(postbox: Postbox, tag: PeerOperationLogTag, limit: Int) {
         self.tag = tag
-        self.entries = getOperations(tag, 0, limit)
-        self.tailIndex = getTailIndex(tag)
+        self.entries = postbox.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: 0, limit: limit)
+        self.tailIndex = postbox.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
         self.limit = limit
     }
     
-    func replay(operations: [PeerMergedOperationLogOperation], getOperations: (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], getTailIndex: (PeerOperationLogTag) -> Int32?) -> Bool {
+    func replay(postbox: Postbox, operations: [PeerMergedOperationLogOperation]) -> Bool {
         var updated = false
         var invalidatedTail = false
         
@@ -65,7 +65,7 @@ final class MutablePeerMergedOperationLogView {
     
         if updated {
             if invalidatedTail {
-                self.tailIndex = getTailIndex(self.tag)
+                self.tailIndex = postbox.peerMergedOperationLogIndexTable.tailIndex(tag: self.tag)
             }
             if self.entries.count < self.limit {
                 if let tailIndex = self.tailIndex {
@@ -74,7 +74,7 @@ final class MutablePeerMergedOperationLogView {
                         if !self.entries.isEmpty {
                             fromIndex = self.entries.last!.mergedIndex + 1
                         }
-                        for entry in getOperations(self.tag, fromIndex, self.limit - self.entries.count) {
+                        for entry in postbox.peerOperationLogTable.getMergedEntries(tag: self.tag, fromIndex: fromIndex, limit: self.limit - self.entries.count) {
                             self.entries.append(entry)
                         }
                         for i in 0 ..< self.entries.count {

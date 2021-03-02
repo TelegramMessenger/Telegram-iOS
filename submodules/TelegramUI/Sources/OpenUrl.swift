@@ -12,10 +12,6 @@ import AccountContext
 import UrlEscaping
 import PassportUI
 import UrlHandling
-#if ENABLE_WALLET
-import WalletUI
-import WalletUrl
-#endif
 import OpenInExternalAppUI
 
 public struct ParsedSecureIdUrl {
@@ -142,18 +138,6 @@ func formattedConfirmationCode(_ code: Int) -> String {
 }
 
 func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
-    #if ENABLE_WALLET
-    if url.hasPrefix("ton://") {
-        if let url = URL(string: url), let parsedUrl = parseWalletUrl(url) {
-            context.sharedContext.openWallet(context: context, walletContext: .send(address: parsedUrl.address, amount: parsedUrl.amount, comment: parsedUrl.comment)) { c in
-                navigationController?.pushViewController(c)
-            }
-        }
-        
-        return
-    }
-    #endif
-    
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         context.sharedContext.applicationBindings.openUrl(url)
         return
@@ -252,18 +236,21 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 if parsedUrl.host == "localpeer" {
                      if let components = URLComponents(string: "/?" + query) {
                         var peerId: PeerId?
+                        var accountId: Int64?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
                                     if queryItem.name == "id", let intValue = Int64(value) {
                                         peerId = PeerId(intValue)
+                                    } else if queryItem.name == "accountId", let intValue = Int64(value) {
+                                        accountId = intValue
                                     }
                                 }
                             }
                         }
-                        if let peerId = peerId, let navigationController = navigationController {
+                        if let peerId = peerId, let accountId = accountId {
                             context.sharedContext.applicationBindings.dismissNativeController()
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                            context.sharedContext.navigateToChat(accountId: AccountRecordId(rawValue: accountId), peerId: peerId, messageId: nil)
                         }
                     }
                 } else if parsedUrl.host == "join" {
@@ -686,15 +673,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
-                let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
+                let settings = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings, ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData())
                 |> take(1)
-                |> map { sharedData -> WebBrowserSettings in
-                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings {
-                         return current
-                     } else {
-                         return WebBrowserSettings.defaultSettings
-                     }
-                 }
+                |> map { sharedData, accessChallengeData -> WebBrowserSettings in
+                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? PresentationPasscodeSettings.defaultSettings
+                    if accessChallengeData.data.isLockable {
+                        if passcodeSettings.autolockTimeout != nil {
+                            return WebBrowserSettings(defaultWebBrowser: "Safari")
+                        }
+                    }
+                    
+                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings {
+                        return current   
+                    } else {
+                        return WebBrowserSettings.defaultSettings
+                    }
+                }
 
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in

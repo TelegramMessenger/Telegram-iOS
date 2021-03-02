@@ -14,6 +14,14 @@ public struct TelegramPeerPhoto {
     public let index: Int
     public let totalCount: Int
     public let messageId: MessageId?
+    public init(image: TelegramMediaImage, reference: TelegramMediaImageReference?, date: Int32, index: Int, totalCount: Int, messageId: MessageId?) {
+        self.image = image
+        self.reference = reference
+        self.date = date
+        self.index = index
+        self.totalCount = totalCount
+        self.messageId = messageId
+    }
 }
 
 public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {

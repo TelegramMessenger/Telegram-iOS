@@ -652,7 +652,15 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     } else {
         aboutTitle = presentationData.strings.Profile_About
     }
-    if user.isScam {
+    if user.isFake {
+        let aboutValue: String
+        if let _ = user.botInfo {
+            aboutValue = presentationData.strings.UserInfo_FakeBotWarning
+        } else {
+            aboutValue = presentationData.strings.UserInfo_FakeUserWarning
+        }
+        entries.append(UserInfoEntry.about(presentationData.theme, peer, aboutTitle, aboutValue))
+    } else if user.isScam {
         let aboutValue: String
         if let _ = user.botInfo {
             aboutValue = presentationData.strings.UserInfo_ScamBotWarning
@@ -872,24 +880,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 return
             }
-            
-            let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
-            if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                if currentPeerId == peer.id {
-                    context.sharedContext.navigateToCurrentCall()
-                } else {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                        return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
-                        } |> deliverOnMainQueue).start(next: { peer, current in
-                            if let peer = peer, let current = current {
-                                presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    let _ = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
-                                })]), nil)
-                            }
-                        })
-                }
-            }
+                
+            context.requestCall(peerId: peer.id, isVideo: isVideo, completion: {})
         })
     }
     
@@ -1025,7 +1017,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                                     let _ = removePeerChat(account: context.account, peerId: peerId, reportChatSpam: reportSpam).start()
                                     popToRootImpl?()
                                 } else if reportSpam {
-                                    let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam).start()
+                                    let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam, message: "").start()
                                 }
                                 
                                 deleteSendMessageIntents(peerId: peerId)
@@ -1184,11 +1176,11 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 openChatImpl?()
             })
     }, report: {
-        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
+        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), passthrough: false, present: { c, a in
             presentControllerImpl?(c, a)
         }, push: { c in
             pushControllerImpl?(c)
-        }, completion: { _ in }), nil)
+        }, completion: { _, _ in }), nil)
     })
         
     let deviceContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> = peerView.get()

@@ -1238,7 +1238,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         if !self.shouldStayHiddenUntilConnection || self.containerNode.alpha > 0.0 {
             self.containerNode.layer.allowsGroupOpacity = true
             self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
-                self?.containerNode.layer.allowsGroupOpacity = true
+                self?.containerNode.layer.allowsGroupOpacity = false
             })
             self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
                 completion()
@@ -2022,7 +2022,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     }
 }
 
-private final class CallPanGestureRecognizer: UIPanGestureRecognizer {
+final class CallPanGestureRecognizer: UIPanGestureRecognizer {
     private(set) var firstLocation: CGPoint?
     
     public var shouldBegin: ((CGPoint) -> Bool)?
