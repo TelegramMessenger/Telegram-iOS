@@ -833,7 +833,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired externalDecodeOgg:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull))externalDecodeOgg {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired externalDecodeOgg:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull))externalDecodeOgg disableIncomingChannels:(bool)disableIncomingChannels {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -891,7 +891,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                 }
                 participantDescriptionsRequired(mappedSources);
             },
-            .externalDecodeOgg = externalDecodeOggFunction
+            .externalDecodeOgg = externalDecodeOggFunction,
+            .disableIncomingChannels = disableIncomingChannels
         }));
     }
     return self;

@@ -190,7 +190,8 @@ public final class OngoingGroupCallContext {
                     } else {
                         return resultData
                     }
-                }
+                },
+                disableIncomingChannels: audioStreamData?.account.testingEnvironment ?? false
             )
             
             let queue = self.queue

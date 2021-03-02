@@ -7748,12 +7748,13 @@ public extension Api {
                     })
                 }
             
-                public static func toggleGroupCallRecord(call: Api.InputGroupCall, start: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func toggleGroupCallRecord(flags: Int32, call: Api.InputGroupCall, title: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1990430344)
+                    buffer.appendInt32(-1070962985)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
-                    start.serialize(buffer, true)
-                    return (FunctionDescription(name: "phone.toggleGroupCallRecord", parameters: [("call", call), ("start", start)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "phone.toggleGroupCallRecord", parameters: [("flags", flags), ("call", call), ("title", title)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

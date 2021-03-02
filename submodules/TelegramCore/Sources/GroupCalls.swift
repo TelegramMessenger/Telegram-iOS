@@ -1463,7 +1463,11 @@ public final class GroupCallParticipantsContext {
     }
     
     public func updateShouldBeRecording(_ shouldBeRecording: Bool) {
-        self.updateShouldBeRecordingDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallRecord(call: .inputGroupCall(id: self.id, accessHash: self.accessHash), start: shouldBeRecording ? .boolTrue : .boolFalse))
+        var flags: Int32 = 0
+        if shouldBeRecording {
+            flags |= 1 << 0
+        }
+        self.updateShouldBeRecordingDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallRecord(flags: flags, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), title: nil))
         |> deliverOnMainQueue).start(next: { [weak self] updates in
             guard let strongSelf = self else {
                 return
