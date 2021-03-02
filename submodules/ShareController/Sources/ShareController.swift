@@ -39,6 +39,13 @@ public enum ShareControllerExternalStatus {
     case done
 }
 
+public struct ShareControllerSegmentedValue {
+    let title: String
+    let subject: ShareControllerSubject
+    let actionTitle: String
+    let formatSendTitle: (Int) -> String
+}
+
 public enum ShareControllerSubject {
     case url(String)
     case text(String)
@@ -293,8 +300,7 @@ public final class ShareController: ViewController {
     private let presetText: String?
     private let switchableAccounts: [AccountWithInfo]
     private let immediatePeerId: PeerId?
-    private let openStats: (() -> Void)?
-    private let shares: Int?
+    private let segmentedValues: [ShareControllerSegmentedValue]?
     private let fromForeignApp: Bool
     
     private let peers = Promise<([(RenderedPeer, PeerPresence?)], Peer)>()
@@ -314,11 +320,11 @@ public final class ShareController: ViewController {
         }
     }
     
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, fromForeignApp: Bool = false, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
-        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, openStats: openStats, fromForeignApp: fromForeignApp, shares: shares, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forcedTheme: forcedTheme, forcedActionTitle: forcedActionTitle)
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
+        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, fromForeignApp: fromForeignApp, segmentedValues: segmentedValues, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forcedTheme: forcedTheme, forcedActionTitle: forcedActionTitle)
     }
     
-    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, fromForeignApp: Bool = false, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
+    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
         self.sharedContext = sharedContext
         self.currentContext = currentContext
         self.currentAccount = currentContext.account
@@ -328,9 +334,8 @@ public final class ShareController: ViewController {
         self.immediateExternalShare = immediateExternalShare
         self.switchableAccounts = switchableAccounts
         self.immediatePeerId = immediatePeerId
-        self.openStats = openStats
         self.fromForeignApp = fromForeignApp
-        self.shares = shares
+        self.segmentedValues = segmentedValues
         self.forcedTheme = forcedTheme
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
@@ -468,7 +473,7 @@ public final class ShareController: ViewController {
                 return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, shares: self.shares, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme)
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme, segmentedValues: self.segmentedValues)
         self.controllerNode.completed = self.completed
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -769,11 +774,6 @@ public final class ShareController: ViewController {
             ])
             strongSelf.view.endEditing(true)
             strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        }
-        if case .messages = self.subject, let openStats = self.openStats {
-            self.controllerNode.openStats = {
-                openStats()
-            }
         }
         self.displayNodeDidLoad()
         

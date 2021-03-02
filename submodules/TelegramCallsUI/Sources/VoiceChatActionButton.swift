@@ -254,7 +254,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             case .connecting:
                 break
         }
-        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, color: iconColor), animated: true)
+        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, filled: true, color: iconColor), animated: true)
     }
     
     func update(snap: Bool, animated: Bool) {

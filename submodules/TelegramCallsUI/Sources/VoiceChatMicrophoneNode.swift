@@ -5,11 +5,13 @@ import Display
 
 private final class VoiceChatMicrophoneNodeDrawingState: NSObject {
     let color: UIColor
+    let filled: Bool
     let transition: CGFloat
     let reverse: Bool
     
-    init(color: UIColor, transition: CGFloat, reverse: Bool) {
+    init(color: UIColor, filled: Bool, transition: CGFloat, reverse: Bool) {
         self.color = color
+        self.filled = filled
         self.transition = transition
         self.reverse = reverse
         
@@ -21,9 +23,11 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
     class State: Equatable {
         let muted: Bool
         let color: UIColor
+        let filled: Bool
         
-        init(muted: Bool, color: UIColor) {
+        init(muted: Bool, filled: Bool, color: UIColor) {
             self.muted = muted
+            self.filled = filled
             self.color = color
         }
         
@@ -32,6 +36,9 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
                 return false
             }
             if lhs.color.argb != rhs.color.argb {
+                return false
+            }
+            if lhs.filled != rhs.filled {
                 return false
             }
             return true
@@ -53,7 +60,7 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
     private var animator: ConstantDisplayLinkAnimator?
     
     private var hasState = false
-    private var state: State = State(muted: false, color: .black)
+    private var state: State = State(muted: false, filled: false, color: .black)
     private var transitionContext: TransitionContext?
     
     override init() {
@@ -133,7 +140,7 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             }
         }
         
-        return VoiceChatMicrophoneNodeDrawingState(color: color, transition: transitionFraction, reverse: reverse)
+        return VoiceChatMicrophoneNodeDrawingState(color: color, filled: self.state.filled, transition: transitionFraction, reverse: reverse)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -167,7 +174,7 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             context.translateBy(x: 18.0, y: 18.0)
             let _ = try? drawSvgPath(context, path: "M-0.004000000189989805,-9.86400032043457 C2.2960000038146973,-9.86400032043457 4.165999889373779,-8.053999900817871 4.25600004196167,-5.77400016784668 C4.25600004196167,-5.77400016784668 4.265999794006348,-5.604000091552734 4.265999794006348,-5.604000091552734 C4.265999794006348,-5.604000091552734 4.265999794006348,-0.8040000200271606 4.265999794006348,-0.8040000200271606 C4.265999794006348,1.555999994277954 2.3559999465942383,3.4660000801086426 -0.004000000189989805,3.4660000801086426 C-2.2939999103546143,3.4660000801086426 -4.164000034332275,1.6460000276565552 -4.263999938964844,-0.6240000128746033 C-4.263999938964844,-0.6240000128746033 -4.263999938964844,-0.8040000200271606 -4.263999938964844,-0.8040000200271606 C-4.263999938964844,-0.8040000200271606 -4.263999938964844,-5.604000091552734 -4.263999938964844,-5.604000091552734 C-4.263999938964844,-7.953999996185303 -2.3540000915527344,-9.86400032043457 -0.004000000189989805,-9.86400032043457 Z ")
         }
-        if bounds.width > 30.0 {
+        if bounds.width > 30.0 && !parameters.filled {
             context.setBlendMode(.clear)
         
             let _ = try? drawSvgPath(context, path: "M0.004000000189989805,-8.53600025177002 C-1.565999984741211,-8.53600025177002 -2.8459999561309814,-7.306000232696533 -2.936000108718872,-5.75600004196167 C-2.936000108718872,-5.75600004196167 -2.936000108718872,-5.5960001945495605 -2.936000108718872,-5.5960001945495605 C-2.936000108718872,-5.5960001945495605 -2.936000108718872,-0.7960000038146973 -2.936000108718872,-0.7960000038146973 C-2.936000108718872,0.8240000009536743 -1.6260000467300415,2.134000062942505 0.004000000189989805,2.134000062942505 C1.5740000009536743,2.134000062942505 2.8540000915527344,0.9039999842643738 2.934000015258789,-0.6460000276565552 C2.934000015258789,-0.6460000276565552 2.934000015258789,-0.7960000038146973 2.934000015258789,-0.7960000038146973 C2.934000015258789,-0.7960000038146973 2.934000015258789,-5.5960001945495605 2.934000015258789,-5.5960001945495605 C2.934000015258789,-7.22599983215332 1.6239999532699585,-8.53600025177002 0.004000000189989805,-8.53600025177002 Z ")
