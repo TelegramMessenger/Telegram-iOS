@@ -325,7 +325,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?)) -> Signal<Any, MTRpcError> {
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true) -> Signal<Any, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -340,6 +340,12 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.dependsOnPasswordEntry = false
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
                 return true
             }
             

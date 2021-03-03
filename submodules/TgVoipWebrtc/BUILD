@@ -51,6 +51,8 @@ objc_library(
         "//submodules/MtProtoKit:MtProtoKit",
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
+        "//third-party/ogg:ogg",
+        "//third-party/opusfile:opusfile",
     ],
     sdk_frameworks = [
         "Foundation",

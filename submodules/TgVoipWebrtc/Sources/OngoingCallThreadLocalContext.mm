@@ -833,13 +833,26 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired externalDecodeOgg:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull))externalDecodeOgg disableIncomingChannels:(bool)disableIncomingChannels {
     self = [super init];
     if (self != nil) {
         _queue = queue;
         
         _networkStateUpdated = [networkStateUpdated copy];
         _videoCapturer = videoCapturer;
+        
+        std::function<void(std::vector<uint8_t> &, std::vector<uint8_t> const &)> externalDecodeOggFunction;
+        if (externalDecodeOgg) {
+            externalDecodeOggFunction = [externalDecodeOgg](std::vector<uint8_t> &outPcm, std::vector<uint8_t> sourceData) {
+                @autoreleasepool {
+                    NSData *result = externalDecodeOgg([NSData dataWithBytes:sourceData.data() length:sourceData.size()]);
+                    if (result) {
+                        outPcm.resize(result.length);
+                        [result getBytes:outPcm.data() length:result.length];
+                    }
+                }
+            };
+        }
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
@@ -877,7 +890,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     [mappedSources addObject:@(it)];
                 }
                 participantDescriptionsRequired(mappedSources);
-            }
+            },
+            .externalDecodeOgg = externalDecodeOggFunction,
+            .disableIncomingChannels = disableIncomingChannels
         }));
     }
     return self;
@@ -1398,20 +1413,21 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
-- (void)addBroadcastPackets:(NSArray<OngoingGroupCallBroadcastPacket *> * _Nonnull)packets {
+- (void)addBroadcastParts:(NSArray<OngoingGroupCallBroadcastPart *> * _Nonnull)parts {
     if (!_instance) {
         return;
     }
     
-    std::vector<tgcalls::BroadcastPacket> parsedPackets;
-    for (OngoingGroupCallBroadcastPacket *packet in packets) {
-        tgcalls::BroadcastPacket parsedPacket;
-        parsedPacket.numSamples = packet.numSamples;
-        parsedPacket.data.resize(packet.data.length);
-        [packet.data getBytes:parsedPacket.data.data() length:packet.data.length];
-        parsedPackets.push_back(std::move(parsedPacket));
+    std::vector<tgcalls::BroadcastPart> parsedParts;
+    for (OngoingGroupCallBroadcastPart *part in parts) {
+        tgcalls::BroadcastPart parsedPart;
+        parsedPart.timestamp = part.timestamp;
+        parsedPart.oggData.resize(part.oggData.length);
+        [part.oggData getBytes:parsedPart.oggData.data() length:part.oggData.length];
+        
+        parsedParts.push_back(std::move(parsedPart));
     }
-    ((tgcalls::GroupInstanceCustomImpl *)(_instance.get()))->addBroadcastPackets(std::move(parsedPackets));
+    ((tgcalls::GroupInstanceCustomImpl *)(_instance.get()))->addBroadcastParts(std::move(parsedParts));
 }
 
 @end
@@ -1429,13 +1445,13 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 @end
 
-@implementation OngoingGroupCallBroadcastPacket
+@implementation OngoingGroupCallBroadcastPart
 
-- (instancetype _Nonnull)initWithNumSamples:(int)numSamples data:(NSData * _Nonnull)data {
+- (instancetype _Nonnull)initWithTimestamp:(int32_t)timestamp oggData:(NSData * _Nonnull)oggData {
     self = [super init];
     if (self != nil) {
-        _numSamples = numSamples;
-        _data = data;
+        _timestamp = timestamp;
+        _oggData = oggData;
     }
     return self;
 }

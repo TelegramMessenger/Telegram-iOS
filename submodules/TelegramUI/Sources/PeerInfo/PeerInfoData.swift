@@ -993,9 +993,16 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var canViewStats = false
         var hasDiscussion = false
         var hasVoiceChat = false
+        var displayMore = true
         var canStartVoiceChat = false
         if let cachedChannelData = cachedData as? CachedChannelData {
             canViewStats = cachedChannelData.flags.contains(.canViewStats)
+        }
+        if channel.flags.contains(.hasVoiceChat) {
+            hasVoiceChat = true
+        }
+        if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+            displayMore = true
         }
         switch channel.info {
         case let .broadcast(info):
@@ -1037,7 +1044,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if displayLeave {
             result.append(.leave)
         }
-        var displayMore = true
         if displayLeave && !channel.flags.contains(.isCreator) {
             if let _ = channel.adminRights {
                 displayMore = false

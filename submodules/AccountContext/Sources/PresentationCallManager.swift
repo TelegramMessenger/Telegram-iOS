@@ -177,19 +177,25 @@ public struct PresentationGroupCallState: Equatable {
     public var adminIds: Set<PeerId>
     public var muteState: GroupCallParticipantsContext.Participant.MuteState?
     public var defaultParticipantMuteState: DefaultParticipantMuteState?
+    public var recordingStartTimestamp: Int32?
+    public var title: String?
     
     public init(
         networkState: NetworkState,
         canManageCall: Bool,
         adminIds: Set<PeerId>,
         muteState: GroupCallParticipantsContext.Participant.MuteState?,
-        defaultParticipantMuteState: DefaultParticipantMuteState?
+        defaultParticipantMuteState: DefaultParticipantMuteState?,
+        recordingStartTimestamp: Int32?,
+        title: String?
     ) {
         self.networkState = networkState
         self.canManageCall = canManageCall
         self.adminIds = adminIds
         self.muteState = muteState
         self.defaultParticipantMuteState = defaultParticipantMuteState
+        self.recordingStartTimestamp = recordingStartTimestamp
+        self.title = title
     }
 }
 
@@ -279,6 +285,7 @@ public protocol PresentationGroupCall: class {
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }
+    var myPeerId: PeerId { get }
     
     var isVideo: Bool { get }
     
@@ -306,6 +313,9 @@ public protocol PresentationGroupCall: class {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
+    func setShouldBeRecording(_ shouldBeRecording: Bool)
+    
+    func updateTitle(_ title: String)
     
     func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)
@@ -323,5 +333,5 @@ public protocol PresentationCallManager: class {
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
+    func joinGroupCall(context: AccountContext, peerId: PeerId, joinAsPeerId: PeerId?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
 }

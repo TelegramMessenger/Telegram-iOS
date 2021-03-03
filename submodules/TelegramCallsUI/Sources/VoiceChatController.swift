@@ -373,6 +373,8 @@ public final class VoiceChatController: ViewController {
             }
             
             var peer: Peer
+            var about: String?
+            var myPeerId: PeerId
             var ssrc: UInt32
             var presence: TelegramUserPresence?
             var activityTimestamp: Int32
@@ -388,6 +390,12 @@ public final class VoiceChatController: ViewController {
             
             static func ==(lhs: PeerEntry, rhs: PeerEntry) -> Bool {
                 if !lhs.peer.isEqual(rhs.peer) {
+                    return false
+                }
+                if lhs.about != rhs.about {
+                    return false
+                }
+                if lhs.myPeerId != rhs.myPeerId {
                     return false
                 }
                 if lhs.ssrc != rhs.ssrc {
@@ -511,10 +519,14 @@ public final class VoiceChatController: ViewController {
                         let icon: VoiceChatParticipantItem.Icon
                         switch peerEntry.state {
                         case .listening:
+                            var isAbout = false
                             if let muteState = peerEntry.muteState, muteState.mutedByYou {
                                 text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, .destructive)
+                            } else if let about = peerEntry.about, !about.isEmpty {
+                                text = .text(about, .generic)
+                                isAbout = true
                             } else {
-                                text = .text(presentationData.strings.VoiceChat_StatusListening, .accent)
+                                text = .text(presentationData.strings.VoiceChat_StatusListening, .generic)
                             }
                             let microphoneColor: UIColor
                             if let muteState = peerEntry.muteState, !muteState.canUnmute || muteState.mutedByYou {
@@ -543,7 +555,7 @@ public final class VoiceChatController: ViewController {
                         
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: peer.id != context.account.peerId || peerEntry.canManageCall, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: peer.id != peerEntry.myPeerId || peerEntry.canManageCall, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
                             return interaction.getPeerVideo(peerEntry.ssrc)
                         }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                             interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
@@ -605,13 +617,13 @@ public final class VoiceChatController: ViewController {
         
         private var peer: Peer?
         private var currentTitle: String = ""
+        private var currentTitleIsCustom = false
         private var currentSubtitle: String = ""
         private var currentCallMembers: ([GroupCallParticipantsContext.Participant], String?)?
         private var currentInvitedPeers: [Peer]?
         private var currentSpeakingPeers: Set<PeerId>?
         private var currentContentOffset: CGFloat?
         private var ignoreScrolling = false
-        private var accountPeer: Peer?
         private var currentAudioButtonColor: UIColor?
         
         private var currentEntries: [ListEntry] = []
@@ -756,9 +768,26 @@ public final class VoiceChatController: ViewController {
                 statePromise.set(stateValue.modify { f($0) })
             }
             
-            self.itemInteraction = Interaction(
-                updateIsMuted: { [weak self] peerId, isMuted in
-                    let _ = self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
+            let context = self.context
+            let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(context.account.peerId)
+            |> map { peer in
+                return [FoundPeer(peer: peer, subscribers: nil)]
+            }
+            
+            let displayAsPeers: Signal<[FoundPeer], NoError> = currentAccountPeer
+            |> then(
+                combineLatest(currentAccountPeer, groupCallDisplayAsAvailablePeers(network: context.account.network, postbox: context.account.postbox))
+                |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
+                    var result = currentAccountPeer
+                    result.append(contentsOf: availablePeers)
+                    return result
+                }
+            )
+            let displayAsPeersPromise = Promise<[FoundPeer]>([])
+            displayAsPeersPromise.set(displayAsPeers)
+            
+            self.itemInteraction = Interaction(updateIsMuted: { [weak self] peerId, isMuted in
+                let _ = self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
             }, openPeer: { [weak self] peerId in
                 if let strongSelf = self, let navigationController = strongSelf.controller?.parentNavigationController {
                     /*let context = strongSelf.context
@@ -827,7 +856,7 @@ public final class VoiceChatController: ViewController {
                         }
                         
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        if peer.id == strongSelf.context.account.peerId {
+                        if peer.id == strongSelf.call.myPeerId {
                             return
                         }
                         if let participant = participant {
@@ -1050,7 +1079,7 @@ public final class VoiceChatController: ViewController {
                         f(.default)
                     })))*/
                     
-                    if peer.id != strongSelf.context.account.peerId {
+                    if peer.id != strongSelf.call.myPeerId {
                         if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
                             if callState.adminIds.contains(peer.id) {
                                 if let _ = muteState {
@@ -1239,8 +1268,6 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.rightBorderNode)
             self.contentContainer.addSubnode(self.bottomPanelNode)
             
-            
-            let context = self.context
             let invitedPeers: Signal<[Peer], NoError> = self.call.invitedPeers
             |> mapToSignal { ids -> Signal<[Peer], NoError> in
                 return context.account.postbox.transaction { transaction -> [Peer] in
@@ -1308,18 +1335,26 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.peerViewDisposable = (combineLatest(self.context.account.viewTracker.peerView(self.call.peerId), self.context.account.postbox.loadedPeerWithId(self.context.account.peerId))
-            |> deliverOnMainQueue).start(next: { [weak self] view, accountPeer in
+            
+            let title: Signal<String?, NoError> = self.call.state
+            |> map { state -> String? in
+                return state.title
+            }
+            self.peerViewDisposable = combineLatest(queue: Queue.mainQueue(), self.context.account.viewTracker.peerView(self.call.peerId), title).start(next: { [weak self] view, title in
                 guard let strongSelf = self else {
                     return
                 }
                     
                 if let peer = peerViewMainPeer(view) {
                     strongSelf.peer = peer
-                    strongSelf.currentTitle = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                    strongSelf.currentTitleIsCustom = title != nil
+                    strongSelf.currentTitle = title ?? peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                    
+                    if strongSelf.didSetDataReady {
+                        strongSelf.updateTitle(transition: .immediate)
+                    }
                 }
                 if !strongSelf.didSetDataReady {
-                    strongSelf.accountPeer = accountPeer
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
                     
                     strongSelf.didSetDataReady = true
@@ -1349,7 +1384,7 @@ public final class VoiceChatController: ViewController {
                 }
                 var levels = levels
                 if strongSelf.effectiveMuteState != nil {
-                    levels = levels.filter { $0.0 != strongSelf.context.account.peerId }
+                    levels = levels.filter { $0.0 != strongSelf.call.myPeerId }
                 }
                 
                 var maxLevelWithVideo: (PeerId, UInt32, Float)?
@@ -1402,28 +1437,39 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 
+                let myPeerId = strongSelf.call.myPeerId
+                
                 var mainItemsImpl: (() -> Signal<[ContextMenuItem], NoError>)?
                 
                 let displayAsItems: () -> Signal<[ContextMenuItem], NoError> = {
-                    var items: [ContextMenuItem] = []
-                    items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: theme.actionSheet.primaryTextColor)
-                    }), true))
-                    
-                    if let accountPeer = strongSelf.accountPeer {
-                        items.append(.action(ContextMenuActionItem(text: accountPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: .secondLineWithValue(strongSelf.presentationData.strings.VoiceChat_PersonalAccount), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: accountPeer, size: avatarSize)), action: { _, f in
-                            f(.default)
-                        })))
-                        items.append(.separator)
-                    }
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { (c, _) in
-                        if let mainItems = mainItemsImpl {
-                            c.setItems(mainItems())
+                    return displayAsPeersPromise.get()
+                    |> map { peers -> [ContextMenuItem] in
+                        var items: [ContextMenuItem] = []
+                        items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: theme.actionSheet.primaryTextColor)
+                        }), true))
+                        
+                        for peer in peers.prefix(5) {
+                            var subtitle: String?
+                            if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
+                                subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
+                            } else if let subscribers = peer.subscribers {
+                                subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                            }
+                            items.append(.action(ContextMenuActionItem(text: peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { _, f in
+                                f(.default)
+                            })))
                         }
-                    })))
-                    return .single(items)
+                        items.append(.separator)
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { (c, _) in
+                            if let mainItems = mainItemsImpl {
+                                c.setItems(mainItems())
+                            }
+                        })))
+                        return items
+                    }
                 }
    
                 let permissionItems: () -> Signal<[ContextMenuItem], NoError> = {
@@ -1472,115 +1518,139 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 mainItemsImpl = {
-                    var items: [ContextMenuItem] = []
-
-                    if let accountPeer = strongSelf.accountPeer {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(accountPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: accountPeer, size: avatarSize)), action: { c, _ in
-                            c.setItems(displayAsItems())
-                        })))
-                        items.append(.separator)
-                    }
-                    
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditTitle, icon: { theme -> UIImage? in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
+                    return displayAsPeersPromise.get()
+                    |> map { peers -> [ContextMenuItem] in
+                        var items: [ContextMenuItem] = []
                         
-                        let controller = voiceChatTitleEditController(sharedContext: context.sharedContext, account: context.account, forceTheme: self?.darkTheme, title: nil, apply: { title in
-                            
-                        })
-                        self?.controller?.present(controller, in: .window(.root))
-                    })))
-                    
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditPermissions, icon: { theme -> UIImage? in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { c, _ in
-                        c.setItems(permissionItems())
-                    })))
-                    
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-                      
-                        guard let strongSelf = self else {
-                            return
+                        for peer in peers {
+                            if peer.peer.id == myPeerId {
+                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { c, _ in
+                                    c.setItems(displayAsItems())
+                                })))
+                                items.append(.separator)
+                                break
+                            }
                         }
                         
-                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
-                            if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
-                                return "https://t.me/\(addressName)"
-                            } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
-                                if let cachedData = cachedData as? CachedChannelData {
-                                    return cachedData.exportedInvitation?.link
-                                } else if let cachedData = cachedData as? CachedGroupData {
-                                    return cachedData.exportedInvitation?.link
-                                }
-                            }
-                            return nil
-                        } |> deliverOnMainQueue).start(next: { link in
-                            if let link = link {
-                                if let strongSelf = self {
-                                    let formatSendTitle: (String) -> String = { string in
-                                        var string = string
-                                        if string.contains("[") && string.contains("]") {
-                                            if let startIndex = string.firstIndex(of: "["), let endIndex = string.firstIndex(of: "]") {
-                                                string.removeSubrange(startIndex ... endIndex)
-                                            }
-                                        } else {
-                                            string = string.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
-                                        }
-                                        return string
-                                    }
-                                    
-                                    let segmentedValues = [ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(link), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
-                                        return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
-                                    }), ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(link), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
-                                        return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
-                                    })]
-                                    let shareController = ShareController(context: strongSelf.context, subject: .url(link), segmentedValues: segmentedValues, forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_CopyInviteLink)
-                                    strongSelf.controller?.present(shareController, in: .window(.root))
-                                }
-                            }
-                        })
-                    })))
-                    
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StartRecording, icon: { theme -> UIImage? in
-                        return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, f in
-                        f(.dismissWithoutContent)
-                    })))
-                                  
-                    if let callState = strongSelf.callState, callState.canManageCall {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
-                        }, action: { _, f in
-                            f(.dismissWithoutContent)
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditTitle, icon: { theme -> UIImage? in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
                             
+                            let controller = voiceChatTitleEditController(sharedContext: context.sharedContext, account: context.account, forceTheme: self?.darkTheme, title: self?.callState?.title, apply: { title in
+                                self?.call.updateTitle(title ?? "")
+                            })
+                            self?.controller?.present(controller, in: .window(.root))
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditPermissions, icon: { theme -> UIImage? in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { c, _ in
+                            c.setItems(permissionItems())
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                          
                             guard let strongSelf = self else {
                                 return
                             }
                             
-                            let action: () -> Void = {
+                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
+                                if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
+                                    return "https://t.me/\(addressName)"
+                                } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
+                                    if let cachedData = cachedData as? CachedChannelData {
+                                        return cachedData.exportedInvitation?.link
+                                    } else if let cachedData = cachedData as? CachedGroupData {
+                                        return cachedData.exportedInvitation?.link
+                                    }
+                                }
+                                return nil
+                            } |> deliverOnMainQueue).start(next: { link in
+                                if let link = link {
+                                    if let strongSelf = self {
+                                        let formatSendTitle: (String) -> String = { string in
+                                            var string = string
+                                            if string.contains("[") && string.contains("]") {
+                                                if let startIndex = string.firstIndex(of: "["), let endIndex = string.firstIndex(of: "]") {
+                                                    string.removeSubrange(startIndex ... endIndex)
+                                                }
+                                            } else {
+                                                string = string.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
+                                            }
+                                            return string
+                                        }
+                                        
+                                        let segmentedValues = [ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(link), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
+                                            return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
+                                        }), ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(link), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
+                                            return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
+                                        })]
+                                        let shareController = ShareController(context: strongSelf.context, subject: .url(link), segmentedValues: segmentedValues, forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_CopyInviteLink)
+                                        strongSelf.controller?.present(shareController, in: .window(.root))
+                                    }
+                                }
+                            })
+                        })))
+                        
+                        if let recordingStartTimestamp = strongSelf.callState?.recordingStartTimestamp {
+                            items.append(.custom(VoiceChatRecordingContextItem(timestamp: Double(recordingStartTimestamp), action: { _, f in
+                                f(.dismissWithoutContent)
+                                
+                                let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: {
+                                    self?.call.setShouldBeRecording(false)
+                                })])
+                                self?.controller?.present(alertController, in: .window(.root))
+                            }), false))
+                        } else {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StartRecording, icon: { theme -> UIImage? in
+                                return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.dismissWithoutContent)
+                               
+                                let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle, text: strongSelf.presentationData.strings.VoiceChat_StartRecordingText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StartRecordingStart, action: {
+                                    self?.call.setShouldBeRecording(true)
+                                })])
+                                self?.controller?.present(alertController, in: .window(.root))
+                            })))
+                        }
+                               
+                        if let callState = strongSelf.callState, callState.canManageCall {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
+                            }, action: { _, f in
+                                f(.dismissWithoutContent)
+                                
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 
-                                let _ = (strongSelf.call.leave(terminateIfPossible: true)
-                                |> filter { $0 }
-                                |> take(1)
-                                |> deliverOnMainQueue).start(completed: {
-                                    self?.controller?.dismiss()
-                                })
-                            }
-                            
-                            let alert = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
-                                action()
-                            })])
-                            strongSelf.controller?.present(alert, in: .window(.root))
-                        })))
+                                let action: () -> Void = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    let _ = (strongSelf.call.leave(terminateIfPossible: true)
+                                    |> filter { $0 }
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(completed: {
+                                        self?.controller?.dismiss()
+                                    })
+                                }
+                                
+                                let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
+                                    action()
+                                })])
+                                strongSelf.controller?.present(alertController, in: .window(.root))
+                            })))
+                        }
+                        
+                        
+                        return items
                     }
-                    return .single(items)
                 }
                 
                 let optionsButton: VoiceChatHeaderButton = !strongSelf.recButton.isHidden ? strongSelf.recButton : strongSelf.optionsButton
@@ -1862,7 +1932,7 @@ public final class VoiceChatController: ViewController {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
                     }
                     
-                    self.itemInteraction?.updateAudioLevels([(self.context.account.peerId, 0, 0.0, false)], reset: true)
+                    self.itemInteraction?.updateAudioLevels([(self.call.myPeerId, 0, 0.0, false)], reset: true)
                                         
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
@@ -2126,7 +2196,7 @@ public final class VoiceChatController: ViewController {
                 return
             }
             var title = self.currentTitle
-            if !self.isFullscreen {
+            if !self.isFullscreen && !self.currentTitleIsCustom {
                 if let navigationController = self.controller?.navigationController as? NavigationController {
                     for controller in navigationController.viewControllers.reversed() {
                         if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation, peerId == self.call.peerId {
@@ -2607,7 +2677,7 @@ public final class VoiceChatController: ViewController {
                 
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
-                if member.peer.id == self.context.account.peerId {
+                if member.peer.id == self.call.myPeerId {
                     if muteState == nil {
                         memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
                     } else {
@@ -2621,6 +2691,8 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(.peer(PeerEntry(
                     peer: member.peer,
+                    about: member.about,
+                    myPeerId: self.call.myPeerId,
                     ssrc: member.ssrc,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,
@@ -2632,19 +2704,6 @@ public final class VoiceChatController: ViewController {
                 index += 1
             }
             
-            if let accountPeer = self.accountPeer, !processedPeerIds.contains(accountPeer.id) {
-                entries.insert(.peer(PeerEntry(
-                    peer: accountPeer,
-                    ssrc: 0,
-                    presence: nil,
-                    activityTimestamp: Int32.max - 1 - index,
-                    state: .listening,
-                    muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
-                    canManageCall: self.callState?.canManageCall ?? false,
-                    volume: nil
-                )), at: 1)
-            }
-            
             for peer in invitedPeers {
                 if processedPeerIds.contains(peer.id) {
                     continue
@@ -2653,6 +2712,8 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(.peer(PeerEntry(
                     peer: peer,
+                    about: nil,
+                    myPeerId: self.call.myPeerId,
                     ssrc: 0,
                     presence: nil,
                     activityTimestamp: Int32.max - 1 - index,

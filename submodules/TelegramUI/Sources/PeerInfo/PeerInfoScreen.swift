@@ -57,6 +57,7 @@ import InviteLinksUI
 import UndoUI
 import MediaResources
 import HashtagSearchUI
+import ActionSheetPeerItem
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -3256,9 +3257,69 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.requestCall(isVideo: true)
         case .voiceChat:
             if let cachedData = self.data?.cachedData as? CachedGroupData, let activeCall = cachedData.activeCall {
-                self.context.joinGroupCall(peerId: self.peerId, activeCall: activeCall)
+                self.context.joinGroupCall(peerId: self.peerId, joinAsPeerId: nil, activeCall: activeCall)
             } else if let cachedData = self.data?.cachedData as? CachedChannelData, let activeCall = cachedData.activeCall {
-                self.context.joinGroupCall(peerId: self.peerId, activeCall: activeCall)
+                let accountPeerId = self.context.account.peerId
+                let _ = (adminedPublicChannels(account: self.context.account, scope: .forVoiceChat)
+                |> deliverOnMainQueue).start(next: { [weak self] channelPeers in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
+                        return transaction.getPeer(accountPeerId)
+                    }
+                    |> deliverOnMainQueue).start(next: { accountPeer in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if channelPeers.isEmpty {
+                            strongSelf.context.joinGroupCall(peerId: strongSelf.peerId, joinAsPeerId: nil, activeCall: activeCall)
+                        } else {
+                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                            let dismissAction: () -> Void = { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            }
+                            let selectAction: (PeerId) -> Void = { joinAsPeerId in
+                                dismissAction()
+                                
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.context.joinGroupCall(peerId: strongSelf.peerId, joinAsPeerId: joinAsPeerId == strongSelf.context.account.peerId ? nil : joinAsPeerId, activeCall: activeCall)
+                            }
+                            var items: [ActionSheetItem] = []
+                            
+                            var allPeers: [Peer] = []
+                            if let accountPeer = accountPeer {
+                                allPeers.append(accountPeer)
+                            }
+                            var channelPeers = channelPeers
+                            for i in 0 ..< channelPeers.count {
+                                if channelPeers[i].id == strongSelf.peerId {
+                                    let peer = channelPeers[i]
+                                    channelPeers.remove(at: i)
+                                    channelPeers.insert(peer, at: 0)
+                                    break
+                                }
+                            }
+                            allPeers.append(contentsOf: channelPeers)
+                            
+                            for peer in allPeers {
+                                items.append(ActionSheetPeerItem(context: strongSelf.context, peer: peer, title: peer.debugDisplayTitle, isSelected: false, strings: strongSelf.presentationData.strings, theme: strongSelf.presentationData.theme, action: {
+                                    selectAction(peer.id)
+                                }))
+                            }
+                            
+                            actionSheet.setItemGroups([
+                                ActionSheetItemGroup(items: items),
+                                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                            ])
+                            strongSelf.view.endEditing(true)
+                            controller.present(actionSheet, in: .window(.root))
+                        }
+                    })
+                })
             }
         case .mute:
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
@@ -3428,7 +3489,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             } else if let channel = peer as? TelegramChannel {
-                if case .group = channel.info, !channel.flags.contains(.hasVoiceChat) {
+                if !channel.flags.contains(.hasVoiceChat) {
                     if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
                         items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_CreateVoiceChat, color: .accent, action: { [weak self] in
                             dismissAction()
@@ -3684,7 +3745,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             if let activeCall = cachedChannelData.activeCall {
-                self.context.joinGroupCall(peerId: peer.id, activeCall: activeCall)
+                self.context.joinGroupCall(peerId: peer.id, joinAsPeerId: nil, activeCall: activeCall)
             } else {
                 self.createAndJoinGroupCall(peerId: peer.id)
             }
@@ -3695,7 +3756,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             if let activeCall = cachedGroupData.activeCall {
-                self.context.joinGroupCall(peerId: peer.id, activeCall: activeCall)
+                self.context.joinGroupCall(peerId: peer.id, joinAsPeerId: nil, activeCall: activeCall)
             } else {
                 self.createAndJoinGroupCall(peerId: peer.id)
             }
@@ -3729,12 +3790,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     statusController?.dismiss()
                 }
                 strongSelf.controller?.present(statusController, in: .window(.root))
-                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId)
+                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId, joinAs: nil)
                 |> deliverOnMainQueue).start(next: { [weak self] info in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                    strongSelf.context.joinGroupCall(peerId: peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
                 }, error: { [weak self] error in
                     dismissStatus?()
                     

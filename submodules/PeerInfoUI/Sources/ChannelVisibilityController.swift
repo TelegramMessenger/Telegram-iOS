@@ -822,7 +822,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     let peersDisablingAddressNameAssignment = Promise<[Peer]?>()
     peersDisablingAddressNameAssignment.set(.single(nil) |> then(channelAddressNameAssignmentAvailability(account: context.account, peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
         if case .addressNameLimitReached = result {
-            return adminedPublicChannels(account: context.account, location: false)
+            return adminedPublicChannels(account: context.account, scope: .all)
             |> map(Optional.init)
         } else {
             return .single([])

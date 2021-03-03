@@ -624,9 +624,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, joinAsPeerId: PeerId?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
-            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall).start()
+            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, joinAsPeerId: joinAsPeerId, initialCall: initialCall).start()
         }
         
         if let currentGroupCall = self.currentGroupCallValue {
@@ -660,6 +660,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private func startGroupCall(
         accountContext: AccountContext,
         peerId: PeerId,
+        joinAsPeerId: PeerId?,
         initialCall: CachedChannelData.ActiveCall,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
@@ -710,7 +711,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 initialCall: initialCall,
                 internalId: internalId,
                 peerId: peerId,
-                peer: nil
+                peer: nil,
+                joinAsPeerId: joinAsPeerId
             )
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))

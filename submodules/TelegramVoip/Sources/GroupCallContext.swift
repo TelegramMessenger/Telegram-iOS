@@ -4,6 +4,8 @@ import TgVoipWebrtc
 import UniversalMediaPlayer
 import AppBundle
 import OpusBinding
+import Postbox
+import TelegramCore
 
 private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
@@ -29,80 +31,89 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
     }
 }
 
-private final class DemoBroadcastPacketSource {
+private protocol BroadcastPartSource: class {
+    var parts: Signal<[OngoingGroupCallBroadcastPart], NoError> { get }
+}
+
+private final class NetworkBroadcastPartSource: BroadcastPartSource {
     private let queue: Queue
+    private let account: Account
+    private let callId: Int64
+    private let accessHash: Int64
+    private let datacenterId: Int?
     
-    private let packetsPipe = ValuePipe<[OngoingGroupCallBroadcastPacket]>()
-    var packets: Signal<[OngoingGroupCallBroadcastPacket], NoError> {
-        return self.packetsPipe.signal()
+    private let partsPipe = ValuePipe<[OngoingGroupCallBroadcastPart]>()
+    var parts: Signal<[OngoingGroupCallBroadcastPart], NoError> {
+        return self.partsPipe.signal()
     }
     
     private var timer: SwiftSignalKit.Timer?
+    private let disposable = MetaDisposable()
     
-    private var enqueuedPackets: [OngoingGroupCallBroadcastPacket] = []
-    private var delayTimer: SwiftSignalKit.Timer?
+    private var nextTimestampId: Int32?
     
-    private var nextIndex: Int = 0
-    
-    init(queue: Queue) {
+    init(queue: Queue, account: Account, callId: Int64, accessHash: Int64, datacenterId: Int?) {
         self.queue = queue
+        self.account = account
+        self.callId = callId
+        self.accessHash = accessHash
+        self.datacenterId = datacenterId
         
-        self.emitPacketAndStartTimer()
+        self.check()
     }
     
     deinit {
         self.timer?.invalidate()
-        self.delayTimer?.invalidate()
+        self.disposable.dispose()
     }
     
-    private func emitPacketAndStartTimer() {
-        let demoPacketCount = 200
-        let index = self.nextIndex % demoPacketCount
-        self.nextIndex += 1
-        
-        var packets: [OngoingGroupCallBroadcastPacket] = []
-        
-        let fileName = String(format: "%04d", index)
-        if let path = getAppBundle().path(forResource: fileName, ofType: "ogg") {
-            let source = SoftwareAudioSource(path: path)
-            while true {
-                if let frame = source.readFrame() {
-                    packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(frame.count / 2), data: frame))
-                } else {
-                    break
-                }
-            }
+    private func check() {
+        let timestampId: Int32
+        if let nextTimestampId = self.nextTimestampId {
+            timestampId = nextTimestampId
+        } else {
+            timestampId = Int32(Date().timeIntervalSince1970)
         }
-        
-        if !packets.isEmpty {
-            self.enqueuedPackets.append(contentsOf: packets)
-            self.startDelayTimer()
-        }
-        
-        let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
-            self?.emitPacketAndStartTimer()
-        }, queue: self.queue)
-        self.timer = timer
-        timer.start()
-    }
-    
-    private func startDelayTimer() {
-        let delayTimer = SwiftSignalKit.Timer(timeout: Double.random(in: 0.1 ... 0.3), repeat: false, completion: { [weak self] in
+        self.disposable.set((getAudioBroadcastPart(account: self.account, callId: self.callId, accessHash: self.accessHash, datacenterId: self.datacenterId, timestampId: timestampId)
+        |> deliverOn(self.queue)).start(next: { [weak self] data in
             guard let strongSelf = self else {
                 return
             }
-            let packets = strongSelf.enqueuedPackets
-            strongSelf.enqueuedPackets.removeAll()
-            if !packets.isEmpty {
-                strongSelf.packetsPipe.putNext(packets)
+            if let data = data {
+                var parts: [OngoingGroupCallBroadcastPart] = []
+                parts.append(OngoingGroupCallBroadcastPart(timestamp: timestampId, oggData: data))
+                
+                strongSelf.nextTimestampId = timestampId + 1
+                
+                if !parts.isEmpty {
+                    strongSelf.partsPipe.putNext(parts)
+                }
             }
-        }, queue: self.queue)
-        self.delayTimer = delayTimer
-        delayTimer.start()
+            
+            strongSelf.timer?.invalidate()
+            strongSelf.timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: false, completion: {
+                self?.check()
+            }, queue: strongSelf.queue)
+            strongSelf.timer?.start()
+        }))
     }
 }
 
 public final class OngoingGroupCallContext {
+    public struct AudioStreamData {
+        public var account: Account
+        public var callId: Int64
+        public var accessHash: Int64
+        public var datacenterId: Int?
+        
+        public init(account: Account, callId: Int64, accessHash: Int64, datacenterId: Int?) {
+            self.account = account
+            self.callId = callId
+            self.accessHash = accessHash
+            self.datacenterId = datacenterId
+        }
+    }
+    
     public enum NetworkState {
         case connecting
         case connected
@@ -126,10 +137,10 @@ public final class OngoingGroupCallContext {
         
         let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
         
-        private var broadcastPacketSource: DemoBroadcastPacketSource?
-        private var broadcastPacketsDisposable: Disposable?
+        private var broadcastPartsSource: BroadcastPartSource?
+        private var broadcastPartsDisposable: Disposable?
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, demoAudioStream: Bool) {
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
@@ -152,7 +163,35 @@ public final class OngoingGroupCallContext {
                 },
                 participantDescriptionsRequired: { ssrcs in
                     participantDescriptionsRequired(Set(ssrcs.map { $0.uint32Value }))
-                }
+                },
+                externalDecodeOgg: { sourceData in
+                    let tempFile = TempBox.shared.tempFile(fileName: "audio.ogg")
+                    defer {
+                        TempBox.shared.dispose(tempFile)
+                    }
+                    
+                    guard let _ = try? sourceData.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) else {
+                        return nil
+                    }
+                    
+                    var resultData = Data()
+                    
+                    let source = SoftwareAudioSource(path: tempFile.path)
+                    while true {
+                        if let frame = source.readFrame() {
+                            resultData.append(frame)
+                        } else {
+                            break
+                        }
+                    }
+                    
+                    if resultData.isEmpty {
+                        return nil
+                    } else {
+                        return resultData
+                    }
+                },
+                disableIncomingChannels: audioStreamData?.account.testingEnvironment ?? false
             )
             
             let queue = self.queue
@@ -204,54 +243,22 @@ public final class OngoingGroupCallContext {
                 }
             })
             
-            if demoAudioStream {
-                let broadcastPacketSource = DemoBroadcastPacketSource(queue: queue)
-                self.broadcastPacketSource = broadcastPacketSource
-                self.broadcastPacketsDisposable = (broadcastPacketSource.packets
-                |> deliverOn(queue)).start(next: { [weak self] packets in
+            if let audioStreamData = audioStreamData {
+                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, account: audioStreamData.account, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash, datacenterId: audioStreamData.datacenterId)
+                //let broadcastPartsSource = DemoBroadcastPartSource(queue: queue)
+                self.broadcastPartsSource = broadcastPartsSource
+                self.broadcastPartsDisposable = (broadcastPartsSource.parts
+                |> deliverOn(queue)).start(next: { [weak self] parts in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.context.add(packets)
+                    strongSelf.context.add(parts)
                 })
             }
-            
-            /*var packets: [OngoingGroupCallBroadcastPacket] = []
-            for i in 0 ..< 200 {
-                let fileName = String(format: "%04d", i)
-                if let path = getAppBundle().path(forResource: fileName, ofType: "ogg") {
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                        if let frames = OggOpusReader.extractFrames(data) {
-                            for frame in frames {
-                                packets.append(OngoingGroupCallBroadcastPacket(numSamples: frame.numSamples, data: frame.data))
-                            }
-                        }
-                    }
-                    continue
-                    
-                    let source = SoftwareAudioSource(path: path)
-                    while true {
-                        if let (frame, numSamples) = source.readEncodedFrame() {
-                            if numSamples != 960 {
-                                continue
-                            }
-                            packets.append(OngoingGroupCallBroadcastPacket(numSamples: Int32(numSamples), data: frame))
-                        } else {
-                            break
-                        }
-                        /*if let frame = source.readFrame() {
-                            packets.append(frame)
-                        } else {
-                            break
-                        }*/
-                    }
-                }
-            }
-            context.add(packets);*/
         }
         
         deinit {
-            self.broadcastPacketsDisposable?.dispose()
+            self.broadcastPartsDisposable?.dispose()
         }
         
         func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
@@ -468,10 +475,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, demoAudioStream: Bool) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, demoAudioStream: demoAudioStream)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, audioStreamData: audioStreamData)
         })
     }
     
