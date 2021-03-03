@@ -95,12 +95,6 @@ final class DoubleBottomFlowContext {
         } else {
             let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
         }
-        
-        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedApplicationContext.sharedContext.accountManager, { settings in
-            var settings = settings
-            settings.enableSystemIntegration = false
-            return settings
-        }).start()
     }
 }
 
