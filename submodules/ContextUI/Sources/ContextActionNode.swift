@@ -68,6 +68,8 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             titleFont = customFont
         }
         
+        let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
+        
         self.textNode.attributedText = NSAttributedString(string: action.text, font: titleFont, textColor: textColor)
         
         switch action.textLayout {
@@ -83,7 +85,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             statusNode.isAccessibilityElement = false
             statusNode.isUserInteractionEnabled = false
             statusNode.displaysAsynchronously = false
-            statusNode.attributedText = NSAttributedString(string: value, font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
+            statusNode.attributedText = NSAttributedString(string: value, font: subtitleFont, textColor: presentationData.theme.contextMenu.secondaryColor)
             statusNode.maximumNumberOfLines = 1
             self.statusNode = statusNode
         }
@@ -281,7 +283,8 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         
         switch self.action.textLayout {
         case let .secondLineWithValue(value):
-            self.statusNode?.attributedText = NSAttributedString(string: value, font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
+            let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
+            self.statusNode?.attributedText = NSAttributedString(string: value, font: subtitleFont, textColor: presentationData.theme.contextMenu.secondaryColor)
         default:
             break
         }

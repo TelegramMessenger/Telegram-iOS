@@ -10,7 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import UrlEscaping
 
-private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
+private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private var theme: PresentationTheme
     private let backgroundNode: ASImageNode
     private let textInputNode: EditableTextNode
@@ -149,13 +149,12 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     }
 }
 
-private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
+private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
-    private let text: String
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
-    let inputFieldNode: ChatTextLinkEditInputFieldNode
+    let inputFieldNode: VoiceChatTitleEditInputFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -177,17 +176,16 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, link: String?) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String?) {
         self.strings = strings
-        self.text = text
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 2
         
-        self.inputFieldNode = ChatTextLinkEditInputFieldNode(theme: ptheme, placeholder: strings.TextFormat_AddLinkPlaceholder)
-        self.inputFieldNode.text = link ?? ""
+        self.inputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: strings.VoiceChat_Title)
+        self.inputFieldNode.text = title ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -218,7 +216,6 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         for actionNode in self.actionNodes {
             self.addSubnode(actionNode)
         }
-        self.actionNodes.last?.actionEnabled = !(link ?? "").isEmpty
         
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
@@ -232,12 +229,6 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
             }
         }
         
-        self.inputFieldNode.textChanged = { [weak self] text in
-            if let strongSelf = self, let lastNode = strongSelf.actionNodes.last {
-                lastNode.actionEnabled = !text.isEmpty
-            }
-        }
-        
         self.updateTheme(theme)
     }
     
@@ -245,13 +236,13 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         self.disposable.dispose()
     }
     
-    var link: String {
+    var title: String {
         return self.inputFieldNode.text
     }
 
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkText(self.text).0, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.VoiceChat_EditTitleTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: self.strings.VoiceChat_EditTitleText, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
 
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -386,8 +377,11 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
 }
 
-func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
-    let presentationData = sharedContext.currentPresentationData.with { $0 }
+func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String?, apply: @escaping (String?) -> Void) -> AlertController {
+    var presentationData = sharedContext.currentPresentationData.with { $0 }
+    if let forceTheme = forceTheme {
+        presentationData = presentationData.withUpdated(theme: forceTheme)
+    }
     
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
@@ -399,7 +393,7 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
         applyImpl?()
     })]
     
-    let contentNode = ChatTextLinkEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, link: link)
+    let contentNode = VoiceChatTitleEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title)
     contentNode.complete = {
         applyImpl?()
     }
@@ -407,17 +401,16 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
         guard let contentNode = contentNode else {
             return
         }
-        let updatedLink = explicitUrl(contentNode.link)
-        if !updatedLink.isEmpty && isValidUrl(updatedLink, validSchemes: ["http": true, "https": true, "tg": false, "ton": false]) {
-            dismissImpl?(true)
-            apply(updatedLink)
-        } else {
-            contentNode.animateError()
-        }
+        dismissImpl?(true)
+        apply(contentNode.title)
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
     let presentationDataDisposable = sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+        var presentationData = presentationData
+        if let forceTheme = forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })

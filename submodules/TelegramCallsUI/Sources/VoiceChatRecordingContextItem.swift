@@ -8,6 +8,18 @@ import AppBundle
 import ContextUI
 import TelegramStringFormatting
 
+func generateStartRecordingIcon(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 18.0, height: 18.0), opaque: false, rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        context.setLineWidth(1.0 + UIScreenPixel)
+        context.setStrokeColor(color.cgColor)
+        context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
+        context.setFillColor(color.cgColor)
+        context.fillEllipse(in: bounds.insetBy(dx: 5.0, dy: 5.0))
+    })
+}
+
 final class VoiceChatRecordingContextItem: ContextMenuCustomItem {
     fileprivate let timestamp: Double
     fileprivate let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void

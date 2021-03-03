@@ -40,6 +40,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case headphones
             case accept
             case end
+            case cancel
         }
         
         var appearance: Appearance
@@ -228,6 +229,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAcceptButton"), color: imageColor)
                 case .end:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallDeclineButton"), color: imageColor)
+                case .cancel:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallCancelButton"), color: imageColor)
                 }
             
                 if let image = image {

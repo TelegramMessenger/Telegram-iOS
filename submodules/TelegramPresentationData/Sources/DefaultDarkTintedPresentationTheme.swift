@@ -781,7 +781,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
         itemHighlightedBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.15),
         primaryColor: UIColor(rgb: 0xffffff, alpha: 1.0),
-        secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.8),
+        secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         destructiveColor: UIColor(rgb: 0xff6767),
         badgeFillColor: accentColor,
         badgeForegroundColor: secondaryBadgeTextColor,

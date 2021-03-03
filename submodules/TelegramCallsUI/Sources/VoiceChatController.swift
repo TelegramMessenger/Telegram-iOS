@@ -22,11 +22,14 @@ import AlertUI
 import PresentationDataUtils
 import DirectionalPanGesture
 import PeerInfoUI
+import AvatarNode
 
 private let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 private let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
 private let fullscreenBackgroundColor = UIColor(rgb: 0x000000)
 private let dimColor = UIColor(white: 0.0, alpha: 0.5)
+private let sideButtonSize = CGSize(width: 56.0, height: 56.0)
+private let bottomAreaHeight: CGFloat = 175.0
 
 private func cornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
@@ -1114,8 +1117,17 @@ public final class VoiceChatController: ViewController {
                             }
                         }
                         
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_OpenChat, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
+                        let openTitle: String
+                        let openIcon: UIImage?
+                        if peer.id.namespace == Namespaces.Peer.CloudChannel {
+                            openTitle = strongSelf.presentationData.strings.VoiceChat_OpenChannel
+                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/Channels")
+                        } else {
+                            openTitle = strongSelf.presentationData.strings.VoiceChat_OpenChat
+                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/Message")
+                        }
+                        items.append(.action(ContextMenuActionItem(text: openTitle, icon: { theme in
+                            return generateTintedImage(image: openIcon, color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             guard let strongSelf = self, let navigationController = strongSelf.controller?.parentNavigationController else {
                                 return
@@ -1384,92 +1396,195 @@ public final class VoiceChatController: ViewController {
             
             self.cameraButtonNode.addTarget(self, action: #selector(self.cameraPressed), forControlEvents: .touchUpInside)
             
+            let avatarSize = CGSize(width: 28.0, height: 28.0)
             self.optionsButton.contextAction = { [weak self] sourceNode, gesture in
                 guard let strongSelf = self, let controller = strongSelf.controller else {
                     return
                 }
-   
-                var items: [ContextMenuItem] = []
                 
-                if let callState = strongSelf.callState, callState.canManageCall, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
-                    let isMuted = defaultParticipantMuteState == .muted
+                var mainItemsImpl: (() -> Signal<[ContextMenuItem], NoError>)?
+                
+                let displayAsItems: () -> Signal<[ContextMenuItem], NoError> = {
+                    var items: [ContextMenuItem] = []
+                    items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: theme.actionSheet.primaryTextColor)
+                    }), true))
                     
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
-                        if isMuted {
-                            return nil
-                        } else {
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                    if let accountPeer = strongSelf.accountPeer {
+                        items.append(.action(ContextMenuActionItem(text: accountPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: .secondLineWithValue(strongSelf.presentationData.strings.VoiceChat_PersonalAccount), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: accountPeer, size: avatarSize)), action: { _, f in
+                            f(.default)
+                        })))
+                        items.append(.separator)
+                    }
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { (c, _) in
+                        if let mainItems = mainItemsImpl {
+                            c.setItems(mainItems())
                         }
-                    }, action: { _, f in
-                        f(.dismissWithoutContent)
-                      
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: false)
                     })))
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionAdmin, icon: { theme in
-                        if !isMuted {
-                            return nil
-                        } else {
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
-                        }
-                    }, action: { _, f in
-                        f(.dismissWithoutContent)
-                      
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: true)
-                    })))
+                    return .single(items)
                 }
-                                
-                if !items.isEmpty {
-                    items.append(.separator)
+   
+                let permissionItems: () -> Signal<[ContextMenuItem], NoError> = {
+                    var items: [ContextMenuItem] = []
+                    if let callState = strongSelf.callState, callState.canManageCall, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
+                        let isMuted = defaultParticipantMuteState == .muted
+                        
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
+                            if isMuted {
+                                return nil
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                            }
+                        }, action: { _, f in
+                            f(.dismissWithoutContent)
+                          
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: false)
+                        })))
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionAdmin, icon: { theme in
+                            if !isMuted {
+                                return nil
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                            }
+                        }, action: { _, f in
+                            f(.dismissWithoutContent)
+                          
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: true)
+                        })))
+                        items.append(.separator)
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { (c, _) in
+                            if let mainItems = mainItemsImpl {
+                                c.setItems(mainItems())
+                            }
+                        })))
+                    }
+                    return .single(items)
                 }
                 
-                if let callState = strongSelf.callState, callState.canManageCall {
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
-                    }, action: { _, f in
-                        f(.dismissWithoutContent)
+                mainItemsImpl = {
+                    var items: [ContextMenuItem] = []
+
+                    if let accountPeer = strongSelf.accountPeer {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(accountPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: accountPeer, size: avatarSize)), action: { c, _ in
+                            c.setItems(displayAsItems())
+                        })))
+                        items.append(.separator)
+                    }
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditTitle, icon: { theme -> UIImage? in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
                         
+                        let controller = voiceChatTitleEditController(sharedContext: context.sharedContext, account: context.account, forceTheme: self?.darkTheme, title: nil, apply: { title in
+                            
+                        })
+                        self?.controller?.present(controller, in: .window(.root))
+                    })))
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditPermissions, icon: { theme -> UIImage? in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c.setItems(permissionItems())
+                    })))
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                      
                         guard let strongSelf = self else {
                             return
                         }
                         
-                        let action: () -> Void = {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
+                            if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
+                                return "https://t.me/\(addressName)"
+                            } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
+                                if let cachedData = cachedData as? CachedChannelData {
+                                    return cachedData.exportedInvitation?.link
+                                } else if let cachedData = cachedData as? CachedGroupData {
+                                    return cachedData.exportedInvitation?.link
+                                }
+                            }
+                            return nil
+                        } |> deliverOnMainQueue).start(next: { link in
+                            if let link = link {
+                                if let strongSelf = self {
+                                    let formatSendTitle: (String) -> String = { string in
+                                        var string = string
+                                        if string.contains("[") && string.contains("]") {
+                                            if let startIndex = string.firstIndex(of: "["), let endIndex = string.firstIndex(of: "]") {
+                                                string.removeSubrange(startIndex ... endIndex)
+                                            }
+                                        } else {
+                                            string = string.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
+                                        }
+                                        return string
+                                    }
+                                    
+                                    let segmentedValues = [ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(link), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
+                                        return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
+                                    }), ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(link), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
+                                        return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
+                                    })]
+                                    let shareController = ShareController(context: strongSelf.context, subject: .url(link), segmentedValues: segmentedValues, forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_CopyInviteLink)
+                                    strongSelf.controller?.present(shareController, in: .window(.root))
+                                }
+                            }
+                        })
+                    })))
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StartRecording, icon: { theme -> UIImage? in
+                        return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                    })))
+                                  
+                    if let callState = strongSelf.callState, callState.canManageCall {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
+                        }, action: { _, f in
+                            f(.dismissWithoutContent)
+                            
                             guard let strongSelf = self else {
                                 return
                             }
                             
-                            let _ = (strongSelf.call.leave(terminateIfPossible: true)
-                            |> filter { $0 }
-                            |> take(1)
-                            |> deliverOnMainQueue).start(completed: {
-                                self?.controller?.dismiss()
-                            })
-                        }
-                        
-                        let alert = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
-                            action()
-                        })])
-                        strongSelf.controller?.present(alert, in: .window(.root))
-                    })))
+                            let action: () -> Void = {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                let _ = (strongSelf.call.leave(terminateIfPossible: true)
+                                |> filter { $0 }
+                                |> take(1)
+                                |> deliverOnMainQueue).start(completed: {
+                                    self?.controller?.dismiss()
+                                })
+                            }
+                            
+                            let alert = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
+                                action()
+                            })])
+                            strongSelf.controller?.present(alert, in: .window(.root))
+                        })))
+                    }
+                    return .single(items)
                 }
                 
-                if items.isEmpty {
-                    return
-                }
-                
-                let optionsButton: VoiceChatHeaderButton
-                if !strongSelf.recButton.isHidden {
-                    optionsButton = strongSelf.recButton
-                } else {
-                    optionsButton = strongSelf.optionsButton
-                }
-            
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: optionsButton.extractedContainerNode, keepInPlace: false, blurBackground: false)), items: .single(items), reactionItems: [], gesture: gesture)
+                let optionsButton: VoiceChatHeaderButton = !strongSelf.recButton.isHidden ? strongSelf.recButton : strongSelf.optionsButton
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: optionsButton.extractedContainerNode, keepInPlace: false, blurBackground: false)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
             
@@ -1841,7 +1956,6 @@ public final class VoiceChatController: ViewController {
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             let topPanelHeight: CGFloat = 63.0
             let listTopInset = layoutTopInset + topPanelHeight
-            let bottomAreaHeight: CGFloat = 268.0
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             
             var size = layout.size
@@ -2088,14 +2202,13 @@ public final class VoiceChatController: ViewController {
                 soundTitle = self.presentationData.strings.Call_Audio
             }
             
-            let sideButtonSize = CGSize(width: 60.0, height: 60.0)
             self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: soundTitle, transition: .animated(duration: 0.3, curve: .linear))
             
             let cameraButtonSize = CGSize(width: 40.0, height: 40.0)
             
             self.cameraButtonNode.update(size: cameraButtonSize, content: CallControllerButtonItemNode.Content(appearance: CallControllerButtonItemNode.Content.Appearance.blurred(isFilled: false), image: .camera), text: " ", transition: .animated(duration: 0.3, curve: .linear))
             
-            self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
+            self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .cancel), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -2117,7 +2230,6 @@ public final class VoiceChatController: ViewController {
             
             transition.updateFrame(node: self.contentContainer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: 0.0), size: size))
             
-            let bottomAreaHeight: CGFloat = 268.0
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             
             let sideInset: CGFloat = 16.0
@@ -2177,9 +2289,8 @@ public final class VoiceChatController: ViewController {
             let bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: size.width, height: bottomPanelHeight))
             transition.updateFrame(node: self.bottomPanelNode, frame: bottomPanelFrame)
             
-            let sideButtonSize = CGSize(width: 60.0, height: 60.0)
             let cameraButtonSize = CGSize(width: 40.0, height: 40.0)
-            let centralButtonSize = CGSize(width: 440.0, height: 440.0)
+            let centralButtonSize = CGSize(width: 300.0, height: 300.0)
                         
             let actionButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - centralButtonSize.width) / 2.0), y: floorToScreenPixels((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
             
@@ -2200,7 +2311,7 @@ public final class VoiceChatController: ViewController {
                             actionButtonState = .active(state: .muted)
                             
                             actionButtonTitle = self.presentationData.strings.VoiceChat_Unmute
-                            actionButtonSubtitle = self.presentationData.strings.VoiceChat_UnmuteHelp
+                            actionButtonSubtitle = ""
                         } else {
                             actionButtonState = .active(state: .cantSpeak)
                             
@@ -2222,7 +2333,7 @@ public final class VoiceChatController: ViewController {
             }
             
             self.actionButton.isDisabled = !actionButtonEnabled
-            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: size.width < 330.0, animated: true)
+            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: false, animated: true)
             
             if self.actionButton.supernode === self.bottomPanelNode {
                 transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
@@ -2243,13 +2354,13 @@ public final class VoiceChatController: ViewController {
                 if videoNode.supernode == nil {
                     self.contentContainer.addSubnode(videoNode)
                 }
-                
+                 
                 currentVideoOrigin.x += videoSize.width + 4.0
             }*/
             
             let sideButtonMinimalInset: CGFloat = 16.0
-            let sideButtonOffset = min(36.0, floor((((size.width - 144.0) / 2.0) - sideButtonSize.width) / 2.0))
-            let sideButtonOrigin = max(sideButtonMinimalInset, floor((size.width - 144.0) / 2.0) - sideButtonOffset - sideButtonSize.width)
+            let sideButtonOffset = min(42.0, floor((((size.width - 112.0) / 2.0) - sideButtonSize.width) / 2.0))
+            let sideButtonOrigin = max(sideButtonMinimalInset, floor((size.width - 112.0) / 2.0) - sideButtonOffset - sideButtonSize.width)
             
             if self.audioOutputNode.supernode === self.bottomPanelNode {
                 if true {
@@ -2378,7 +2489,6 @@ public final class VoiceChatController: ViewController {
             }
             itemsHeight += CGFloat(itemsCount) * 56.0
            
-            let bottomAreaHeight: CGFloat = 268.0
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             
             let sideInset: CGFloat = 16.0

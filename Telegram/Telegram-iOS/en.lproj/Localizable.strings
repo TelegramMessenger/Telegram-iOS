@@ -6185,10 +6185,24 @@ Sorry for the inconvenience.";
 
 "Contacts.VoiceOver.AddContact" = "Add Contact";
 
-"VoiceChat.InviteLinks.Speaker" = "Speaker";
-"VoiceChat.InviteLinks.Listener" = "Listener";
-"VoiceChat.InviteLinks.CopySpeakerLink" = "Copy Speaker Link";
-"VoiceChat.InviteLinks.CopyListenerLink" = "Copy Listener Link";
+"VoiceChat.DisplayAs" = "Display Me As...";
+"VoiceChat.DisplayAsInfo" = "Choose whether you want to be displayed as your personal account or as your channel.";
+"VoiceChat.PersonalAccount" = "personal account";
+"VoiceChat.EditTitle" = "Edit Voice Chat Title";
+"VoiceChat.EditPermissions" = "Edit Permissions";
+
+"VoiceChat.OpenChannel" = "Open Channel";
+
+"VoiceChat.DisplayAsSuccess" = "Members of this voice chat will now see your as **%@**.";
+
+"VoiceChat.EditTitleTitle" = "Voice Chat Title";
+"VoiceChat.EditTitleText" = "Edit a title of this voice chat.";
+"VoiceChat.EditTitleSuccess" = "Voice chat title changed to **%@**.";
+
+"VoiceChat.InviteLink.Speaker" = "Speaker";
+"VoiceChat.InviteLink.Listener" = "Listener";
+"VoiceChat.InviteLink.CopySpeakerLink" = "Copy Speaker Link";
+"VoiceChat.InviteLink.CopyListenerLink" = "Copy Listener Link";
 
 "VoiceChat.InviteLink.InviteSpeakers_0" = "[%@] Invite Speakers";
 "VoiceChat.InviteLink.InviteSpeakers_1" = "[%@] Invite Speaker";
@@ -6203,3 +6217,5 @@ Sorry for the inconvenience.";
 "VoiceChat.InviteLink.InviteListeners_3_10" = "[%@] Invite Listeners";
 "VoiceChat.InviteLink.InviteListeners_many" = "[%@] Invite Listeners";
 "VoiceChat.InviteLink.InviteListeners_any" = "[%@] Invite Listeners";
+
+"Conversation.JoinVoiceChat" = "JOIN VOICE CHAT";

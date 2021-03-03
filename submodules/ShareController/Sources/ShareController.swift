@@ -44,6 +44,13 @@ public struct ShareControllerSegmentedValue {
     let subject: ShareControllerSubject
     let actionTitle: String
     let formatSendTitle: (Int) -> String
+    
+    public init(title: String, subject: ShareControllerSubject, actionTitle: String, formatSendTitle: @escaping (Int) -> String) {
+        self.title = title
+        self.subject = subject
+        self.actionTitle = actionTitle
+        self.formatSendTitle = formatSendTitle
+    }
 }
 
 public enum ShareControllerSubject {

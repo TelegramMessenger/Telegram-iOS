@@ -37,12 +37,9 @@ func closeButtonImage(dark: Bool) -> UIImage? {
         context.setLineCap(.round)
         context.setStrokeColor(UIColor.white.cgColor)
         
-        context.move(to: CGPoint(x: 9.0, y: 9.0))
-        context.addLine(to: CGPoint(x: 19.0, y: 19.0))
-        context.strokePath()
-        
-        context.move(to: CGPoint(x: 19.0, y: 9.0))
-        context.addLine(to: CGPoint(x: 9.0, y: 19.0))
+        context.move(to: CGPoint(x: 7.0 + UIScreenPixel, y: 16.0 + UIScreenPixel))
+        context.addLine(to: CGPoint(x: 14.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 21.0 - UIScreenPixel, y: 16.0 + UIScreenPixel))
         context.strokePath()
     })
 }
