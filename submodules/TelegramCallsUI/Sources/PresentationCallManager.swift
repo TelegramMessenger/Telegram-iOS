@@ -13,7 +13,9 @@ import TelegramUIPreferences
 import AccountContext
 import CallKit
 
-private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, settings: VoiceCallSettings?) -> CallKitIntegration?  {
+private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, settings: VoiceCallSettings?, forAccount account: Account) -> CallKitIntegration?  {
+    if account.isHidden { return nil }
+    
     let enabled = settings?.enableSystemIntegration ?? true
     return enabled ? integration : nil
 }
@@ -292,7 +294,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         account: firstState.0,
                         audioSession: strongSelf.audioSession,
                         callSessionManager: firstState.0.callSessionManager,
-                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil,
+                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings, forAccount: firstState.0) : nil,
                         serializedData: configuration.serializedData,
                         dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
                         derivedState: derivedState,
@@ -359,7 +361,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         if alreadyInCall, !endCurrentIfAny {
             return .alreadyInProgress(alreadyInCallWithPeerId)
         }
-        if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings) {
+        if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings, forAccount: account) {
             let begin: () -> Void = { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -552,7 +554,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         callSessionManager: account.callSessionManager,
                         callKitIntegration: callKitIntegrationIfEnabled(
                             strongSelf.callKitIntegration,
-                            settings: strongSelf.callSettings
+                            settings: strongSelf.callSettings,
+                            forAccount: account
                         ),
                         serializedData: configuration.serializedData,
                         dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),

@@ -164,7 +164,11 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
         self.centerScrollViewContents(transition: transition)
         self.ignoreZoom = false
         
+        let updatedZoomScale = self.scrollNode.view.zoomScale != self.scrollNode.view.minimumZoomScale
         self.scrollNode.view.zoomScale = self.scrollNode.view.minimumZoomScale
+        if !updatedZoomScale {
+            self.scrollViewDidZoom(self.scrollNode.view)
+        }
         self.ignoreZoomTransition = nil
     }
     

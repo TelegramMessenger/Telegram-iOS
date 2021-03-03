@@ -494,20 +494,22 @@ public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
 
 private struct UrlHandlingConfiguration {
     static var defaultValue: UrlHandlingConfiguration {
-        return UrlHandlingConfiguration(token: nil, domains: [])
+        return UrlHandlingConfiguration(token: nil, domains: [], urlAuthDomains: [])
     }
     
     public let token: String?
     public let domains: [String]
+    public let urlAuthDomains: [String]
     
-    fileprivate init(token: String?, domains: [String]) {
+    fileprivate init(token: String?, domains: [String], urlAuthDomains: [String]) {
         self.token = token
         self.domains = domains
+        self.urlAuthDomains = urlAuthDomains
     }
     
     static func with(appConfiguration: AppConfiguration) -> UrlHandlingConfiguration {
         if let data = appConfiguration.data, let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
-            return UrlHandlingConfiguration(token: token, domains: domains)
+            return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: [])
         } else {
             return .defaultValue
         }
@@ -522,15 +524,21 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
         let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
         
         var url = url
-        if !(url.hasPrefix("http") || url.hasPrefix("https")) {
-            url = "http://\(url)"
+        if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
+            if !(url.hasPrefix("http") || url.hasPrefix("https")) {
+                url = "http://\(url)"
+            }
         }
-        if let urlValue = URL(string: url), let host = urlValue.host, urlHandlingConfiguration.domains.contains(host.lowercased()), var components = URLComponents(string: url) {
-            components.scheme = "https"
-            var queryItems = components.queryItems ?? []
-            queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
-            components.queryItems = queryItems
-            url = components.url?.absoluteString ?? url
+        if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
+            if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
+                components.scheme = "https"
+                var queryItems = components.queryItems ?? []
+                queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
+                components.queryItems = queryItems
+                url = components.url?.absoluteString ?? url
+            } else if urlHandlingConfiguration.urlAuthDomains.contains(host) {
+                return .single(.urlAuth(url))
+            }
         }
         
         for basePath in baseTelegramMePaths {

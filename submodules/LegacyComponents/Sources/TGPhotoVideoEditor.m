@@ -204,7 +204,9 @@
         }
     };
     
-    [model.interfaceView immediateEditorTransitionIn];
+    if (paint) {
+        [model.interfaceView immediateEditorTransitionIn];
+    }
     
     for (UIView *view in snapshots) {
         [galleryController.view addSubview:view];

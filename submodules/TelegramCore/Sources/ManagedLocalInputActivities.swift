@@ -30,13 +30,13 @@ struct PeerInputActivityRecord: Equatable {
 private final class ManagedLocalTypingActivitiesContext {
     private var disposables: [PeerActivitySpace: (PeerInputActivityRecord, MetaDisposable)] = [:]
     
-    func update(activities: [PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) -> (start: [(PeerActivitySpace, PeerInputActivityRecord?, MetaDisposable)], dispose: [MetaDisposable]) {
+    func update(activities: [PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]]) -> (start: [(PeerActivitySpace, PeerInputActivityRecord?, MetaDisposable)], dispose: [MetaDisposable]) {
         var start: [(PeerActivitySpace, PeerInputActivityRecord?, MetaDisposable)] = []
         var dispose: [MetaDisposable] = []
         
         var validPeerIds = Set<PeerActivitySpace>()
         for (peerId, record) in activities {
-            if let activity = record.values.first {
+            if let activity = record.first?.1 {
                 validPeerIds.insert(peerId)
                 
                 let currentRecord = self.disposables[peerId]
@@ -76,7 +76,7 @@ private final class ManagedLocalTypingActivitiesContext {
     }
 }
 
-func managedLocalTypingActivities(activities: Signal<[PeerActivitySpace: [PeerId: PeerInputActivityRecord]], NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func managedLocalTypingActivities(activities: Signal<[PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]], NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let context = Atomic(value: ManagedLocalTypingActivitiesContext())
         let disposable = activities.start(next: { activities in

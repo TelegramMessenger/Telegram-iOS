@@ -68,7 +68,11 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }
     }
     
-    var strings: PresentationStrings
+    var strings: PresentationStrings {
+        didSet {
+            self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
+        }
+    }
     
     init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme

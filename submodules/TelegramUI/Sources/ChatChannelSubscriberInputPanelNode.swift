@@ -168,7 +168,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         case .join:
             self.activityIndicator.isHidden = false
             self.activityIndicator.startAnimating()
-            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id)
+            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id, hash: nil)
             |> afterDisposed { [weak self] in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -189,7 +189,9 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         }
                     }))
                     return
-                default:
+                case .tooMuchUsers:
+                    text = presentationInterfaceState.strings.Conversation_UsersTooMuchError
+                case .generic:
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
                     } else {

@@ -8,6 +8,7 @@ import SyncCore
 public enum JoinLinkError {
     case generic
     case tooMuchJoined
+    case tooMuchUsers
 }
 
 func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
@@ -31,10 +32,13 @@ public enum ExternalJoiningChatState {
 public func joinChatInteractively(with hash: String, account: Account) -> Signal <PeerId?, JoinLinkError> {
     return account.network.request(Api.functions.messages.importChatInvite(hash: hash))
     |> mapError { error -> JoinLinkError in
-        if error.errorDescription == "CHANNELS_TOO_MUCH" {
-            return .tooMuchJoined
-        } else {
-            return .generic
+        switch error.errorDescription {
+            case "CHANNELS_TOO_MUCH":
+                return .tooMuchJoined
+            case "USERS_TOO_MUCH":
+                return .tooMuchUsers
+            default:
+                return .generic
         }
     }
     |> mapToSignal { updates -> Signal<PeerId?, JoinLinkError> in

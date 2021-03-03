@@ -20,6 +20,7 @@ import Markdown
 public enum PeerReportSubject {
     case peer(PeerId)
     case messages([MessageId])
+    case profilePhoto(PeerId, Int64)
 }
 
 public enum PeerReportOption {
@@ -60,7 +61,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
             }, action: { [weak parent] _, f in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-                var reportReason: ReportReason?
+                let reportReason: ReportReason
                 switch option {
                 case .spam:
                     reportReason = .spam
@@ -75,30 +76,60 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 case .copyright:
                     reportReason = .copyright
                 case .other:
-                    break
+                    reportReason = .custom
                 }
-                if let reportReason = reportReason {
-                    switch subject {
-                    case let .peer(peerId):
-                        let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
-                        |> deliverOnMainQueue).start(completed: {
-                            if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                                parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
-                            }
-                            completion(reportReason, true)
-                        })
-                    case let .messages(messageIds):
-                        let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
-                        |> deliverOnMainQueue).start(completed: {
-                            if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                                parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
-                            }
-                            completion(reportReason, true)
-                        })
+                
+                let displaySuccess = {
+                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
+                        parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
                     }
-                } else {
-                    parent?.push(peerReportController(context: context, subject: subject, completion: completion))
                 }
+                
+                let action: (String) -> Void = { message in
+                    switch subject {
+                        case let .peer(peerId):
+                            let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                            |> deliverOnMainQueue).start(completed: {
+                                displaySuccess()
+                                completion(reportReason, true)
+                            })
+                        case let .messages(messageIds):
+                            let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
+                            |> deliverOnMainQueue).start(completed: {
+                                displaySuccess()
+                                completion(reportReason, true)
+                            })
+                        case let .profilePhoto(peerId, photoId):
+                            let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                            |> deliverOnMainQueue).start(completed: {
+                                displaySuccess()
+                                completion(reportReason, true)
+                            })
+                    }
+                }
+                
+                let controller = ActionSheetController(presentationData: presentationData, allowInputInset: true)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                var message = ""
+                var items: [ActionSheetItem] = []
+                items.append(ReportPeerHeaderActionSheetItem(context: context, text: presentationData.strings.Report_AdditionalDetailsText))
+                items.append(ReportPeerDetailsActionSheetItem(context: context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
+                    message = text
+                }))
+                items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
+                    dismissAction()
+         
+                    action(message)
+                }))
+                
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                parent?.present(controller, in: .window(.root))
+
                 f(.dismissWithoutContent)
             })))
         }
@@ -162,17 +193,21 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     passthrough = false
                 }
                 
-                let action = {
+                let displaySuccess = {
+                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
+                        present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
+                    }
+                }
+                
+                let action: (String) -> Void = { message in
                     switch subject {
                         case let .peer(peerId):
                             if passthrough {
                                 completion(reportReason, true)
                             } else {
-                                let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
-                                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                                        present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
-                                    }
+                                    displaySuccess()
                                     completion(nil, false)
                                 })
                             }
@@ -180,11 +215,19 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                             if passthrough {
                                 completion(reportReason, true)
                             } else {
-                                let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
+                                let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
-                                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                                        present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
-                                    }
+                                    displaySuccess()
+                                    completion(nil, false)
+                                })
+                            }
+                        case let .profilePhoto(peerId, photoId):
+                            if passthrough {
+                                completion(reportReason, true)
+                            } else {
+                                let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: message)
+                                |> deliverOnMainQueue).start(completed: {
+                                    displaySuccess()
                                     completion(nil, false)
                                 })
                             }
@@ -205,7 +248,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
                         dismissAction()
              
-                        action()
+                        action(message)
                     }))
                     
                     controller.setItemGroups([
@@ -214,7 +257,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     ])
                     present(controller, nil)
                 } else {
-                    action()
+                    action("")
                 }
             } else {
                 push(peerReportController(context: context, subject: subject, completion: completion))
@@ -369,16 +412,21 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
                         dismissImpl?()
                     }
                     switch subject {
-                    case let .peer(peerId):
-                        reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: text)
-                        |> deliverOnMainQueue).start(completed: {
-                            completed()
-                        }))
-                    case let .messages(messageIds):
-                        reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: text)
-                        |> deliverOnMainQueue).start(completed: {
-                            completed()
-                        }))
+                        case let .peer(peerId):
+                            reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: text)
+                            |> deliverOnMainQueue).start(completed: {
+                                completed()
+                            }))
+                        case let .messages(messageIds):
+                            reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: text)
+                            |> deliverOnMainQueue).start(completed: {
+                                completed()
+                            }))
+                        case let .profilePhoto(peerId, photoId):
+                            reportDisposable.set((reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: text)
+                            |> deliverOnMainQueue).start(completed: {
+                                completed()
+                            }))
                     }
                 }
             })
