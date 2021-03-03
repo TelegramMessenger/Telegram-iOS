@@ -1,8 +1,8 @@
 import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
-import UniversalMediaPlayer
-import AppBundle
+//import UniversalMediaPlayer
+//import AppBundle
 import OpusBinding
 import Postbox
 import TelegramCore
@@ -165,31 +165,34 @@ public final class OngoingGroupCallContext {
                     participantDescriptionsRequired(Set(ssrcs.map { $0.uint32Value }))
                 },
                 externalDecodeOgg: { sourceData in
-                    let tempFile = TempBox.shared.tempFile(fileName: "audio.ogg")
-                    defer {
-                        TempBox.shared.dispose(tempFile)
-                    }
                     
-                    guard let _ = try? sourceData.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) else {
-                        return nil
-                    }
+                    return nil
                     
-                    var resultData = Data()
-                    
-                    let source = SoftwareAudioSource(path: tempFile.path)
-                    while true {
-                        if let frame = source.readFrame() {
-                            resultData.append(frame)
-                        } else {
-                            break
-                        }
-                    }
-                    
-                    if resultData.isEmpty {
-                        return nil
-                    } else {
-                        return resultData
-                    }
+//                    let tempFile = TempBox.shared.tempFile(fileName: "audio.ogg")
+//                    defer {
+//                        TempBox.shared.dispose(tempFile)
+//                    }
+//
+//                    guard let _ = try? sourceData.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) else {
+//                        return nil
+//                    }
+//
+//                    var resultData = Data()
+//
+//                    let source = SoftwareAudioSource(path: tempFile.path)
+//                    while true {
+//                        if let frame = source.readFrame() {
+//                            resultData.append(frame)
+//                        } else {
+//                            break
+//                        }
+//                    }
+//
+//                    if resultData.isEmpty {
+//                        return nil
+//                    } else {
+//                        return resultData
+//                    }
                 },
                 disableIncomingChannels: audioStreamData?.account.testingEnvironment ?? false
             )
