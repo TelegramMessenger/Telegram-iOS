@@ -1693,6 +1693,52 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
     }
 }
 
+
+
+
+public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox) -> Signal<[FoundPeer], NoError> {
+    return network.request(Api.functions.channels.getAdminedPublicChannels(flags: 1 << 2))
+        |> retryRequest
+        |> mapToSignal { result in
+        
+        let chats:[Api.Chat]
+        switch result {
+        case let .chatsSlice(_, c):
+            chats = c
+        case let .chats(c):
+            chats = c
+        }
+        var subscribers: [PeerId: Int32] = [:]
+        let peers = chats.compactMap(parseTelegramGroupOrChannel)
+        for chat in chats {
+            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                switch chat {
+                    case let .channel(channel):
+                        if let participantsCount = channel.participantsCount {
+                            subscribers[groupOrChannel.id] = participantsCount
+                        }
+                case let .chat(chat):
+                    subscribers[groupOrChannel.id] = chat.participantsCount
+                default:
+                    break
+                }
+            }
+        }
+            
+            
+            
+        return postbox.transaction { transaction -> [Peer] in
+            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                return updated
+            })
+            return peers
+        } |> map { peers -> [FoundPeer] in
+            return peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) }
+        }
+        
+    }
+}
+
 public func updatedCurrentPeerGroupCall(account: Account, peerId: PeerId) -> Signal<CachedChannelData.ActiveCall?, NoError> {
     return fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)
     |> mapToSignal { _ -> Signal<CachedChannelData.ActiveCall?, NoError> in
