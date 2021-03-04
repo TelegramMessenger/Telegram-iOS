@@ -3529,7 +3529,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     switch channel.info {
                     case .broadcast:
                         if channel.flags.contains(.isCreator) {
-                            items.append(.separator)
+                            if !items.isEmpty {
+                                items.append(.separator)
+                            }
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteChannel, textColor: .destructive, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                             }, action: { [weak self] _, f in
@@ -3540,7 +3542,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         } else {
                             if !headerButtons.contains(.leave) {
                                 if case .member = channel.participationStatus {
-                                    items.append(.separator)
+                                    if !items.isEmpty {
+                                        items.append(.separator)
+                                    }
                                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_LeaveChannel, textColor: .destructive, icon: { theme in
                                         generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                                     }, action: { [weak self] _, f in
@@ -3553,7 +3557,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                     case .group:
                         if channel.flags.contains(.isCreator) {
-                            items.append(.separator)
+                            if !items.isEmpty {
+                                items.append(.separator)
+                            }
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteGroup, textColor: .destructive, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                             }, action: { [weak self] _, f in
@@ -3563,7 +3569,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             })))
                         } else {
                             if case .member = channel.participationStatus {
-                                items.append(.separator)
+                                if !items.isEmpty {
+                                    items.append(.separator)
+                                }
                                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
                                     generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                                 }, action: { [weak self] _, f in
@@ -3596,7 +3604,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     
                     if case .Member = group.membership {
-                        items.append(.separator)
+                        if !items.isEmpty {
+                            items.append(.separator)
+                        }
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                         }, action: { [weak self] _, f in
