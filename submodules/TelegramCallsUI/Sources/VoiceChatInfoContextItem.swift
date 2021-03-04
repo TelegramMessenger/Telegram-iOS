@@ -8,16 +8,16 @@ import AppBundle
 import ContextUI
 import TelegramStringFormatting
 
-final class VoiceChatInfoContextItem: ContextMenuCustomItem {
+public final class VoiceChatInfoContextItem: ContextMenuCustomItem {
     let text: String
     let icon: (PresentationTheme) -> UIImage?
     
-    init(text: String, icon: @escaping (PresentationTheme) -> UIImage?) {
+    public init(text: String, icon: @escaping (PresentationTheme) -> UIImage?) {
         self.text = text
         self.icon = icon
     }
     
-    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+    public func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
         return VoiceChatInfoContextItemNode(presentationData: presentationData, item: self, getController: getController, actionSelected: actionSelected)
     }
 }

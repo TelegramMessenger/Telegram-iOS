@@ -1444,13 +1444,14 @@ public final class VoiceChatController: ViewController {
                 
                 let displayAsItems: () -> Signal<[ContextMenuItem], NoError> = {
                     return displayAsPeersPromise.get()
+                    |> take(1)
                     |> map { peers -> [ContextMenuItem] in
                         var items: [ContextMenuItem] = []
                         items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: theme.actionSheet.primaryTextColor)
                         }), true))
                         
-                        for peer in peers.prefix(5) {
+                        for peer in peers {
                             var subtitle: String?
                             if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
                                 subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
@@ -1486,6 +1487,10 @@ public final class VoiceChatController: ViewController {
                                 
                                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer.peer, text: strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                             })))
+                            
+                            if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
+                                items.append(.separator)
+                            }
                         }
                         items.append(.separator)
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
@@ -1546,6 +1551,7 @@ public final class VoiceChatController: ViewController {
                 
                 mainItemsImpl = {
                     return displayAsPeersPromise.get()
+                    |> take(1)
                     |> map { peers -> [ContextMenuItem] in
                         var items: [ContextMenuItem] = []
                         
@@ -1693,7 +1699,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 let optionsButton: VoiceChatHeaderButton = !strongSelf.recButton.isHidden ? strongSelf.recButton : strongSelf.optionsButton
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: optionsButton.extractedContainerNode, keepInPlace: true, blurBackground: false)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: optionsButton.referenceNode)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
             
@@ -3221,5 +3227,19 @@ private final class VoiceChatContextExtractedContentSource: ContextExtractedCont
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class VoiceChatContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

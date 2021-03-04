@@ -178,7 +178,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.searchButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/SearchIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
         
         self.shareButtonNode = HighlightableButtonNode()
-        self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: []) 
+        self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
                  
         let segmentedItems: [SegmentedControlItem]
         if let segmentedValues = segmentedValues {
@@ -187,6 +187,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             segmentedItems = []
         }
         self.segmentedNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: segmentedItems, selectedIndex: 0)
+        self.segmentedNode.isHidden = segmentedValues == nil
         
         self.contentTitleNode.isHidden = self.segmentedValues != nil
         self.contentSubtitleNode.isHidden = self.segmentedValues != nil

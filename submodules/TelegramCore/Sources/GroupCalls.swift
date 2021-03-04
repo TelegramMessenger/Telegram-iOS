@@ -1732,6 +1732,60 @@ public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox)
     }
 }
 
+public final class CachedDisplayAsPeers: PostboxCoding {
+    public let peerIds: [PeerId]
+    public let timestamp: Int32
+    
+    public init(peerIds: [PeerId], timestamp: Int32) {
+        self.peerIds = peerIds
+        self.timestamp = timestamp
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map { PeerId($0) }
+        self.timestamp = decoder.decodeInt32ForKey("timestamp", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+        encoder.encodeInt32(self.timestamp, forKey: "timestamp")
+    }
+}
+
+public func cachedGroupCallDisplayAsAvailablePeers(account: Account) -> Signal<[FoundPeer], NoError> {
+    let key = ValueBoxKey(length: 0)
+    return account.postbox.transaction { transaction -> ([FoundPeer], Int32)? in
+        let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key)) as? CachedDisplayAsPeers
+        if let cached = cached {
+            var peers: [FoundPeer] = []
+            for peerId in cached.peerIds {
+                if let peer = transaction.getPeer(peerId) {
+                    peers.append(FoundPeer(peer: peer, subscribers: nil))
+                }
+            }
+            return (peers, cached.timestamp)
+        } else {
+            return nil
+        }
+    }
+    |> mapToSignal { cachedPeersAndTimestamp -> Signal<[FoundPeer], NoError> in
+        let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+        if let (cachedPeers, timestamp) = cachedPeersAndTimestamp, currentTimestamp - timestamp < 60 * 5 {
+            return .single(cachedPeers)
+        } else {
+            return groupCallDisplayAsAvailablePeers(network: account.network, postbox: account.postbox)
+            |> mapToSignal { peers -> Signal<[FoundPeer], NoError> in
+                return account.postbox.transaction { transaction -> [FoundPeer] in
+                    let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key), entry: CachedDisplayAsPeers(peerIds: peers.map { $0.peer.id }, timestamp: currentTimestamp), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                    return peers
+                }
+            }
+        }
+    }
+}
+
+
 public func updatedCurrentPeerGroupCall(account: Account, peerId: PeerId) -> Signal<CachedChannelData.ActiveCall?, NoError> {
     return fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)
     |> mapToSignal { _ -> Signal<CachedChannelData.ActiveCall?, NoError> in

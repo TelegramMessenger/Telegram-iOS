@@ -56,7 +56,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 icon = UIImage(bundleImageName: "Chat/Context Menu/ReportXxx")
             case .childAbuse:
                 title = presentationData.strings.ReportPeer_ReasonChildAbuse
-                icon = UIImage(bundleImageName: "Chat/Context Menu/Block")
+                icon = UIImage(bundleImageName: "Chat/Context Menu/Restrict")
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
                 icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")

@@ -1247,7 +1247,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let contentNode = self.contentContainerNode.contentNode {
             switch contentNode {
             case let .reference(referenceNode):
-                let contentActionsSpacing: CGFloat = 16.0
+                let contentActionsSpacing: CGFloat = 8.0
                 if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
