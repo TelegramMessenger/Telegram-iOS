@@ -694,14 +694,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }) {
             if let participantsContext = temporaryParticipantsContext.context.participantsContext {
                 let myPeerId = self.joinAsPeerId
-                let myPeer = self.accountContext.account.postbox.transaction { transaction -> Peer? in
-                    return transaction.getPeer(myPeerId)
+                let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
+                    if let peer = transaction.getPeer(myPeerId) {
+                        return (peer, transaction.getPeerCachedData(peerId: myPeerId))
+                    } else {
+                        return nil
+                    }
                 }
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     myPeer,
                     participantsContext.state,
                     participantsContext.activeSpeakers
-                ).start(next: { [weak self] myPeer, state, activeSpeakers in
+                ).start(next: { [weak self] myPeerAndCachedData, state, activeSpeakers in
                     guard let strongSelf = self else {
                         return
                     }
@@ -721,7 +725,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     var participants = state.participants
                     
                     if !participants.contains(where: { $0.peer.id == myPeerId }) {
-                        if let myPeer = myPeer {
+                        if let (myPeer, cachedData) = myPeerAndCachedData {
+                            let about: String?
+                            if let cachedData = cachedData as? CachedUserData {
+                                about = cachedData.about
+                            } else if let cachedData = cachedData as? CachedUserData {
+                                about = cachedData.about
+                            } else {
+                                about = nil
+                            }
                             participants.append(GroupCallParticipantsContext.Participant(
                                 peer: myPeer,
                                 ssrc: 0,
@@ -731,7 +743,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 activityRank: nil,
                                 muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                                 volume: nil,
-                                about: nil
+                                about: about
                             ))
                             participants.sort()
                         }

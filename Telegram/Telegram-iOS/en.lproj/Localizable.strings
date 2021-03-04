@@ -5824,6 +5824,8 @@ Sorry for the inconvenience.";
 "VoiceChat.StopRecordingTitle" = "Stop Recording?";
 "VoiceChat.StopRecordingStop" = "Stop";
 
+"VoiceChat.RecordingSaved" = "Audio stream saved to Saved Messages.";
+
 "VoiceChat.StatusMutedForYou" = "muted for you";
 "VoiceChat.StatusMutedYou" = "put you on mute";
 
@@ -6187,13 +6189,12 @@ Sorry for the inconvenience.";
 
 "VoiceChat.DisplayAs" = "Display Me As...";
 "VoiceChat.DisplayAsInfo" = "Choose whether you want to be displayed as your personal account or as your channel.";
+"VoiceChat.DisplayAsSuccess" = "Members of this voice chat will now see your as **%@**.";
 "VoiceChat.PersonalAccount" = "personal account";
 "VoiceChat.EditTitle" = "Edit Voice Chat Title";
 "VoiceChat.EditPermissions" = "Edit Permissions";
 
 "VoiceChat.OpenChannel" = "Open Channel";
-
-"VoiceChat.DisplayAsSuccess" = "Members of this voice chat will now see your as **%@**.";
 
 "VoiceChat.EditTitleTitle" = "Voice Chat Title";
 "VoiceChat.EditTitleText" = "Edit a title of this voice chat.";

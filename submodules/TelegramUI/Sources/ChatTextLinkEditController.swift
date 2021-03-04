@@ -425,6 +425,7 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
         presentationDataDisposable.dispose()
     }
     dismissImpl = { [weak controller] animated in
+        contentNode.inputFieldNode.deactivateInput()
         if animated {
             controller?.dismissAnimated()
         } else {

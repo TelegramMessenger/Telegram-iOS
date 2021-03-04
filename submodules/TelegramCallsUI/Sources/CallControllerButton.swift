@@ -230,7 +230,22 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 case .end:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallDeclineButton"), color: imageColor)
                 case .cancel:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallCancelButton"), color: imageColor)
+                    image = generateImage(CGSize(width: 28.0, height: 28.0), opaque: false, rotatedContext: { size, context in
+                        let bounds = CGRect(origin: CGPoint(), size: size)
+                        context.clear(bounds)
+                        
+                        context.setLineWidth(4.0 - UIScreenPixel)
+                        context.setLineCap(.round)
+                        context.setStrokeColor(imageColor.cgColor)
+                        
+                        context.move(to: CGPoint(x: 2.0 + UIScreenPixel, y: 2.0 + UIScreenPixel))
+                        context.addLine(to: CGPoint(x: 26.0 - UIScreenPixel, y: 26.0 - UIScreenPixel))
+                        context.strokePath()
+                        
+                        context.move(to: CGPoint(x: 26.0 - UIScreenPixel, y: 2.0 + UIScreenPixel))
+                        context.addLine(to: CGPoint(x: 2.0 + UIScreenPixel, y: 26.0 - UIScreenPixel))
+                        context.strokePath()
+                    })
                 }
             
                 if let image = image {

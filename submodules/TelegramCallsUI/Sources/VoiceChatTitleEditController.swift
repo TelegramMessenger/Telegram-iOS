@@ -418,6 +418,7 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
         presentationDataDisposable.dispose()
     }
     dismissImpl = { [weak controller] animated in
+        contentNode.inputFieldNode.deactivateInput()
         if animated {
             controller?.dismissAnimated()
         } else {

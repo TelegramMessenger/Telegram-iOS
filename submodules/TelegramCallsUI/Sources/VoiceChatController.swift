@@ -1438,6 +1438,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 let myPeerId = strongSelf.call.myPeerId
+                let darkTheme = strongSelf.darkTheme
                 
                 var mainItemsImpl: (() -> Signal<[ContextMenuItem], NoError>)?
                 
@@ -1456,8 +1457,34 @@ public final class VoiceChatController: ViewController {
                             } else if let subscribers = peer.subscribers {
                                 subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
                             }
-                            items.append(.action(ContextMenuActionItem(text: peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { _, f in
+                            
+                            let isSelected = peer.peer.id == myPeerId
+                            let extendedAvatarSize = CGSize(width: 35.0, height: 35.0)
+                            let avatarSignal = peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)
+                            |> map { image -> UIImage? in
+                                if isSelected, let image = image {
+                                    return generateImage(extendedAvatarSize, rotatedContext: { size, context in
+                                        let bounds = CGRect(origin: CGPoint(), size: size)
+                                        context.clear(bounds)
+                                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                                        context.scaleBy(x: 1.0, y: -1.0)
+                                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                                        context.draw(image.cgImage!, in: CGRect(x: (extendedAvatarSize.width - avatarSize.width) / 2.0, y: (extendedAvatarSize.height - avatarSize.height) / 2.0, width: avatarSize.width, height: avatarSize.height))
+                                        
+                                        let lineWidth = 1.0 + UIScreenPixel
+                                        context.setLineWidth(lineWidth)
+                                        context.setStrokeColor(darkTheme.actionSheet.controlAccentColor.cgColor)
+                                        context.strokeEllipse(in: bounds.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0))
+                                    })
+                                } else {
+                                    return image
+                                }
+                            }
+                            
+                            items.append(.action(ContextMenuActionItem(text: peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), action: { _, f in
                                 f(.default)
+                                
+                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer.peer, text: strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                             })))
                         }
                         items.append(.separator)
@@ -1537,8 +1564,12 @@ public final class VoiceChatController: ViewController {
                         }, action: { [weak self] _, f in
                             f(.default)
                             
-                            let controller = voiceChatTitleEditController(sharedContext: context.sharedContext, account: context.account, forceTheme: self?.darkTheme, title: self?.callState?.title, apply: { title in
-                                self?.call.updateTitle(title ?? "")
+                            let controller = voiceChatTitleEditController(sharedContext: context.sharedContext, account: context.account, forceTheme: self?.darkTheme, title: self?.callState?.title, apply: { [weak self] title in
+                                if let strongSelf = self, let title = title {
+                                    strongSelf.call.updateTitle(title)
+                                    
+                                    strongSelf.presentUndoOverlay(content: .succeed(text: strongSelf.presentationData.strings.VoiceChat_EditTitleSuccess(title).0), action: { _ in return false })
+                                }
                             })
                             self?.controller?.present(controller, in: .window(.root))
                         })))
@@ -1597,11 +1628,15 @@ public final class VoiceChatController: ViewController {
                         })))
                         
                         if let recordingStartTimestamp = strongSelf.callState?.recordingStartTimestamp {
-                            items.append(.custom(VoiceChatRecordingContextItem(timestamp: Double(recordingStartTimestamp), action: { _, f in
+                            items.append(.custom(VoiceChatRecordingContextItem(timestamp: recordingStartTimestamp, action: { _, f in
                                 f(.dismissWithoutContent)
                                 
-                                let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: {
-                                    self?.call.setShouldBeRecording(false)
+                                let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.call.setShouldBeRecording(false)
+                                    
+                                        strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { _ in return false })
+                                    }
                                 })])
                                 self?.controller?.present(alertController, in: .window(.root))
                             }), false))
@@ -1611,8 +1646,12 @@ public final class VoiceChatController: ViewController {
                             }, action: { _, f in
                                 f(.dismissWithoutContent)
                                
-                                let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle, text: strongSelf.presentationData.strings.VoiceChat_StartRecordingText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StartRecordingStart, action: {
-                                    self?.call.setShouldBeRecording(true)
+                                let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle, text: strongSelf.presentationData.strings.VoiceChat_StartRecordingText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StartRecordingStart, action: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.call.setShouldBeRecording(true)
+                                    
+                                        strongSelf.presentUndoOverlay(content: .recording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+                                    }
                                 })])
                                 self?.controller?.present(alertController, in: .window(.root))
                             })))
@@ -1654,7 +1693,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 let optionsButton: VoiceChatHeaderButton = !strongSelf.recButton.isHidden ? strongSelf.recButton : strongSelf.optionsButton
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: optionsButton.extractedContainerNode, keepInPlace: false, blurBackground: false)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: optionsButton.extractedContainerNode, keepInPlace: true, blurBackground: false)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
             
@@ -1668,7 +1707,7 @@ public final class VoiceChatController: ViewController {
             |> deliverOnMainQueue).start(next: { [weak self] color in
                 if let strongSelf = self {
                     strongSelf.currentAudioButtonColor = color
-                    strongSelf.updateButtons(transition: .immediate)
+                    strongSelf.updateButtons(animated: true)
                 }
             })
             
@@ -2214,7 +2253,7 @@ public final class VoiceChatController: ViewController {
             self.titleNode.update(size: CGSize(width: size.width, height: 44.0), title: title, subtitle: self.currentSubtitle, transition: transition)
         }
         
-        private func updateButtons(transition: ContainedViewLayoutTransition) {
+        private func updateButtons(animated: Bool) {
             let audioButtonAppearance: CallControllerButtonItemNode.Content.Appearance
             if let color = self.currentAudioButtonColor {
                 audioButtonAppearance = .color(.custom(color.rgb, 1.0))
@@ -2272,11 +2311,11 @@ public final class VoiceChatController: ViewController {
                 soundTitle = self.presentationData.strings.Call_Audio
             }
             
-            self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: soundTitle, transition: .animated(duration: 0.3, curve: .linear))
+            self.audioOutputNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: soundTitle, transition: animated ? .animated(duration: 0.3, curve: .linear) : .immediate)
             
             let cameraButtonSize = CGSize(width: 40.0, height: 40.0)
             
-            self.cameraButtonNode.update(size: cameraButtonSize, content: CallControllerButtonItemNode.Content(appearance: CallControllerButtonItemNode.Content.Appearance.blurred(isFilled: false), image: .camera), text: " ", transition: .animated(duration: 0.3, curve: .linear))
+            self.cameraButtonNode.update(size: cameraButtonSize, content: CallControllerButtonItemNode.Content(appearance: CallControllerButtonItemNode.Content.Appearance.blurred(isFilled: false), image: .camera), text: " ", transition: animated ? .animated(duration: 0.3, curve: .linear) : .immediate)
             
             self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .cancel), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
         }
@@ -2409,7 +2448,7 @@ public final class VoiceChatController: ViewController {
                 transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
             }
             
-            self.updateButtons(transition: transition)
+            self.updateButtons(animated: !isFirstTime)
             
             /*var currentVideoOrigin = CGPoint(x: 4.0, y: (layout.statusBarHeight ?? 0.0) + 4.0)
             for (_, _, videoNode) in self.videoNodes {

@@ -257,7 +257,7 @@ private struct ChannelBannedMemberControllerState: Equatable {
     var updating: Bool = false
 }
 
-private func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
+func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
     var result = flags
     result.remove(.banReadMessages)
     if result.contains(.banSendGifs) {

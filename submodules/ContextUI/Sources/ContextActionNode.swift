@@ -223,7 +223,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
                 let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
                 let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
                 transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
-                transition.updateFrameAdditive(node: statusNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin + verticalSpacing + textSize.height), size: textSize))
+                transition.updateFrameAdditive(node: statusNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin + verticalSpacing + textSize.height), size: statusSize))
                 
                 let badgeFrame = CGRect(origin: CGPoint(x: textFrame.maxX + badgeSpacing, y: floor((size.height - badgeSize.height) / 2.0)), size: badgeSize)
                 transition.updateFrame(node: self.badgeBackgroundNode, frame: badgeFrame)
