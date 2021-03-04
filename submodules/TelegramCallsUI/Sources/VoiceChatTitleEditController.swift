@@ -54,10 +54,10 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
         self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
-        self.textInputNode.keyboardType = .URL
-        self.textInputNode.autocapitalizationType = .none
+        self.textInputNode.keyboardType = .default
+        self.textInputNode.autocapitalizationType = .sentences
         self.textInputNode.returnKeyType = .done
-        self.textInputNode.autocorrectionType = .no
+        self.textInputNode.autocorrectionType = .default
         self.textInputNode.tintColor = theme.actionSheet.controlAccentColor
         
         self.placeholderNode = ASTextNode()
