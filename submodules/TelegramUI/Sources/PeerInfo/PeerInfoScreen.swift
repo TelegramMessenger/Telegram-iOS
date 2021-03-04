@@ -3484,10 +3484,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_CreateVoiceChat, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, f in
-                                f(.dismissWithoutContent)
-                                
-                                self?.requestCall(isVideo: false)
+                            }, action: { [weak self] c, f in
+                                self?.openVoiceChatDisplayAsPeerSelection(contextController: c, result: f, backAction: { c in
+                                    if let mainItemsImpl = mainItemsImpl {
+                                        c.setItems(mainItemsImpl())
+                                    }
+                                })
                             })))
                         }
                     }
