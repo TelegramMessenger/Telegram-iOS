@@ -32,6 +32,7 @@ public enum UndoOverlayContent {
     case autoDelete(isOn: Bool, title: String?, text: String)
     case gigagroupConversion(text: String)
     case linkRevoked(text: String)
+    case recording(text: String)
 }
 
 public enum UndoOverlayAction {

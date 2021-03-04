@@ -417,26 +417,6 @@ func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> Tele
     }
 }
 
-private func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
-    var result = flags
-    result.remove(.banReadMessages)
-    if result.contains(.banSendGifs) {
-        result.insert(.banSendStickers)
-        result.insert(.banSendGifs)
-        result.insert(.banSendGames)
-    } else {
-        result.remove(.banSendStickers)
-        result.remove(.banSendGifs)
-        result.remove(.banSendGames)
-    }
-    if result.contains(.banEmbedLinks) {
-        result.insert(.banSendInline)
-    } else {
-        result.remove(.banSendInline)
-    }
-    return result
-}
-
 private func channelPermissionsControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelPermissionsControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelPermissionsEntry] {
     var entries: [ChannelPermissionsEntry] = []
     

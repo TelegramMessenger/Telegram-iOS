@@ -25,19 +25,22 @@ final class PeerInfoState {
     let updatingAvatar: PeerInfoUpdatingAvatar?
     let updatingBio: String?
     let avatarUploadProgress: CGFloat?
+    let highlightedButton: PeerInfoHeaderButtonKey?
     
     init(
         isEditing: Bool,
         selectedMessageIds: Set<MessageId>?,
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
-        avatarUploadProgress: CGFloat?
+        avatarUploadProgress: CGFloat?,
+        highlightedButton: PeerInfoHeaderButtonKey?
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
         self.updatingAvatar = updatingAvatar
         self.updatingBio = updatingBio
         self.avatarUploadProgress = avatarUploadProgress
+        self.highlightedButton = highlightedButton
     }
     
     func withIsEditing(_ isEditing: Bool) -> PeerInfoState {
@@ -46,7 +49,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -56,7 +60,8 @@ final class PeerInfoState {
             selectedMessageIds: selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -66,7 +71,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -76,7 +82,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -86,7 +93,19 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: avatarUploadProgress
+            avatarUploadProgress: avatarUploadProgress,
+            highlightedButton: self.highlightedButton
+        )
+    }
+    
+    func withHighlightedButton(_ highlightedButton: PeerInfoHeaderButtonKey?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: highlightedButton
         )
     }
 }

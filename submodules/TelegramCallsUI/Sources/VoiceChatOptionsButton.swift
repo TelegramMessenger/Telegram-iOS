@@ -37,18 +37,15 @@ func closeButtonImage(dark: Bool) -> UIImage? {
         context.setLineCap(.round)
         context.setStrokeColor(UIColor.white.cgColor)
         
-        context.move(to: CGPoint(x: 9.0, y: 9.0))
-        context.addLine(to: CGPoint(x: 19.0, y: 19.0))
-        context.strokePath()
-        
-        context.move(to: CGPoint(x: 19.0, y: 9.0))
-        context.addLine(to: CGPoint(x: 9.0, y: 19.0))
+        context.move(to: CGPoint(x: 7.0 + UIScreenPixel, y: 16.0 + UIScreenPixel))
+        context.addLine(to: CGPoint(x: 14.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 21.0 - UIScreenPixel, y: 16.0 + UIScreenPixel))
         context.strokePath()
     })
 }
 
 final class VoiceChatHeaderButton: HighlightableButtonNode {
-    let extractedContainerNode: ContextExtractedContentContainingNode
+    let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
     
@@ -58,7 +55,7 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
     var dotNode: ASImageNode?
     
     init(rec: Bool = false) {
-        self.extractedContainerNode = ContextExtractedContentContainingNode()
+        self.referenceNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.isGestureEnabled = false
         self.iconNode = ASImageNode()
@@ -81,14 +78,13 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
         
         super.init()
         
-        self.containerNode.addSubnode(self.extractedContainerNode)
-        self.extractedContainerNode.contentNode.addSubnode(self.iconNode)
-        self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.addSubnode(self.iconNode)
         self.addSubnode(self.containerNode)
         
         if rec, let textNode = self.textNode, let dotNode = self.dotNode {
-            self.extractedContainerNode.contentNode.addSubnode(textNode)
-            self.extractedContainerNode.contentNode.addSubnode(dotNode)
+            self.referenceNode.addSubnode(textNode)
+            self.referenceNode.addSubnode(dotNode)
         }
         
         self.containerNode.shouldBegin = { [weak self] location in
@@ -107,8 +103,7 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
         self.iconNode.image = optionsButtonImage(dark: false)
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: rec ? 58.0 : 28.0, height: 28.0))
-        self.extractedContainerNode.frame = self.containerNode.bounds
-        self.extractedContainerNode.contentRect = self.containerNode.bounds
+        self.referenceNode.frame = self.containerNode.bounds
         self.iconNode.frame = self.containerNode.bounds
     }
     

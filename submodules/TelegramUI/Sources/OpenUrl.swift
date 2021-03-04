@@ -227,7 +227,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         }
         
         let handleInternalUrl: (String) -> Void = { url in
-            let _ = (context.sharedContext.resolveUrl(account: context.account, url: url)
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: url, skipUrlAuth: true)
             |> deliverOnMainQueue).start(next: handleResolvedUrl)
         }
         

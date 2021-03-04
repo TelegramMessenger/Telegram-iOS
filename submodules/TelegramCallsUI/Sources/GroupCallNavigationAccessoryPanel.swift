@@ -484,7 +484,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         } else {
             isMuted = false
         }
-        self.micButtonForegroundNode.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, color: UIColor.white), animated: transition.isAnimated)
+        self.micButtonForegroundNode.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, filled: false, color: UIColor.white), animated: transition.isAnimated)
         
         if isMuted != self.micButtonBackgroundNodeIsMuted {
             self.micButtonBackgroundNodeIsMuted = isMuted

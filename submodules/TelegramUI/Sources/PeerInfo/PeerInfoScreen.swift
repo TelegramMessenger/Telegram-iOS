@@ -58,6 +58,7 @@ import UndoUI
 import MediaResources
 import HashtagSearchUI
 import ActionSheetPeerItem
+import TelegramCallsUI
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -1507,7 +1508,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         selectedMessageIds: nil,
         updatingAvatar: nil,
         updatingBio: nil,
-        avatarUploadProgress: nil
+        avatarUploadProgress: nil,
+        highlightedButton: nil
     )
     private let nearbyPeerDistance: Int32?
     private var dataDisposable: Disposable?
@@ -1527,6 +1529,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
     private let preloadStickerDisposable = MetaDisposable()
+    
+    private let displayAsPeersPromise = Promise<[FoundPeer]>([])
     
     fileprivate let accountsAndPeers = Promise<[(Account, Peer, Int32)]>()
     fileprivate let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>()
@@ -1597,7 +1601,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self?.updateBlocked(block: block)
             },
             openReport: { [weak self] user in
-                self?.openReport(user: user)
+                self?.openReport(user: user, contextController: nil, backAction: nil)
             },
             openShareBot: { [weak self] in
                 self?.openShareBot()
@@ -2734,6 +2738,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
+            
+            if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(peerId.namespace) {
+                self.displayAsPeersPromise.set(cachedGroupCallDisplayAsAvailablePeers(account: context.account))
+            }
         }
         
         self.headerNode.avatarListNode.listContainerNode.currentIndexUpdated = { [weak self] in
@@ -3256,80 +3264,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .videoCall:
             self.requestCall(isVideo: true)
         case .voiceChat:
-            if let cachedData = self.data?.cachedData as? CachedGroupData, let activeCall = cachedData.activeCall {
-                self.context.joinGroupCall(peerId: self.peerId, joinAsPeerId: nil, activeCall: activeCall)
-            } else if let cachedData = self.data?.cachedData as? CachedChannelData, let activeCall = cachedData.activeCall {
-                let accountPeerId = self.context.account.peerId
-                let _ = (adminedPublicChannels(account: self.context.account, scope: .forVoiceChat)
-                |> deliverOnMainQueue).start(next: { [weak self] channelPeers in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
-                        return transaction.getPeer(accountPeerId)
-                    }
-                    |> deliverOnMainQueue).start(next: { accountPeer in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        if channelPeers.isEmpty {
-                            strongSelf.context.joinGroupCall(peerId: strongSelf.peerId, joinAsPeerId: nil, activeCall: activeCall)
-                        } else {
-                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                            let dismissAction: () -> Void = { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            }
-                            let selectAction: (PeerId) -> Void = { joinAsPeerId in
-                                dismissAction()
-                                
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.context.joinGroupCall(peerId: strongSelf.peerId, joinAsPeerId: joinAsPeerId == strongSelf.context.account.peerId ? nil : joinAsPeerId, activeCall: activeCall)
-                            }
-                            var items: [ActionSheetItem] = []
-                            
-                            var allPeers: [Peer] = []
-                            if let accountPeer = accountPeer {
-                                allPeers.append(accountPeer)
-                            }
-                            var channelPeers = channelPeers
-                            for i in 0 ..< channelPeers.count {
-                                if channelPeers[i].id == strongSelf.peerId {
-                                    let peer = channelPeers[i]
-                                    channelPeers.remove(at: i)
-                                    channelPeers.insert(peer, at: 0)
-                                    break
-                                }
-                            }
-                            allPeers.append(contentsOf: channelPeers)
-                            
-                            for peer in allPeers {
-                                items.append(ActionSheetPeerItem(context: strongSelf.context, peer: peer, title: peer.debugDisplayTitle, isSelected: false, strings: strongSelf.presentationData.strings, theme: strongSelf.presentationData.theme, action: {
-                                    selectAction(peer.id)
-                                }))
-                            }
-                            
-                            actionSheet.setItemGroups([
-                                ActionSheetItemGroup(items: items),
-                                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                            ])
-                            strongSelf.view.endEditing(true)
-                            controller.present(actionSheet, in: .window(.root))
-                        }
-                    })
-                })
-            }
+            self.openVoiceChatDisplayAsPeerSelection(contextController: nil, result: nil, backAction: nil)
         case .mute:
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
                 let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: nil).start()
             } else {
-                let actionSheet = ActionSheetController(presentationData: self.presentationData)
-                let dismissAction: () -> Void = { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
+                self.state = self.state.withHighlightedButton(.mute)
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                 }
-                var items: [ActionSheetItem] = []
+                
+                var items: [ContextMenuItem] = []
                 let muteValues: [Int32] = [
                     1 * 60 * 60,
                     2 * 24 * 60 * 60,
@@ -3342,20 +3287,28 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     } else {
                         title = muteForIntervalString(strings: self.presentationData.strings, value: delay)
                     }
-                    items.append(ActionSheetButtonItem(title: title, action: {
-                        dismissAction()
+                    
+                    items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
                         
                         let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: delay).start()
-                    }))
+                    })))
                 }
                 
-                items.insert(ActionSheetButtonItem(title: self.presentationData.strings.PeerInfo_CustomizeNotifications, action: {
-                    guard let peer = self.data?.peer else {
+                items.append(.separator)
+                
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_CustomizeNotifications, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.dismissWithoutContent)
+                    
+                    guard let strongSelf = self, let peer = strongSelf.data?.peer else {
                         return
                     }
-                    dismissAction()
                     
-                    let context = self.context
+                    let context = strongSelf.context
                     let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
                         return updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound) |> deliverOnMainQueue
                     }
@@ -3390,204 +3343,297 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     })
                     exceptionController.navigationPresentation = .modal
                     controller.push(exceptionController)
-                }), at: items.count - 1)
+                })))
                 
-                actionSheet.setItemGroups([
-                    ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                ])
                 self.view.endEditing(true)
-                controller.present(actionSheet, in: .window(.root))
+                
+                if let sourceNode = self.headerNode.buttonNodes[.mute]?.referenceNode {
+                    let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(items), reactionItems: [], gesture: nil)
+                    contextController.dismissed = { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.state = strongSelf.state.withHighlightedButton(nil)
+                            if let (layout, navigationHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                            }
+                        }
+                    }
+                    controller.presentInGlobalOverlay(contextController)
+                }
             }
         case .more:
             guard let data = self.data, let peer = data.peer else {
                 return
             }
-            let actionSheet = ActionSheetController(presentationData: self.presentationData)
-            let dismissAction: () -> Void = { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
+            let presentationData = self.presentationData
+            self.state = self.state.withHighlightedButton(.more)
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
-            var items: [ActionSheetItem] = []
-            if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false).contains(.search) || (self.headerNode.isAvatarExpanded && self.peerId.namespace == Namespaces.Peer.CloudUser) {
-                items.append(ActionSheetButtonItem(title: presentationData.strings.ChatSearch_SearchPlaceholder, color: .accent, action: { [weak self] in
-                    dismissAction()
-                    self?.openChatWithMessageSearch()
-                }))
-            }
-            if let user = peer as? TelegramUser {
-                if let botInfo = user.botInfo {
-                    if botInfo.flags.contains(.worksWithGroups) {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_InviteBotToGroup, color: .accent, action: { [weak self] in
-                            dismissAction()
-                            self?.openAddBotToGroup()
-                        }))
-                    }
-                    if user.username != nil {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_ShareBot, color: .accent, action: { [weak self] in
-                            dismissAction()
-                            self?.openShareBot()
-                        }))
+            
+            var mainItemsImpl: (() -> Signal<[ContextMenuItem], NoError>)?
+            mainItemsImpl = {
+                var items: [ContextMenuItem] = []
+                
+                let headerButtons = peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false)
+                
+                let hasSearch = !headerButtons.contains(.search) || (self.headerNode.isAvatarExpanded && self.peerId.namespace == Namespaces.Peer.CloudUser)
+                if hasSearch {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatSearch_SearchPlaceholder, icon: { theme in
+                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.dismissWithoutContent)
+                        self?.openChatWithMessageSearch()
+                    })))
+                }
+                
+                if let user = peer as? TelegramUser {
+                    if let botInfo = user.botInfo {
+                        if botInfo.flags.contains(.worksWithGroups) {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_InviteBotToGroup, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Groups"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                self?.openAddBotToGroup()
+                            })))
+                        }
+                        if user.username != nil {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_ShareBot, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                self?.openShareBot()
+                            })))
+                        }
+                        
+                        if let cachedData = data.cachedData as? CachedUserData, let botInfo = cachedData.botInfo {
+                            for command in botInfo.commands {
+                                if command.text == "settings" {
+                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotSettings, icon: { theme in
+                                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
+                                    }, action: { [weak self] _, f in
+                                        f(.dismissWithoutContent)
+                                        self?.performBotCommand(command: .settings)
+                                    })))
+                                } else if command.text == "help" {
+                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotHelp, icon: { theme in
+                                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Help"), color: theme.contextMenu.primaryColor)
+                                    }, action: { [weak self] _, f in
+                                        f(.dismissWithoutContent)
+                                        self?.performBotCommand(command: .help)
+                                    })))
+                                } else if command.text == "privacy" {
+                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotPrivacy, icon: { theme in
+                                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
+                                    }, action: { [weak self] _, f in
+                                        f(.dismissWithoutContent)
+                                        self?.performBotCommand(command: .privacy)
+                                    })))
+                                }
+                            }
+                        }
                     }
                     
-                    if let cachedData = data.cachedData as? CachedUserData, let botInfo = cachedData.botInfo {
-                        for command in botInfo.commands {
-                            if command.text == "settings" {
-                                items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_BotSettings, color: .accent, action: { [weak self] in
-                                    dismissAction()
-                                    self?.performBotCommand(command: .settings)
-                                }))
-                            } else if command.text == "help" {
-                                items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_BotHelp, color: .accent, action: { [weak self] in
-                                    dismissAction()
-                                    self?.performBotCommand(command: .help)
-                                }))
-                            } else if command.text == "privacy" {
-                                items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_BotPrivacy, color: .accent, action: { [weak self] in
-                                    dismissAction()
-                                    self?.performBotCommand(command: .privacy)
-                                }))
+                    if user.botInfo == nil && data.isContact {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Profile_ShareContactButton, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            if let strongSelf = self, let peer = strongSelf.data?.peer as? TelegramUser, let phone = peer.phone {
+                                let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
+                                let shareController = ShareController(context: strongSelf.context, subject: .media(.standalone(media: contact)))
+                                strongSelf.controller?.present(shareController, in: .window(.root))
+                            }
+                        })))
+                    }
+                   
+                    if self.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_StartSecretChat, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            self?.openStartSecretChat()
+                        })))
+                        if data.isContact {
+                            if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
+                            } else {
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, icon: { theme in
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor)
+                                }, action: { [weak self] _, f in
+                                    f(.dismissWithoutContent)
+                                    
+                                    self?.updateBlocked(block: true)
+                                })))
                             }
                         }
-                    }
-                }
-                
-                if user.botInfo == nil && data.isContact {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Profile_ShareContactButton, color: .accent, action: { [weak self] in
-                        dismissAction()
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        if let peer = strongSelf.data?.peer as? TelegramUser, let phone = peer.phone {
-                            let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
-                            let shareController = ShareController(context: strongSelf.context, subject: .media(.standalone(media: contact)))
-                            strongSelf.controller?.present(shareController, in: .window(.root))
-                        }
-                    }))
-                }
-               
-                if self.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_StartSecretChat, color: .accent, action: { [weak self] in
-                        dismissAction()
-                        self?.openStartSecretChat()
-                    }))
-                    if data.isContact {
+                    } else if self.peerId.namespace == Namespaces.Peer.SecretChat && data.isContact {
                         if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
                         } else {
-                            items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_BlockUser, color: .destructive, action: { [weak self] in
-                                dismissAction()
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
                                 self?.updateBlocked(block: true)
-                            }))
+                            })))
                         }
                     }
-                } else if self.peerId.namespace == Namespaces.Peer.SecretChat && data.isContact {
-                    if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
-                    } else {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_BlockUser, color: .destructive, action: { [weak self] in
-                            dismissAction()
-                            self?.updateBlocked(block: true)
-                        }))
+                } else if let channel = peer as? TelegramChannel {
+                    if !channel.flags.contains(.hasVoiceChat) {
+                        if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_CreateVoiceChat, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] c, f in
+                                self?.openVoiceChatDisplayAsPeerSelection(contextController: c, result: f, backAction: { c in
+                                    if let mainItemsImpl = mainItemsImpl {
+                                        c.setItems(mainItemsImpl())
+                                    }
+                                })
+                            })))
+                        }
                     }
-                }
-            } else if let channel = peer as? TelegramChannel {
-                if !channel.flags.contains(.hasVoiceChat) {
-                    if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_CreateVoiceChat, color: .accent, action: { [weak self] in
-                            dismissAction()
-                            self?.requestCall(isVideo: false)
-                        }))
+                    
+                    if let cachedData = self.data?.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_Stats, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            self?.openStats()
+                        })))
                     }
-                }
-                
-                if let cachedData = self.data?.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_Stats, color: .accent, action: { [weak self] in
-                        dismissAction()
-                        self?.openStats()
-                    }))
-                }
-                
-                var canReport = true
-                if channel.isVerified {
-                    canReport = false
-                }
-                if channel.adminRights != nil {
-                    canReport = false
-                }
-                if channel.flags.contains(.isCreator) {
-                    canReport = false
-                }
-                if canReport {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.ReportPeer_Report, color: .destructive, action: { [weak self] in
-                        dismissAction()
-                        self?.openReport(user: false)
-                    }))
-                }
-                
-                switch channel.info {
-                case .broadcast:
+                    
+                    var canReport = true
+                    if channel.isVerified {
+                        canReport = false
+                    }
+                    if channel.adminRights != nil {
+                        canReport = false
+                    }
                     if channel.flags.contains(.isCreator) {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_DeleteChannel, color: .destructive, action: { [weak self] in
-                            dismissAction()
-                            self?.openDeletePeer()
-                        }))
-                    } else {
-                        if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false).contains(.leave) {
+                        canReport = false
+                    }
+                    if canReport {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ReportPeer_Report, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, f in
+                            self?.openReport(user: false, contextController: c, backAction: { c in
+                                if let mainItemsImpl = mainItemsImpl {
+                                    c.setItems(mainItemsImpl())
+                                }
+                            })
+                        })))
+                    }
+                    
+                    switch channel.info {
+                    case .broadcast:
+                        if channel.flags.contains(.isCreator) {
+                            if !items.isEmpty {
+                                items.append(.separator)
+                            }
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteChannel, textColor: .destructive, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                self?.openDeletePeer()
+                            })))
+                        } else {
+                            if !headerButtons.contains(.leave) {
+                                if case .member = channel.participationStatus {
+                                    if !items.isEmpty {
+                                        items.append(.separator)
+                                    }
+                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_LeaveChannel, textColor: .destructive, icon: { theme in
+                                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                    }, action: { [weak self] _, f in
+                                        f(.dismissWithoutContent)
+                                        
+                                        self?.openLeavePeer()
+                                    })))
+                                }
+                            }
+                        }
+                    case .group:
+                        if channel.flags.contains(.isCreator) {
+                            if !items.isEmpty {
+                                items.append(.separator)
+                            }
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteGroup, textColor: .destructive, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                self?.openDeletePeer()
+                            })))
+                        } else {
                             if case .member = channel.participationStatus {
-                                items.append(ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, color: .destructive, action: { [weak self] in
-                                    dismissAction()
+                                if !items.isEmpty {
+                                    items.append(.separator)
+                                }
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                }, action: { [weak self] _, f in
+                                    f(.dismissWithoutContent)
+                                    
                                     self?.openLeavePeer()
-                                }))
+                                })))
                             }
                         }
                     }
-                case .group:
-                    if channel.flags.contains(.isCreator) {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_DeleteGroup, color: .destructive, action: { [weak self] in
-                            dismissAction()
-                            self?.openDeletePeer()
-                        }))
-                    } else {
-                        if case .member = channel.participationStatus {
-                            items.append(ActionSheetButtonItem(title: presentationData.strings.Group_LeaveGroup, color: .destructive, action: { [weak self] in
-                                dismissAction()
-                                self?.openLeavePeer()
-                            }))
-                        }
-                    }
-                }
-            } else if let group = peer as? TelegramGroup {
-                var canManageGroupCalls = false
-                if case .creator = group.role {
-                    canManageGroupCalls = true
-                } else if case let .admin(rights, _) = group.role {
-                    if rights.rights.contains(.canManageCalls) {
+                } else if let group = peer as? TelegramGroup {
+                    var canManageGroupCalls = false
+                    if case .creator = group.role {
                         canManageGroupCalls = true
-                    }
-                }
-                if canManageGroupCalls, !group.flags.contains(.hasVoiceChat) {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_CreateVoiceChat, color: .accent, action: { [weak self] in
-                        dismissAction()
-                        
-                        guard let strongSelf = self else {
-                            return
+                    } else if case let .admin(rights, _) = group.role {
+                        if rights.rights.contains(.canManageCalls) {
+                            canManageGroupCalls = true
                         }
-                        
-                        strongSelf.createAndJoinGroupCall(peerId: group.id)
-                    }))
+                    }
+                    if canManageGroupCalls, !group.flags.contains(.hasVoiceChat) {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_CreateVoiceChat, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, f in
+                            self?.openVoiceChatDisplayAsPeerSelection(contextController: c, result: f, backAction: { c in
+                                if let mainItemsImpl = mainItemsImpl {
+                                    c.setItems(mainItemsImpl())
+                                }
+                            })
+                        })))
+                    }
+                    
+                    if case .Member = group.membership {
+                        if !items.isEmpty {
+                            items.append(.separator)
+                        }
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            self?.openLeavePeer()
+                        })))
+                    }
                 }
                 
-                if case .Member = group.membership {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Group_LeaveGroup, color: .destructive, action: { [weak self] in
-                        dismissAction()
-                        self?.openLeavePeer()
-                    }))
-                }
+                return .single(items)
             }
-            actionSheet.setItemGroups([
-                ActionSheetItemGroup(items: items),
-                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
+            
             self.view.endEditing(true)
-            controller.present(actionSheet, in: .window(.root))
+            
+            if let sourceNode = self.headerNode.buttonNodes[.more]?.referenceNode {
+                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: nil)
+                contextController.dismissed = { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.state = strongSelf.state.withHighlightedButton(nil)
+                        if let (layout, navigationHeight) = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                        }
+                    }
+                }
+                controller.presentInGlobalOverlay(contextController)
+            }
         case .addMember:
             self.openAddMember()
         case .search:
@@ -3623,14 +3669,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private func openChatForReporting(_ reason: ReportReason) {
         if let navigationController = (self.controller?.navigationController as? NavigationController) {
             self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), keepStack: .default, reportReason: reason, completion: { _ in
-//                    var viewControllers = navigationController.viewControllers
-//                    viewControllers = viewControllers.filter { controller in
-//                        if controller is PeerInfoScreen {
-//                            return false
-//                        }
-//                        return true
-//                    }
-//                    navigationController.setViewControllers(viewControllers, animated: false)
             }))
         }
     }
@@ -3738,16 +3776,16 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.present(shareController, in: .window(.root))
     }
     
-    private func requestCall(isVideo: Bool) {
+    private func requestCall(isVideo: Bool, joinAsPeerId: PeerId? = nil) {
         if let peer = self.data?.peer as? TelegramChannel {
             guard let cachedChannelData = self.data?.cachedData as? CachedChannelData else {
                 return
             }
             
             if let activeCall = cachedChannelData.activeCall {
-                self.context.joinGroupCall(peerId: peer.id, joinAsPeerId: nil, activeCall: activeCall)
+                self.context.joinGroupCall(peerId: peer.id, joinAsPeerId: joinAsPeerId, activeCall: activeCall)
             } else {
-                self.createAndJoinGroupCall(peerId: peer.id)
+                self.createAndJoinGroupCall(peerId: peer.id, joinAsPeerId: joinAsPeerId)
             }
             return
         } else if let peer = self.data?.peer as? TelegramGroup {
@@ -3756,9 +3794,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             if let activeCall = cachedGroupData.activeCall {
-                self.context.joinGroupCall(peerId: peer.id, joinAsPeerId: nil, activeCall: activeCall)
+                self.context.joinGroupCall(peerId: peer.id, joinAsPeerId: joinAsPeerId, activeCall: activeCall)
             } else {
-                self.createAndJoinGroupCall(peerId: peer.id)
+                self.createAndJoinGroupCall(peerId: peer.id, joinAsPeerId: joinAsPeerId)
             }
             return
         }
@@ -3774,7 +3812,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.context.requestCall(peerId: peer.id, isVideo: isVideo, completion: {})
     }
     
-    private func createAndJoinGroupCall(peerId: PeerId) {
+    private func createAndJoinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?) {
         if let _ = self.context.sharedContext.callManager {
             let startCall: (Bool) -> Void = { [weak self] endCurrentIfAny in
                 guard let strongSelf = self else {
@@ -3790,12 +3828,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     statusController?.dismiss()
                 }
                 strongSelf.controller?.present(statusController, in: .window(.root))
-                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId, joinAs: nil)
+                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId, joinAs: joinAsPeerId)
                 |> deliverOnMainQueue).start(next: { [weak self] info in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.context.joinGroupCall(peerId: peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                    strongSelf.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
                 }, error: { [weak self] error in
                     dismissStatus?()
                     
@@ -4114,7 +4152,87 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         controller.push(statsController)
     }
     
-    private func openReport(user: Bool) {
+    private func openVoiceChatDisplayAsPeerSelection(contextController: ContextController?, result: ((ContextMenuActionResult) -> Void)?, backAction: ((ContextController) -> Void)?) {
+        let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(context.account.peerId)
+        |> map { peer in
+            return [FoundPeer(peer: peer, subscribers: nil)]
+        }
+        let _ = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.displayAsPeersPromise.get() |> take(1))
+        |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
+            var result = currentAccountPeer
+            result.append(contentsOf: availablePeers)
+            return result
+        }).start(next: { [weak self] peers in
+            guard let strongSelf = self else {
+                return
+            }
+            if peers.count == 1 {
+                result?(.dismissWithoutContent)
+                strongSelf.requestCall(isVideo: false, joinAsPeerId: nil)
+            } else {
+                var items: [ContextMenuItem] = []
+                
+                items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: theme.actionSheet.primaryTextColor)
+                }), true))
+                
+                for peer in peers {
+                    var subtitle: String?
+                    if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
+                        subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
+                    } else if let subscribers = peer.subscribers {
+                        subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                    }
+
+                    let avatarSize = CGSize(width: 28.0, height: 28.0)
+                    let avatarSignal = peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)
+                    items.append(.action(ContextMenuActionItem(text: peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: avatarSignal), action: { _, f in
+                        f(.dismissWithoutContent)
+                        
+                        strongSelf.requestCall(isVideo: false, joinAsPeerId: peer.peer.id == strongSelf.context.account.peerId ? nil : peer.peer.id)
+                    })))
+                    
+                    if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
+                        items.append(.separator)
+                    }
+                }
+                if backAction != nil {
+                    items.append(.separator)
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { (c, _) in
+                        if let backAction = backAction {
+                            backAction(c)
+                        }
+                    })))
+                }
+                
+                if let contextController = contextController {
+                    contextController.setItems(.single(items))
+                } else {
+                    strongSelf.state = strongSelf.state.withHighlightedButton(.voiceChat)
+                    if let (layout, navigationHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                    }
+                    
+                    if let sourceNode = strongSelf.headerNode.buttonNodes[.voiceChat]?.referenceNode, let controller = strongSelf.controller {
+                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(items), reactionItems: [], gesture: nil)
+                        contextController.dismissed = { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.state = strongSelf.state.withHighlightedButton(nil)
+                                if let (layout, navigationHeight) = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                                }
+                            }
+                        }
+                        controller.presentInGlobalOverlay(contextController)
+                    }
+                }
+            }
+        })
+    }
+    
+    private func openReport(user: Bool, contextController: ContextController?, backAction: ((ContextController) -> Void)?) {
         guard let controller = self.controller else {
             return
         }
@@ -4126,17 +4244,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         } else {
             options = [.spam, .fake, .violence, .pornography, .childAbuse, .copyright, .other]
         }
-        controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), options: options, passthrough: true, present: { [weak controller] c, a in
-            controller?.present(c, in: .window(.root), with: a)
-        }, push: { [weak controller] c in
-            controller?.push(c)
-        }, completion: { [weak self] reason, _ in
+        
+        presentPeerReportOptions(context: self.context, parent: controller, contextController: contextController, backAction: backAction, subject: .peer(self.peerId), options: options, passthrough: true, completion: { [weak self] reason, _ in
             if let reason = reason {
                 DispatchQueue.main.async {
                     self?.openChatForReporting(reason)
                 }
             }
-        }), in: .window(.root))
+        })
     }
     
     private func openEncryptionKey() {
@@ -6216,36 +6331,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             })))
         }
         
-        func accountIconSignal(account: Account, peer: Peer, size: CGSize) -> Signal<UIImage?, NoError> {
-            let iconSignal: Signal<UIImage?, NoError>
-            if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, inset: 0.0, emptyColor: nil, synchronousLoad: false) {
-                iconSignal = signal
-                    |> map { imageVersions -> UIImage? in
-                        return imageVersions?.0
-                }
-            } else {
-                let peerId = peer.id
-                var displayLetters = peer.displayLetters
-                if displayLetters.count == 2 && displayLetters[0].isSingleEmoji && displayLetters[1].isSingleEmoji {
-                    displayLetters = [displayLetters[0]]
-                }
-                iconSignal = Signal { subscriber in
-                    let image = generateImage(size, rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarPlaceholderFont(size: 13.0), letters: displayLetters, peerId: peerId)
-                    })?.withRenderingMode(.alwaysOriginal)
-                    
-                    subscriber.putNext(image)
-                    subscriber.putCompletion()
-                    return EmptyDisposable
-                }
-            }
-            return iconSignal
-        }
-        
         let avatarSize = CGSize(width: 28.0, height: 28.0)
         
-        items.append(.action(ContextMenuActionItem(text: primary.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: primary.0, peer: primary.1, size: avatarSize)), action: { _, f in
+        items.append(.action(ContextMenuActionItem(text: primary.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: primary.0, peer: primary.1, size: avatarSize)), action: { _, f in
             f(.default)
         })))
         
@@ -6255,7 +6343,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         
         for account in other {
             let id = account.0.id
-            items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: account.0, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
+            items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: account.0, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
                 guard let strongSelf = self else {
                     return
                 }
@@ -6531,6 +6619,20 @@ private final class MessageContextExtractedContentSource: ContextExtractedConten
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class PeerInfoContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
 

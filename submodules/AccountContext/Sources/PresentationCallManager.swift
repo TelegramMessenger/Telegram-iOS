@@ -178,6 +178,7 @@ public struct PresentationGroupCallState: Equatable {
     public var muteState: GroupCallParticipantsContext.Participant.MuteState?
     public var defaultParticipantMuteState: DefaultParticipantMuteState?
     public var recordingStartTimestamp: Int32?
+    public var title: String?
     
     public init(
         networkState: NetworkState,
@@ -185,7 +186,8 @@ public struct PresentationGroupCallState: Equatable {
         adminIds: Set<PeerId>,
         muteState: GroupCallParticipantsContext.Participant.MuteState?,
         defaultParticipantMuteState: DefaultParticipantMuteState?,
-        recordingStartTimestamp: Int32?
+        recordingStartTimestamp: Int32?,
+        title: String?
     ) {
         self.networkState = networkState
         self.canManageCall = canManageCall
@@ -193,6 +195,7 @@ public struct PresentationGroupCallState: Equatable {
         self.muteState = muteState
         self.defaultParticipantMuteState = defaultParticipantMuteState
         self.recordingStartTimestamp = recordingStartTimestamp
+        self.title = title
     }
 }
 
@@ -310,7 +313,9 @@ public protocol PresentationGroupCall: class {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
-    func setShouldBeRecording(_ shouldBeRecording: Bool)
+    func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?)
+    
+    func updateTitle(_ title: String)
     
     func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)
