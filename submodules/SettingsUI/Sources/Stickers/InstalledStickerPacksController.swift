@@ -336,20 +336,26 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
 
 private struct InstalledStickerPacksControllerState: Equatable {
     let editing: Bool
+    let selectedPackIds: Set<Int64>?
     let packIdWithRevealedOptions: ItemCollectionId?
     
     init() {
         self.editing = false
+        self.selectedPackIds = nil
         self.packIdWithRevealedOptions = nil
     }
     
-    init(editing: Bool, packIdWithRevealedOptions: ItemCollectionId?) {
+    init(editing: Bool, selectedPackIds: Set<Int64>?, packIdWithRevealedOptions: ItemCollectionId?) {
         self.editing = editing
+        self.selectedPackIds = selectedPackIds
         self.packIdWithRevealedOptions = packIdWithRevealedOptions
     }
     
     static func ==(lhs: InstalledStickerPacksControllerState, rhs: InstalledStickerPacksControllerState) -> Bool {
         if lhs.editing != rhs.editing {
+            return false
+        }
+        if lhs.selectedPackIds != rhs.selectedPackIds {
             return false
         }
         if lhs.packIdWithRevealedOptions != rhs.packIdWithRevealedOptions {
@@ -360,11 +366,15 @@ private struct InstalledStickerPacksControllerState: Equatable {
     }
     
     func withUpdatedEditing(_ editing: Bool) -> InstalledStickerPacksControllerState {
-        return InstalledStickerPacksControllerState(editing: editing, packIdWithRevealedOptions: self.packIdWithRevealedOptions)
+        return InstalledStickerPacksControllerState(editing: editing, selectedPackIds: self.selectedPackIds, packIdWithRevealedOptions: self.packIdWithRevealedOptions)
+    }
+    
+    func withUpdatedSelectedPackIds(_ selectedPackIds: Set<Int64>) -> InstalledStickerPacksControllerState {
+        return InstalledStickerPacksControllerState(editing: editing, selectedPackIds: selectedPackIds, packIdWithRevealedOptions: self.packIdWithRevealedOptions)
     }
     
     func withUpdatedPackIdWithRevealedOptions(_ packIdWithRevealedOptions: ItemCollectionId?) -> InstalledStickerPacksControllerState {
-        return InstalledStickerPacksControllerState(editing: self.editing, packIdWithRevealedOptions: packIdWithRevealedOptions)
+        return InstalledStickerPacksControllerState(editing: self.editing, selectedPackIds: self.selectedPackIds, packIdWithRevealedOptions: packIdWithRevealedOptions)
     }
 }
 
@@ -651,6 +661,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         
         let leftNavigationButton: ItemListNavigationButton? = nil
         var rightNavigationButton: ItemListNavigationButton?
+        var toolbarItem: ItemListToolbarItem?
         if let packCount = packCount, packCount != 0 {
             if case .modal = mode {
                 rightNavigationButton = nil
@@ -687,7 +698,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, temporaryPackOrder: temporaryPackOrder, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, temporaryPackOrder: temporaryPackOrder, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings), style: .blocks, ensureVisibleItemTag: focusOnItemTag, toolbarItem: toolbarItem, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {
