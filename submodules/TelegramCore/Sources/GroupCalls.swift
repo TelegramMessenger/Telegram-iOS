@@ -386,8 +386,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId, call
                     }
                     
                     return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100, hash: 0))
-                    |> mapError { _ -> JoinGroupCallError in
-                        return .generic
+                    |> `catch` { _  in
+                        return .single(.channelParticipantsNotModified)
                     }
                 }
                 |> map { admins -> (Set<PeerId>, [Api.User]) in
@@ -1387,7 +1387,12 @@ public final class GroupCallParticipantsContext {
         
         for participant in self.stateValue.state.participants {
             if participant.peer.id == peerId {
-                if participant.muteState == muteState && participant.volume == volume {
+                var raiseHandEqual: Bool = true
+                if let raiseHand = raiseHand {
+                    raiseHandEqual = (participant.raiseHandRating == nil && !raiseHand) ||
+                        (participant.raiseHandRating != nil && raiseHand)
+                }
+                if participant.muteState == muteState && participant.volume == volume && raiseHandEqual {
                     return
                 }
             }
@@ -1826,7 +1831,7 @@ private func mergeAndSortParticipants(current currentParticipants: [GroupCallPar
 public func getAudioBroadcastPart(account: Account, callId: Int64, accessHash: Int64, datacenterId: Int?, timestampId: Int32) -> Signal<Data?, NoError> {
     return account.network.multiplexedRequestManager.request(to: .main(account.network.datacenterId), consumerId: Int64.random(in: 0 ..< Int64.max), data: Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), date: timestampId), offset: 0, limit: 128 * 1024), tag: nil, continueInBackground: false, automaticFloodWait: false)
     |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.upload.File?, NoError> in
+    |> `catch` { error -> Signal<Api.upload.File?, NoError> in
         return .single(nil)
     }
     |> map { result -> Data? in
