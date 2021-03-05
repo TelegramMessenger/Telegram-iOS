@@ -325,7 +325,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true) -> Signal<Any, MTRpcError> {
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true) -> Signal<(Any, Double), (MTRpcError, Double)> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -351,9 +351,9 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
-                    subscriber.putError(error)
+                    subscriber.putError((error, timestamp))
                 } else {
-                    subscriber.putNext((boxedResponse as! BoxedMessage).body)
+                    subscriber.putNext(((boxedResponse as! BoxedMessage).body, timestamp))
                     subscriber.putCompletion()
                 }
             }

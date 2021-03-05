@@ -1260,7 +1260,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         category = .voiceChat
                     }
                     
-                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), category: category), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: activity)
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), category: category), peerId: userId.peerId, activity: activity)
                 }
             case let .updateChannelUserTyping(_, channelId, topMsgId, userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
@@ -1275,7 +1275,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         category = .thread(threadId)
                     }
                     
-                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: channelPeerId, category: category), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: activity)
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: channelPeerId, category: category), peerId: userId.peerId, activity: activity)
                 }
             case let .updateEncryptedChatTyping(chatId):
                 if let date = updatesDate, date + 60 > serverTime {

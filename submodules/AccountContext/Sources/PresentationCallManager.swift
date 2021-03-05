@@ -172,6 +172,7 @@ public struct PresentationGroupCallState: Equatable {
         case muted
     }
     
+    public var myPeerId: PeerId
     public var networkState: NetworkState
     public var canManageCall: Bool
     public var adminIds: Set<PeerId>
@@ -180,6 +181,7 @@ public struct PresentationGroupCallState: Equatable {
     public var recordingStartTimestamp: Int32?
     
     public init(
+        myPeerId: PeerId,
         networkState: NetworkState,
         canManageCall: Bool,
         adminIds: Set<PeerId>,
@@ -187,6 +189,7 @@ public struct PresentationGroupCallState: Equatable {
         defaultParticipantMuteState: DefaultParticipantMuteState?,
         recordingStartTimestamp: Int32?
     ) {
+        self.myPeerId = myPeerId
         self.networkState = networkState
         self.canManageCall = canManageCall
         self.adminIds = adminIds
@@ -282,7 +285,6 @@ public protocol PresentationGroupCall: class {
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }
-    var myPeerId: PeerId { get }
     
     var isVideo: Bool { get }
     
@@ -298,10 +300,12 @@ public protocol PresentationGroupCall: class {
     
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     
+    func reconnect(as peerId: PeerId)
     func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>
     
     func toggleIsMuted()
     func setIsMuted(action: PresentationGroupCallMuteAction)
+    func raiseHand()
     func requestVideo()
     func disableVideo()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)

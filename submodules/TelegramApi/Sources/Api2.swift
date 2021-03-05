@@ -3604,13 +3604,13 @@ public extension Api {
     
     }
     public enum GroupCallParticipant: TypeConstructorDescription {
-        case groupCallParticipant(flags: Int32, peer: Api.Peer, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, about: String?)
+        case groupCallParticipant(flags: Int32, peer: Api.Peer, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, about: String?, raiseHandRating: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about):
+                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about, let raiseHandRating):
                     if boxed {
-                        buffer.appendInt32(-763544865)
+                        buffer.appendInt32(430815881)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
@@ -3619,14 +3619,15 @@ public extension Api {
                     serializeInt32(source, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 11) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 13) != 0 {serializeInt64(raiseHandRating!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about):
-                return ("groupCallParticipant", [("flags", flags), ("peer", peer), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("about", about)])
+                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about, let raiseHandRating):
+                return ("groupCallParticipant", [("flags", flags), ("peer", peer), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("about", about), ("raiseHandRating", raiseHandRating)])
     }
     }
     
@@ -3647,6 +3648,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 7) != 0 {_6 = reader.readInt32() }
             var _7: String?
             if Int(_1!) & Int(1 << 11) != 0 {_7 = parseString(reader) }
+            var _8: Int64?
+            if Int(_1!) & Int(1 << 13) != 0 {_8 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -3654,8 +3657,9 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 7) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 11) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, peer: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6, about: _7)
+            let _c8 = (Int(_1!) & Int(1 << 13) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, peer: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6, about: _7, raiseHandRating: _8)
             }
             else {
                 return nil
@@ -4586,7 +4590,7 @@ public extension Api {
         case updateMessageID(id: Int32, randomId: Int64)
         case updateDeleteMessages(messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateUserTyping(userId: Int32, action: Api.SendMessageAction)
-        case updateChatUserTyping(chatId: Int32, userId: Int32, action: Api.SendMessageAction)
+        case updateChatUserTyping(chatId: Int32, fromId: Api.Peer, action: Api.SendMessageAction)
         case updateChatParticipants(participants: Api.ChatParticipants)
         case updateUserStatus(userId: Int32, status: Api.UserStatus)
         case updateUserName(userId: Int32, firstName: String, lastName: String, username: String)
@@ -4663,7 +4667,7 @@ public extension Api {
         case updateReadChannelDiscussionInbox(flags: Int32, channelId: Int32, topMsgId: Int32, readMaxId: Int32, broadcastId: Int32?, broadcastPost: Int32?)
         case updateReadChannelDiscussionOutbox(channelId: Int32, topMsgId: Int32, readMaxId: Int32)
         case updatePeerBlocked(peerId: Api.Peer, blocked: Api.Bool)
-        case updateChannelUserTyping(flags: Int32, channelId: Int32, topMsgId: Int32?, userId: Int32, action: Api.SendMessageAction)
+        case updateChannelUserTyping(flags: Int32, channelId: Int32, topMsgId: Int32?, fromId: Api.Peer, action: Api.SendMessageAction)
         case updatePinnedMessages(flags: Int32, peer: Api.Peer, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updatePinnedChannelMessages(flags: Int32, channelId: Int32, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateChat(chatId: Int32)
@@ -4710,12 +4714,12 @@ public extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
-                case .updateChatUserTyping(let chatId, let userId, let action):
+                case .updateChatUserTyping(let chatId, let fromId, let action):
                     if boxed {
-                        buffer.appendInt32(-1704596961)
+                        buffer.appendInt32(-2033525908)
                     }
                     serializeInt32(chatId, buffer: buffer, boxed: false)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    fromId.serialize(buffer, true)
                     action.serialize(buffer, true)
                     break
                 case .updateChatParticipants(let participants):
@@ -5359,14 +5363,14 @@ public extension Api {
                     peerId.serialize(buffer, true)
                     blocked.serialize(buffer, true)
                     break
-                case .updateChannelUserTyping(let flags, let channelId, let topMsgId, let userId, let action):
+                case .updateChannelUserTyping(let flags, let channelId, let topMsgId, let fromId, let action):
                     if boxed {
-                        buffer.appendInt32(-13975905)
+                        buffer.appendInt32(1796675352)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
-                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    fromId.serialize(buffer, true)
                     action.serialize(buffer, true)
                     break
                 case .updatePinnedMessages(let flags, let peer, let messages, let pts, let ptsCount):
@@ -5480,8 +5484,8 @@ public extension Api {
                 return ("updateDeleteMessages", [("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
                 case .updateUserTyping(let userId, let action):
                 return ("updateUserTyping", [("userId", userId), ("action", action)])
-                case .updateChatUserTyping(let chatId, let userId, let action):
-                return ("updateChatUserTyping", [("chatId", chatId), ("userId", userId), ("action", action)])
+                case .updateChatUserTyping(let chatId, let fromId, let action):
+                return ("updateChatUserTyping", [("chatId", chatId), ("fromId", fromId), ("action", action)])
                 case .updateChatParticipants(let participants):
                 return ("updateChatParticipants", [("participants", participants)])
                 case .updateUserStatus(let userId, let status):
@@ -5634,8 +5638,8 @@ public extension Api {
                 return ("updateReadChannelDiscussionOutbox", [("channelId", channelId), ("topMsgId", topMsgId), ("readMaxId", readMaxId)])
                 case .updatePeerBlocked(let peerId, let blocked):
                 return ("updatePeerBlocked", [("peerId", peerId), ("blocked", blocked)])
-                case .updateChannelUserTyping(let flags, let channelId, let topMsgId, let userId, let action):
-                return ("updateChannelUserTyping", [("flags", flags), ("channelId", channelId), ("topMsgId", topMsgId), ("userId", userId), ("action", action)])
+                case .updateChannelUserTyping(let flags, let channelId, let topMsgId, let fromId, let action):
+                return ("updateChannelUserTyping", [("flags", flags), ("channelId", channelId), ("topMsgId", topMsgId), ("fromId", fromId), ("action", action)])
                 case .updatePinnedMessages(let flags, let peer, let messages, let pts, let ptsCount):
                 return ("updatePinnedMessages", [("flags", flags), ("peer", peer), ("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
                 case .updatePinnedChannelMessages(let flags, let channelId, let messages, let pts, let ptsCount):
@@ -5728,8 +5732,10 @@ public extension Api {
         public static func parse_updateChatUserTyping(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
             var _3: Api.SendMessageAction?
             if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.SendMessageAction
@@ -5738,7 +5744,7 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.Update.updateChatUserTyping(chatId: _1!, userId: _2!, action: _3!)
+                return Api.Update.updateChatUserTyping(chatId: _1!, fromId: _2!, action: _3!)
             }
             else {
                 return nil
@@ -7028,8 +7034,10 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
-            var _4: Int32?
-            _4 = reader.readInt32()
+            var _4: Api.Peer?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
             var _5: Api.SendMessageAction?
             if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.SendMessageAction
@@ -7040,7 +7048,7 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.Update.updateChannelUserTyping(flags: _1!, channelId: _2!, topMsgId: _3, userId: _4!, action: _5!)
+                return Api.Update.updateChannelUserTyping(flags: _1!, channelId: _2!, topMsgId: _3, fromId: _4!, action: _5!)
             }
             else {
                 return nil
