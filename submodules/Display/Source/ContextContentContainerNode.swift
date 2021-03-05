@@ -13,6 +13,8 @@ public final class ContextContentContainerNode: ASDisplayNode {
             return
         }
         switch contentNode {
+        case .reference:
+            break
         case .extracted:
             break
         case let .controller(controller):

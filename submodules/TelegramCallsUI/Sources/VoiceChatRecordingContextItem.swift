@@ -8,11 +8,23 @@ import AppBundle
 import ContextUI
 import TelegramStringFormatting
 
+func generateStartRecordingIcon(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 18.0, height: 18.0), opaque: false, rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        context.setLineWidth(1.0 + UIScreenPixel)
+        context.setStrokeColor(color.cgColor)
+        context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
+        context.setFillColor(color.cgColor)
+        context.fillEllipse(in: bounds.insetBy(dx: 5.0, dy: 5.0))
+    })
+}
+
 final class VoiceChatRecordingContextItem: ContextMenuCustomItem {
-    fileprivate let timestamp: Double
+    fileprivate let timestamp: Int32
     fileprivate let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void
     
-    init(timestamp: Double, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    init(timestamp: Int32, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.timestamp = timestamp
         self.action = action
     }
@@ -175,8 +187,8 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
             return
         }
         
-        let currentTime = CFAbsoluteTimeGetCurrent()
-        let duration = currentTime - item.timestamp
+        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        let duration = max(0, timestamp - item.timestamp)
         
         let subtextFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
         self.statusNode.attributedText = NSAttributedString(string: stringForDuration(Int32(duration)), font: subtextFont, textColor: presentationData.theme.contextMenu.secondaryColor)
@@ -206,7 +218,12 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
         let verticalSpacing: CGFloat = 2.0
         let combinedTextHeight = textSize.height + verticalSpacing + statusSize.height
         return (CGSize(width: max(textSize.width, statusSize.width) + sideInset + rightTextInset, height: verticalInset * 2.0 + combinedTextHeight), { size, transition in
+            let hadLayout = self.validLayout != nil
             self.validLayout = size
+            
+            if !hadLayout {
+                self.updateTime(transition: .immediate)
+            }
             let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
             let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
             transition.updateFrameAdditive(node: self.textNode, frame: textFrame)

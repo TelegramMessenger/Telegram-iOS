@@ -1138,8 +1138,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
-    public func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
-        return resolveUrlImpl(account: account, url: url)
+    public func resolveUrl(account: Account, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
+        return resolveUrlImpl(account: account, url: url, skipUrlAuth: skipUrlAuth)
     }
     
     public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {

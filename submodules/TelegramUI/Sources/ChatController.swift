@@ -563,7 +563,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 statusController?.dismiss()
                                             }
                                             strongSelf.present(statusController, in: .window(.root))
-                                            strongSelf.createVoiceChatDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: message.id.peerId, joinAs: nil)
+                                            strongSelf.createVoiceChatDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: message.id.peerId)
                                             |> deliverOnMainQueue).start(next: { [weak self] info in
                                                 guard let strongSelf = self else {
                                                     return
@@ -1221,7 +1221,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         switch result {
                             case .default:
-                                strongSelf.openUrl(defaultUrl, concealed: false)
+                                strongSelf.openUrl(defaultUrl, concealed: false, skipUrlAuth: true)
                             case let .request(domain, bot, requestWriteAccess):
                                 let controller = chatMessageActionUrlAuthController(context: strongSelf.context, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), open: { [weak self] authorize, allowWriteAccess in
                                     if let strongSelf = self {
@@ -1270,21 +1270,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 if let strongSelf = self {
                                                     switch result {
                                                         case let .accepted(url):
-                                                            strongSelf.openUrl(url, concealed: false)
+                                                            strongSelf.openUrl(url, concealed: false, skipUrlAuth: true)
                                                         default:
-                                                            strongSelf.openUrl(defaultUrl, concealed: false)
+                                                            strongSelf.openUrl(defaultUrl, concealed: false, skipUrlAuth: true)
                                                     }
                                                 }
                                             }))
                                         } else {
-                                            strongSelf.openUrl(defaultUrl, concealed: false)
+                                            strongSelf.openUrl(defaultUrl, concealed: false, skipUrlAuth: true)
                                         }
                                     }
                                 })
                                 strongSelf.chatDisplayNode.dismissInput()
                                 strongSelf.present(controller, in: .window(.root))
                             case let .accepted(url):
-                                strongSelf.openUrl(url, concealed: false)
+                                strongSelf.openUrl(url, concealed: false, skipUrlAuth: true)
                         }
                     }
                 }))
@@ -11108,7 +11108,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil)
     }
     
-    private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
+    private func openUrl(_ url: String, concealed: Bool, skipUrlAuth: Bool = false, message: Message? = nil) {
         self.commitPurposefulAction()
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
@@ -11164,7 +11164,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, present: { [weak self] c in
+            openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(resolved)

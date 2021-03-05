@@ -1140,7 +1140,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadProgress.set(0.02)
     
         self.loadWebpageDisposable.set(nil)
-        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url.url)
+        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url.url, skipUrlAuth: true)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.loadProgress.set(0.07)

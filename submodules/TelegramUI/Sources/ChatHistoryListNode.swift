@@ -59,6 +59,21 @@ private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
         } else {
             let touch = touches.first!
             self.initialLocation = touch.location(in: self.view)
+            
+            let touchesArray = Array(touches)
+            if touchesArray.count == 2, let firstTouch = touchesArray.first, let secondTouch = touchesArray.last {
+                let firstLocation = firstTouch.location(in: self.view)
+                let secondLocation = secondTouch.location(in: self.view)
+                
+                func distance(_ v1: CGPoint, _ v2: CGPoint) -> CGFloat {
+                    let dx = v1.x - v2.x
+                    let dy = v1.y - v2.y
+                    return sqrt(dx * dx + dy * dy)
+                }
+                if distance(firstLocation, secondLocation) > 100 {
+                    self.state = .failed
+                }
+            }
         }
     }
     

@@ -29,8 +29,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private var immediatePeerId: PeerId?
-    private let shares: Int?
     private let fromForeignApp: Bool
+    private let segmentedValues: [ShareControllerSegmentedValue]?
+    private var selectedSegmentedIndex: Int = 0
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -79,16 +80,16 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, shares: Int?, fromForeignApp: Bool, forcedTheme: PresentationTheme?) {
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forcedTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.forcedTheme = forcedTheme
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
-        self.shares = shares
         self.fromForeignApp = fromForeignApp
         self.presentError = presentError
+        self.segmentedValues = segmentedValues
         
         self.presetText = presetText
         
@@ -700,7 +701,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         let animated = self.peersContentNode == nil
         let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
-        }, extendedInitialReveal: self.presetText != nil, statsCount: self.shares)
+        }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
             let _ = (recentlySearchedPeers(postbox: context.account.postbox)
@@ -766,12 +767,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         peersContentNode.openShare = {
             openShare(false)
         }
-        if let openStats = self.openStats {
-            peersContentNode.openStats = { [weak self] in
-                openStats()
-                self?.animateOut(shared: true, completion: {
-                    self?.dismiss?(true)
-                })
+        peersContentNode.segmentedSelectedIndexUpdated = { [weak self] index in
+            if let strongSelf = self, let segmentedValues = strongSelf.segmentedValues {
+                strongSelf.selectedSegmentedIndex = index
+                strongSelf.updateButton()
             }
         }
         if self.immediateExternalShare {
@@ -837,6 +836,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
                 self.actionButtonNode.isEnabled = false
                 self.actionButtonNode.badge = nil
+            } else if let segmentedValues = self.segmentedValues {
+                let value = segmentedValues[self.selectedSegmentedIndex]
+                self.actionButtonNode.setTitle(value.actionTitle, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+                self.actionButtonNode.isEnabled = true
+                self.actionButtonNode.badge = nil
             } else if let defaultAction = self.defaultAction {
                 self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
                 self.actionButtonNode.isEnabled = true
@@ -847,8 +851,15 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.actionButtonNode.badge = nil
             }
         } else {
+            let text: String
+            if let segmentedValues = self.segmentedValues {
+                let value = segmentedValues[self.selectedSegmentedIndex]
+                text = value.formatSendTitle(self.controllerInteraction!.selectedPeers.count)
+            } else {
+                text = self.presentationData.strings.ShareMenu_Send
+            }
             self.actionButtonNode.isEnabled = true
-            self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+            self.actionButtonNode.setTitle(text, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             self.actionButtonNode.badge = "\(self.controllerInteraction!.selectedPeers.count)"
         }
     }
