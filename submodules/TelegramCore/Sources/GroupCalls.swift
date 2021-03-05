@@ -147,7 +147,8 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                             activityRank: nil,
                             muteState: muteState,
                             volume: volume,
-                            about: about
+                            about: about,
+                            raiseHandRating: raiseHandRating
                         ))
                     }
                 }
@@ -667,7 +668,7 @@ public final class GroupCallParticipantsContext {
         public var muteState: MuteState?
         public var volume: Int32?
         public var about: String?
-        public var raiseHandRating: Int32?
+        public var raiseHandRating: Int64?
         public init(
             peer: Peer,
             ssrc: UInt32,
@@ -678,7 +679,7 @@ public final class GroupCallParticipantsContext {
             muteState: MuteState?,
             volume: Int32?,
             about: String?,
-            raiseHandRating: Int32?
+            raiseHandRating: Int64?
         ) {
             self.peer = peer
             self.ssrc = ssrc
@@ -822,7 +823,7 @@ public final class GroupCallParticipantsContext {
                 public var participationStatusChange: ParticipationStatusChange
                 public var volume: Int32?
                 public var about: String?
-                public var raiseHandRating: Int32?
+                public var raiseHandRating: Int64?
                 init(
                     peerId: PeerId,
                     ssrc: UInt32,
@@ -833,7 +834,7 @@ public final class GroupCallParticipantsContext {
                     participationStatusChange: ParticipationStatusChange,
                     volume: Int32?,
                     about: String?,
-                    raiseHandRating: Int32?
+                    raiseHandRating: Int64?
                 ) {
                     self.peerId = peerId
                     self.ssrc = ssrc

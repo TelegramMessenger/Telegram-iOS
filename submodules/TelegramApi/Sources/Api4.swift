@@ -1803,20 +1803,6 @@ public struct phone {
 public extension Api {
     public struct functions {
             public struct messages {
-                public static func checkHistoryImportPeer(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.CheckedHistoryImportPeer>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1573261059)
-                    peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.checkHistoryImportPeer", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.CheckedHistoryImportPeer? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.CheckedHistoryImportPeer?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.CheckedHistoryImportPeer
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getMessages(id: [Api.InputMessage]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1673946374)
@@ -4170,6 +4156,20 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func checkHistoryImportPeer(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.CheckedHistoryImportPeer>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1573261059)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.checkHistoryImportPeer", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.CheckedHistoryImportPeer? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.CheckedHistoryImportPeer?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.CheckedHistoryImportPeer
                         }
                         return result
                     })
