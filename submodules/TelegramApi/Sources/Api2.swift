@@ -3604,29 +3604,30 @@ public extension Api {
     
     }
     public enum GroupCallParticipant: TypeConstructorDescription {
-        case groupCallParticipant(flags: Int32, peer: Api.Peer, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, about: String?)
+        case groupCallParticipant(flags: Int32, peer: Api.Peer, date: Int32, activeDate: Int32?, source: Int32?, volume: Int32?, about: String?, raiseHandRating: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about):
+                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about, let raiseHandRating):
                     if boxed {
-                        buffer.appendInt32(-763544865)
+                        buffer.appendInt32(2085094779)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(activeDate!, buffer: buffer, boxed: false)}
-                    serializeInt32(source, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 12) != 0 {serializeInt32(source!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 11) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 13) != 0 {serializeInt64(raiseHandRating!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about):
-                return ("groupCallParticipant", [("flags", flags), ("peer", peer), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("about", about)])
+                case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about, let raiseHandRating):
+                return ("groupCallParticipant", [("flags", flags), ("peer", peer), ("date", date), ("activeDate", activeDate), ("source", source), ("volume", volume), ("about", about), ("raiseHandRating", raiseHandRating)])
     }
     }
     
@@ -3642,20 +3643,23 @@ public extension Api {
             var _4: Int32?
             if Int(_1!) & Int(1 << 3) != 0 {_4 = reader.readInt32() }
             var _5: Int32?
-            _5 = reader.readInt32()
+            if Int(_1!) & Int(1 << 12) != 0 {_5 = reader.readInt32() }
             var _6: Int32?
             if Int(_1!) & Int(1 << 7) != 0 {_6 = reader.readInt32() }
             var _7: String?
             if Int(_1!) & Int(1 << 11) != 0 {_7 = parseString(reader) }
+            var _8: Int64?
+            if Int(_1!) & Int(1 << 13) != 0 {_8 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            let _c5 = _5 != nil
+            let _c5 = (Int(_1!) & Int(1 << 12) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 7) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 11) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, peer: _2!, date: _3!, activeDate: _4, source: _5!, volume: _6, about: _7)
+            let _c8 = (Int(_1!) & Int(1 << 13) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, peer: _2!, date: _3!, activeDate: _4, source: _5, volume: _6, about: _7, raiseHandRating: _8)
             }
             else {
                 return nil
