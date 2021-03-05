@@ -396,8 +396,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                     }
                     
                     return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100, hash: 0))
-                    |> mapError { _ -> JoinGroupCallError in
-                        return .generic
+                    |> `catch` { _  in
+                        return .single(.channelParticipantsNotModified)
                     }
                 }
                 |> map { admins -> (Set<PeerId>, [Api.User]) in
@@ -1442,7 +1442,12 @@ public final class GroupCallParticipantsContext {
         
         for participant in self.stateValue.state.participants {
             if participant.peer.id == peerId {
-                if participant.muteState == muteState && participant.volume == volume {
+                var raiseHandEqual: Bool = true
+                if let raiseHand = raiseHand {
+                    raiseHandEqual = (participant.raiseHandRating == nil && !raiseHand) ||
+                        (participant.raiseHandRating != nil && raiseHand)
+                }
+                if participant.muteState == muteState && participant.volume == volume && raiseHandEqual {
                     return
                 }
             }
@@ -1837,7 +1842,11 @@ public func cachedGroupCallDisplayAsAvailablePeers(account: Account) -> Signal<[
             var peers: [FoundPeer] = []
             for peerId in cached.peerIds {
                 if let peer = transaction.getPeer(peerId) {
-                    peers.append(FoundPeer(peer: peer, subscribers: nil))
+                    var subscribers: Int32?
+                    if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
+                        subscribers = cachedData.participantsSummary.memberCount
+                    }
+                    peers.append(FoundPeer(peer: peer, subscribers: subscribers))
                 }
             }
             return (peers, cached.timestamp)

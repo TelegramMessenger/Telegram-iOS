@@ -339,11 +339,6 @@ private final class StickerPackContainer: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
-                stickerSettings = value
-            }
-            
             if installed {
                 let _ = removeStickerPackInteractively(postbox: strongSelf.context.account.postbox, id: info.id, option: .delete).start()
             } else {

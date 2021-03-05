@@ -954,7 +954,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.requestDisposable.set((joinGroupCall(
                         account: strongSelf.account,
                         peerId: strongSelf.peerId,
-                        joinAs: strongSelf.joinAsPeerId == strongSelf.account.peerId ? nil : strongSelf.joinAsPeerId,
+                        joinAs: strongSelf.joinAsPeerId,
                         callId: callInfo.id,
                         accessHash: callInfo.accessHash,
                         preferMuted: true,

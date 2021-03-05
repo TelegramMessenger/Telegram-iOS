@@ -34,10 +34,11 @@ private struct ArchivedStickersNoticeEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, presentationData: PresentationData) -> ListViewItem {
-        return ItemListStickerPackItem(presentationData: ItemListPresentationData(presentationData), account: account, packInfo: info, itemCount: self.count, topItem: topItem, unread: false, control: .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, playAnimatedStickers: true, sectionId: 0, action: {
+        return ItemListStickerPackItem(presentationData: ItemListPresentationData(presentationData), account: account, packInfo: info, itemCount: self.count, topItem: topItem, unread: false, control: .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: true, sectionId: 0, action: {
         }, setPackIdWithRevealedOptions: { current, previous in
         }, addPack: {
         }, removePack: {
+        }, toggleSelected: {
         })
     }
 }
