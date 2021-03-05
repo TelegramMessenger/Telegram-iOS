@@ -296,8 +296,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                     return .like
                                 case .unlike:
                                     return .unlike
-                                default:
-                                    return nil
                                 }
                             }
                             if strongSelf.highlightedReaction != highlightedReaction {
@@ -431,8 +429,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     reactionSelected(.like)
                 case .unlike:
                     reactionSelected(.unlike)
-                default:
-                    break
                 }
             }
         }
@@ -632,7 +628,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let contentNode = self.contentContainerNode.contentNode {
             switch contentNode {
-            case let .reference(referenceNode):
+            case .reference:
                 let springDuration: Double = 0.42 * animationDurationFactor
                 let springDamping: CGFloat = 104.0
                 
@@ -758,10 +754,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             
             self.scrollNode.view.setContentOffset(self.scrollNode.view.contentOffset, animated: false)
             
-            var completedEffect = false
-            var completedContentNode = false
-            var completedActionsNode = false
-            
             if let transitionInfo = transitionInfo, let parentSupernode = referenceNode.supernode {
                 self.originalProjectedContentViewFrame = (convertFrame(referenceNode.frame, from: parentSupernode.view, to: self.view), convertFrame(referenceNode.bounds, from: referenceNode.view, to: self.view))
                 
@@ -794,8 +786,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             
             if animateOutToItem, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                 let localSourceFrame = self.view.convert(originalProjectedContentViewFrame.1, to: self.scrollNode.view)
-                let localContentSourceFrame = self.view.convert(originalProjectedContentViewFrame.1, to: self.contentContainerNode.view.superview)
-                
                 self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
             }
         case let .extracted(source):
@@ -864,7 +854,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
                     propertyAnimator?.stopAnimation(true)
                 }
-                self.propertyAnimator = UIViewPropertyAnimator(duration: transitionDuration * UIView.animationDurationFactor(), curve: .easeInOut, animations: { [weak self] in
+                self.propertyAnimator = UIViewPropertyAnimator(duration: transitionDuration * UIView.animationDurationFactor(), curve: .easeInOut, animations: {
                     //self?.effectView.effect = nil
                 })
             }

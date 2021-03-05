@@ -6221,3 +6221,8 @@ Sorry for the inconvenience.";
 "VoiceChat.InviteLink.InviteListeners_any" = "[%@] Invite Listeners";
 
 "Conversation.JoinVoiceChat" = "JOIN VOICE CHAT";
+
+"Conversation.CancelForwardTitle" = "Cancel Forwarding";
+"Conversation.CancelForwardText" = "Do you want to cancel this forwarding or would like to send this messages to another chat?";
+"Conversation.CancelForwardCancelForward" = "Cancel Forwarding";
+"Conversation.CancelForwardSelectChat" = "Select Chat";

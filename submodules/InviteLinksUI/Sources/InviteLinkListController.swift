@@ -446,7 +446,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, mainLinkContextAction: { invite, node, gesture in
-        guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?(), let invite = invite else {
+        guard let node = node as? ContextReferenceContentNode, let controller = getControllerImpl?(), let invite = invite else {
             return
         }
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -551,7 +551,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: false)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, createLink: {
         let controller = inviteLinkEditController(context: context, peerId: peerId, invite: nil, completion: { invite in
@@ -897,5 +897,19 @@ final class InviteLinkContextExtractedContentSource: ContextExtractedContentSour
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+final class InviteLinkContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

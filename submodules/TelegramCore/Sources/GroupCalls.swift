@@ -1774,7 +1774,11 @@ public func cachedGroupCallDisplayAsAvailablePeers(account: Account) -> Signal<[
             var peers: [FoundPeer] = []
             for peerId in cached.peerIds {
                 if let peer = transaction.getPeer(peerId) {
-                    peers.append(FoundPeer(peer: peer, subscribers: nil))
+                    var subscribers: Int32?
+                    if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
+                        subscribers = cachedData.participantsSummary.memberCount
+                    }
+                    peers.append(FoundPeer(peer: peer, subscribers: subscribers))
                 }
             }
             return (peers, cached.timestamp)

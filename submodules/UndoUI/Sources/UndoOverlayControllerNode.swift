@@ -28,6 +28,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let animationNode: AnimationNode?
     private var animatedStickerNode: AnimatedStickerNode?
     private var slotMachineNode: SlotMachineAnimationNode?
+    private var recordingIconNode: RecordingIconNode?
     private var stillStickerNode: TransformImageNode?
     private var stickerImageSize: CGSize?
     private var stickerOffset: CGPoint?
@@ -555,8 +556,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: "anim_linkrevoked", colors: [:], scale: 0.066)
+                self.animationNode = nil
                 self.animatedStickerNode = nil
+                
+                self.recordingIconNode = RecordingIconNode()
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -609,6 +612,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.slotMachineNode.flatMap(self.panelWrapperNode.addSubnode)
         self.avatarNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.recordingIconNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
         self.panelWrapperNode.addSubnode(self.buttonNode)
@@ -834,6 +838,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: slotMachineNode, frame: iconFrame)
         }
+        
+        if let recordingIconNode = self.recordingIconNode {
+            let iconSize = CGSize(width: 24.0, height: 24.0)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
+            transition.updateFrame(node: recordingIconNode, frame: iconFrame)
+        }
                 
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
@@ -907,5 +917,48 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             return nil
         }
         return super.hitTest(point, with: event)
+    }
+}
+
+private class RecordingIconNode: ASDisplayNode {
+    private let backgroundNode: ASImageNode
+    private let dotNode: ASImageNode
+    
+    override init() {
+        let iconSize: CGFloat = 24.0
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.image = generateCircleImage(diameter: iconSize, lineWidth: 1.0 + UIScreenPixel, color: UIColor.white, backgroundColor: nil)
+        
+        self.dotNode = ASImageNode()
+        self.dotNode.displaysAsynchronously = false
+        self.dotNode.displayWithoutProcessing = true
+        self.dotNode.image = generateFilledCircleImage(diameter: 12.0, color: UIColor(rgb: 0xff3b30))
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.dotNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let animation = CAKeyframeAnimation(keyPath: "opacity")
+        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+        animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+        animation.duration = 0.5
+        animation.autoreverses = true
+        animation.repeatCount = Float.infinity
+        self.dotNode.layer.add(animation, forKey: "recording")
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.backgroundNode.frame = self.bounds
+        let dotSize = CGSize(width: 12.0, height: 12.0)
+        self.dotNode.frame = CGRect(origin: CGPoint(x: (self.bounds.width - dotSize.width) / 2.0, y: (self.bounds.height - dotSize.height) / 2.0), size: dotSize)
     }
 }

@@ -743,7 +743,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 activityRank: nil,
                                 muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                                 volume: nil,
-                                about: about
+                                about: about,
+                                raiseHandRating: nil
                             ))
                             participants.sort()
                         }
@@ -901,7 +902,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.requestDisposable.set((joinGroupCall(
                         account: strongSelf.account,
                         peerId: strongSelf.peerId,
-                        joinAs: strongSelf.joinAsPeerId == strongSelf.account.peerId ? nil : strongSelf.joinAsPeerId,
+                        joinAs: strongSelf.joinAsPeerId,
                         callId: callInfo.id,
                         accessHash: callInfo.accessHash,
                         preferMuted: true,
@@ -1456,7 +1457,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if id == peerId {
                 self.callContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
                 if sync {
-                    self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: volume)
+                    self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: volume, raiseHand: nil)
                 }
                 break
             }
@@ -1564,19 +1565,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 canThenUnmute = true
             }
             let muteState = isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute, mutedByYou: mutedByYou) : nil
-            self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil)
+            self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil, raiseHand: nil)
             return muteState
         } else {
             if peerId == self.joinAsPeerId {
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil, raiseHand: nil)
                 return nil
             } else if self.stateValue.canManageCall || self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
                 let muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil, raiseHand: nil)
                 return muteState
             } else {
                 self.setVolume(peerId: peerId, volume: 10000, sync: true)
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil, raiseHand: nil)
                 return nil
             }
         }

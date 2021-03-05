@@ -76,9 +76,19 @@ public struct ItemListToolbarItem {
         public let title: String
         public let isEnabled: Bool
         public let action: () -> Void
+        
+        public init(title: String, isEnabled: Bool, action: @escaping () -> Void) {
+            self.title = title
+            self.isEnabled = isEnabled
+            self.action = action
+        }
     }
     
     let actions: [Action]
+    
+    public init(actions: [Action]) {
+        self.actions = actions
+    }
     
     var toolbar: Toolbar {
         var leftAction: ToolbarAction?
@@ -644,9 +654,25 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 return transition.strings.VoiceOver_ScrollStatus(row, count).0
             }
             
-            let toolbarFrame = CGRect()
             let layoutTransition: ContainedViewLayoutTransition = .immediate
             if let toolbarItem = transition.toolbarItem, let (layout, _) = self.validLayout {
+                var options: ContainerViewLayoutInsetOptions = []
+                if layout.metrics.widthClass == .regular {
+                    options.insert(.input)
+                }
+                var tabBarHeight: CGFloat
+                let bottomInset: CGFloat = layout.insets(options: options).bottom
+                if !layout.safeInsets.left.isZero {
+                    tabBarHeight = 34.0 + bottomInset
+//                    insets.bottom += 34.0
+                } else {
+                    tabBarHeight = 49.0 + bottomInset
+//                    insets.bottom += 49.0
+                }
+                
+                let toolbarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
+                
+                
                 if let toolbarNode = self.toolbarNode {
                     layoutTransition.updateFrame(node: toolbarNode, frame: toolbarFrame)
                     toolbarNode.updateLayout(size: toolbarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: layout.intrinsicInsets.bottom, toolbar: toolbarItem.toolbar, transition: layoutTransition)

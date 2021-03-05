@@ -14,6 +14,7 @@ import AccountContext
 import StickerPackPreviewUI
 import ItemListStickerPackItem
 import UndoUI
+import ShareController
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account
@@ -27,8 +28,9 @@ private final class InstalledStickerPacksControllerArguments {
     let openArchived: ([ArchivedStickerPackItem]?) -> Void
     let openSuggestOptions: () -> Void
     let toggleAnimatedStickers: (Bool) -> Void
+    let togglePackSelected: (ItemCollectionId) -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleAnimatedStickers: @escaping (Bool) -> Void) {
+    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleAnimatedStickers: @escaping (Bool) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void) {
         self.account = account
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
@@ -39,6 +41,7 @@ private final class InstalledStickerPacksControllerArguments {
         self.openArchived = openArchived
         self.openSuggestOptions = openSuggestOptions
         self.toggleAnimatedStickers = toggleAnimatedStickers
+        self.togglePackSelected = togglePackSelected
     }
 }
 
@@ -99,7 +102,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case animatedStickers(PresentationTheme, String, Bool)
     case animatedStickersInfo(PresentationTheme, String)
     case packsTitle(PresentationTheme, String)
-    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool, Bool, ItemListStickerPackItemEditing)
+    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool, Bool, ItemListStickerPackItemEditing, Bool?)
     case packsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -127,7 +130,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return .index(5)
             case .packsTitle:
                 return .index(6)
-            case let .pack(_, _, _, info, _, _, _, _, _):
+            case let .pack(_, _, _, info, _, _, _, _, _, _):
                 return .pack(info.id)
             case .packsInfo:
                 return .index(7)
@@ -178,8 +181,8 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsTopItem, lhsCount, lhsAnimatedStickers, lhsEnabled, lhsEditing):
-                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsTopItem, rhsCount, rhsAnimatedStickers, rhsEnabled, rhsEditing) = rhs {
+            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsTopItem, lhsCount, lhsAnimatedStickers, lhsEnabled, lhsEditing, lhsSelected):
+                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsTopItem, rhsCount, rhsAnimatedStickers, rhsEnabled, rhsEditing, rhsSelected) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -205,6 +208,9 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsEditing != rhsEditing {
+                        return false
+                    }
+                    if lhsSelected != rhsSelected {
                         return false
                     }
                     return true
@@ -271,9 +277,9 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .pack(lhsIndex, _, _, _, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     case .packsInfo:
                         return true
@@ -317,14 +323,16 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .pack(_, _, strings, info, topItem, count, animatedStickers, enabled, editing):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
+            case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing, selected):
+                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: editing.editing ? .check(checked: selected ?? false) : .none, editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
                 }, addPack: {
                 }, removePack: {
                     arguments.removePack(ArchivedStickerPackItem(info: info, topItems: topItem != nil ? [topItem!] : []))
+                }, toggleSelected: {
+                    arguments.togglePackSelected(info.id)
                 })
             case let .packsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
@@ -336,7 +344,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
 
 private struct InstalledStickerPacksControllerState: Equatable {
     let editing: Bool
-    let selectedPackIds: Set<Int64>?
+    let selectedPackIds: Set<ItemCollectionId>?
     let packIdWithRevealedOptions: ItemCollectionId?
     
     init() {
@@ -345,7 +353,7 @@ private struct InstalledStickerPacksControllerState: Equatable {
         self.packIdWithRevealedOptions = nil
     }
     
-    init(editing: Bool, selectedPackIds: Set<Int64>?, packIdWithRevealedOptions: ItemCollectionId?) {
+    init(editing: Bool, selectedPackIds: Set<ItemCollectionId>?, packIdWithRevealedOptions: ItemCollectionId?) {
         self.editing = editing
         self.selectedPackIds = selectedPackIds
         self.packIdWithRevealedOptions = packIdWithRevealedOptions
@@ -369,7 +377,7 @@ private struct InstalledStickerPacksControllerState: Equatable {
         return InstalledStickerPacksControllerState(editing: editing, selectedPackIds: self.selectedPackIds, packIdWithRevealedOptions: self.packIdWithRevealedOptions)
     }
     
-    func withUpdatedSelectedPackIds(_ selectedPackIds: Set<Int64>) -> InstalledStickerPacksControllerState {
+    func withUpdatedSelectedPackIds(_ selectedPackIds: Set<ItemCollectionId>?) -> InstalledStickerPacksControllerState {
         return InstalledStickerPacksControllerState(editing: editing, selectedPackIds: selectedPackIds, packIdWithRevealedOptions: self.packIdWithRevealedOptions)
     }
     
@@ -454,7 +462,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             var index: Int32 = 0
             for entry in sortedPacks {
                 if let info = entry.info as? StickerPackCollectionInfo {
-                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count), stickerSettings.loopAnimatedStickers, true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id, reorderable: true)))
+                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count), stickerSettings.loopAnimatedStickers, true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id, reorderable: true, selectable: true), state.selectedPackIds?.contains(info.id)))
                     index += 1
                 }
             }
@@ -485,7 +493,7 @@ public enum InstalledStickerPacksControllerMode {
 }
 
 public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
-    let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal)
+    let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal).withUpdatedSelectedPackIds(mode == .modal ? Set() : nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((InstalledStickerPacksControllerState) -> InstalledStickerPacksControllerState) -> Void = { f in
@@ -624,6 +632,19 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         let _ = updateStickerSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedLoopAnimatedStickers(value)
         }).start()
+    }, togglePackSelected: { packId in
+        updateState { state in
+            if var selectedPackIds = state.selectedPackIds {
+                if selectedPackIds.contains(packId) {
+                    selectedPackIds.remove(packId)
+                } else {
+                    selectedPackIds.insert(packId)
+                }
+                return state.withUpdatedSelectedPackIds(selectedPackIds)
+            } else {
+                return state
+            }
+        }
     })
     let stickerPacks = Promise<CombinedView>()
     stickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [namespaceForMode(mode)])]))
@@ -669,16 +690,32 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 if state.editing {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState {
-                            $0.withUpdatedEditing(false)
+                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                         }
                         if case .modal = mode {
                             dismissImpl?()
                         }
                     })
+                    let enabled = (state.selectedPackIds?.count ?? 0) > 0
+                    toolbarItem = ItemListToolbarItem(actions: [.init(title: "Delete", isEnabled: enabled, action: {
+                        updateState {
+                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
+                        }
+                    }), .init(title: "Archive", isEnabled: enabled, action: {
+                        updateState {
+                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
+                        }
+                    }), .init(title: "Share", isEnabled: enabled, action: {
+                        updateState {
+                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
+                        }
+                        let shareController = ShareController(context: context, subject: .text("test"), externalShare: true)
+                        presentControllerImpl?(shareController, nil)
+                    })])
                 } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState {
-                            $0.withUpdatedEditing(true)
+                            $0.withUpdatedEditing(true).withUpdatedSelectedPackIds(Set())
                         }
                     })
                 }
@@ -711,7 +748,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     }
     controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [InstalledStickerPacksEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
-        guard case let .pack(_, _, _, fromPackInfo, _, _, _, _, _) = fromEntry else {
+        guard case let .pack(_, _, _, fromPackInfo, _, _, _, _, _, _) = fromEntry else {
             return .single(false)
         }
         var referenceId: ItemCollectionId?
@@ -719,7 +756,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         var afterAll = false
         if toIndex < entries.count {
             switch entries[toIndex] {
-                case let .pack(_, _, _, toPackInfo, _, _, _, _, _):
+                case let .pack(_, _, _, toPackInfo, _, _, _, _, _, _):
                     referenceId = toPackInfo.id
                 default:
                     if entries[toIndex] < fromEntry {
