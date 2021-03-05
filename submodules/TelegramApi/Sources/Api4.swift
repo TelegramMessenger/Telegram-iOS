@@ -7595,14 +7595,13 @@ public extension Api {
                     })
                 }
             
-                public static func createGroupCall(flags: Int32, peer: Api.InputPeer, joinAs: Api.InputPeer?, randomId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func createGroupCall(peer: Api.InputPeer, joinAs: Api.InputPeer, randomId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(534090322)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(130050293)
                     peer.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {joinAs!.serialize(buffer, true)}
+                    joinAs.serialize(buffer, true)
                     serializeInt32(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "phone.createGroupCall", parameters: [("flags", flags), ("peer", peer), ("joinAs", joinAs), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "phone.createGroupCall", parameters: [("peer", peer), ("joinAs", joinAs), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -7612,12 +7611,12 @@ public extension Api {
                     })
                 }
             
-                public static func joinGroupCall(flags: Int32, call: Api.InputGroupCall, joinAs: Api.InputPeer?, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func joinGroupCall(flags: Int32, call: Api.InputGroupCall, joinAs: Api.InputPeer, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(780232376)
+                    buffer.appendInt32(909354416)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 1) != 0 {joinAs!.serialize(buffer, true)}
+                    joinAs.serialize(buffer, true)
                     params.serialize(buffer, true)
                     return (FunctionDescription(name: "phone.joinGroupCall", parameters: [("flags", flags), ("call", call), ("joinAs", joinAs), ("params", params)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
@@ -7764,14 +7763,15 @@ public extension Api {
                     })
                 }
             
-                public static func editGroupCallParticipant(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer, volume: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func editGroupCallParticipant(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer, volume: Int32?, raiseHand: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1192486819)
+                    buffer.appendInt32(-646583424)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
                     participant.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "phone.editGroupCallParticipant", parameters: [("flags", flags), ("call", call), ("participant", participant), ("volume", volume)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 2) != 0 {raiseHand!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "phone.editGroupCallParticipant", parameters: [("flags", flags), ("call", call), ("participant", participant), ("volume", volume), ("raiseHand", raiseHand)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
