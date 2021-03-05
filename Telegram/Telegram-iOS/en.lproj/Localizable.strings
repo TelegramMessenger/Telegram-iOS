@@ -5825,7 +5825,7 @@ Sorry for the inconvenience.";
 "VoiceChat.StopRecordingTitle" = "Stop Recording?";
 "VoiceChat.StopRecordingStop" = "Stop";
 
-"VoiceChat.RecordingSaved" = "Audio stream saved to Saved Messages.";
+"VoiceChat.RecordingSaved" = "Audio saved to Saved Messages.";
 
 "VoiceChat.StatusMutedForYou" = "muted for you";
 "VoiceChat.StatusMutedYou" = "put you on mute";
@@ -6226,3 +6226,29 @@ Sorry for the inconvenience.";
 "Conversation.CancelForwardText" = "Do you want to cancel this forwarding or would like to send this messages to another chat?";
 "Conversation.CancelForwardCancelForward" = "Cancel Forwarding";
 "Conversation.CancelForwardSelectChat" = "Select Chat";
+
+"StickerPacks.ActionDelete" = "Delete";
+"StickerPacks.ActionArchive" = "Archive";
+"StickerPacks.ActionShare" = "Share";
+
+"StickerPacks.DeleteStickerPacksConfirmation_0" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_1" = "Delete %@ Sticker Set";
+"StickerPacks.DeleteStickerPacksConfirmation_2" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_3_10" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_many" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_any" = "Delete %@ Sticker Sets";
+
+"StickerPacks.ArchiveStickerPacksConfirmation_0" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_1" = "Archive %@ Sticker Set";
+"StickerPacks.ArchiveStickerPacksConfirmation_2" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_3_10" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_many" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_any" = "Archive %@ Sticker Sets";
+
+"VoiceChat.StatusWantsToSpeak" = "wants to speak";
+
+"VoiceChat.AskedToSpeak" = "You Asked To Speak";
+"VoiceChat.AskedToSpeakHelp" = "We let the speakers know";
+
+"VoiceChat.YouCanNowSpeak" = "You can now speak";
+"VoiceChat.YouCanNowSpeakIn" = "You can now speak in **%@**";

@@ -439,7 +439,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         if let packsEntries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] {
             var sortedPacks: [ItemCollectionInfoEntry] = []
             for entry in packsEntries {
-                if let info = entry.info as? StickerPackCollectionInfo {
+                if let _ = entry.info as? StickerPackCollectionInfo {
                     sortedPacks.append(entry)
                 }
             }
@@ -676,8 +676,10 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         }
         
         var packCount: Int? = nil
+        var stickerPacks: [ItemCollectionInfoEntry] = []
         if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] {
             packCount = entries.count
+            stickerPacks = entries
         }
         
         let leftNavigationButton: ItemListNavigationButton? = nil
@@ -696,20 +698,73 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                             dismissImpl?()
                         }
                     })
-                    let enabled = (state.selectedPackIds?.count ?? 0) > 0
-                    toolbarItem = ItemListToolbarItem(actions: [.init(title: "Delete", isEnabled: enabled, action: {
+                    
+                    let selectedCount = Int32(state.selectedPackIds?.count ?? 0)
+                    toolbarItem = ItemListToolbarItem(actions: [.init(title: presentationData.strings.StickerPacks_ActionDelete, isEnabled: selectedCount > 0, action: {
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_DeleteStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                           
+                            updateState {
+                                $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
+                            }
+                            
+                            var packIds: [ItemCollectionId] = []
+                            for entry in stickerPacks {
+                                if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
+                                    packIds.append(entry.id)
+                                }
+                            }
+                                                        
+                            let _ = removeStickerPacksInteractively(postbox: context.account.postbox, ids: packIds, option: .delete).start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        presentControllerImpl?(actionSheet, nil)
+                    }), .init(title: presentationData.strings.StickerPacks_ActionArchive, isEnabled: selectedCount > 0, action: {
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_ArchiveStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                           
+                            updateState {
+                                $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
+                            }
+                            
+                            var packIds: [ItemCollectionId] = []
+                            for entry in stickerPacks {
+                                if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
+                                    packIds.append(entry.id)
+                                }
+                            }
+                                                        
+                            let _ = removeStickerPacksInteractively(postbox: context.account.postbox, ids: packIds, option: .archive).start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        presentControllerImpl?(actionSheet, nil)
+                    }), .init(title: presentationData.strings.StickerPacks_ActionShare, isEnabled: selectedCount > 0, action: {
                         updateState {
                             $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                         }
-                    }), .init(title: "Archive", isEnabled: enabled, action: {
-                        updateState {
-                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
+                        
+                        var packNames: [String] = []
+                        for entry in stickerPacks {
+                            if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
+                                if let info = entry.info as? StickerPackCollectionInfo {
+                                    packNames.append(info.shortName)
+                                }
+                            }
                         }
-                    }), .init(title: "Share", isEnabled: enabled, action: {
-                        updateState {
-                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
-                        }
-                        let shareController = ShareController(context: context, subject: .text("test"), externalShare: true)
+                        let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
+                        let shareController = ShareController(context: context, subject: .text(text), externalShare: true)
                         presentControllerImpl?(shareController, nil)
                     })])
                 } else {

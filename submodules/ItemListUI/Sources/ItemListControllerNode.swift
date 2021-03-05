@@ -672,32 +672,35 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let toolbarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
                 
-                
                 if let toolbarNode = self.toolbarNode {
                     layoutTransition.updateFrame(node: toolbarNode, frame: toolbarFrame)
                     toolbarNode.updateLayout(size: toolbarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: layout.intrinsicInsets.bottom, toolbar: toolbarItem.toolbar, transition: layoutTransition)
                 } else {
-                    let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: transition.theme), left: {
-                        toolbarItem.actions[0].action()
-                    }, right: {
-                        if toolbarItem.actions.count == 2 {
-                            toolbarItem.actions[1].action()
-                        } else if toolbarItem.actions.count == 3 {
-                            toolbarItem.actions[2].action()
-                        }
-                    }, middle: {
-                        if toolbarItem.actions.count == 1 {
-                            toolbarItem.actions[0].action()
-                        } else if toolbarItem.actions.count == 3 {
-                            toolbarItem.actions[1].action()
-                        }
-                    })
+                    let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: transition.theme), displaySeparator: true)
                     toolbarNode.frame = toolbarFrame
                     toolbarNode.updateLayout(size: toolbarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: layout.intrinsicInsets.bottom, toolbar: toolbarItem.toolbar, transition: .immediate)
                     self.addSubnode(toolbarNode)
                     self.toolbarNode = toolbarNode
                     if transition.animated {
                         toolbarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                
+                self.toolbarNode?.left = {
+                    toolbarItem.actions[0].action()
+                }
+                self.toolbarNode?.right = {
+                    if toolbarItem.actions.count == 2 {
+                        toolbarItem.actions[1].action()
+                    } else if toolbarItem.actions.count == 3 {
+                        toolbarItem.actions[2].action()
+                    }
+                }
+                self.toolbarNode?.middle = {
+                    if toolbarItem.actions.count == 1 {
+                        toolbarItem.actions[0].action()
+                    } else if toolbarItem.actions.count == 3 {
+                        toolbarItem.actions[1].action()
                     }
                 }
             } else if let toolbarNode = self.toolbarNode {
