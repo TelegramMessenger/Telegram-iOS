@@ -3828,7 +3828,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     statusController?.dismiss()
                 }
                 strongSelf.controller?.present(statusController, in: .window(.root))
-                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId, joinAs: joinAsPeerId)
+                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId, joinAs: joinAsPeerId ?? strongSelf.context.account.peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] info in
                     guard let strongSelf = self else {
                         return
