@@ -1930,7 +1930,7 @@ public struct GetAudioBroadcastPartResult {
 }
 
 public func getAudioBroadcastPart(account: Account, callId: Int64, accessHash: Int64, datacenterId: Int, timestampId: Int32) -> Signal<GetAudioBroadcastPartResult, NoError> {
-    return account.network.multiplexedRequestManager.requestWithAdditionalInfo(to: .main(datacenterId), consumerId: Int64.random(in: 0 ..< Int64.max), data: Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), date: timestampId), offset: 0, limit: 128 * 1024), tag: nil, continueInBackground: false, automaticFloodWait: false)
+    return account.network.multiplexedRequestManager.requestWithAdditionalInfo(to: .main(datacenterId), consumerId: Int64.random(in: 0 ..< Int64.max), data: Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: Int64(timestampId) * 1000, scale: 0), offset: 0, limit: 128 * 1024), tag: nil, continueInBackground: false, automaticFloodWait: false)
     |> map { result, responseTimestamp -> GetAudioBroadcastPartResult in
         switch result {
         case let .file(_, _, bytes):
@@ -1954,6 +1954,11 @@ public func getAudioBroadcastPart(account: Account, callId: Int64, accessHash: I
         } else if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .single(GetAudioBroadcastPartResult(
                 status: .notReady,
+                responseTimestamp: responseTimestamp
+            ))
+        } else if error.errorDescription == "DATE_INVALID" {
+            return .single(GetAudioBroadcastPartResult(
+                status: .tooOld,
                 responseTimestamp: responseTimestamp
             ))
         } else {

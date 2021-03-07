@@ -175,19 +175,22 @@ genrule(
         mkdir -p "$$YASM_DIR"
         tar -xf "$(location //third-party/yasm:yasm.tar)" -C "$$YASM_DIR"
 
+        VARIANT=release
+
         if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
             BUILD_ARCH="armv7"
         elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
             BUILD_ARCH="arm64"
         elif [ "$(TARGET_CPU)" == "ios_sim_arm64" ]; then
             BUILD_ARCH="sim_arm64"
+            VARIANT="debug"
         elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
             BUILD_ARCH="x86_64"
         else
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
 
-        PATH="$$PATH:$$YASM_DIR" "$$SOURCE_PATH/build-ffmpeg-bazel.sh" release "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH"
+        PATH="$$PATH:$$YASM_DIR" "$$SOURCE_PATH/build-ffmpeg-bazel.sh" "$$VARIANT" "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH"
     """ + "\n" + "\n".join([
         "cp \"$$BUILD_DIR/FFmpeg-iOS/include/{header_path}\" \"$(location Public/ffmpeg/{header_path})\"".format(header_path = header_path) for header_path in ffmpeg_header_paths
     ]) + "\n" + "\n".join([

@@ -42,7 +42,7 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
     private let accessHash: Int64
     private var datacenterId: Int?
     
-    
+    private let dumpDir: TempBoxDirectory
     
     init(queue: Queue, account: Account, callId: Int64, accessHash: Int64, datacenterId: Int?) {
         self.queue = queue
@@ -50,6 +50,9 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         self.callId = callId
         self.accessHash = accessHash
         self.datacenterId = datacenterId
+        
+        self.dumpDir = TempBox.shared.tempDirectory()
+        print("dumpDir = \(self.dumpDir.path)")
     }
     
     func requestPart(timestamp: Int32, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
@@ -80,6 +83,8 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             }
         }
         |> deliverOn(self.queue)
+        
+        let dumpDir = self.dumpDir
             
         return signal.start(next: { result in
             guard let result = result else {
@@ -89,6 +94,9 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
+                let filePath = dumpDir.path + "/\(timestampId).ogg"
+                let _ = try? dataValue.write(to: URL(fileURLWithPath: filePath))
+                
                 part = OngoingGroupCallBroadcastPart(timestamp: timestampId, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestamp: timestampId, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
