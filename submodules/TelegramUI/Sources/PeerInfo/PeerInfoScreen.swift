@@ -1724,7 +1724,27 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss(completion: {
                         if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
+                            let currentPeerId = strongSelf.peerId
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true), keepStack: .always, useExisting: false, purposefulAction: {
+                                var viewControllers = navigationController.viewControllers
+                                var indexesToRemove = Set<Int>()
+                                var keptCurrentChatController = false
+                                var index: Int = viewControllers.count - 1
+                                for controller in viewControllers.reversed() {
+                                    if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation {
+                                        if peerId == currentPeerId && !keptCurrentChatController {
+                                            keptCurrentChatController = true
+                                        } else {
+                                            indexesToRemove.insert(index)
+                                        }
+                                    } else if controller is PeerInfoScreen {
+                                        indexesToRemove.insert(index)
+                                    }
+                                    index -= 1
+                                }
+                                viewControllers.remove(atOffsets: IndexSet(indexesToRemove))
+                                navigationController.setViewControllers(viewControllers, animated: false)
+                            }))
                         }
                     })
                 })))
@@ -1844,7 +1864,27 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c.dismiss(completion: {
                                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
+                                    let currentPeerId = strongSelf.peerId
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true), keepStack: .always, useExisting: false, purposefulAction: {
+                                        var viewControllers = navigationController.viewControllers
+                                        var indexesToRemove = Set<Int>()
+                                        var keptCurrentChatController = false
+                                        var index: Int = viewControllers.count - 1
+                                        for controller in viewControllers.reversed() {
+                                            if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation {
+                                                if peerId == currentPeerId && !keptCurrentChatController {
+                                                    keptCurrentChatController = true
+                                                } else {
+                                                    indexesToRemove.insert(index)
+                                                }
+                                            } else if controller is PeerInfoScreen {
+                                                indexesToRemove.insert(index)
+                                            }
+                                            index -= 1
+                                        }
+                                        viewControllers.remove(atOffsets: IndexSet(indexesToRemove))
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                    }))
                                 }
                             })
                         })))
@@ -3702,11 +3742,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self else {
                 return
             }
-            if false, let currentPeerId = currentPeerId {
-                if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId)))
-                }
-            } else if let controller = strongSelf.controller {
+            if let controller = strongSelf.controller {
                 let displayTitle = peer?.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder) ?? ""
                 controller.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.UserInfo_StartSecretChatConfirmation(displayTitle).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.UserInfo_StartSecretChatStart, action: {
                     guard let strongSelf = self else {
