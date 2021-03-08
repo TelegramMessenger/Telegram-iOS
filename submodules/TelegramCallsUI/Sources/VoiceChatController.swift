@@ -370,6 +370,7 @@ public final class VoiceChatController: ViewController {
                 case listening
                 case speaking
                 case invited
+                case raisedHand
             }
             
             var peer: Peer
@@ -383,7 +384,6 @@ public final class VoiceChatController: ViewController {
             var revealed: Bool?
             var canManageCall: Bool
             var volume: Int32?
-            var raiseHandStatus: Bool
             
             var stableId: PeerId {
                 return self.peer.id
@@ -421,9 +421,6 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.volume != rhs.volume {
-                    return false
-                }
-                if lhs.raiseHandStatus != rhs.raiseHandStatus {
                     return false
                 }
                 return true
@@ -523,12 +520,10 @@ public final class VoiceChatController: ViewController {
                         let icon: VoiceChatParticipantItem.Icon
                         switch peerEntry.state {
                         case .listening:
-                            var isAbout = false
                             if let muteState = peerEntry.muteState, muteState.mutedByYou {
                                 text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, .destructive)
                             } else if let about = peerEntry.about, !about.isEmpty {
                                 text = .text(about, .generic)
-                                isAbout = true
                             } else {
                                 text = .text(presentationData.strings.VoiceChat_StatusListening, .generic)
                             }
@@ -555,12 +550,11 @@ public final class VoiceChatController: ViewController {
                         case .invited:
                             text = .text(presentationData.strings.VoiceChat_StatusInvited, .generic)
                             icon = .invite(true)
+                        case .raisedHand:
+                            text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
+                            icon = .invite(true)
                         }
-                        
-                        if peerEntry.raiseHandStatus, case let .text(value, type) = text {
-                            text = .text("[hand] \(value)", type)
-                        }
-                        
+                                                
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
                         return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: !peerEntry.isMyPeer || peerEntry.canManageCall, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
@@ -2748,7 +2742,10 @@ public final class VoiceChatController: ViewController {
                 
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
-                if member.peer.id == self.callState?.myPeerId {
+                if member.raiseHandRating != nil {
+                    memberState = .raisedHand
+                    memberMuteState = member.muteState
+                } else if member.peer.id == self.callState?.myPeerId {
                     if muteState == nil {
                         memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
                     } else {
@@ -2770,8 +2767,7 @@ public final class VoiceChatController: ViewController {
                     state: memberState,
                     muteState: memberMuteState,
                     canManageCall: self.callState?.canManageCall ?? false,
-                    volume: member.volume,
-                    raiseHandStatus: member.raiseHandRating != nil
+                    volume: member.volume
                 )))
                 index += 1
             }
@@ -2792,8 +2788,7 @@ public final class VoiceChatController: ViewController {
                     state: .invited,
                     muteState: nil,
                     canManageCall: false,
-                    volume: nil,
-                    raiseHandStatus: false
+                    volume: nil
                 )))
                 index += 1
             }
