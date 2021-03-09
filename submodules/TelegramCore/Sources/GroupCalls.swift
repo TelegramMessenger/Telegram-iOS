@@ -1802,7 +1802,6 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
 }
 
 public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
-    
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     } |> mapToSignal { inputPeer in

@@ -837,6 +837,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         jsonParams: nil,
                         joinTimestamp: strongSelf.temporaryJoinTimestamp,
                         raiseHandRating: nil,
+                        hasRaiseHand: false,
                         activityTimestamp: nil,
                         activityRank: nil,
                         muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
@@ -1240,6 +1241,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 jsonParams: nil,
                                 joinTimestamp: strongSelf.temporaryJoinTimestamp,
                                 raiseHandRating: nil,
+                                hasRaiseHand: false,
                                 activityTimestamp: nil,
                                 activityRank: nil,
                                 muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
@@ -1840,7 +1842,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         updatedInvitedPeers.insert(peerId, at: 0)
         self.invitedPeersValue = updatedInvitedPeers
         
-        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
+        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId, canUnmute: false).start()
         
         return true
     }

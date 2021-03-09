@@ -2780,7 +2780,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(peerId.namespace) {
-                self.displayAsPeersPromise.set(cachedGroupCallDisplayAsAvailablePeers(account: context.account))
+                self.displayAsPeersPromise.set(cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId))
             }
         }
         
