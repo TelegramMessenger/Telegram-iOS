@@ -1775,43 +1775,50 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
     }
 }
 
-public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox) -> Signal<[FoundPeer], NoError> {
-    return network.request(Api.functions.channels.getAdminedPublicChannels(flags: 1 << 2))
-    |> retryRequest
-    |> mapToSignal { result in
-        let chats: [Api.Chat]
-        switch result {
-            case let .chatsSlice(_, c):
-                chats = c
-            case let .chats(c):
-                chats = c
+public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+    
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    } |> mapToSignal { inputPeer in
+        guard let inputPeer = inputPeer else {
+            return .complete()
         }
-        var subscribers: [PeerId: Int32] = [:]
-        let peers = chats.compactMap(parseTelegramGroupOrChannel)
-        for chat in chats {
-            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                switch chat {
-                case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount):
-                    if let participantsCount = participantsCount {
-                        subscribers[groupOrChannel.id] = participantsCount
+        return network.request(Api.functions.phone.getGroupCallJoinAs(peer: inputPeer))
+        |> retryRequest
+        |> mapToSignal { result in
+            var peers:[Peer]
+            switch result {
+            case let .joinAsPeers(peers, chats, users):
+                var subscribers: [PeerId: Int32] = [:]
+                let peers = chats.compactMap(parseTelegramGroupOrChannel)
+                for chat in chats {
+                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        switch chat {
+                        case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                            if let participantsCount = participantsCount {
+                                subscribers[groupOrChannel.id] = participantsCount
+                            }
+                        case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
+                            subscribers[groupOrChannel.id] = participantsCount
+                        default:
+                            break
+                        }
                     }
-                case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
-                    subscribers[groupOrChannel.id] = participantsCount
-                default:
-                    break
+                }
+                return postbox.transaction { transaction -> [Peer] in
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                        return updated
+                    })
+                    return peers
+                } |> map { peers -> [FoundPeer] in
+                    return peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) }
                 }
             }
         }
         
-        return postbox.transaction { transaction -> [Peer] in
-            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                return updated
-            })
-            return peers
-        } |> map { peers -> [FoundPeer] in
-            return peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) }
-        }
     }
+    
+    
 }
 
 public final class CachedDisplayAsPeers: PostboxCoding {
@@ -1834,8 +1841,9 @@ public final class CachedDisplayAsPeers: PostboxCoding {
     }
 }
 
-public func cachedGroupCallDisplayAsAvailablePeers(account: Account) -> Signal<[FoundPeer], NoError> {
-    let key = ValueBoxKey(length: 0)
+public func cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: peerId.toInt64())
     return account.postbox.transaction { transaction -> ([FoundPeer], Int32)? in
         let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key)) as? CachedDisplayAsPeers
         if let cached = cached {
@@ -1859,7 +1867,7 @@ public func cachedGroupCallDisplayAsAvailablePeers(account: Account) -> Signal<[
         if let (cachedPeers, timestamp) = cachedPeersAndTimestamp, currentTimestamp - timestamp < 60 * 5 {
             return .single(cachedPeers)
         } else {
-            return groupCallDisplayAsAvailablePeers(network: account.network, postbox: account.postbox)
+            return groupCallDisplayAsAvailablePeers(network: account.network, postbox: account.postbox, peerId: peerId)
             |> mapToSignal { peers -> Signal<[FoundPeer], NoError> in
                 return account.postbox.transaction { transaction -> [FoundPeer] in
                     let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -1930,7 +1938,7 @@ public struct GetAudioBroadcastPartResult {
 }
 
 public func getAudioBroadcastPart(account: Account, callId: Int64, accessHash: Int64, datacenterId: Int, timestampId: Int32) -> Signal<GetAudioBroadcastPartResult, NoError> {
-    return account.network.multiplexedRequestManager.requestWithAdditionalInfo(to: .main(datacenterId), consumerId: Int64.random(in: 0 ..< Int64.max), data: Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), date: timestampId), offset: 0, limit: 128 * 1024), tag: nil, continueInBackground: false, automaticFloodWait: false)
+    return account.network.multiplexedRequestManager.requestWithAdditionalInfo(to: .main(datacenterId), consumerId: Int64.random(in: 0 ..< Int64.max), data: Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: 0, scale: 0), offset: 0, limit: 128 * 1024), tag: nil, continueInBackground: false, automaticFloodWait: false)
     |> map { result, responseTimestamp -> GetAudioBroadcastPartResult in
         switch result {
         case let .file(_, _, bytes):
