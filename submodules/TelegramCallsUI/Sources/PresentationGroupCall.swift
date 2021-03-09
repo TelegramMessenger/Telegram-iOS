@@ -352,6 +352,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var internalState: InternalState = .requesting
     
     private var callContext: OngoingGroupCallContext?
+    private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
     private var ssrcMapping: [UInt32: PeerId] = [:]
     
     private var requestedSsrcs = Set<UInt32>()
@@ -426,6 +427,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public var canBeRemoved: Signal<Bool, NoError> {
         return self._canBeRemoved.get()
     }
+    private var markedAsCanBeRemoved = false
     
     private let wasRemoved = Promise<Bool>(false)
     
@@ -479,6 +481,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let isMutedDisposable = MetaDisposable()
     private let memberStatesDisposable = MetaDisposable()
     private let leaveDisposable = MetaDisposable()
+
+    private var isReconnectingAsSpeaker = false {
+        didSet {
+            if self.isReconnectingAsSpeaker != oldValue {
+                self.isReconnectingAsSpeakerPromise.set(self.isReconnectingAsSpeaker)
+            }
+        }
+    }
+    private let isReconnectingAsSpeakerPromise = ValuePromise<Bool>(false)
     
     private var checkCallDisposable: Disposable?
     private var isCurrentlyConnecting: Bool?
@@ -652,13 +663,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     
                                     if participantUpdate.peerId == strongSelf.joinAsPeerId {
                                         if case let .established(_, _, _, ssrc, _) = strongSelf.internalState, ssrc == participantUpdate.ssrc {
-                                            strongSelf._canBeRemoved.set(.single(true))
+                                            strongSelf.markAsCanBeRemoved()
                                         }
                                     }
                                 } else if participantUpdate.peerId == strongSelf.joinAsPeerId {
                                     if case let .established(_, connectionMode, _, ssrc, _) = strongSelf.internalState {
                                         if ssrc != participantUpdate.ssrc {
-                                            strongSelf._canBeRemoved.set(.single(true))
+                                            strongSelf.markAsCanBeRemoved()
                                         } else if case .broadcast = connectionMode {
                                             let canUnmute: Bool
                                             if let muteState = participantUpdate.muteState {
@@ -668,7 +679,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                             }
                                             
                                             if canUnmute {
-                                                strongSelf.requestCall()
+                                                strongSelf.requestCall(movingFromBroadcastToRtc: true)
                                             }
                                         }
                                     }
@@ -682,7 +693,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                         case let .call(isTerminated, _, _, _):
                             if isTerminated {
-                                strongSelf._canBeRemoved.set(.single(true))
+                                strongSelf.markAsCanBeRemoved()
                             }
                         }
                     }
@@ -732,7 +743,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         })
         
-        self.requestCall()
+        self.requestCall(movingFromBroadcastToRtc: false)
     }
     
     deinit {
@@ -826,6 +837,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         jsonParams: nil,
                         joinTimestamp: strongSelf.temporaryJoinTimestamp,
                         raiseHandRating: nil,
+                        hasRaiseHand: false,
                         activityTimestamp: nil,
                         activityRank: nil,
                         muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
@@ -922,7 +934,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 return
                             }
                             if case .established = strongSelf.internalState {
-                                strongSelf.requestCall()
+                                strongSelf.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
                     })
@@ -981,10 +993,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             
                             switch joinCallResult.connectionMode {
                             case .rtc:
-                                strongSelf.callContext?.setConnectionMode(.rtc)
+                                strongSelf.currentConnectionMode = .rtc
+                                strongSelf.callContext?.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
                                 strongSelf.callContext?.setJoinResponse(payload: clientParams, participants: addedParticipants)
                             case .broadcast:
-                                strongSelf.callContext?.setConnectionMode(.broadcast)
+                                strongSelf.currentConnectionMode = .broadcast
+                                strongSelf.callContext?.setConnectionMode(.broadcast, keepBroadcastConnectedIfWasEnabled: false)
                             }
                             
                             strongSelf.updateSessionState(internalState: .established(info: joinCallResult.callInfo, connectionMode: joinCallResult.connectionMode, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
@@ -1004,7 +1018,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                             ]), on: .root, blockInteraction: false, completion: {})
                         }
-                        strongSelf._canBeRemoved.set(.single(true))
+                        strongSelf.markAsCanBeRemoved()
                     }))
                 }))
                 
@@ -1014,12 +1028,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         return
                     }
                     let mappedState: PresentationGroupCallState.NetworkState
-                    switch state {
-                    case .connecting:
-                        mappedState = .connecting
-                    case .connected:
+                    if state.isConnected {
                         mappedState = .connected
+                    } else {
+                        mappedState = .connecting
                     }
+
                     let wasConnecting = strongSelf.stateValue.networkState == .connecting
                     if strongSelf.stateValue.networkState != mappedState {
                         strongSelf.stateValue.networkState = mappedState
@@ -1035,8 +1049,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.checkCallDisposable = nil
                         }
                     }
+
+                    strongSelf.isReconnectingAsSpeaker = state.isTransitioningFromBroadcastToRtc
                     
-                    if (wasConnecting != isConnecting && strongSelf.didConnectOnce) { //|| !strongSelf.didStartConnectingOnce {
+                    if (wasConnecting != isConnecting && strongSelf.didConnectOnce) {
                         if isConnecting {
                             let toneRenderer = PresentationCallToneRenderer(tone: .groupConnecting)
                             strongSelf.toneRenderer = toneRenderer
@@ -1050,7 +1066,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         strongSelf.didStartConnectingOnce = true
                     }
                     
-                    if case .connected = state {
+                    if state.isConnected {
                         if !strongSelf.didConnectOnce {
                             strongSelf.didConnectOnce = true
                             
@@ -1176,8 +1192,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     participantsContext.activeSpeakers,
                     self.speakingParticipantsContext.get(),
                     adminIds,
-                    myPeer
-                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants, adminIds, myPeer in
+                    myPeer,
+                    self.isReconnectingAsSpeakerPromise.get()
+                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants, adminIds, myPeer, isReconnectingAsSpeaker in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1224,6 +1241,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 jsonParams: nil,
                                 joinTimestamp: strongSelf.temporaryJoinTimestamp,
                                 raiseHandRating: nil,
+                                hasRaiseHand: false,
                                 activityTimestamp: nil,
                                 activityRank: nil,
                                 muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
@@ -1246,7 +1264,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         
                         if participant.peer.id == strongSelf.joinAsPeerId {
-                            if let muteState = participant.muteState {
+                            var filteredMuteState = participant.muteState
+                            if isReconnectingAsSpeaker || strongSelf.currentConnectionMode != .rtc {
+                                filteredMuteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false)
+                            }
+
+                            if let muteState = filteredMuteState {
                                 if muteState.canUnmute {
                                     switch strongSelf.isMutedValue {
                                     case let .muted(isPushToTalkActive):
@@ -1428,7 +1451,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     return
                 }
                 strongSelf.checkCallDisposable = nil
-                strongSelf.requestCall()
+                strongSelf.requestCall(movingFromBroadcastToRtc: false)
             })
         }
     }
@@ -1441,6 +1464,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private func markAsCanBeRemoved() {
+        if self.markedAsCanBeRemoved {
+            return
+        }
+        self.markedAsCanBeRemoved = true
+
         self.callContext?.stop()
         self._canBeRemoved.set(.single(true))
         
@@ -1490,7 +1518,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 strongSelf.stateValue.myPeerId = peerId
             }
             
-            strongSelf.requestCall()
+            strongSelf.requestCall(movingFromBroadcastToRtc: false)
         })
     }
     
@@ -1740,8 +1768,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContext?.updateShouldBeRecording(shouldBeRecording, title: title)
     }
     
-    private func requestCall() {
-        self.callContext?.setConnectionMode(.none)
+    private func requestCall(movingFromBroadcastToRtc: Bool) {
+        self.currentConnectionMode = .none
+        self.callContext?.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc)
         
         self.missingSsrcsDisposable.set(nil)
         self.missingSsrcs.removeAll()
@@ -1783,8 +1812,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.checkCallDisposable?.dispose()
         self.checkCallDisposable = nil
-        
-        self.stateValue.networkState = .connecting
+
+        if !movingFromBroadcastToRtc {
+            self.stateValue.networkState = .connecting
+        }
         
         self.requestDisposable.set((currentOrRequestedCall
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -1797,7 +1828,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 
                 strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
             } else {
-                strongSelf._canBeRemoved.set(.single(true))
+                strongSelf.markAsCanBeRemoved()
             }
         }))
     }
@@ -1811,7 +1842,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         updatedInvitedPeers.insert(peerId, at: 0)
         self.invitedPeersValue = updatedInvitedPeers
         
-        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
+        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId, canUnmute: false).start()
         
         return true
     }

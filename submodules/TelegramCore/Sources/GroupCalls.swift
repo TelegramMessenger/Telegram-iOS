@@ -143,6 +143,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                             jsonParams: jsonParams,
                             joinTimestamp: date,
                             raiseHandRating: raiseHandRating,
+                            hasRaiseHand: raiseHandRating != nil,
                             activityTimestamp: activeDate.flatMap(Double.init),
                             activityRank: nil,
                             muteState: muteState,
@@ -310,6 +311,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                             jsonParams: jsonParams,
                             joinTimestamp: date,
                             raiseHandRating: raiseHandRating,
+                            hasRaiseHand: raiseHandRating != nil,
                             activityTimestamp: activeDate.flatMap(Double.init),
                             activityRank: nil,
                             muteState: muteState,
@@ -692,6 +694,7 @@ public final class GroupCallParticipantsContext {
         public var jsonParams: String?
         public var joinTimestamp: Int32
         public var raiseHandRating: Int64?
+        public var hasRaiseHand: Bool
         public var activityTimestamp: Double?
         public var activityRank: Int?
         public var muteState: MuteState?
@@ -704,6 +707,7 @@ public final class GroupCallParticipantsContext {
             jsonParams: String?,
             joinTimestamp: Int32,
             raiseHandRating: Int64?,
+            hasRaiseHand: Bool,
             activityTimestamp: Double?,
             activityRank: Int?,
             muteState: MuteState?,
@@ -715,6 +719,7 @@ public final class GroupCallParticipantsContext {
             self.jsonParams = jsonParams
             self.joinTimestamp = joinTimestamp
             self.raiseHandRating = raiseHandRating
+            self.hasRaiseHand = hasRaiseHand
             self.activityTimestamp = activityTimestamp
             self.activityRank = activityRank
             self.muteState = muteState
@@ -738,6 +743,9 @@ public final class GroupCallParticipantsContext {
                 return false
             }
             if lhs.raiseHandRating != rhs.raiseHandRating {
+                return false
+            }
+            if lhs.hasRaiseHand != rhs.hasRaiseHand {
                 return false
             }
             if lhs.activityTimestamp != rhs.activityTimestamp {
@@ -951,17 +959,27 @@ public final class GroupCallParticipantsContext {
     public var immediateState: State?
     
     public var state: Signal<State, NoError> {
+        let accountPeerId = self.account.peerId
         return self.statePromise.get()
         |> map { state -> State in
             if state.overlayState.isEmpty {
                 return state.state
             }
             var publicState = state.state
+            var sortAgain = false
+            let canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
             for i in 0 ..< publicState.participants.count {
                 if let pendingMuteState = state.overlayState.pendingMuteStateChanges[publicState.participants[i].peer.id] {
                     publicState.participants[i].muteState = pendingMuteState.state
                     publicState.participants[i].volume = pendingMuteState.volume
                 }
+                if !canSeeHands && publicState.participants[i].raiseHandRating != nil {
+                    publicState.participants[i].raiseHandRating = nil
+                    sortAgain = true
+                }
+            }
+            if sortAgain {
+                publicState.participants.sort()
             }
             return publicState
         }
@@ -1367,6 +1385,7 @@ public final class GroupCallParticipantsContext {
                         jsonParams: participantUpdate.jsonParams,
                         joinTimestamp: participantUpdate.joinTimestamp,
                         raiseHandRating: participantUpdate.raiseHandRating,
+                        hasRaiseHand: participantUpdate.raiseHandRating != nil,
                         activityTimestamp: activityTimestamp,
                         activityRank: previousActivityRank,
                         muteState: participantUpdate.muteState,
@@ -1783,7 +1802,6 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
 }
 
 public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
-    
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     } |> mapToSignal { inputPeer in

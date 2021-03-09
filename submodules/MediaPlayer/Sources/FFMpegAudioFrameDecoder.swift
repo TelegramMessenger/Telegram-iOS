@@ -61,8 +61,6 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
                 }
                 return self.delayedFrames.remove(at: minFrameIndex)
             }
-        } else {
-            assert(true)
         }
         
         return nil
