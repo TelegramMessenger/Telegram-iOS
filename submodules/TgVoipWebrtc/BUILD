@@ -54,6 +54,7 @@ objc_library(
         "//third-party/boringssl:ssl",
         "//third-party/ogg:ogg",
         "//third-party/opusfile:opusfile",
+        "//submodules/ffmpeg:ffmpeg",
     ],
     sdk_frameworks = [
         "Foundation",

@@ -426,8 +426,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
-            .statsLogPath = statsLogPath.length == 0 ? "" : std::string(statsLogPath.UTF8String),
+            .logPath =  std::string(logPath.length == 0 ? "" : logPath.UTF8String),
+            .statsLogPath = std::string(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .enableHighBitrateVideo = true,
             .preferredVideoCodecs = preferredVideoCodecs,
@@ -853,7 +853,7 @@ private:
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int32_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -898,10 +898,10 @@ private:
                 }
                 participantDescriptionsRequired(mappedSources);
             },
-            .requestBroadcastPart = [requestBroadcastPart](int32_t timestamp, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
-                id<OngoingGroupCallBroadcastPartTask> task = requestBroadcastPart(timestamp, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
+            .requestBroadcastPart = [requestBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
+                id<OngoingGroupCallBroadcastPartTask> task = requestBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
                     tgcalls::BroadcastPart parsedPart;
-                    parsedPart.timestamp = part.timestamp;
+                    parsedPart.timestampMilliseconds = part.timestampMilliseconds;
                     
                     parsedPart.responseTimestamp = part.responseTimestamp;
                     
@@ -915,8 +915,8 @@ private:
                             mappedStatus = tgcalls::BroadcastPart::Status::NotReady;
                             break;
                         }
-                        case OngoingGroupCallBroadcastPartStatusTooOld: {
-                            mappedStatus = tgcalls::BroadcastPart::Status::TooOld;
+                        case OngoingGroupCallBroadcastPartStatusResyncNeeded: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::ResyncNeeded;
                             break;
                         }
                         default: {
@@ -1495,10 +1495,10 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 @implementation OngoingGroupCallBroadcastPart
 
-- (instancetype _Nonnull)initWithTimestamp:(int32_t)timestamp responseTimestamp:(double)responseTimestamp status:(OngoingGroupCallBroadcastPartStatus)status oggData:(NSData * _Nonnull)oggData {
+- (instancetype _Nonnull)initWithTimestampMilliseconds:(int64_t)timestampMilliseconds responseTimestamp:(double)responseTimestamp status:(OngoingGroupCallBroadcastPartStatus)status oggData:(NSData * _Nonnull)oggData {
     self = [super init];
     if (self != nil) {
-        _timestamp = timestamp;
+        _timestampMilliseconds = timestampMilliseconds;
         _responseTimestamp = responseTimestamp;
         _status = status;
         _oggData = oggData;

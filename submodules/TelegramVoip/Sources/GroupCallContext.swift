@@ -1,9 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
-//import UniversalMediaPlayer
-//import AppBundle
-import OpusBinding
 import Postbox
 import TelegramCore
 
@@ -32,7 +29,7 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
 }
 
 private protocol BroadcastPartSource: class {
-    func requestPart(timestamp: Int32, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
 }
 
 private final class NetworkBroadcastPartSource: BroadcastPartSource {
@@ -40,26 +37,28 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
     private let account: Account
     private let callId: Int64
     private let accessHash: Int64
-    private var datacenterId: Int?
+    private var dataSource: AudioBroadcastDataSource?
     
-    
-    
-    init(queue: Queue, account: Account, callId: Int64, accessHash: Int64, datacenterId: Int?) {
+    init(queue: Queue, account: Account, callId: Int64, accessHash: Int64) {
         self.queue = queue
         self.account = account
         self.callId = callId
         self.accessHash = accessHash
-        self.datacenterId = datacenterId
     }
     
-    func requestPart(timestamp: Int32, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
-        let timestampId = timestamp == 0 ? Int32(Date().timeIntervalSince1970) : timestamp
-        
-        let datacenterId: Signal<Int?, NoError>
-        if let datacenterIdValue = self.datacenterId {
-            datacenterId = .single(datacenterIdValue)
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
+        let timestampIdMilliseconds: Int64
+        if timestampMilliseconds != 0 {
+            timestampIdMilliseconds = timestampMilliseconds
         } else {
-            datacenterId = getAudioBroadcastDatacenter(account: self.account, callId: self.callId, accessHash: self.accessHash)
+            timestampIdMilliseconds = (Int64(Date().timeIntervalSince1970 * 1000.0) / durationMilliseconds) * durationMilliseconds
+        }
+        
+        let dataSource: Signal<AudioBroadcastDataSource?, NoError>
+        if let dataSourceValue = self.dataSource {
+            dataSource = .single(dataSourceValue)
+        } else {
+            dataSource = getAudioBroadcastDataSource(account: self.account, callId: self.callId, accessHash: self.accessHash)
         }
         
         let account = self.account
@@ -67,12 +66,12 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         let accessHash = self.accessHash
         
         let queue = self.queue
-        let signal = datacenterId
+        let signal = dataSource
         |> deliverOn(self.queue)
-        |> mapToSignal { [weak self] datacenterId -> Signal<GetAudioBroadcastPartResult?, NoError> in
-            if let datacenterId = datacenterId {
-                self?.datacenterId = datacenterId
-                return getAudioBroadcastPart(account: account, callId: callId, accessHash: accessHash, datacenterId: datacenterId, timestampId: timestampId)
+        |> mapToSignal { [weak self] dataSource -> Signal<GetAudioBroadcastPartResult?, NoError> in
+            if let dataSource = dataSource {
+                self?.dataSource = dataSource
+                return getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
                 |> map(Optional.init)
             } else {
                 return .single(nil)
@@ -83,17 +82,17 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             
         return signal.start(next: { result in
             guard let result = result else {
-                completion(OngoingGroupCallBroadcastPart(timestamp: timestampId, responseTimestamp: Double(timestampId), status: .notReady, oggData: Data()))
+                completion(OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: Double(timestampIdMilliseconds), status: .notReady, oggData: Data()))
                 return
             }
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
-                part = OngoingGroupCallBroadcastPart(timestamp: timestampId, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
+                part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
-                part = OngoingGroupCallBroadcastPart(timestamp: timestampId, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
-            case .tooOld:
-                part = OngoingGroupCallBroadcastPart(timestamp: timestampId, responseTimestamp: result.responseTimestamp, status: .tooOld, oggData: Data())
+                part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
+            case .resyncNeeded:
+                part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .resyncNeeded, oggData: Data())
             case .rejoinNeeded:
                 rejoinNeeded()
                 return
@@ -121,13 +120,11 @@ public final class OngoingGroupCallContext {
         public var account: Account
         public var callId: Int64
         public var accessHash: Int64
-        public var datacenterId: Int?
         
-        public init(account: Account, callId: Int64, accessHash: Int64, datacenterId: Int?) {
+        public init(account: Account, callId: Int64, accessHash: Int64) {
             self.account = account
             self.callId = callId
             self.accessHash = accessHash
-            self.datacenterId = datacenterId
         }
     }
     
@@ -169,7 +166,7 @@ public final class OngoingGroupCallContext {
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
             
             if let audioStreamData = audioStreamData {
-                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, account: audioStreamData.account, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash, datacenterId: audioStreamData.datacenterId)
+                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, account: audioStreamData.account, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash)
                 self.broadcastPartsSource = broadcastPartsSource
             }
             
@@ -193,11 +190,11 @@ public final class OngoingGroupCallContext {
                 participantDescriptionsRequired: { ssrcs in
                     participantDescriptionsRequired(Set(ssrcs.map { $0.uint32Value }))
                 },
-                requestBroadcastPart: { timestamp, completion in
+                requestBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
                     let disposable = MetaDisposable()
                     
                     queue.async {
-                        disposable.set(broadcastPartsSource?.requestPart(timestamp: timestamp, completion: completion, rejoinNeeded: {
+                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, completion: completion, rejoinNeeded: {
                             rejoinNeeded()
                         }))
                     }
