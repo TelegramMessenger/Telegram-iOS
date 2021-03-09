@@ -12,7 +12,7 @@ public struct GroupCallInfo: Equatable {
     public var streamDcId: Int32?
     public var title: String?
     public var recordingStartTimestamp: Int32?
-    public var canManagePermissions:Bool
+    
     public init(
         id: Int64,
         accessHash: Int64,
@@ -20,8 +20,7 @@ public struct GroupCallInfo: Equatable {
         clientParams: String?,
         streamDcId: Int32?,
         title: String?,
-        recordingStartTimestamp: Int32?,
-        canManagePermissions: Bool
+        recordingStartTimestamp: Int32?
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -30,7 +29,6 @@ public struct GroupCallInfo: Equatable {
         self.streamDcId = streamDcId
         self.title = title
         self.recordingStartTimestamp = recordingStartTimestamp
-        self.canManagePermissions = canManagePermissions
     }
 }
 
@@ -50,7 +48,6 @@ extension GroupCallInfo {
                     clientParams = data
                 }
             }
-            let canManagePermissions: Bool = (flags & (1 << 2)) != 0
             self.init(
                 id: id,
                 accessHash: accessHash,
@@ -58,8 +55,7 @@ extension GroupCallInfo {
                 clientParams: clientParams,
                 streamDcId: streamDcId,
                 title: title,
-                recordingStartTimestamp: recordStartDate,
-                canManagePermissions: canManagePermissions
+                recordingStartTimestamp: recordStartDate
             )
         case .groupCallDiscarded:
             return nil
