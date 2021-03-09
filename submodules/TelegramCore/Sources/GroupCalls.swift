@@ -355,7 +355,7 @@ public struct JoinGroupCallResult {
     public var connectionMode: ConnectionMode
 }
 
-public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, inviteHash: String?) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         if let joinAs = joinAs {
             return transaction.getPeer(joinAs).flatMap(apiInputPeer)
