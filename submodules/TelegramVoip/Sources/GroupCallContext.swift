@@ -134,9 +134,9 @@ public final class OngoingGroupCallContext {
         case broadcast
     }
     
-    public enum NetworkState {
-        case connecting
-        case connected
+    public struct NetworkState: Equatable {
+        public var isConnected: Bool
+        public var isTransitioningFromBroadcastToRtc: Bool
     }
     
     public enum AudioLevelKey: Hashable {
@@ -151,7 +151,7 @@ public final class OngoingGroupCallContext {
         let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
         
         let joinPayload = Promise<(String, UInt32)>()
-        let networkState = ValuePromise<NetworkState>(.connecting, ignoreRepeated: true)
+        let networkState = ValuePromise<NetworkState>(NetworkState(isConnected: false, isTransitioningFromBroadcastToRtc: false), ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
         
@@ -210,16 +210,7 @@ public final class OngoingGroupCallContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    let mappedState: NetworkState
-                    switch state {
-                    case .connecting:
-                        mappedState = .connecting
-                    case .connected:
-                        mappedState = .connected
-                    @unknown default:
-                        mappedState = .connecting
-                    }
-                    strongSelf.networkState.set(mappedState)
+                    strongSelf.networkState.set(NetworkState(isConnected: state.isConnected, isTransitioningFromBroadcastToRtc: state.isTransitioningFromBroadcastToRtc))
                 }
             }
             
@@ -295,7 +286,7 @@ public final class OngoingGroupCallContext {
             self.context.stop()
         }
         
-        func setConnectionMode(_ connectionMode: ConnectionMode) {
+        func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool) {
             let mappedConnectionMode: OngoingCallConnectionMode
             switch connectionMode {
             case .none:
@@ -305,7 +296,7 @@ public final class OngoingGroupCallContext {
             case .broadcast:
                 mappedConnectionMode = .broadcast
             }
-            self.context.setConnectionMode(mappedConnectionMode)
+            self.context.setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled)
             
             if (mappedConnectionMode != .rtc) {
                 self.joinPayload.set(.never())
@@ -504,9 +495,9 @@ public final class OngoingGroupCallContext {
         })
     }
     
-    public func setConnectionMode(_ connectionMode: ConnectionMode) {
+    public func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool) {
         self.impl.with { impl in
-            impl.setConnectionMode(connectionMode)
+            impl.setConnectionMode(connectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled)
         }
     }
     

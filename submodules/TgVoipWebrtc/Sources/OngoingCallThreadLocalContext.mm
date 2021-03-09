@@ -863,13 +863,16 @@ private:
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
-            .networkStateUpdated = [weakSelf, queue, networkStateUpdated](bool isConnected) {
+            .networkStateUpdated = [weakSelf, queue, networkStateUpdated](tgcalls::GroupNetworkState networkState) {
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf == nil) {
                         return;
                     }
-                    networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
+                    GroupCallNetworkState mappedState;
+                    mappedState.isConnected = networkState.isConnected;
+                    mappedState.isTransitioningFromBroadcastToRtc = networkState.isTransitioningFromBroadcastToRtc;
+                    networkStateUpdated(mappedState);
                 }];
             },
             .audioLevelsUpdated = [audioLevelsUpdated](tgcalls::GroupLevelsUpdate const &levels) {
@@ -1041,7 +1044,7 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     completion(string, payload.ssrc);
 }
 
-- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode {
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled {
     if (_instance) {
         tgcalls::GroupConnectionMode mappedConnectionMode;
         switch (connectionMode) {
@@ -1062,7 +1065,7 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
                 break;
             }
         }
-        _instance->setConnectionMode(mappedConnectionMode);
+        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled);
     }
 }
 

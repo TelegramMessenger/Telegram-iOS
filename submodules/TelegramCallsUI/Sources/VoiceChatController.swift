@@ -2742,7 +2742,7 @@ public final class VoiceChatController: ViewController {
                 
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
-                if member.raiseHandRating != nil {
+                if member.raiseHandRating != nil || member.hasRaiseHand {
                     memberState = .raisedHand
                     memberMuteState = member.muteState
                 } else if member.peer.id == self.callState?.myPeerId {
