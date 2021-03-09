@@ -619,6 +619,9 @@ public protocol SharedAccountContext: class {
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
     
+    var hasGroupCallOnScreen: Signal<Bool, NoError> { get }
+    var currentGroupCallController: ViewController? { get }
+    
     func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController?, withChatListController chatListController: ViewController?)
     func beginNewAuth(testingEnvironment: Bool)
 }

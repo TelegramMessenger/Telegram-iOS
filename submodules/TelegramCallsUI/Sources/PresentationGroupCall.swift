@@ -1178,8 +1178,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     participantsContext.activeSpeakers,
                     self.speakingParticipantsContext.get(),
                     adminIds,
-                    myPeer
-                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants, adminIds, myPeer in
+                    myPeer,
+                    accountContext.account.postbox.peerView(id: peerId)
+                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants, adminIds, myPeer, view in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1254,8 +1255,40 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             
                             if let muteState = participant.muteState, muteState.canUnmute && strongSelf.stateValue.raisedHand {
                                 strongSelf.stateValue.raisedHand = false
-                                let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
-                                strongSelf.accountContext.sharedContext.mainWindow?.present(UndoOverlayController(presentationData: presentationData, content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_YouCanNowSpeak), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), on: .root, blockInteraction: false, completion: {})
+                                
+                                let _ = (strongSelf.accountContext.sharedContext.hasGroupCallOnScreen
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak self] hasGroupCallOnScreen in
+                                    let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
+                                    if hasGroupCallOnScreen, let groupCallController = self?.accountContext.sharedContext.currentGroupCallController {
+                                        var animateInAsReplacement = false
+                                        groupCallController.forEachController { c in
+                                            if let c = c as? UndoOverlayController {
+                                                animateInAsReplacement = true
+                                                c.dismiss()
+                                            }
+                                            return true
+                                        }
+                                        groupCallController.present(UndoOverlayController(presentationData: presentationData, content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_YouCanNowSpeak), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return true }), in: .current)
+                                    } else {
+                                        let title: String?
+                                        if let voiceChatTitle = strongSelf.stateValue.title {
+                                            title = voiceChatTitle
+                                        } else if let peer = peerViewMainPeer(view) {
+                                            title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        } else {
+                                            title = nil
+                                        }
+                                        
+                                        let text: String
+                                        if let title = title {
+                                            text = presentationData.strings.VoiceChat_YouCanNowSpeakIn(title).0
+                                        } else {
+                                            text = presentationData.strings.VoiceChat_YouCanNowSpeak
+                                        }
+                                        strongSelf.accountContext.sharedContext.mainWindow?.present(UndoOverlayController(presentationData: presentationData, content: .voiceChatCanSpeak(text: text), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), on: .root, blockInteraction: false, completion: {})
+                                    }
+                                })
                             }
                             
                             if let muteState = participant.muteState {
@@ -1823,7 +1856,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         updatedInvitedPeers.insert(peerId, at: 0)
         self.invitedPeersValue = updatedInvitedPeers
         
-        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
+        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId, canUnmute: false).start()
         
         return true
     }

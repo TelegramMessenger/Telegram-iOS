@@ -100,7 +100,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private let callState = Promise<PresentationCallState?>(nil)
     
     private var groupCallController: VoiceChatController?
-    private let hasGroupCallOnScreen = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var currentGroupCallController: ViewController? {
+        return self.groupCallController
+    }
+    private let hasGroupCallOnScreenPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var hasGroupCallOnScreen: Signal<Bool, NoError> {
+        return self.hasGroupCallOnScreenPromise.get()
+    }
     
     private var immediateHasOngoingCallValue = Atomic<Bool>(value: false)
     public var immediateHasOngoingCall: Bool {
@@ -637,16 +643,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         
                         if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
                             mainWindow.hostView.containerView.endEditing(true)
-                            strongSelf.hasGroupCallOnScreen.set(true)
+                            strongSelf.hasGroupCallOnScreenPromise.set(true)
                             let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
                             groupCallController.onViewDidAppear = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreen.set(true)
+                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
                                 }
                             }
                             groupCallController.onViewDidDisappear = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreen.set(false)
+                                    strongSelf.hasGroupCallOnScreenPromise.set(false)
                                 }
                             }
                             groupCallController.navigationPresentation = .flatModal
@@ -673,7 +679,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.callStateDisposable = combineLatest(queue: .mainQueue(),
                 callSignal,
                 groupCallSignal,
-                self.hasGroupCallOnScreen.get()
+                self.hasGroupCallOnScreenPromise.get()
             ).start(next: { [weak self] call, groupCall, hasGroupCallOnScreen in
                 if let strongSelf = self {
                     let statusBarContent: CallStatusBarNodeImpl.Content?

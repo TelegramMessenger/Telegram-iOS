@@ -11855,7 +11855,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let context = self.context
         let presentationData = self.presentationData
         
-        var proceed: (PeerId) -> Void = { joinAsPeerId in
+        let proceed: (PeerId) -> Void = { joinAsPeerId in
             super.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: activeCall)
         }
         
@@ -11865,7 +11865,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return [FoundPeer(peer: peer, subscribers: nil)]
             }
             
-            let _ = (combineLatest(currentAccountPeer, cachedGroupCallDisplayAsAvailablePeers(account: context.account))
+            let _ = (combineLatest(currentAccountPeer, groupCallDisplayAsAvailablePeers(network: context.account.network, postbox: context.account.postbox, peerId: peerId))
             |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
                 var result = currentAccountPeer
                 result.append(contentsOf: availablePeers)

@@ -17,6 +17,7 @@ public enum ParsedInternalPeerUrlParameter {
     case groupBotStart(String)
     case channelMessage(Int32)
     case replyThread(Int32, Int32)
+    case voiceChat(String?)
 }
 
 public enum ParsedInternalUrl {
@@ -135,7 +136,11 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     return .peerName(peerName, .groupBotStart(value))
                                 } else if queryItem.name == "game" {
                                     return nil
+                                } else if queryItem.name == "voicechat" {
+                                    return .peerName(peerName, .voiceChat(value))
                                 }
+                            } else if queryItem.name == "voicechat" {
+                                return .peerName(peerName, .voiceChat(nil))
                             }
                         }
                     }
@@ -334,6 +339,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                     }
                                     return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
+                            case let .voiceChat(invite):
+                                return .single(.peer(peer.id, .default))
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {

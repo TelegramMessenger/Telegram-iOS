@@ -609,6 +609,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var startGroup: String?
                         var game: String?
                         var post: String?
+                        var voiceChat: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -622,7 +623,11 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         game = value
                                     } else if queryItem.name == "post" {
                                         post = value
+                                    } else if queryItem.name == "voicechat" {
+                                        voiceChat = value
                                     }
+                                } else if queryItem.name == "voicechat" {
+                                    voiceChat = ""
                                 }
                             }
                         }
@@ -638,6 +643,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 result += "?startgroup=\(startGroup)"
                             } else if let game = game {
                                 result += "?game=\(game)"
+                            } else if let voiceChat = voiceChat {
+                                if !voiceChat.isEmpty {
+                                    result += "?voicechat=\(voiceChat)"
+                                } else {
+                                    result += "?voicechat="
+                                }
                             }
                             convertedUrl = result
                         }

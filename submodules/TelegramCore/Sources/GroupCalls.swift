@@ -337,6 +337,29 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
     }
 }
 
+public func inviteToGroupCall(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64, users: Set<PeerId>, canUnmute: Bool) -> Signal<Void, NoError> {
+    return .complete()
+//    return account.postbox.transaction { transaction -> [Api.InputUser] in
+//        var inputUsers: [Api.InputUser] = []
+//        for user in users {
+//            if let peer = transaction.getPeer(user), let inputUser = apiInputUser(peer) {
+//                inputUsers.append(inputUser)
+//            }
+//        }
+//        return inputUsers
+//    }
+//    |> mapToSignal { users -> Signal<Void, NoError> in
+//        return account.network.request(Api.functions.phone.inviteToGroupCall(flags: 0, call: .inputGroupCall(id: callId, accessHash: accessHash), users: users))
+//        |> `catch` { _ -> Signal<Void, NoError> in
+//            return .single(Void())
+//        } |> mapToSignal { updates -> Signal<Void, NoError> in
+//            account.stateManager.addUpdates(updates)
+//
+//            return .single(Void())
+//        }
+//    }
+}
+
 public enum JoinGroupCallError {
     case generic
     case anonymousNotAllowed
@@ -1776,7 +1799,6 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
 }
 
 public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
-    
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     } |> mapToSignal { inputPeer in
@@ -1817,8 +1839,6 @@ public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox,
         }
         
     }
-    
-    
 }
 
 public final class CachedDisplayAsPeers: PostboxCoding {
