@@ -639,8 +639,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    var animatingOut = false
     var outCompletion: (() -> Void)?
     func animateOut(shared: Bool, completion: @escaping () -> Void) {
+        guard !self.animatingOut else {
+            return
+        }
+        self.animatingOut = true
+        
         if self.contentNode != nil {
             var dimCompleted = false
             var offsetCompleted = false
@@ -648,6 +654,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let internalCompletion: () -> Void = { [weak self] in
                 if dimCompleted && offsetCompleted {
                     if let strongSelf = self {
+                        strongSelf.animatingOut = false
                         strongSelf.isHidden = true
                         strongSelf.dimNode.layer.removeAllAnimations()
                         strongSelf.layer.removeAllAnimations()
@@ -669,6 +676,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 internalCompletion()
             })
         } else {
+            self.animatingOut = false
             self.outCompletion = completion
             Queue.mainQueue().after(0.2) {
                 if let completion = self.outCompletion {

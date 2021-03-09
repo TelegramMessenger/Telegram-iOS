@@ -853,6 +853,6 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     }
     
     open func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, info: GroupCallInfo) {
-        self.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+        self.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
     }
 }

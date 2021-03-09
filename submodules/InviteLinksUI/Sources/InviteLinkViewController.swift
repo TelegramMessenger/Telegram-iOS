@@ -165,8 +165,8 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     } else {
                         interaction.shareLink(invite)
                     }
-                }, contextAction: { node in
-                    interaction.contextAction(invite, node, nil)
+                }, contextAction: { node, gesture in
+                    interaction.contextAction(invite, node, gesture)
                 }, viewAction: {
                 })
             case let .creatorHeader(_, title):

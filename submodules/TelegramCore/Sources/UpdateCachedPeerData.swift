@@ -291,16 +291,8 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                 if (chatFull.flags & 1 << 8) != 0 {
                                     hasScheduledMessages = true
                                 }
-                                
-                                var updatedActiveCall: CachedChannelData.ActiveCall?
-                                if let inputCall = chatFull.call {
-                                    switch inputCall {
-                                    case let .inputGroupCall(id, accessHash):
-                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash)
-                                    }
-                                }
-                                
-                                let groupcallDefaultJoinAs = chatFull.groupcallDefaultJoinAs
+                                                                
+                                let groupCallDefaultJoinAs = chatFull.groupcallDefaultJoinAs
                                 
                                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                     let previous: CachedGroupData
@@ -308,6 +300,14 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         previous = current
                                     } else {
                                         previous = CachedGroupData()
+                                    }
+                                    
+                                    var updatedActiveCall: CachedChannelData.ActiveCall?
+                                    if let inputCall = chatFull.call {
+                                        switch inputCall {
+                                        case let .inputGroupCall(id, accessHash):
+                                            updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title)
+                                        }
                                     }
                                     
                                     return previous.withUpdatedParticipants(participants)
@@ -320,7 +320,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         .withUpdatedInvitedBy(invitedBy)
                                         .withUpdatedPhoto(photo)
                                         .withUpdatedActiveCall(updatedActiveCall)
-                                        .withUpdatedCallJoinPeerId(groupcallDefaultJoinAs?.peerId)
+                                        .withUpdatedCallJoinPeerId(groupCallDefaultJoinAs?.peerId)
                                 })
                             case .channelFull:
                                 break
@@ -409,15 +409,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             if let pinnedMsgId = pinnedMsgId {
                                                 pinnedMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: pinnedMsgId)
                                             }
-                                            
-                                            var updatedActiveCall: CachedChannelData.ActiveCall?
-                                            if let inputCall = inputCall {
-                                                switch inputCall {
-                                                case let .inputGroupCall(id, accessHash):
-                                                    updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash)
-                                                }
-                                            }
-                                            
+                                                                                        
                                             var minAvailableMessageId: MessageId?
                                             if let minAvailableMsgId = minAvailableMsgId {
                                                 minAvailableMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minAvailableMsgId)
@@ -514,6 +506,14 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 previous = previous.withUpdatedIsNotAccessible(false)
                                                 
                                                 minAvailableMessageIdUpdated = previous.minAvailableMessageId != minAvailableMessageId
+                                                
+                                                var updatedActiveCall: CachedChannelData.ActiveCall?
+                                                if let inputCall = inputCall {
+                                                    switch inputCall {
+                                                    case let .inputGroupCall(id, accessHash):
+                                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title)
+                                                    }
+                                                }
                                                 
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)

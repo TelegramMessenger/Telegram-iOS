@@ -713,7 +713,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         })
         
         if let initialCall = initialCall, let temporaryParticipantsContext = (self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl)?.impl.syncWith({ impl in
-            impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash))
+            impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title))
         }) {
             if let participantsContext = temporaryParticipantsContext.context.participantsContext, let immediateState = participantsContext.immediateState {
                 self.switchToTemporaryParticipantsContext(sourceContext: participantsContext, initialState: immediateState, oldMyPeerId: self.joinAsPeerId)
@@ -1779,6 +1779,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.checkCallDisposable = nil
         
         self.stateValue.networkState = .connecting
+        self.stateValue.title = initialCall?.title
         
         self.requestDisposable.set((currentOrRequestedCall
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -1787,7 +1788,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             
             if let value = value {
-                strongSelf.initialCall = CachedChannelData.ActiveCall(id: value.id, accessHash: value.accessHash)
+                strongSelf.initialCall = CachedChannelData.ActiveCall(id: value.id, accessHash: value.accessHash, title: value.title)
                 
                 strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
             } else {

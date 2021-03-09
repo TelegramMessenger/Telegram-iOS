@@ -48,7 +48,7 @@ enum PeerInfoHeaderButtonIcon {
 
 final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     let key: PeerInfoHeaderButtonKey
-    private let action: (PeerInfoHeaderButtonNode) -> Void
+    private let action: (PeerInfoHeaderButtonNode, ContextGesture?) -> Void
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let backgroundNode: ASImageNode
@@ -58,13 +58,13 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     private var icon: PeerInfoHeaderButtonIcon?
     private var isActive: Bool?
     
-    init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode) -> Void) {
+    init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode, ContextGesture?) -> Void) {
         self.key = key
         self.action = action
         
         self.referenceNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
-        self.containerNode.isGestureEnabled = false
+        self.containerNode.animateScale = false
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -94,11 +94,17 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             }
         }
         
+        self.containerNode.activated = { [weak self] gesture, _ in
+            if let strongSelf = self {
+                strongSelf.action(strongSelf, gesture)
+            }
+        }
+        
         self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
     @objc private func buttonPressed() {
-        self.action(self)
+        self.action(self, nil)
     }
     
     func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
@@ -2593,7 +2599,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let navigationSeparatorNode: ASDisplayNode
     let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
     
-    var performButtonAction: ((PeerInfoHeaderButtonKey) -> Void)?
+    var performButtonAction: ((PeerInfoHeaderButtonKey, ContextGesture?) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
     var cancelUpload: (() -> Void)?
@@ -3302,8 +3308,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 buttonNode = current
             } else {
                 wasAdded = true
-                buttonNode = PeerInfoHeaderButtonNode(key: buttonKey, action: { [weak self] buttonNode in
-                    self?.buttonPressed(buttonNode)
+                buttonNode = PeerInfoHeaderButtonNode(key: buttonKey, action: { [weak self] buttonNode, gesture in
+                    self?.buttonPressed(buttonNode, gesture: gesture)
                 })
                 self.buttonNodes[buttonKey] = buttonNode
                 self.regularContentNode.addSubnode(buttonNode)
@@ -3457,8 +3463,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         return resolvedHeight
     }
     
-    private func buttonPressed(_ buttonNode: PeerInfoHeaderButtonNode) {
-        self.performButtonAction?(buttonNode.key)
+    private func buttonPressed(_ buttonNode: PeerInfoHeaderButtonNode, gesture: ContextGesture?) {
+        self.performButtonAction?(buttonNode.key, gesture)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

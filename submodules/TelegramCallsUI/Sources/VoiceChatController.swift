@@ -552,7 +552,7 @@ public final class VoiceChatController: ViewController {
                             icon = .invite(true)
                         case .raisedHand:
                             text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
-                            icon = .invite(true)
+                            icon = .wantsToSpeak
                         }
                                                 
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
@@ -598,7 +598,6 @@ public final class VoiceChatController: ViewController {
         private let topPanelNode: ASDisplayNode
         private let topPanelEdgeNode: ASDisplayNode
         private let topPanelBackgroundNode: ASDisplayNode
-        private let recButton: VoiceChatHeaderButton
         private let optionsButton: VoiceChatHeaderButton
         private let closeButton: VoiceChatHeaderButton
         private let topCornersNode: ASImageNode
@@ -724,9 +723,6 @@ public final class VoiceChatController: ViewController {
                 self.topPanelEdgeNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
             }
             
-            self.recButton = VoiceChatHeaderButton(rec: true)
-            self.recButton.setImage(optionsBackgroundImage(dark: false))
-            self.recButton.isHidden = true
             self.optionsButton = VoiceChatHeaderButton()
             self.optionsButton.setImage(optionsButtonImage(dark: false))
             self.closeButton = VoiceChatHeaderButton()
@@ -1251,7 +1247,6 @@ public final class VoiceChatController: ViewController {
             self.topPanelNode.addSubnode(self.topPanelEdgeNode)
             self.topPanelNode.addSubnode(self.topPanelBackgroundNode)
             self.topPanelNode.addSubnode(self.titleNode)
-            self.topPanelNode.addSubnode(self.recButton)
             self.topPanelNode.addSubnode(self.optionsButton)
             self.topPanelNode.addSubnode(self.closeButton)
             self.topPanelNode.addSubnode(self.topCornersNode)
@@ -1456,7 +1451,7 @@ public final class VoiceChatController: ViewController {
                     |> map { peers -> [ContextMenuItem] in
                         var items: [ContextMenuItem] = []
                         items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: theme.actionSheet.primaryTextColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Accounts"), color: theme.actionSheet.primaryTextColor)
                         }), true))
                         
                         for peer in peers {
@@ -1581,7 +1576,7 @@ public final class VoiceChatController: ViewController {
                         }
                         
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditTitle, icon: { theme -> UIImage? in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pencil"), color: theme.actionSheet.primaryTextColor)
                         }, action: { [weak self] _, f in
                             f(.default)
                             
@@ -1589,7 +1584,7 @@ public final class VoiceChatController: ViewController {
                                 if let strongSelf = self, let title = title {
                                     strongSelf.call.updateTitle(title)
                                     
-                                    strongSelf.presentUndoOverlay(content: .succeed(text: strongSelf.presentationData.strings.VoiceChat_EditTitleSuccess(title).0), action: { _ in return false })
+                                    strongSelf.presentUndoOverlay(content: .voiceChatFlag(text: title.isEmpty ? strongSelf.presentationData.strings.VoiceChat_EditTitleRemoveSuccess : strongSelf.presentationData.strings.VoiceChat_EditTitleSuccess(title).0), action: { _ in return false })
                                 }
                             })
                             self?.controller?.present(controller, in: .window(.root))
@@ -1672,7 +1667,7 @@ public final class VoiceChatController: ViewController {
                                     if let strongSelf = self, let title = title {
                                         strongSelf.call.setShouldBeRecording(true, title: title)
                                         
-                                        strongSelf.presentUndoOverlay(content: .recording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
                                     }
                                 })
                                 self?.controller?.present(controller, in: .window(.root))
@@ -1714,22 +1709,19 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                let optionsButton: VoiceChatHeaderButton = !strongSelf.recButton.isHidden ? strongSelf.recButton : strongSelf.optionsButton
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: optionsButton.referenceNode)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: strongSelf.optionsButton.referenceNode)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
             
-            self.recButton.contextAction = self.optionsButton.contextAction
-            
             self.optionsButton.addTarget(self, action: #selector(self.optionsPressed), forControlEvents: .touchUpInside)
-            self.recButton.addTarget(self, action: #selector(self.optionsPressed), forControlEvents: .touchUpInside)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: .touchUpInside)
             
             self.actionButtonColorDisposable = (self.actionButton.outerColor
             |> deliverOnMainQueue).start(next: { [weak self] color in
                 if let strongSelf = self {
+                    let animated = strongSelf.currentAudioButtonColor != nil
                     strongSelf.currentAudioButtonColor = color
-                    strongSelf.updateButtons(animated: true)
+                    strongSelf.updateButtons(animated: animated)
                 }
             })
             
@@ -2249,7 +2241,6 @@ public final class VoiceChatController: ViewController {
             }
             self.bottomCornersNode.image = cornersImage(top: false, bottom: true, dark: isFullscreen)
 
-            self.recButton.setImage(optionsBackgroundImage(dark: isFullscreen), animated: transition.isAnimated)
             self.optionsButton.setImage(optionsButtonImage(dark: isFullscreen), animated: transition.isAnimated)
             self.closeButton.setImage(closeButtonImage(dark: isFullscreen), animated: transition.isAnimated)
             
@@ -2357,7 +2348,6 @@ public final class VoiceChatController: ViewController {
             
             self.updateTitle(transition: transition)
             transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: CGSize(width: size.width, height: 44.0)))
-            transition.updateFrame(node: self.recButton, frame: CGRect(origin: CGPoint(x: 20.0, y: 18.0), size: CGSize(width: 58.0, height: 28.0)))
             transition.updateFrame(node: self.optionsButton, frame: CGRect(origin: CGPoint(x: 20.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
             transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: size.width - 20.0 - 28.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
             

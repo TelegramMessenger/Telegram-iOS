@@ -39,7 +39,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let copyAction: (() -> Void)?
     let shareAction: (() -> Void)?
-    let contextAction: ((ASDisplayNode) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let viewAction: (() -> Void)?
     public let tag: ItemListItemTag?
     
@@ -56,7 +56,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         style: ItemListStyle,
         copyAction: (() -> Void)?,
         shareAction: (() -> Void)?,
-        contextAction: ((ASDisplayNode) -> Void)?,
+        contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?,
         viewAction: (() -> Void)?,
         tag: ItemListItemTag? = nil
     ) {
@@ -174,7 +174,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         self.addressButtonNode = HighlightTrackingButtonNode()
         self.referenceContainerNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
-        self.containerNode.isGestureEnabled = false
+        self.containerNode.animateScale = false
         self.addressButtonIconNode = ASImageNode()
         self.addressButtonIconNode.contentMode = .center
         self.addressButtonIconNode.displaysAsynchronously = false
@@ -202,6 +202,12 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         self.addSubnode(self.addressButtonNode)
         
         self.addSubnode(self.activateArea)
+        
+        self.containerNode.activated = { [weak self] gesture, _ in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.contextAction?(strongSelf.referenceContainerNode, gesture)
+            }
+        }
         
         self.fieldButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -259,7 +265,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     
     @objc private func addressButtonPressed() {
         if let item = self.item {
-            item.contextAction?(self.referenceContainerNode)
+            item.contextAction?(self.referenceContainerNode, nil)
         }
     }
     

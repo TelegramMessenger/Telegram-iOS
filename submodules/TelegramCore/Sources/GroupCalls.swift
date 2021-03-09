@@ -205,9 +205,9 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
             return account.postbox.transaction { transaction -> GroupCallInfo in
                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                     if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash))
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title))
                     } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash))
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title))
                     } else {
                         return cachedData
                     }

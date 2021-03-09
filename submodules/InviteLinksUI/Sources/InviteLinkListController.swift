@@ -224,8 +224,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.shareMainLink(invite)
                     }
-                }, contextAction: { node in
-                    arguments.mainLinkContextAction(invite, node, nil)
+                }, contextAction: { node, gesture in
+                    arguments.mainLinkContextAction(invite, node, gesture)
                 }, viewAction: {
                     if let invite = invite {
                         arguments.openLink(invite)

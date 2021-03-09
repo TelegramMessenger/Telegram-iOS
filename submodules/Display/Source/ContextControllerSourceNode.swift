@@ -9,6 +9,8 @@ public final class ContextControllerSourceNode: ASDisplayNode {
             self.contextGesture?.isEnabled = self.isGestureEnabled
         }
     }
+    public var animateScale: Bool = true
+    
     public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var shouldBegin: ((CGPoint) -> Bool)?
     public var customActivationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
@@ -41,7 +43,7 @@ public final class ContextControllerSourceNode: ASDisplayNode {
             }
             if let customActivationProgress = strongSelf.customActivationProgress {
                 customActivationProgress(progress, update)
-            } else {
+            } else if strongSelf.animateScale {
                 let targetNode: ASDisplayNode
                 let targetContentRect: CGRect
                 if let targetNodeForActivationProgress = strongSelf.targetNodeForActivationProgress {

@@ -158,23 +158,32 @@ public final class CachedChannelData: CachedPeerData {
     public struct ActiveCall: Equatable, PostboxCoding {
         public var id: Int64
         public var accessHash: Int64
+        public var title: String?
         
         public init(
             id: Int64,
-            accessHash: Int64
+            accessHash: Int64,
+            title: String?
         ) {
             self.id = id
             self.accessHash = accessHash
+            self.title = title
         }
         
         public init(decoder: PostboxDecoder) {
             self.id = decoder.decodeInt64ForKey("id", orElse: 0)
             self.accessHash = decoder.decodeInt64ForKey("accessHash", orElse: 0)
+            self.title = decoder.decodeOptionalStringForKey("title")
         }
         
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeInt64(self.id, forKey: "id")
             encoder.encodeInt64(self.accessHash, forKey: "accessHash")
+            if let title = self.title {
+                encoder.encodeString(title, forKey: "title")
+            } else {
+                encoder.encodeNil(forKey: "title")
+            }
         }
     }
     

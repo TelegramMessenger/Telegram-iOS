@@ -2978,9 +2978,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     if let info = GroupCallInfo(call) {
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                             if let current = current as? CachedChannelData {
-                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
                             } else if let current = current as? CachedGroupData {
-                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
                             } else {
                                 return current
                             }

@@ -6200,6 +6200,7 @@ Sorry for the inconvenience.";
 "VoiceChat.EditTitleTitle" = "Voice Chat Title";
 "VoiceChat.EditTitleText" = "Edit a title of this voice chat.";
 "VoiceChat.EditTitleSuccess" = "Voice chat title changed to **%@**.";
+"VoiceChat.EditTitleRemoveSuccess" = "Voice chat title removed.";
 
 "VoiceChat.InviteLink.Speaker" = "Speaker";
 "VoiceChat.InviteLink.Listener" = "Listener";
@@ -6223,9 +6224,9 @@ Sorry for the inconvenience.";
 "Conversation.JoinVoiceChat" = "JOIN VOICE CHAT";
 
 "Conversation.CancelForwardTitle" = "Cancel Forwarding";
-"Conversation.CancelForwardText" = "Do you want to cancel this forwarding or would like to send this messages to another chat?";
+"Conversation.CancelForwardText" = "Do you want to cancel forwarding or send messages to a different chat?";
 "Conversation.CancelForwardCancelForward" = "Cancel Forwarding";
-"Conversation.CancelForwardSelectChat" = "Select Chat";
+"Conversation.CancelForwardSelectChat" = "Select Another Chat";
 
 "StickerPacks.ActionDelete" = "Delete";
 "StickerPacks.ActionArchive" = "Archive";

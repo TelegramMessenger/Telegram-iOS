@@ -33,10 +33,10 @@ private final class ChannelVisibilityControllerArguments {
     let revokePeerId: (PeerId) -> Void
     let copyLink: (ExportedInvitation) -> Void
     let shareLink: (ExportedInvitation) -> Void
-    let linkContextAction: (ASDisplayNode) -> Void
+    let linkContextAction: (ASDisplayNode, ContextGesture?) -> Void
     let manageInviteLinks: () -> Void
     
-    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode) -> Void, manageInviteLinks: @escaping () -> Void) {
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void) {
         self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
@@ -302,8 +302,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.shareLink(invite)
                     }
-                }, contextAction: { node in
-                    arguments.linkContextAction(node)
+                }, contextAction: { node, gesture in
+                    arguments.linkContextAction(node, gesture)
                 }, viewAction: {
                     
                 })
@@ -923,7 +923,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
         }
         presentControllerImpl?(shareController, nil)
-    }, linkContextAction: { node in
+    }, linkContextAction: { node, gesture in
         guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?() else {
             return
         }
@@ -1048,7 +1048,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             })
         })))
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: nil)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, manageInviteLinks: {
         let controller = inviteLinkListController(context: context, peerId: peerId, admin: nil)

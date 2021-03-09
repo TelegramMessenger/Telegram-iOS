@@ -2264,8 +2264,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         }
         
-        self.headerNode.performButtonAction = { [weak self] key in
-            self?.performButtonAction(key: key)
+        self.headerNode.performButtonAction = { [weak self] key, gesture in
+            self?.performButtonAction(key: key, gesture: gesture)
         }
         
         self.headerNode.cancelUpload = { [weak self] in
@@ -3267,7 +3267,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }))
     }
     
-    private func performButtonAction(key: PeerInfoHeaderButtonKey) {
+    private func performButtonAction(key: PeerInfoHeaderButtonKey, gesture: ContextGesture?) {
         guard let controller = self.controller else {
             return
         }
@@ -3304,7 +3304,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .videoCall:
             self.requestCall(isVideo: true)
         case .voiceChat:
-            self.openVoiceChatDisplayAsPeerSelection(contextController: nil, result: nil, backAction: nil)
+            self.openVoiceChatDisplayAsPeerSelection(gesture: gesture, contextController: nil, result: nil, backAction: nil)
         case .mute:
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
                 let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: nil).start()
@@ -3315,12 +3315,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
                 
                 var items: [ContextMenuItem] = []
-                let muteValues: [Int32] = [
-                    1 * 60 * 60,
-                    2 * 24 * 60 * 60,
-                    Int32.max
+                let muteValues: [(Int32, String)] = [
+                    (1 * 60 * 60, "Chat/Context Menu/Mute2h"),
+                    (2 * 24 * 60 * 60, "Chat/Context Menu/Mute2d"),
+                    (Int32.max, "Chat/Context Menu/Muted")
                 ]
-                for delay in muteValues {
+                for (delay, iconName) in muteValues {
                     let title: String
                     if delay == Int32.max {
                         title = self.presentationData.strings.MuteFor_Forever
@@ -3329,7 +3329,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     
                     items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+                        return generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor)
                     }, action: { _, f in
                         f(.dismissWithoutContent)
                         
@@ -3340,7 +3340,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 items.append(.separator)
                 
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_CustomizeNotifications, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, f in
                     f(.dismissWithoutContent)
                     
@@ -3388,7 +3388,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.view.endEditing(true)
                 
                 if let sourceNode = self.headerNode.buttonNodes[.mute]?.referenceNode {
-                    let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(items), reactionItems: [], gesture: nil)
+                    let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(items), reactionItems: [], gesture: gesture)
                     contextController.dismissed = { [weak self] in
                         if let strongSelf = self {
                             strongSelf.state = strongSelf.state.withHighlightedButton(nil)
@@ -3489,7 +3489,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                    
                     if self.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_StartSecretChat, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
                             
@@ -3525,7 +3525,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_CreateVoiceChat, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] c, f in
-                                self?.openVoiceChatDisplayAsPeerSelection(contextController: c, result: f, backAction: { c in
+                                self?.openVoiceChatDisplayAsPeerSelection(gesture: nil, contextController: c, result: f, backAction: { c in
                                     if let mainItemsImpl = mainItemsImpl {
                                         c.setItems(mainItemsImpl())
                                     }
@@ -3635,7 +3635,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_CreateVoiceChat, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, f in
-                            self?.openVoiceChatDisplayAsPeerSelection(contextController: c, result: f, backAction: { c in
+                            self?.openVoiceChatDisplayAsPeerSelection(gesture: nil, contextController: c, result: f, backAction: { c in
                                 if let mainItemsImpl = mainItemsImpl {
                                     c.setItems(mainItemsImpl())
                                 }
@@ -3663,7 +3663,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.view.endEditing(true)
             
             if let sourceNode = self.headerNode.buttonNodes[.more]?.referenceNode {
-                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: nil)
+                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     if let strongSelf = self {
                         strongSelf.state = strongSelf.state.withHighlightedButton(nil)
@@ -3869,7 +3869,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                    strongSelf.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
                 }, error: { [weak self] error in
                     dismissStatus?()
                     
@@ -4188,7 +4188,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         controller.push(statsController)
     }
     
-    private func openVoiceChatDisplayAsPeerSelection(contextController: ContextController?, result: ((ContextMenuActionResult) -> Void)?, backAction: ((ContextController) -> Void)?) {
+    private func openVoiceChatDisplayAsPeerSelection(gesture: ContextGesture?, contextController: ContextController?, result: ((ContextMenuActionResult) -> Void)?, backAction: ((ContextController) -> Void)?) {
         let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(context.account.peerId)
         |> map { peer in
             return [FoundPeer(peer: peer, subscribers: nil)]
@@ -4209,7 +4209,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 var items: [ContextMenuItem] = []
                 
                 items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: theme.actionSheet.primaryTextColor)
+                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Accounts"), color: theme.actionSheet.primaryTextColor)
                 }), true))
                 
                 for peer in peers {
@@ -4252,7 +4252,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     
                     if let sourceNode = strongSelf.headerNode.buttonNodes[.voiceChat]?.referenceNode, let controller = strongSelf.controller {
-                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(items), reactionItems: [], gesture: nil)
+                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(items), reactionItems: [], gesture: gesture)
                         contextController.dismissed = { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.state = strongSelf.state.withHighlightedButton(nil)

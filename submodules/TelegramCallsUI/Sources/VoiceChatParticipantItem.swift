@@ -36,6 +36,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         case none
         case microphone(Bool, UIColor)
         case invite(Bool)
+        case wantsToSpeak
     }
     
     struct RevealOption {

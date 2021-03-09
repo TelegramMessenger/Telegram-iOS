@@ -32,7 +32,9 @@ public enum UndoOverlayContent {
     case autoDelete(isOn: Bool, title: String?, text: String)
     case gigagroupConversion(text: String)
     case linkRevoked(text: String)
-    case recording(text: String)
+    case voiceChatRecording(text: String)
+    case voiceChatFlag(text: String)
+    case voiceChatCanSpeak(text: String)
 }
 
 public enum UndoOverlayAction {

@@ -129,8 +129,8 @@ private enum InviteLinkInviteEntry: Comparable, Identifiable {
                     if let invite = invite {
                         interaction.shareLink(invite)
                     }
-                }, contextAction: { node in
-                    interaction.mainLinkContextAction(invite, node, nil)
+                }, contextAction: { node, gesture in
+                    interaction.mainLinkContextAction(invite, node, gesture)
                 }, viewAction: {
                 })
             case let .manage(theme, text, standalone):

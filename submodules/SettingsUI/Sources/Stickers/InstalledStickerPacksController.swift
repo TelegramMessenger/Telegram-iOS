@@ -700,7 +700,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                     })
                     
                     let selectedCount = Int32(state.selectedPackIds?.count ?? 0)
-                    toolbarItem = ItemListToolbarItem(actions: [.init(title: presentationData.strings.StickerPacks_ActionDelete, isEnabled: selectedCount > 0, action: {
+                    toolbarItem = StickersToolbarItem(selectedCount: selectedCount, actions: [.init(title: presentationData.strings.StickerPacks_ActionDelete, isEnabled: selectedCount > 0, action: {
                         let actionSheet = ActionSheetController(presentationData: presentationData)
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_DeleteStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
@@ -985,4 +985,21 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     }
     
     return controller
+}
+
+private class StickersToolbarItem: ItemListToolbarItem {
+    private let selectedCount: Int32
+    
+    init(selectedCount: Int32, actions: [Action]) {
+        self.selectedCount = selectedCount
+        super.init(actions: actions)
+    }
+    
+    override func isEqual(to: ItemListToolbarItem) -> Bool {
+        if let other = to as? StickersToolbarItem {
+            return self.selectedCount == other.selectedCount
+        } else {
+            return false
+        }
+    }
 }
