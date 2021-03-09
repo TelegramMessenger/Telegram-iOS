@@ -12,7 +12,7 @@ public struct GroupCallInfo: Equatable {
     public var streamDcId: Int32?
     public var title: String?
     public var recordingStartTimestamp: Int32?
-    
+    public var canManagePermissions:Bool
     public init(
         id: Int64,
         accessHash: Int64,
@@ -20,7 +20,8 @@ public struct GroupCallInfo: Equatable {
         clientParams: String?,
         streamDcId: Int32?,
         title: String?,
-        recordingStartTimestamp: Int32?
+        recordingStartTimestamp: Int32?,
+        canManagePermissions: Bool
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -29,6 +30,7 @@ public struct GroupCallInfo: Equatable {
         self.streamDcId = streamDcId
         self.title = title
         self.recordingStartTimestamp = recordingStartTimestamp
+        self.canManagePermissions = canManagePermissions
     }
 }
 
@@ -40,7 +42,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(_, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
+        case let .groupCall(flags, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -48,6 +50,7 @@ extension GroupCallInfo {
                     clientParams = data
                 }
             }
+            let canManagePermissions: Bool = (flags & (1 << 2)) != 0
             self.init(
                 id: id,
                 accessHash: accessHash,
@@ -55,7 +58,8 @@ extension GroupCallInfo {
                 clientParams: clientParams,
                 streamDcId: streamDcId,
                 title: title,
-                recordingStartTimestamp: recordStartDate
+                recordingStartTimestamp: recordStartDate,
+                canManagePermissions: canManagePermissions
             )
         case .groupCallDiscarded:
             return nil
