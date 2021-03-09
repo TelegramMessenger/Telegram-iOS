@@ -406,7 +406,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
                         joinAsPeerId: nil,
-                        info: groupCallPanelData.info
+                        activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title)
                     )
                 })
                 if let navigationBar = self.navigationBar {
@@ -852,7 +852,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         })]
     }
     
-    open func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, info: GroupCallInfo) {
-        self.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
+    open func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, activeCall: CachedChannelData.ActiveCall) {
+        self.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: activeCall)
     }
 }

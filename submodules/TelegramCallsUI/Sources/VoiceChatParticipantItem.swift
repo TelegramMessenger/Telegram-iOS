@@ -165,6 +165,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private let actionContainerNode: ASDisplayNode
     private var animationNode: VoiceChatMicrophoneNode?
     private var iconNode: ASImageNode?
+    private var raiseHandNode: VoiceChatRaiseHandNode?
     private var actionButtonNode: HighlightableButtonNode
     
     private var audioLevelView: VoiceBlobView?
@@ -178,6 +179,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private var wavesColor: UIColor?
     
     private var videoNode: GroupVideoNode?
+    
+    private var raiseHandTimer: SwiftSignalKit.Timer?
     
     var item: VoiceChatParticipantItem? {
         return self.layoutParams?.0
@@ -291,6 +294,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     
     deinit {
         self.audioLevelDisposable.dispose()
+        self.raiseHandTimer?.invalidate()
     }
     
     override func selected() {
@@ -310,9 +314,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
             }
-            
-            let statusFontSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0)
-            
+                        
             let titleFont = Font.regular(17.0)
             let statusFont = Font.regular(14.0)
             
@@ -662,6 +664,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
                     
+                    var hadMicrophoneNode = false
+                    var hadRaiseHandNode = false
+                    var hadIconNode = false
+                    var nodeToAnimateIn: ASDisplayNode?
+                    
                     if case let .microphone(muted, color) = item.icon {
                         let animationNode: VoiceChatMicrophoneNode
                         if let current = strongSelf.animationNode {
@@ -670,18 +677,48 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             animationNode = VoiceChatMicrophoneNode()
                             strongSelf.animationNode = animationNode
                             strongSelf.actionButtonNode.addSubnode(animationNode)
-                            if let _ = strongSelf.iconNode {
-                                animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                animationNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
-                            }
+                            
+                            nodeToAnimateIn = animationNode
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: false, color: color), animated: true)
                         strongSelf.actionButtonNode.isUserInteractionEnabled = item.contextAction != nil
                     } else if let animationNode = strongSelf.animationNode {
+                        hadMicrophoneNode = true
                         strongSelf.animationNode = nil
                         animationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                         animationNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak animationNode] _ in
                             animationNode?.removeFromSupernode()
+                        })
+                    }
+                    
+                    if case .wantsToSpeak = item.icon {
+                        let raiseHandNode: VoiceChatRaiseHandNode
+                        if let current = strongSelf.raiseHandNode {
+                            raiseHandNode = current
+                        } else {
+                            raiseHandNode = VoiceChatRaiseHandNode(color: item.presentationData.theme.list.itemAccentColor)
+                            raiseHandNode.contentMode = .center
+                            strongSelf.raiseHandNode = raiseHandNode
+                            strongSelf.actionButtonNode.addSubnode(raiseHandNode)
+                            
+                            nodeToAnimateIn = raiseHandNode
+                            raiseHandNode.playRandomAnimation()
+                            
+                            strongSelf.raiseHandTimer = SwiftSignalKit.Timer(timeout: Double.random(in: 8.0 ... 10.5), repeat: true, completion: {
+                                strongSelf.raiseHandNode?.playRandomAnimation()
+                            }, queue: Queue.mainQueue())
+                            strongSelf.raiseHandTimer?.start()
+                        }
+                    } else if let raiseHandNode = strongSelf.raiseHandNode {
+                        hadRaiseHandNode = true
+                        strongSelf.raiseHandNode = nil
+                        if let raiseHandTimer = strongSelf.raiseHandTimer {
+                            strongSelf.raiseHandTimer = nil
+                            raiseHandTimer.invalidate()
+                        }
+                        raiseHandNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                        raiseHandNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak raiseHandNode] _ in
+                            raiseHandNode?.removeFromSupernode()
                         })
                     }
                     
@@ -695,10 +732,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.iconNode = iconNode
                             strongSelf.actionButtonNode.addSubnode(iconNode)
                             
-                            if let _ = strongSelf.animationNode {
-                                iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
-                            }
+                            nodeToAnimateIn = iconNode
                         }
                         
                         if invited {
@@ -708,11 +742,17 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         }
                         strongSelf.actionButtonNode.isUserInteractionEnabled = false
                     } else if let iconNode = strongSelf.iconNode {
+                        hadIconNode = true
                         strongSelf.iconNode = nil
                         iconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                         iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak iconNode] _ in
                             iconNode?.removeFromSupernode()
                         })
+                    }
+                    
+                    if let node = nodeToAnimateIn, hadMicrophoneNode || hadRaiseHandNode || hadIconNode {
+                        node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        node.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
                     }
                     
                     let videoSize = CGSize(width: avatarSize, height: avatarSize)
@@ -724,7 +764,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     let actionOffset: CGFloat = 0.0
                     strongSelf.videoNode = videoNode
                     if let videoNode = videoNode {
-                        
                         videoNode.updateLayout(size: videoSize, transition: .immediate)
                         if videoNode.supernode !== strongSelf.avatarNode {
                             videoNode.clipsToBounds = true
@@ -738,6 +777,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     let animationSize = CGSize(width: 36.0, height: 36.0)
                     strongSelf.iconNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     strongSelf.animationNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
+                    strongSelf.raiseHandNode?.frame = CGRect(origin: CGPoint(), size: CGSize(width: 32.0, height: 32.0))
                     
                     strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset + actionOffset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     

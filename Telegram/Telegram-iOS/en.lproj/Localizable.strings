@@ -6188,6 +6188,7 @@ Sorry for the inconvenience.";
 
 "Contacts.VoiceOver.AddContact" = "Add Contact";
 
+"VoiceChat.SelectAccount" = "Select Account";
 "VoiceChat.DisplayAs" = "Display Me As...";
 "VoiceChat.DisplayAsInfo" = "Choose whether you want to be displayed as your personal account or as your channel.";
 "VoiceChat.DisplayAsSuccess" = "Members of this voice chat will now see your as **%@**.";
@@ -6253,3 +6254,6 @@ Sorry for the inconvenience.";
 
 "VoiceChat.YouCanNowSpeak" = "You can now speak";
 "VoiceChat.YouCanNowSpeakIn" = "You can now speak in **%@**";
+
+"VoiceChat.MutedByAdmin" = "Muted by Admin";
+"VoiceChat.MutedByAdminHelp" = "Tap if you want to speak";

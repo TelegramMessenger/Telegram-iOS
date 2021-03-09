@@ -534,7 +534,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
                             if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
-                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title))
+                                strongSelf.joinGroupCall(peerId: message.id.peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title))
                             } else {
                                 var canManageGroupCalls = false
                                 if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
@@ -568,7 +568,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
+                                                strongSelf.joinGroupCall(peerId: message.id.peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
                                             }, error: { [weak self] error in
                                                 dismissStatus?()
                                                 
@@ -6403,7 +6403,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            strongSelf.context.joinGroupCall(peerId: peer.id, joinAsPeerId: nil, activeCall: activeCall)
+            strongSelf.joinGroupCall(peerId: peer.id, joinAsPeerId: nil, activeCall: activeCall)
         }, presentInviteMembers: { [weak self] in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
@@ -11851,9 +11851,58 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return inputShortcuts + otherShortcuts
     }
     
-    public override func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, info: GroupCallInfo) {
-        let _ = self.presentVoiceMessageDiscardAlert(action: {
-            super.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, info: info)
+    public override func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, activeCall: CachedChannelData.ActiveCall) {
+        let context = self.context
+        let presentationData = self.presentationData
+        
+        var proceed: (PeerId) -> Void = { joinAsPeerId in
+            super.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: activeCall)
+        }
+        
+        let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+            let currentAccountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId)
+            |> map { peer in
+                return [FoundPeer(peer: peer, subscribers: nil)]
+            }
+            
+            let _ = (combineLatest(currentAccountPeer, cachedGroupCallDisplayAsAvailablePeers(account: context.account))
+            |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
+                var result = currentAccountPeer
+                result.append(contentsOf: availablePeers)
+                return result
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] peers in
+                guard let strongSelf = self else {
+                    return
+                }
+                let controller = ActionSheetController(presentationData: presentationData)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                
+                var items: [ActionSheetItem] = []
+                items.append(VoiceChatAccountHeaderActionSheetItem(title: presentationData.strings.VoiceChat_SelectAccount, text: presentationData.strings.VoiceChat_DisplayAsInfo))
+                for peer in peers {
+                    var subtitle: String?
+                    if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
+                        subtitle = presentationData.strings.VoiceChat_PersonalAccount
+                    } else if let subscribers = peer.subscribers {
+                        subtitle = presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                    }
+                    
+                    items.append(VoiceChatPeerActionSheetItem(context: context, peer: peer.peer, title: peer.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
+                        dismissAction()
+                        proceed(peer.peer.id)
+                    }))
+                }
+                
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                strongSelf.present(controller, in: .window(.root))
+            })
         })
     }
     

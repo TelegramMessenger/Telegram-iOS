@@ -14,7 +14,7 @@ public final class VoiceChatAccountHeaderActionSheetItem: ActionSheetItem {
     let title: String
     let text: String
     
-    public init(context: AccountContext, title: String, text: String) {
+    public init(title: String, text: String) {
         self.title = title
         self.text = text
     }
@@ -40,16 +40,30 @@ private final class VoiceChatAccountHeaderActionSheetItemNode: ActionSheetItemNo
     init(theme: ActionSheetControllerTheme, title: String, text: String) {
         self.theme = theme
         
-        let titleFont = Font.medium(floor(theme.baseFontSize * 13.0 / 17.0))
+        let titleFont = Font.bold(floor(theme.baseFontSize))
         let textFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
         self.iconBackgroundNode = ASImageNode()
         self.iconBackgroundNode.displaysAsynchronously = false
         self.iconBackgroundNode.displayWithoutProcessing = true
+        self.iconBackgroundNode.image = generateImage(CGSize(width: 72.0, height: 72.0), contextGenerator: { size, context in
+            let bounds = CGRect(origin: CGPoint(), size: size)
+            context.clear(bounds)
+            context.addPath(UIBezierPath(ovalIn: bounds).cgPath)
+            context.clip()
+            
+            var locations: [CGFloat] = [0.0, 1.0]
+            let colorsArray: NSArray = [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor]
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
+            
+            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        })
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/Accounts"), color: UIColor.white)
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -66,10 +80,8 @@ private final class VoiceChatAccountHeaderActionSheetItemNode: ActionSheetItemNo
         self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(theme: theme)
-        
-        self.hasSeparator = false
-        
-        self.addSubnode(self.backgroundNode)
+                
+        self.addSubnode(self.iconBackgroundNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
@@ -83,12 +95,13 @@ private final class VoiceChatAccountHeaderActionSheetItemNode: ActionSheetItemNo
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        let titleSize = self.titleNode.updateLayout(CGSize(width: constrainedSize.width - 120.0, height: .greatestFiniteMagnitude))
-        let textSize = self.textNode.updateLayout(CGSize(width: constrainedSize.width - 120.0, height: .greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: constrainedSize.width - 80.0, height: .greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: constrainedSize.width - 80.0, height: .greatestFiniteMagnitude))
         
-        let topInset: CGFloat = 26.0
-        let textSpacing: CGFloat = 17.0
-        let bottomInset: CGFloat = 15.0
+        let topInset: CGFloat = 20.0
+        let titleSpacing: CGFloat = 10.0
+        let textSpacing: CGFloat = 6.0
+        let bottomInset: CGFloat = 14.0
         
         let iconSize = CGSize(width: 72.0, height: 72.0)
         let iconFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - iconSize.width) / 2.0), y: topInset), size: iconSize)
@@ -97,11 +110,11 @@ private final class VoiceChatAccountHeaderActionSheetItemNode: ActionSheetItemNo
             self.iconNode.frame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconSize.width - image.size.width) / 2.0), y: iconFrame.minY + floorToScreenPixels((iconSize.height - image.size.height) / 2.0)), size: image.size)
         }
         
-        self.titleNode.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - titleSize.width) / 2.0), y: topInset + iconSize.height + textSpacing), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - titleSize.width) / 2.0), y: topInset + iconSize.height + titleSpacing), size: titleSize)
         
-        self.textNode.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - textSize.width) / 2.0), y: topInset + iconSize.height + textSpacing + titleSize.height), size: textSize)
+        self.textNode.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - textSize.width) / 2.0), y: topInset + iconSize.height + titleSpacing + titleSize.height + textSpacing), size: textSize)
         
-        let size = CGSize(width: constrainedSize.width, height: topInset + iconSize.height + textSpacing + titleSize.height + textSize.height + bottomInset)
+        let size = CGSize(width: constrainedSize.width, height: topInset + iconSize.height + titleSpacing + titleSize.height + textSpacing + textSize.height + bottomInset)
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
                
         self.updateInternalLayout(size, constrainedSize: constrainedSize)

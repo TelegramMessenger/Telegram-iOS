@@ -4,6 +4,8 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import LegacyComponents
+import AnimationUI
+import AppBundle
 
 private let titleFont = Font.regular(15.0)
 private let subtitleFont = Font.regular(13.0)
@@ -15,8 +17,8 @@ private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
-private let purple = UIColor(rgb: 0x6b81f0)
-private let pink = UIColor(rgb: 0xd75a76)
+private let purple = UIColor(rgb: 0x3252ef)
+private let pink = UIColor(rgb: 0xef436c)
 
 private let areaSize = CGSize(width: 300.0, height: 300.0)
 private let blobSize = CGSize(width: 190.0, height: 190.0)
@@ -45,6 +47,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatMicrophoneNode
+    private let raiseHandNode: VoiceChatRaiseHandNode
     private let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     
@@ -83,6 +86,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             if self.pressing {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
+                transition.updateTransformScale(node: self.raiseHandNode, scale: snap ? 0.5 : 0.9)
                 
                 switch state {
                     case let .active(state):
@@ -98,6 +102,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             } else {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
+                transition.updateTransformScale(node: self.raiseHandNode, scale: snap ? 0.5 : 1.0)
                 self.wasActiveWhenPressed = false
             }
         }
@@ -108,6 +113,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.containerNode = ASDisplayNode()
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
         self.iconNode = VoiceChatMicrophoneNode()
+        self.raiseHandNode = VoiceChatRaiseHandNode(color: nil)
         
         self.titleLabel = ImmediateTextNode()
         self.subtitleLabel = ImmediateTextNode()
@@ -121,18 +127,21 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.iconNode)
+        self.containerNode.addSubnode(self.raiseHandNode)
         
         self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
-                guard let (_, _, _, _, _, _, _, snap) = strongSelf.currentParams, !strongSelf.isDisabled else {
+                guard let (_, _, _, _, _, _, _, snap) = strongSelf.currentParams else {
                     return
                 }
                 if pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                     transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
+                    transition.updateTransformScale(node: strongSelf.raiseHandNode, scale: snap ? 0.5 : 0.9)
                 } else if !strongSelf.pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                     transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
+                    transition.updateTransformScale(node: strongSelf.raiseHandNode, scale: snap ? 0.5 : 1.0)
                 }
             }
         }
@@ -229,6 +238,10 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let iconSize = CGSize(width: 68.0, height: 68.0)
         self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
         self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        
+        let raiseHandSize = CGSize(width: 68.0, height: 68.0)
+        self.raiseHandNode.bounds = CGRect(origin: CGPoint(), size: raiseHandSize)
+        self.raiseHandNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
     }
     
     private func applyIconParams() {
@@ -237,22 +250,25 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         }
         
         var iconMuted = true
-        var iconColor: UIColor = UIColor(rgb: 0xffffff)
+        var speakIcon = false
+        let iconColor: UIColor = UIColor(rgb: 0xffffff)
         switch state {
             case let .active(state):
                 switch state {
                     case .on:
                         iconMuted = false
-                    case .muted:
-                        break
                     case .cantSpeak:
-                        if !snap {
-                            iconColor = UIColor(rgb: 0xff3b30)
-                        }
+                        speakIcon = true
+                    default:
+                        break
                 }
             case .connecting:
                 break
         }
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        transition.updateAlpha(node: self.raiseHandNode, alpha: speakIcon ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.iconNode, alpha: speakIcon ? 0.0 : 1.0)
+        
         self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, filled: true, color: iconColor), animated: true)
     }
     
@@ -317,6 +333,10 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             return nil
         }
         return result
+    }
+    
+    func playAnimation() {
+        self.raiseHandNode.playRandomAnimation()
     }
 }
 
@@ -683,7 +703,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             case .muted:
                 targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
                 targetScale = 0.85
-                outerColor = UIColor(rgb: 0x1d588d)
+                outerColor = UIColor(rgb: 0x3b3474)
         }
         self.updatedOuterColor?(outerColor)
         
@@ -1354,5 +1374,52 @@ final class BlobView: UIView {
         CATransaction.setDisableActions(true)
         shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         CATransaction.commit()
+    }
+}
+
+final class VoiceChatRaiseHandNode: ASDisplayNode {
+    private let animationNode: AnimationNode
+    private let color: UIColor?
+    private var playedOnce = false
+    
+    init(color: UIColor?) {
+        self.color = color
+        if let color = color, let url = getAppBundle().url(forResource: "anim_hand1", withExtension: "json"), let data = try? Data(contentsOf: url) {
+            self.animationNode = AnimationNode(animationData: transformedWithColors(data: data, colors: [(UIColor(rgb: 0xffffff), color)]))
+        } else {
+            self.animationNode = AnimationNode(animation: "anim_hand1", colors: nil, scale: 0.5)
+        }
+        super.init()
+        self.addSubnode(self.animationNode)
+    }
+    
+    func playRandomAnimation() {
+        guard self.playedOnce else {
+            self.playedOnce = true
+            self.animationNode.play()
+            return
+        }
+        
+        guard !self.animationNode.isPlaying else {
+            self.animationNode.completion = { [weak self] in
+                self?.playRandomAnimation()
+            }
+            return
+        }
+        
+        self.animationNode.completion = nil
+        if let animationName = ["anim_hand1", "anim_hand2", "anim_hand3", "anim_hand4"].randomElement() {
+            if let color = color, let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let data = try? Data(contentsOf: url) {
+                self.animationNode.setAnimation(data: transformedWithColors(data: data, colors: [(UIColor(rgb: 0xffffff), color)]))
+            } else {
+                self.animationNode.setAnimation(name: animationName)
+            }
+            self.animationNode.play()
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        self.animationNode.frame = self.bounds
     }
 }

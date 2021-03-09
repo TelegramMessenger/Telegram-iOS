@@ -1084,7 +1084,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             var animateDotAppearing = false
             let audioRecordingDotNode: AnimationNode
-            if let currentAudioRecordingDotNode = self.audioRecordingDotNode, !currentAudioRecordingDotNode.played {
+            if let currentAudioRecordingDotNode = self.audioRecordingDotNode, !currentAudioRecordingDotNode.didPlay {
                 audioRecordingDotNode = currentAudioRecordingDotNode
             } else {
                 self.audioRecordingDotNode?.removeFromSupernode()

@@ -384,6 +384,7 @@ public final class VoiceChatController: ViewController {
             var revealed: Bool?
             var canManageCall: Bool
             var volume: Int32?
+            var raisedHand: Bool
             
             var stableId: PeerId {
                 return self.peer.id
@@ -421,6 +422,9 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.volume != rhs.volume {
+                    return false
+                }
+                if lhs.raisedHand != rhs.raisedHand {
                     return false
                 }
                 return true
@@ -1102,7 +1106,7 @@ public final class VoiceChatController: ViewController {
                             } else {
                                 if let muteState = muteState, !muteState.canUnmute {
                                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
-                                        return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
+                                        return generateTintedImage(image: UIImage(bundleImageName: entry.raisedHand ? "Call/Context Menu/AllowToSpeak" : "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
                                     }, action: { _, f in
                                         guard let strongSelf = self else {
                                             return
@@ -1559,9 +1563,9 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 mainItemsImpl = {
-                    return displayAsPeersPromise.get()
+                    return combineLatest(displayAsPeersPromise.get(), context.account.postbox.loadedPeerWithId(call.peerId))
                     |> take(1)
-                    |> map { peers -> [ContextMenuItem] in
+                    |> map { peers, chatPeer -> [ContextMenuItem] in
                         let presentationData = strongSelf.presentationData
                         var items: [ContextMenuItem] = []
                         
@@ -1590,11 +1594,21 @@ public final class VoiceChatController: ViewController {
                             self?.controller?.present(controller, in: .window(.root))
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditPermissions, icon: { theme -> UIImage? in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { c, _ in
-                            c.setItems(permissionItems())
-                        })))
+                        var hasPermissions = true
+                        if let chatPeer = chatPeer as? TelegramChannel {
+                            if case .broadcast = chatPeer.info {
+                                hasPermissions = false
+                            } else if chatPeer.flags.contains(.isGigagroup) {
+                                hasPermissions = false
+                            }
+                        }
+                        if hasPermissions {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditPermissions, icon: { theme -> UIImage? in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { c, _ in
+                                c.setItems(permissionItems())
+                            })))
+                        }
                         
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
@@ -1957,21 +1971,25 @@ public final class VoiceChatController: ViewController {
             }
             if let muteState = callState.muteState {
                 if !muteState.canUnmute {
-                    if case .ended = gestureRecognizer.state {
-                        self.hapticFeedback.error()
-                        self.actionButton.layer.addShakeAnimation()
-                        
-                        self.call.raiseHand()
+                    switch gestureRecognizer.state {
+                        case .began:
+                            self.actionButton.pressing = true
+                            self.hapticFeedback.impact(.light)
+                        case .ended, .cancelled:
+                            self.actionButton.pressing = false
+                            self.call.raiseHand()
+                            self.actionButton.playAnimation()
+                        default:
+                            break
                     }
                     return
                 }
             }
             switch gestureRecognizer.state {
                 case .began:
+                    self.actionButton.pressing = true
                     self.hapticFeedback.impact(.light)
                     self.startPressTimer()
-                    
-                    self.actionButton.pressing = true
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
@@ -2440,8 +2458,13 @@ public final class VoiceChatController: ViewController {
                         } else {
                             actionButtonState = .active(state: .cantSpeak)
                             
-                            actionButtonTitle = self.presentationData.strings.VoiceChat_Muted
-                            actionButtonSubtitle = self.presentationData.strings.VoiceChat_MutedHelp
+                            if callState.raisedHand {
+                                actionButtonTitle = self.presentationData.strings.VoiceChat_AskedToSpeak
+                                actionButtonSubtitle = self.presentationData.strings.VoiceChat_AskedToSpeakHelp
+                            } else {
+                                actionButtonTitle = self.presentationData.strings.VoiceChat_MutedByAdmin
+                                actionButtonSubtitle = self.presentationData.strings.VoiceChat_MutedByAdminHelp
+                            }
                         }
                     } else {
                         actionButtonState = .active(state: .on)
@@ -2757,7 +2780,8 @@ public final class VoiceChatController: ViewController {
                     state: memberState,
                     muteState: memberMuteState,
                     canManageCall: self.callState?.canManageCall ?? false,
-                    volume: member.volume
+                    volume: member.volume,
+                    raisedHand: member.raiseHandRating != nil
                 )))
                 index += 1
             }
@@ -2778,7 +2802,8 @@ public final class VoiceChatController: ViewController {
                     state: .invited,
                     muteState: nil,
                     canManageCall: false,
-                    volume: nil
+                    volume: nil,
+                    raisedHand: false
                 )))
                 index += 1
             }

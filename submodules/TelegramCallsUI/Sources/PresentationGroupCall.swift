@@ -15,6 +15,7 @@ import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
 import DeviceProximity
+import UndoUI
 
 private extension GroupCallParticipantsContext.Participant {
     var allSsrcs: Set<UInt32> {
@@ -203,7 +204,8 @@ private extension PresentationGroupCallState {
             muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
             defaultParticipantMuteState: nil,
             recordingStartTimestamp: nil,
-            title: nil
+            title: nil,
+            raisedHand: false
         )
     }
 }
@@ -1246,6 +1248,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         
                         if participant.peer.id == strongSelf.joinAsPeerId {
+                            if !(strongSelf.stateValue.muteState?.canUnmute ?? false) {
+                                strongSelf.stateValue.raisedHand = participant.raiseHandRating != nil
+                            }
+                            
+                            if let muteState = participant.muteState, muteState.canUnmute && strongSelf.stateValue.raisedHand {
+                                strongSelf.stateValue.raisedHand = false
+                                let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
+                                strongSelf.accountContext.sharedContext.mainWindow?.present(UndoOverlayController(presentationData: presentationData, content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_YouCanNowSpeak), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), on: .root, blockInteraction: false, completion: {})
+                            }
+                            
                             if let muteState = participant.muteState {
                                 if muteState.canUnmute {
                                     switch strongSelf.isMutedValue {
@@ -1572,7 +1584,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if participant.raiseHandRating != nil {
                     return
                 }
-                
                 break
             }
         }

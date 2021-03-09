@@ -274,7 +274,6 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 loop: for participant in participants {
                     switch participant {
                     case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating):
-                        
                         let peerId: PeerId
                         switch apiPeerId {
                             case let .peerUser(userId):
@@ -1454,11 +1453,13 @@ public final class GroupCallParticipantsContext {
         }
         
         let disposable = MetaDisposable()
-        self.stateValue.overlayState.pendingMuteStateChanges[peerId] = OverlayState.MuteStateChange(
-            state: muteState,
-            volume: volume,
-            disposable: disposable
-        )
+        if raiseHand == nil {
+            self.stateValue.overlayState.pendingMuteStateChanges[peerId] = OverlayState.MuteStateChange(
+                state: muteState,
+                volume: volume,
+                disposable: disposable
+            )
+        }
         
         let account = self.account
         let id = self.id
@@ -1528,15 +1529,7 @@ public final class GroupCallParticipantsContext {
     }
     
     public func raiseHand() {
-        let flags: Int32 = 1 << 2
-        let signal = account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), participant: .inputPeerSelf, volume: nil, raiseHand: .boolTrue))
-        let _ = (signal
-        |> deliverOnMainQueue).start(next: { [weak self] result in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.account.stateManager.addUpdates(result)
-        })
+        self.updateMuteState(peerId: self.myPeerId, muteState: nil, volume: nil, raiseHand: true)
     }
     
     public func updateShouldBeRecording(_ shouldBeRecording: Bool, title: String?) {
