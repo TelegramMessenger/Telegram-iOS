@@ -40,7 +40,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(_, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
+        case let .groupCall(flags, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -357,7 +357,7 @@ public struct JoinGroupCallResult {
     public var connectionMode: ConnectionMode
 }
 
-public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         if let joinAs = joinAs {
             return transaction.getPeer(joinAs).flatMap(apiInputPeer)
@@ -375,8 +375,11 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
         if preferMuted {
             flags |= (1 << 0)
         }
+        if let _ = inviteHash {
+            flags |= (1 << 1)
+        }
         
-        return account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: nil, params: .dataJSON(data: joinPayload)))
+        return account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, params: .dataJSON(data: joinPayload)))
         |> mapError { error -> JoinGroupCallError in
             if error.errorDescription == "GROUPCALL_ANONYMOUS_FORBIDDEN" {
                 return .anonymousNotAllowed
@@ -1755,7 +1758,7 @@ public enum InviteToGroupCallError {
     case generic
 }
 
-public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId) -> Signal<Never, InviteToGroupCallError> {
+public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId, canUnmute: Bool) -> Signal<Never, InviteToGroupCallError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
@@ -1767,8 +1770,12 @@ public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64
         guard let apiUser = apiInputUser(user) else {
             return .fail(.generic)
         }
+        var flags: Int32 = 0
+        if canUnmute {
+            flags |= (1 << 0)
+        }
         
-        return account.network.request(Api.functions.phone.inviteToGroupCall(flags: 0, call: .inputGroupCall(id: callId, accessHash: accessHash), users: [apiUser]))
+        return account.network.request(Api.functions.phone.inviteToGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), users: [apiUser]))
         |> mapError { _ -> InviteToGroupCallError in
             return .generic
         }
@@ -1794,43 +1801,50 @@ public func editGroupCallTitle(account: Account, callId: Int64, accessHash: Int6
     }
 }
 
-public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox) -> Signal<[FoundPeer], NoError> {
-    return network.request(Api.functions.channels.getAdminedPublicChannels(flags: 1 << 2))
-    |> retryRequest
-    |> mapToSignal { result in
-        let chats: [Api.Chat]
-        switch result {
-            case let .chatsSlice(_, c):
-                chats = c
-            case let .chats(c):
-                chats = c
+public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+    
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    } |> mapToSignal { inputPeer in
+        guard let inputPeer = inputPeer else {
+            return .complete()
         }
-        var subscribers: [PeerId: Int32] = [:]
-        let peers = chats.compactMap(parseTelegramGroupOrChannel)
-        for chat in chats {
-            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                switch chat {
-                case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount):
-                    if let participantsCount = participantsCount {
-                        subscribers[groupOrChannel.id] = participantsCount
+        return network.request(Api.functions.phone.getGroupCallJoinAs(peer: inputPeer))
+        |> retryRequest
+        |> mapToSignal { result in
+            var peers:[Peer]
+            switch result {
+            case let .joinAsPeers(peers, chats, users):
+                var subscribers: [PeerId: Int32] = [:]
+                let peers = chats.compactMap(parseTelegramGroupOrChannel)
+                for chat in chats {
+                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        switch chat {
+                        case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                            if let participantsCount = participantsCount {
+                                subscribers[groupOrChannel.id] = participantsCount
+                            }
+                        case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
+                            subscribers[groupOrChannel.id] = participantsCount
+                        default:
+                            break
+                        }
                     }
-                case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
-                    subscribers[groupOrChannel.id] = participantsCount
-                default:
-                    break
+                }
+                return postbox.transaction { transaction -> [Peer] in
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                        return updated
+                    })
+                    return peers
+                } |> map { peers -> [FoundPeer] in
+                    return peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) }
                 }
             }
         }
         
-        return postbox.transaction { transaction -> [Peer] in
-            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                return updated
-            })
-            return peers
-        } |> map { peers -> [FoundPeer] in
-            return peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) }
-        }
     }
+    
+    
 }
 
 public final class CachedDisplayAsPeers: PostboxCoding {
@@ -1853,8 +1867,9 @@ public final class CachedDisplayAsPeers: PostboxCoding {
     }
 }
 
-public func cachedGroupCallDisplayAsAvailablePeers(account: Account) -> Signal<[FoundPeer], NoError> {
-    let key = ValueBoxKey(length: 0)
+public func cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: peerId.toInt64())
     return account.postbox.transaction { transaction -> ([FoundPeer], Int32)? in
         let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key)) as? CachedDisplayAsPeers
         if let cached = cached {
@@ -1875,10 +1890,10 @@ public func cachedGroupCallDisplayAsAvailablePeers(account: Account) -> Signal<[
     }
     |> mapToSignal { cachedPeersAndTimestamp -> Signal<[FoundPeer], NoError> in
         let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        if let (cachedPeers, timestamp) = cachedPeersAndTimestamp, currentTimestamp - timestamp < 60 * 5 {
+        if let (cachedPeers, timestamp) = cachedPeersAndTimestamp, currentTimestamp - timestamp < 60 * 5 && !cachedPeers.isEmpty {
             return .single(cachedPeers)
         } else {
-            return groupCallDisplayAsAvailablePeers(network: account.network, postbox: account.postbox)
+            return groupCallDisplayAsAvailablePeers(network: account.network, postbox: account.postbox, peerId: peerId)
             |> mapToSignal { peers -> Signal<[FoundPeer], NoError> in
                 return account.postbox.transaction { transaction -> [FoundPeer] in
                     let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
