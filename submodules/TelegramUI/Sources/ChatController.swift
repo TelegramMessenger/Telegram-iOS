@@ -534,7 +534,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
                             if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
-                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash))
+                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash))
                             } else {
                                 var canManageGroupCalls = false
                                 if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
@@ -568,7 +568,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                                                strongSelf.context.joinGroupCall(peerId: message.id.peerId, joinAsPeerId: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
                                             }, error: { [weak self] error in
                                                 dismissStatus?()
                                                 
@@ -1221,7 +1221,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         switch result {
                             case .default:
-                                strongSelf.openUrl(defaultUrl, concealed: false)
+                                strongSelf.openUrl(defaultUrl, concealed: false, skipUrlAuth: true)
                             case let .request(domain, bot, requestWriteAccess):
                                 let controller = chatMessageActionUrlAuthController(context: strongSelf.context, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), open: { [weak self] authorize, allowWriteAccess in
                                     if let strongSelf = self {
@@ -1270,21 +1270,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 if let strongSelf = self {
                                                     switch result {
                                                         case let .accepted(url):
-                                                            strongSelf.openUrl(url, concealed: false)
+                                                            strongSelf.openUrl(url, concealed: false, skipUrlAuth: true)
                                                         default:
-                                                            strongSelf.openUrl(defaultUrl, concealed: false)
+                                                            strongSelf.openUrl(defaultUrl, concealed: false, skipUrlAuth: true)
                                                     }
                                                 }
                                             }))
                                         } else {
-                                            strongSelf.openUrl(defaultUrl, concealed: false)
+                                            strongSelf.openUrl(defaultUrl, concealed: false, skipUrlAuth: true)
                                         }
                                     }
                                 })
                                 strongSelf.chatDisplayNode.dismissInput()
                                 strongSelf.present(controller, in: .window(.root))
                             case let .accepted(url):
-                                strongSelf.openUrl(url, concealed: false)
+                                strongSelf.openUrl(url, concealed: false, skipUrlAuth: true)
                         }
                     }
                 }))
@@ -1382,6 +1382,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.effectiveNavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                strongSelf.chatDisplayNode.dismissInput()
                 openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
                 
                 if case .overlay = strongSelf.presentationInterfaceState.mode {
@@ -2646,7 +2647,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
-        chatInfoButtonItem.accessibilityLabel = self.presentationData.strings.Conversation_Info
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo(expandAvatar: true), buttonItem: chatInfoButtonItem)
         
         self.navigationItem.titleView = self.chatTitleView
@@ -2801,6 +2801,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: imageOverride)
                                     (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
+                                    strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = presentationInterfaceState.strings.Conversation_ContextMenuOpenProfile
                                 }
                             }
                         }
@@ -6402,7 +6403,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            strongSelf.context.joinGroupCall(peerId: peer.id, activeCall: activeCall)
+            strongSelf.context.joinGroupCall(peerId: peer.id, joinAsPeerId: nil, activeCall: activeCall)
         }, presentInviteMembers: { [weak self] in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
@@ -8465,6 +8466,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 legacyController?.dismiss()
             }
         
+            legacyController.blocksBackgroundWhenInOverlay = true
             strongSelf.present(legacyController, in: .window(.root))
             controller.present(in: emptyController, sourceView: nil, animated: true)
             
@@ -11106,7 +11108,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil)
     }
     
-    private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
+    private func openUrl(_ url: String, concealed: Bool, skipUrlAuth: Bool = false, message: Message? = nil) {
         self.commitPurposefulAction()
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
@@ -11162,7 +11164,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, present: { [weak self] c in
+            openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(resolved)
@@ -11641,12 +11643,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var latestNode: (Int32, ASDisplayNode)?
         self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, let statusNode = itemNode.getStatusNode() {
-                if let (latestTimestamp, _) = latestNode {
-                    if item.message.timestamp > latestTimestamp {
+                if !item.content.effectivelyIncoming(self.context.account.peerId) {
+                    if let (latestTimestamp, _) = latestNode {
+                        if item.message.timestamp > latestTimestamp {
+                            latestNode = (item.message.timestamp, statusNode)
+                        }
+                    } else {
                         latestNode = (item.message.timestamp, statusNode)
                     }
-                } else {
-                    latestNode = (item.message.timestamp, statusNode)
                 }
             }
         }
@@ -11847,9 +11851,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return inputShortcuts + otherShortcuts
     }
     
-    public override func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
+    public override func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, info: GroupCallInfo) {
         let _ = self.presentVoiceMessageDiscardAlert(action: {
-            super.joinGroupCall(peerId: peerId, info: info)
+            super.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, info: info)
         })
     }
     

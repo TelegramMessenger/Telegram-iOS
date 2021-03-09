@@ -11,7 +11,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private let collapsedResultCount: Int = 10
-private let collapsedInitialLimit: Int = 14
+private let collapsedInitialLimit: Int = 10
 
 private final class PollResultsControllerArguments {
     let context: AccountContext
@@ -269,7 +269,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                 let count = optionState.count
                 
                 let displayCount: Int
-                if peers.count > collapsedInitialLimit + 1 {
+                if peers.count > collapsedInitialLimit {
                     if optionExpandedAtCount != nil {
                         displayCount = peers.count
                     } else {
@@ -277,7 +277,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                     }
                 } else {
                     if let optionExpandedAtCount = optionExpandedAtCount {
-                        if optionExpandedAtCount == collapsedInitialLimit + 1 && optionState.canLoadMore {
+                        if optionExpandedAtCount == collapsedInitialLimit && optionState.canLoadMore {
                             displayCount = collapsedResultCount
                         } else {
                             displayCount = peers.count

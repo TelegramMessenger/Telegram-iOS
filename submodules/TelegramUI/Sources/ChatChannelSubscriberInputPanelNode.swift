@@ -246,7 +246,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         if self.discussButton.isHidden {
             if let action = self.action, action == .muteNotifications || action == .unmuteNotifications {
-                let buttonWidth = self.button.titleNode.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
+                let buttonWidth = self.button.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
                 self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                 
                 if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, peer.flags.contains(.isGigagroup) {

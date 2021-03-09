@@ -59,7 +59,18 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         case .destructive:
             textColor = presentationData.theme.contextMenu.destructiveColor
         }
-        self.textNode.attributedText = NSAttributedString(string: action.text, font: textFont, textColor: textColor)
+        
+        let titleFont: UIFont
+        switch action.textFont {
+        case .regular:
+            titleFont = textFont
+        case let .custom(customFont):
+            titleFont = customFont
+        }
+        
+        let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
+        
+        self.textNode.attributedText = NSAttributedString(string: action.text, font: titleFont, textColor: textColor)
         
         switch action.textLayout {
         case .singleLine:
@@ -74,7 +85,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             statusNode.isAccessibilityElement = false
             statusNode.isUserInteractionEnabled = false
             statusNode.displaysAsynchronously = false
-            statusNode.attributedText = NSAttributedString(string: value, font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
+            statusNode.attributedText = NSAttributedString(string: value, font: subtitleFont, textColor: presentationData.theme.contextMenu.secondaryColor)
             statusNode.maximumNumberOfLines = 1
             self.statusNode = statusNode
         }
@@ -212,7 +223,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
                 let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
                 let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
                 transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
-                transition.updateFrameAdditive(node: statusNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin + verticalSpacing + textSize.height), size: textSize))
+                transition.updateFrameAdditive(node: statusNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin + verticalSpacing + textSize.height), size: statusSize))
                 
                 let badgeFrame = CGRect(origin: CGPoint(x: textFrame.maxX + badgeSpacing, y: floor((size.height - badgeSize.height) / 2.0)), size: badgeSize)
                 transition.updateFrame(node: self.badgeBackgroundNode, frame: badgeFrame)
@@ -260,12 +271,20 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         }
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+        let titleFont: UIFont
+        switch self.action.textFont {
+        case .regular:
+            titleFont = textFont
+        case let .custom(customFont):
+            titleFont = customFont
+        }
         
-        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: textFont, textColor: textColor)
+        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: titleFont, textColor: textColor)
         
         switch self.action.textLayout {
         case let .secondLineWithValue(value):
-            self.statusNode?.attributedText = NSAttributedString(string: value, font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
+            let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
+            self.statusNode?.attributedText = NSAttributedString(string: value, font: subtitleFont, textColor: presentationData.theme.contextMenu.secondaryColor)
         default:
             break
         }

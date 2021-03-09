@@ -5,7 +5,7 @@ import AccountContext
 import OverlayStatusController
 import UrlWhitelist
 
-public func openUserGeneratedUrl(context: AccountContext, url: String, concealed: Bool, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void) {
+public func openUserGeneratedUrl(context: AccountContext, url: String, concealed: Bool, skipUrlAuth: Bool = false, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void) {
     var concealed = concealed
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -31,7 +31,7 @@ public func openUserGeneratedUrl(context: AccountContext, url: String, concealed
         cancelImpl = {
             disposable.dispose()
         }
-        disposable.set((context.sharedContext.resolveUrl(account: context.account, url: url)
+        disposable.set((context.sharedContext.resolveUrl(account: context.account, url: url, skipUrlAuth: skipUrlAuth)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()

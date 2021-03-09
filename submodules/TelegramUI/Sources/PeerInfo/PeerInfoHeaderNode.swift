@@ -49,18 +49,22 @@ enum PeerInfoHeaderButtonIcon {
 final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     let key: PeerInfoHeaderButtonKey
     private let action: (PeerInfoHeaderButtonNode) -> Void
-    let containerNode: ASDisplayNode
+    let referenceNode: ContextReferenceContentNode
+    let containerNode: ContextControllerSourceNode
     private let backgroundNode: ASImageNode
     private let textNode: ImmediateTextNode
     
     private var theme: PresentationTheme?
     private var icon: PeerInfoHeaderButtonIcon?
+    private var isActive: Bool?
     
     init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode) -> Void) {
         self.key = key
         self.action = action
         
-        self.containerNode = ASDisplayNode()
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.isGestureEnabled = false
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -73,9 +77,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         self.accessibilityTraits = .button
         
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.addSubnode(self.backgroundNode)
         self.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.backgroundNode)
-        self.containerNode.addSubnode(self.textNode)
+        self.addSubnode(self.textNode)
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -96,13 +101,14 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.action(self)
     }
     
-    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
-        if self.theme != presentationData.theme || self.icon != icon {
+    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+        if self.theme != presentationData.theme || self.icon != icon || self.isActive != isActive {
             self.theme = presentationData.theme
             self.icon = icon
+            self.isActive = isActive
             self.backgroundNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)
+                context.setFillColor(isActive ? presentationData.theme.list.itemAccentColor.cgColor : presentationData.theme.list.itemDisabledTextColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.normal)
                 context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
@@ -137,7 +143,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             })
         }
         
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: isActive ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemDisabledTextColor)
         self.accessibilityLabel = text
         let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
         
@@ -145,6 +151,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height + 6.0), size: titleSize))
         transition.updateAlpha(node: self.textNode, alpha: isExpanded ? 0.0 : 1.0)
+        
+        self.referenceNode.frame = self.containerNode.bounds
     }
 }
 
@@ -2437,6 +2445,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
                 self.addSubnode(self.avatarButtonNode)
             }
             self.avatarTextNode.attributedText = NSAttributedString(string: presentationData.strings.Settings_SetNewProfilePhotoOrVideo, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
+            self.avatarButtonNode.accessibilityLabel = self.avatarTextNode.attributedText?.string
             
             let avatarTextSize = self.avatarTextNode.updateLayout(CGSize(width: width, height: 32.0))
             transition.updateFrame(node: self.avatarTextNode, frame: CGRect(origin: CGPoint(), size: avatarTextSize))
@@ -2574,7 +2583,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let usernameNodeContainer: ASDisplayNode
     let usernameNodeRawContainer: ASDisplayNode
     let usernameNode: MultiScaleTextNode
-    private var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
+    var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
     private let backgroundNode: ASDisplayNode
     private let expandedBackgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
@@ -3348,7 +3357,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 buttonText = presentationData.strings.PeerInfo_ButtonLeave
                 buttonIcon = .leave
             }
-            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isExpanded: self.isAvatarExpanded, presentationData: presentationData, transition: buttonTransition)
+            
+            var isActive = true
+            if let highlightedButton = state.highlightedButton {
+                isActive = buttonKey == highlightedButton
+            }
+            
+            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isActive: isActive, isExpanded: self.isAvatarExpanded, presentationData: presentationData, transition: buttonTransition)
             transition.updateSublayerTransformScaleAdditive(node: buttonNode, scale: buttonsScale)
             
             if wasAdded {

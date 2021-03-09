@@ -179,7 +179,7 @@ private final class MultipartUploadManager {
             self.bigParts = true
         } else if useLargerParts {
             self.bigParts = false
-            self.defaultPartSize = 128 * 1024
+            self.defaultPartSize = 256 * 1024
             self.bigTotalParts = nil
         } else {
             self.bigParts = false
@@ -218,7 +218,7 @@ private final class MultipartUploadManager {
                 } else {
                     self.bigParts = false
                     if self.useLargerParts {
-                        self.defaultPartSize = 128 * 1024
+                        self.defaultPartSize = 256 * 1024
                     } else {
                         self.defaultPartSize = 16 * 1024
                     }

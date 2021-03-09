@@ -159,6 +159,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let statusNode: TextNode
+    private var credibilityIconNode: ASImageNode?
     
     private let actionContainerNode: ASDisplayNode
     private var animationNode: VoiceChatMicrophoneNode?
@@ -390,8 +391,26 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let verticalInset: CGFloat = 8.0
             let verticalOffset: CGFloat = 0.0
             let avatarSize: CGFloat = 40.0
+            
+            var titleIconsWidth: CGFloat = 0.0
+            var currentCredibilityIconImage: UIImage?
+            var credibilityIconOffset: CGFloat = 0.0
+            if item.peer.isScam {
+                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                credibilityIconOffset = 2.0
+            } else if item.peer.isFake {
+                currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                credibilityIconOffset = 2.0
+            } else if item.peer.isVerified {
+                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                credibilityIconOffset = 3.0
+            }
+            
+            if let currentCredibilityIconImage = currentCredibilityIconImage {
+                titleIconsWidth += 4.0 + currentCredibilityIconImage.size.width
+            }
                               
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - rightInset - 30.0 - titleIconsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = UIEdgeInsets()
@@ -549,6 +568,25 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset + verticalOffset), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
                     
+                    if let currentCredibilityIconImage = currentCredibilityIconImage {
+                        let iconNode: ASImageNode
+                        if let current = strongSelf.credibilityIconNode {
+                            iconNode = current
+                        } else {
+                            iconNode = ASImageNode()
+                            iconNode.isLayerBacked = true
+                            iconNode.displaysAsynchronously = false
+                            iconNode.displayWithoutProcessing = true
+                            strongSelf.offsetContainerNode.addSubnode(iconNode)
+                            strongSelf.credibilityIconNode = iconNode
+                        }
+                        iconNode.image = currentCredibilityIconImage
+                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + 3.0, y: verticalInset + credibilityIconOffset), size: currentCredibilityIconImage.size))
+                    } else if let credibilityIconNode = strongSelf.credibilityIconNode {
+                        strongSelf.credibilityIconNode = nil
+                        credibilityIconNode.removeFromSupernode()
+                    }
+                    
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
                     transition.updateFrameAsPositionAndBounds(node: strongSelf.avatarNode, frame: avatarFrame)
                     
@@ -636,7 +674,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                 animationNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
                             }
                         }
-                        animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, color: color), animated: true)
+                        animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: false, color: color), animated: true)
                         strongSelf.actionButtonNode.isUserInteractionEnabled = item.contextAction != nil
                     } else if let animationNode = strongSelf.animationNode {
                         strongSelf.animationNode = nil

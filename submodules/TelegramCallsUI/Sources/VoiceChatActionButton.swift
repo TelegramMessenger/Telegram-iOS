@@ -5,7 +5,7 @@ import Display
 import SwiftSignalKit
 import LegacyComponents
 
-private let titleFont = Font.regular(17.0)
+private let titleFont = Font.regular(15.0)
 private let subtitleFont = Font.regular(13.0)
 
 private let white = UIColor(rgb: 0xffffff)
@@ -18,8 +18,8 @@ private let activeBlue = UIColor(rgb: 0x00a0b9)
 private let purple = UIColor(rgb: 0x6b81f0)
 private let pink = UIColor(rgb: 0xd75a76)
 
-private let areaSize = CGSize(width: 440.0, height: 440.0)
-private let blobSize = CGSize(width: 244.0, height: 244.0)
+private let areaSize = CGSize(width: 300.0, height: 300.0)
+private let blobSize = CGSize(width: 190.0, height: 190.0)
 
 final class VoiceChatActionButton: HighlightTrackingButtonNode {
     enum State: Equatable {
@@ -188,7 +188,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 112.0), size: titleSize)
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 71.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
         self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -210,11 +210,10 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 break
         }
         
-        
         if snap {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-            transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.75 : 0.5)
-            transition.updateTransformScale(node: self.iconNode, scale: 0.5)
+            transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.9 : 0.625)
+            transition.updateTransformScale(node: self.iconNode, scale: 0.625)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
@@ -227,7 +226,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
-        let iconSize = CGSize(width: 90.0, height: 90.0)
+        let iconSize = CGSize(width: 68.0, height: 68.0)
         self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
         self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
     }
@@ -254,7 +253,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             case .connecting:
                 break
         }
-        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, color: iconColor), animated: true)
+        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, filled: true, color: iconColor), animated: true)
     }
     
     func update(snap: Bool, animated: Bool) {
@@ -406,7 +405,7 @@ extension UIBezierPath {
 }
 
 private let progressLineWidth: CGFloat = 3.0 + UIScreenPixel
-private let buttonSize = CGSize(width: 144.0, height: 144.0)
+private let buttonSize = CGSize(width: 112.0, height: 112.0)
 private let radius = buttonSize.width / 2.0
 
 private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {

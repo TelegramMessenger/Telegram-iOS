@@ -1260,7 +1260,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         category = .voiceChat
                     }
                     
-                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), category: category), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: activity)
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), category: category), peerId: userId.peerId, activity: activity)
                 }
             case let .updateChannelUserTyping(_, channelId, topMsgId, userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
@@ -1275,7 +1275,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         category = .thread(threadId)
                     }
                     
-                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: channelPeerId, category: category), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: activity)
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: channelPeerId, category: category), peerId: userId.peerId, activity: activity)
                 }
             case let .updateEncryptedChatTyping(chatId):
                 if let date = updatesDate, date + 60 > serverTime {
@@ -2987,13 +2987,13 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         })
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, _, _):
+                        case let .groupCall(flags, _, _, _, _, title, streamDcId, recordStartDate, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             let defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)
                             updatedGroupCallParticipants.append((
                                 info.id,
-                                .call(isTerminated: false, defaultParticipantsAreMuted: defaultParticipantsAreMuted)
+                                .call(isTerminated: false, defaultParticipantsAreMuted: defaultParticipantsAreMuted, title: title, recordingStartTimestamp: recordStartDate)
                             ))
                         default:
                             break
@@ -3002,7 +3002,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 case let .groupCallDiscarded(callId, _, _):
                     updatedGroupCallParticipants.append((
                         callId,
-                        .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false))
+                        .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false), title: nil, recordingStartTimestamp: nil)
                     ))
                     
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in

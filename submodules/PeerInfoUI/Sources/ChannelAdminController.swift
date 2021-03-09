@@ -1039,6 +1039,10 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 return current.withUpdatedUpdating(true)
                             }
                             updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags ?? []), rank: effectiveRank) |> deliverOnMainQueue).start(error: { error in
+                                updateState { current in
+                                    return current.withUpdatedUpdating(false)
+                                }
+                                
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 var text = presentationData.strings.Login_UnknownError
                                 switch error {

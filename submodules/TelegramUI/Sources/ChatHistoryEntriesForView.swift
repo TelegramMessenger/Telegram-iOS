@@ -21,7 +21,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 if id == cachedChannelAdminRanksEntryId(peerId: peerId), let data = data as? CachedChannelAdminRanks {
                     adminRanks = data.ranks
                 }
-            } else if case let .peer(_, peer) = additionalEntry, let channel = peer as? TelegramChannel {
+            } else if case let .peer(_, peer) = additionalEntry, let channel = peer as? TelegramChannel, !channel.flags.contains(.isGigagroup) {
                 if let defaultBannedRights = channel.defaultBannedRights, defaultBannedRights.flags.contains(.banSendStickers) {
                     stickersEnabled = false
                 }
