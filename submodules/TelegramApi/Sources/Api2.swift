@@ -17025,7 +17025,7 @@ public extension Api {
         case inputPhotoLegacyFileLocation(id: Int64, accessHash: Int64, fileReference: Buffer, volumeId: Int64, localId: Int32, secret: Int64)
         case inputPeerPhotoFileLocation(flags: Int32, peer: Api.InputPeer, volumeId: Int64, localId: Int32)
         case inputStickerSetThumb(stickerset: Api.InputStickerSet, volumeId: Int64, localId: Int32)
-        case inputGroupCallStream(call: Api.InputGroupCall, date: Int32)
+        case inputGroupCallStream(call: Api.InputGroupCall, timeMs: Int64, scale: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17104,12 +17104,13 @@ public extension Api {
                     serializeInt64(volumeId, buffer: buffer, boxed: false)
                     serializeInt32(localId, buffer: buffer, boxed: false)
                     break
-                case .inputGroupCallStream(let call, let date):
+                case .inputGroupCallStream(let call, let timeMs, let scale):
                     if boxed {
-                        buffer.appendInt32(-775148961)
+                        buffer.appendInt32(-1146808775)
                     }
                     call.serialize(buffer, true)
-                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt64(timeMs, buffer: buffer, boxed: false)
+                    serializeInt32(scale, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -17134,8 +17135,8 @@ public extension Api {
                 return ("inputPeerPhotoFileLocation", [("flags", flags), ("peer", peer), ("volumeId", volumeId), ("localId", localId)])
                 case .inputStickerSetThumb(let stickerset, let volumeId, let localId):
                 return ("inputStickerSetThumb", [("stickerset", stickerset), ("volumeId", volumeId), ("localId", localId)])
-                case .inputGroupCallStream(let call, let date):
-                return ("inputGroupCallStream", [("call", call), ("date", date)])
+                case .inputGroupCallStream(let call, let timeMs, let scale):
+                return ("inputGroupCallStream", [("call", call), ("timeMs", timeMs), ("scale", scale)])
     }
     }
     
@@ -17302,12 +17303,15 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
             }
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputFileLocation.inputGroupCallStream(call: _1!, date: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputFileLocation.inputGroupCallStream(call: _1!, timeMs: _2!, scale: _3!)
             }
             else {
                 return nil

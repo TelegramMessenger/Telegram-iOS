@@ -516,7 +516,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 state.adminIds = adminIds
                 
                 switch result {
-                case let .groupCall(call, participants, _, chats, users):
+                case let .groupCall(call, _, _, chats, users):
                     guard let _ = GroupCallInfo(call) else {
                         return .fail(.generic)
                     }
@@ -821,7 +821,7 @@ public final class GroupCallParticipantsContext {
             
             for i in 0 ..< self.participants.count {
                 if let index = indexMap[self.participants[i].peer.id] {
-                    self.participants[i].mergeActivity(from: other.participants[i])
+                    self.participants[i].mergeActivity(from: other.participants[index])
                 }
             }
             
@@ -1900,19 +1900,34 @@ private func mergeAndSortParticipants(current currentParticipants: [GroupCallPar
     return mergedParticipants
 }
 
-public func getAudioBroadcastDatacenter(account: Account, callId: Int64, accessHash: Int64) -> Signal<Int?, NoError> {
+public final class AudioBroadcastDataSource {
+    fileprivate let download: Download
+    
+    fileprivate init(download: Download) {
+        self.download = download
+    }
+}
+
+public func getAudioBroadcastDataSource(account: Account, callId: Int64, accessHash: Int64) -> Signal<AudioBroadcastDataSource?, NoError> {
     return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.phone.GroupCall?, NoError> in
         return .single(nil)
     }
-    |> map { result -> Int? in
+    |> mapToSignal { result -> Signal<AudioBroadcastDataSource?, NoError> in
         guard let result = result else {
-            return nil
+            return .single(nil)
         }
         switch result {
         case let .groupCall(call, _, _, _, _):
-            return GroupCallInfo(call)?.streamDcId.flatMap(Int.init)
+            if let datacenterId = GroupCallInfo(call)?.streamDcId.flatMap(Int.init) {
+                return account.network.download(datacenterId: datacenterId, isMedia: true, tag: nil)
+                |> map { download -> AudioBroadcastDataSource? in
+                    return AudioBroadcastDataSource(download: download)
+                }
+            } else {
+                return .single(nil)
+            }
         }
     }
 }
@@ -1921,7 +1936,7 @@ public struct GetAudioBroadcastPartResult {
     public enum Status {
         case data(Data)
         case notReady
-        case tooOld
+        case resyncNeeded
         case rejoinNeeded
     }
     
@@ -1929,8 +1944,18 @@ public struct GetAudioBroadcastPartResult {
     public var responseTimestamp: Double
 }
 
-public func getAudioBroadcastPart(account: Account, callId: Int64, accessHash: Int64, datacenterId: Int, timestampId: Int32) -> Signal<GetAudioBroadcastPartResult, NoError> {
-    return account.network.multiplexedRequestManager.requestWithAdditionalInfo(to: .main(datacenterId), consumerId: Int64.random(in: 0 ..< Int64.max), data: Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), date: timestampId), offset: 0, limit: 128 * 1024), tag: nil, continueInBackground: false, automaticFloodWait: false)
+public func getAudioBroadcastPart(dataSource: AudioBroadcastDataSource, callId: Int64, accessHash: Int64, timestampIdMilliseconds: Int64, durationMilliseconds: Int64) -> Signal<GetAudioBroadcastPartResult, NoError> {
+    let scale: Int32
+    switch durationMilliseconds {
+    case 1000:
+        scale = 0
+    case 500:
+        scale = 1
+    default:
+        return .single(GetAudioBroadcastPartResult(status: .notReady, responseTimestamp: Double(timestampIdMilliseconds) / 1000.0))
+    }
+    
+    return dataSource.download.requestWithAdditionalData(Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: timestampIdMilliseconds, scale: scale), offset: 0, limit: 128 * 1024), automaticFloodWait: false, failOnServerErrors: true)
     |> map { result, responseTimestamp -> GetAudioBroadcastPartResult in
         switch result {
         case let .file(_, _, bytes):
@@ -1956,9 +1981,14 @@ public func getAudioBroadcastPart(account: Account, callId: Int64, accessHash: I
                 status: .notReady,
                 responseTimestamp: responseTimestamp
             ))
+        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" || error.errorDescription == "TIME_TOO_BIG" {
+            return .single(GetAudioBroadcastPartResult(
+                status: .resyncNeeded,
+                responseTimestamp: responseTimestamp
+            ))
         } else {
             return .single(GetAudioBroadcastPartResult(
-                status: .notReady,
+                status: .resyncNeeded,
                 responseTimestamp: responseTimestamp
             ))
         }

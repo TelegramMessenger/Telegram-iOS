@@ -587,9 +587,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if let strongSelf = self {
                 if value {
                     if let audioSessionControl = strongSelf.audioSessionControl {
-                        let audioSessionActive: Signal<Bool, NoError>
+                        //let audioSessionActive: Signal<Bool, NoError>
                         if let callKitIntegration = strongSelf.callKitIntegration {
-                            audioSessionActive = callKitIntegration.audioSessionActive
+                            _ = callKitIntegration.audioSessionActive
                             |> filter { $0 }
                             |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
                                 if let strongSelf = self, let _ = strongSelf.audioSessionControl {
@@ -777,11 +777,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         let temporaryParticipantsContext = GroupCallParticipantsContext(account: self.account, peerId: self.peerId, myPeerId: myPeerId, id: sourceContext.id, accessHash: sourceContext.accessHash, state: initialState)
         self.temporaryParticipantsContext = temporaryParticipantsContext
-        self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
+        self.participantsContextStateDisposable.set((combineLatest(queue: .mainQueue(),
             myPeer,
             temporaryParticipantsContext.state,
             temporaryParticipantsContext.activeSpeakers
-        ).start(next: { [weak self] myPeerAndCachedData, state, activeSpeakers in
+        )
+        |> take(1)).start(next: { [weak self] myPeerAndCachedData, state, activeSpeakers in
             guard let strongSelf = self else {
                 return
             }
@@ -853,7 +854,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             strongSelf.membersValue = members
             
-            strongSelf.stateValue.adminIds = state.adminIds
+            var stateValue = strongSelf.stateValue
+            stateValue.myPeerId = strongSelf.joinAsPeerId
+            stateValue.adminIds = state.adminIds
+            
+            strongSelf.stateValue = stateValue
             
             strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
                 participantCount: state.totalCount,
@@ -911,13 +916,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                             strongSelf.maybeRequestParticipants(ssrcs: ssrcs)
                         }
-                    }, audioStreamData: OngoingGroupCallContext.AudioStreamData(account: self.accountContext.account, callId: callInfo.id, accessHash: callInfo.accessHash, datacenterId: callInfo.streamDcId.flatMap(Int.init)), rejoinNeeded: { [weak self] in
+                    }, audioStreamData: OngoingGroupCallContext.AudioStreamData(account: self.accountContext.account, callId: callInfo.id, accessHash: callInfo.accessHash), rejoinNeeded: { [weak self] in
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
                             }
                             if case .established = strongSelf.internalState {
-                                //strongSelf.requestCall()
+                                strongSelf.requestCall()
                             }
                         }
                     })
@@ -1478,10 +1483,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             let previousPeerId = strongSelf.joinAsPeerId
             strongSelf.joinAsPeerId = peerId
-            strongSelf.stateValue.myPeerId = peerId
             
             if let participantsContext = strongSelf.participantsContext, let immediateState = participantsContext.immediateState {
                 strongSelf.switchToTemporaryParticipantsContext(sourceContext: participantsContext, initialState: immediateState, oldMyPeerId: previousPeerId)
+            } else {
+                strongSelf.stateValue.myPeerId = peerId
             }
             
             strongSelf.requestCall()

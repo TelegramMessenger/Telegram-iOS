@@ -500,6 +500,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
     dict[1248893260] = { return Api.EncryptedFile.parse_encryptedFile($0) }
     dict[-557924733] = { return Api.CodeSettings.parse_codeSettings($0) }
+    dict[-1343921601] = { return Api.phone.JoinAsPeers.parse_joinAsPeers($0) }
     dict[-391902247] = { return Api.SecureValueError.parse_secureValueErrorData($0) }
     dict[12467706] = { return Api.SecureValueError.parse_secureValueErrorFrontSide($0) }
     dict[-2037765467] = { return Api.SecureValueError.parse_secureValueErrorReverseSide($0) }
@@ -667,7 +668,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-667654413] = { return Api.InputFileLocation.parse_inputPhotoLegacyFileLocation($0) }
     dict[668375447] = { return Api.InputFileLocation.parse_inputPeerPhotoFileLocation($0) }
     dict[230353641] = { return Api.InputFileLocation.parse_inputStickerSetThumb($0) }
-    dict[-775148961] = { return Api.InputFileLocation.parse_inputGroupCallStream($0) }
+    dict[-1146808775] = { return Api.InputFileLocation.parse_inputGroupCallStream($0) }
     dict[286776671] = { return Api.GeoPoint.parse_geoPointEmpty($0) }
     dict[-1297942941] = { return Api.GeoPoint.parse_geoPoint($0) }
     dict[506920429] = { return Api.InputPhoneCall.parse_inputPhoneCall($0) }
@@ -1245,6 +1246,8 @@ public struct Api {
             case let _1 as Api.EncryptedFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.CodeSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.phone.JoinAsPeers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueError:
                 _1.serialize(buffer, boxed)
