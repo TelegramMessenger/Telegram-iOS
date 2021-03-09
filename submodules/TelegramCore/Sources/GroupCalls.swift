@@ -40,7 +40,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(flags, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
+        case let .groupCall(_, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
             var clientParams: String?
             if let params = params {
                 switch params {
