@@ -151,10 +151,10 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 @end
 
-typedef NS_ENUM(int32_t, GroupCallNetworkState) {
-    GroupCallNetworkStateConnecting,
-    GroupCallNetworkStateConnected
-};
+typedef struct {
+    bool isConnected;
+    bool isTransitioningFromBroadcastToRtc;
+} GroupCallNetworkState;
 
 @interface OngoingGroupCallParticipantDescription : NSObject
 
@@ -200,7 +200,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallBroadcastPartStatus) {
 
 - (void)stop;
 
-- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode;
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled;
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload participants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;

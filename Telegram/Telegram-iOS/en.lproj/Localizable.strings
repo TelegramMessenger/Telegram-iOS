@@ -5768,6 +5768,7 @@ Sorry for the inconvenience.";
 "VoiceChat.EndConfirmationEnd" = "End";
 
 "VoiceChat.InviteMemberToGroupFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the group?";
+"VoiceChat.InviteMemberToChannelFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the channel?";
 "VoiceChat.InviteMemberToGroupFirstAdd" = "Add";
 
 "VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";

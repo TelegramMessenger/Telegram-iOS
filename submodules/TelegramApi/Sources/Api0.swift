@@ -672,6 +672,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[286776671] = { return Api.GeoPoint.parse_geoPointEmpty($0) }
     dict[-1297942941] = { return Api.GeoPoint.parse_geoPoint($0) }
     dict[506920429] = { return Api.InputPhoneCall.parse_inputPhoneCall($0) }
+    dict[541839704] = { return Api.phone.ExportedGroupCallInvite.parse_exportedGroupCallInvite($0) }
     dict[-1551583367] = { return Api.ReceivedNotifyMessage.parse_receivedNotifyMessage($0) }
     dict[-57668565] = { return Api.ChatParticipants.parse_chatParticipantsForbidden($0) }
     dict[1061556205] = { return Api.ChatParticipants.parse_chatParticipants($0) }
@@ -1412,6 +1413,8 @@ public struct Api {
             case let _1 as Api.GeoPoint:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputPhoneCall:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.phone.ExportedGroupCallInvite:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReceivedNotifyMessage:
                 _1.serialize(buffer, boxed)

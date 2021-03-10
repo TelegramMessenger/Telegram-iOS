@@ -12,6 +12,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import TelegramNotices
+import ChatListSearchItemHeader
 
 private struct CallListNodeListViewTransition {
     let callListView: CallListNodeView
@@ -567,6 +568,12 @@ final class CallListControllerNode: ASDisplayNode {
             self.updateState {
                 return $0.withUpdatedPresentationData(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)
             }
+            
+            self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+                if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                    itemHeaderNode.updateTheme(theme: presentationData.theme)
+                }
+            })
         }
     }
     

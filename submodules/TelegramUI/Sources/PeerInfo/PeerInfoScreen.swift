@@ -1742,7 +1742,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     }
                                     index -= 1
                                 }
-                                viewControllers.remove(atOffsets: IndexSet(indexesToRemove))
+                                for i in indexesToRemove.sorted().reversed() {
+                                    viewControllers.remove(at: i)
+                                }
                                 navigationController.setViewControllers(viewControllers, animated: false)
                             }))
                         }
@@ -1882,7 +1884,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                             }
                                             index -= 1
                                         }
-                                        viewControllers.remove(atOffsets: IndexSet(indexesToRemove))
+                                        for i in indexesToRemove.sorted().reversed() {
+                                            viewControllers.remove(at: i)
+                                        }
                                         navigationController.setViewControllers(viewControllers, animated: false)
                                     }))
                                 }
@@ -2780,7 +2784,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(peerId.namespace) {
-                self.displayAsPeersPromise.set(groupCallDisplayAsAvailablePeers(network: context.account.network, postbox: context.account.postbox, peerId: peerId))
+                self.displayAsPeersPromise.set(cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId))
             }
         }
         

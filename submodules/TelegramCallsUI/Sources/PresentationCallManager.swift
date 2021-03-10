@@ -711,7 +711,6 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 initialCall: initialCall,
                 internalId: internalId,
                 peerId: peerId,
-                peer: nil,
                 joinAsPeerId: joinAsPeerId
             )
             strongSelf.updateCurrentGroupCall(call)

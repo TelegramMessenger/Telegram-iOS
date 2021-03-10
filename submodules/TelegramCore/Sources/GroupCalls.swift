@@ -40,7 +40,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(_, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
+        case let .groupCall(flags, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -143,6 +143,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                             jsonParams: jsonParams,
                             joinTimestamp: date,
                             raiseHandRating: raiseHandRating,
+                            hasRaiseHand: raiseHandRating != nil,
                             activityTimestamp: activeDate.flatMap(Double.init),
                             activityRank: nil,
                             muteState: muteState,
@@ -309,6 +310,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                             jsonParams: jsonParams,
                             joinTimestamp: date,
                             raiseHandRating: raiseHandRating,
+                            hasRaiseHand: raiseHandRating != nil,
                             activityTimestamp: activeDate.flatMap(Double.init),
                             activityRank: nil,
                             muteState: muteState,
@@ -335,29 +337,6 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
         }
         |> castError(GetGroupCallParticipantsError.self)
     }
-}
-
-public func inviteToGroupCall(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64, users: Set<PeerId>, canUnmute: Bool) -> Signal<Void, NoError> {
-    return .complete()
-//    return account.postbox.transaction { transaction -> [Api.InputUser] in
-//        var inputUsers: [Api.InputUser] = []
-//        for user in users {
-//            if let peer = transaction.getPeer(user), let inputUser = apiInputUser(peer) {
-//                inputUsers.append(inputUser)
-//            }
-//        }
-//        return inputUsers
-//    }
-//    |> mapToSignal { users -> Signal<Void, NoError> in
-//        return account.network.request(Api.functions.phone.inviteToGroupCall(flags: 0, call: .inputGroupCall(id: callId, accessHash: accessHash), users: users))
-//        |> `catch` { _ -> Signal<Void, NoError> in
-//            return .single(Void())
-//        } |> mapToSignal { updates -> Signal<Void, NoError> in
-//            account.stateManager.addUpdates(updates)
-//
-//            return .single(Void())
-//        }
-//    }
 }
 
 public enum JoinGroupCallError {
@@ -714,6 +693,7 @@ public final class GroupCallParticipantsContext {
         public var jsonParams: String?
         public var joinTimestamp: Int32
         public var raiseHandRating: Int64?
+        public var hasRaiseHand: Bool
         public var activityTimestamp: Double?
         public var activityRank: Int?
         public var muteState: MuteState?
@@ -726,6 +706,7 @@ public final class GroupCallParticipantsContext {
             jsonParams: String?,
             joinTimestamp: Int32,
             raiseHandRating: Int64?,
+            hasRaiseHand: Bool,
             activityTimestamp: Double?,
             activityRank: Int?,
             muteState: MuteState?,
@@ -737,6 +718,7 @@ public final class GroupCallParticipantsContext {
             self.jsonParams = jsonParams
             self.joinTimestamp = joinTimestamp
             self.raiseHandRating = raiseHandRating
+            self.hasRaiseHand = hasRaiseHand
             self.activityTimestamp = activityTimestamp
             self.activityRank = activityRank
             self.muteState = muteState
@@ -760,6 +742,9 @@ public final class GroupCallParticipantsContext {
                 return false
             }
             if lhs.raiseHandRating != rhs.raiseHandRating {
+                return false
+            }
+            if lhs.hasRaiseHand != rhs.hasRaiseHand {
                 return false
             }
             if lhs.activityTimestamp != rhs.activityTimestamp {
@@ -973,17 +958,27 @@ public final class GroupCallParticipantsContext {
     public var immediateState: State?
     
     public var state: Signal<State, NoError> {
+        let accountPeerId = self.account.peerId
         return self.statePromise.get()
         |> map { state -> State in
             if state.overlayState.isEmpty {
                 return state.state
             }
             var publicState = state.state
+            var sortAgain = false
+            let canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
             for i in 0 ..< publicState.participants.count {
                 if let pendingMuteState = state.overlayState.pendingMuteStateChanges[publicState.participants[i].peer.id] {
                     publicState.participants[i].muteState = pendingMuteState.state
                     publicState.participants[i].volume = pendingMuteState.volume
                 }
+                if !canSeeHands && publicState.participants[i].raiseHandRating != nil {
+                    publicState.participants[i].raiseHandRating = nil
+                    sortAgain = true
+                }
+            }
+            if sortAgain {
+                publicState.participants.sort()
             }
             return publicState
         }
@@ -1389,6 +1384,7 @@ public final class GroupCallParticipantsContext {
                         jsonParams: participantUpdate.jsonParams,
                         joinTimestamp: participantUpdate.joinTimestamp,
                         raiseHandRating: participantUpdate.raiseHandRating,
+                        hasRaiseHand: participantUpdate.raiseHandRating != nil,
                         activityTimestamp: activityTimestamp,
                         activityRank: previousActivityRank,
                         muteState: participantUpdate.muteState,
@@ -1755,7 +1751,7 @@ public enum InviteToGroupCallError {
     case generic
 }
 
-public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId, canUnmute: Bool) -> Signal<Never, InviteToGroupCallError> {
+public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId) -> Signal<Never, InviteToGroupCallError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
@@ -1767,12 +1763,8 @@ public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64
         guard let apiUser = apiInputUser(user) else {
             return .fail(.generic)
         }
-        var flags: Int32 = 0
-        if canUnmute {
-            flags |= (1 << 0)
-        }
         
-        return account.network.request(Api.functions.phone.inviteToGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), users: [apiUser]))
+        return account.network.request(Api.functions.phone.inviteToGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), users: [apiUser]))
         |> mapError { _ -> InviteToGroupCallError in
             return .generic
         }
@@ -1780,6 +1772,47 @@ public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64
             account.stateManager.addUpdates(result)
             
             return .complete()
+        }
+    }
+}
+
+public struct GroupCallInviteLinks {
+    public let listenerLink: String
+    public let speakerLink: String?
+}
+
+public func groupCallInviteLinks(account: Account, callId: Int64, accessHash: Int64) -> Signal<GroupCallInviteLinks?, NoError> {
+    let call = Api.InputGroupCall.inputGroupCall(id: callId, accessHash: accessHash)
+    let listenerInvite: Signal<String?, NoError> = account.network.request(Api.functions.phone.exportGroupCallInvite(flags: 0, call: call))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.phone.ExportedGroupCallInvite?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<String?, NoError> in
+        if let result = result,  case let .exportedGroupCallInvite(link) = result {
+            return .single(link)
+        }
+        return .single(nil)
+    }
+
+    let speakerInvite: Signal<String?, NoError> = account.network.request(Api.functions.phone.exportGroupCallInvite(flags: 1 << 0, call: call))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.phone.ExportedGroupCallInvite?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<String?, NoError> in
+        if let result = result,  case let .exportedGroupCallInvite(link) = result {
+            return .single(link)
+        }
+        return .single(nil)
+    }
+    
+    return combineLatest(listenerInvite, speakerInvite)
+    |> map { listenerLink, speakerLink in
+        if let listenerLink = listenerLink {
+            return GroupCallInviteLinks(listenerLink: listenerLink, speakerLink: speakerLink)
+        } else {
+            return nil
         }
     }
 }
@@ -1861,6 +1894,7 @@ public final class CachedDisplayAsPeers: PostboxCoding {
     }
 }
 
+
 public func cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
     let key = ValueBoxKey(length: 8)
     key.setInt64(0, value: peerId.toInt64())
@@ -1884,14 +1918,14 @@ public func cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: Pee
     }
     |> mapToSignal { cachedPeersAndTimestamp -> Signal<[FoundPeer], NoError> in
         let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        if let (cachedPeers, timestamp) = cachedPeersAndTimestamp, currentTimestamp - timestamp < 60 * 5 && !cachedPeers.isEmpty {
+        if let (cachedPeers, timestamp) = cachedPeersAndTimestamp, currentTimestamp - timestamp < 60 * 3 && !cachedPeers.isEmpty {
             return .single(cachedPeers)
         } else {
             return groupCallDisplayAsAvailablePeers(network: account.network, postbox: account.postbox, peerId: peerId)
             |> mapToSignal { peers -> Signal<[FoundPeer], NoError> in
                 return account.postbox.transaction { transaction -> [FoundPeer] in
                     let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key), entry: CachedDisplayAsPeers(peerIds: peers.map { $0.peer.id }, timestamp: currentTimestamp), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key), entry: CachedDisplayAsPeers(peerIds: peers.map { $0.peer.id }, timestamp: currentTimestamp), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20))
                     return peers
                 }
             }

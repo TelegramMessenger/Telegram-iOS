@@ -31,7 +31,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private var immediatePeerId: PeerId?
     private let fromForeignApp: Bool
     private let segmentedValues: [ShareControllerSegmentedValue]?
-    private var selectedSegmentedIndex: Int = 0
+    var selectedSegmentedIndex: Int = 0
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -237,8 +237,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.addSubnode(self.actionSeparatorNode)
         self.contentContainerNode.addSubnode(self.actionsBackgroundNode)
-        self.contentContainerNode.addSubnode(self.actionButtonNode)
         self.contentContainerNode.addSubnode(self.inputFieldNode)
+        self.contentContainerNode.addSubnode(self.actionButtonNode)
         
         self.inputFieldNode.updateHeight = { [weak self] in
             if let strongSelf = self {
@@ -314,7 +314,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     let previousAlpha = node.alpha
                     node.alpha = alpha
                     if animated {
-                        node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32)
+                        node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32, timingFunction: alpha.isZero ? CAMediaTimingFunctionName.easeOut.rawValue : CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                     }
                     
                     if let inputNode = node as? ShareInputFieldNode, alpha.isZero {
@@ -460,13 +460,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
-        transition.updateFrame(node: self.actionsBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: bottomGridInset)))
+        transition.updateFrame(node: self.actionsBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: bottomGridInset)), beginWithCurrentState: true)
         
         transition.updateFrame(node: self.actionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - actionButtonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
         
-        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: inputHeight)))
+        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: inputHeight)), beginWithCurrentState: true)
         
-        transition.updateFrame(node: self.actionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.actionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)), beginWithCurrentState: true)
         
         let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
         

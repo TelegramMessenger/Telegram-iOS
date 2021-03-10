@@ -842,14 +842,7 @@ public final class ManagedAudioSession {
     
     private func updateOutputMode(_ outputMode: AudioSessionOutputMode) {
         if let (type, currentOutputMode) = self.currentTypeAndOutputMode, currentOutputMode != outputMode {
-            //self.currentTypeAndOutputMode = (type, outputMode)
-            do {
-                try self.setup(type: type, outputMode: outputMode, activateNow: true)
-                //try self.setupOutputMode(outputMode, type: type)
-                //try self.activate()
-            } catch let error {
-                print("ManagedAudioSession overrideOutputAudioPort error \(error)")
-            }
+            self.setup(type: type, outputMode: outputMode, activateNow: true)
         }
     }
     

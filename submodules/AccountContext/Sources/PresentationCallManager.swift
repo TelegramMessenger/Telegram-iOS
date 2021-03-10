@@ -328,6 +328,8 @@ public protocol PresentationGroupCall: class {
     func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
     
+    var inviteLinks: Signal<GroupCallInviteLinks?, NoError> { get }
+    
     var incomingVideoSources: Signal<[PeerId: UInt32], NoError> { get }
     
     func makeIncomingVideoView(source: UInt32, completion: @escaping (PresentationCallVideoView?) -> Void)

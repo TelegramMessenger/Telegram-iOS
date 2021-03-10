@@ -1812,6 +1812,40 @@ public struct phone {
         }
     
     }
+    public enum ExportedGroupCallInvite: TypeConstructorDescription {
+        case exportedGroupCallInvite(link: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .exportedGroupCallInvite(let link):
+                    if boxed {
+                        buffer.appendInt32(541839704)
+                    }
+                    serializeString(link, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedGroupCallInvite(let link):
+                return ("exportedGroupCallInvite", [("link", link)])
+    }
+    }
+    
+        public static func parse_exportedGroupCallInvite(_ reader: BufferReader) -> ExportedGroupCallInvite? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.phone.ExportedGroupCallInvite.exportedGroupCallInvite(link: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum PhoneCall: TypeConstructorDescription {
         case phoneCall(phoneCall: Api.PhoneCall, users: [Api.User])
     
@@ -7703,17 +7737,16 @@ public extension Api {
                     })
                 }
             
-                public static func inviteToGroupCall(flags: Int32, call: Api.InputGroupCall, users: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func inviteToGroupCall(call: Api.InputGroupCall, users: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-919505530)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(2067345760)
                     call.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "phone.inviteToGroupCall", parameters: [("flags", flags), ("call", call), ("users", users)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "phone.inviteToGroupCall", parameters: [("call", call), ("users", users)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -7866,6 +7899,21 @@ public extension Api {
                         var result: Api.phone.JoinAsPeers?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.phone.JoinAsPeers
+                        }
+                        return result
+                    })
+                }
+            
+                public static func exportGroupCallInvite(flags: Int32, call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.ExportedGroupCallInvite>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-425040769)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.exportGroupCallInvite", parameters: [("flags", flags), ("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.ExportedGroupCallInvite? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.ExportedGroupCallInvite?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.ExportedGroupCallInvite
                         }
                         return result
                     })

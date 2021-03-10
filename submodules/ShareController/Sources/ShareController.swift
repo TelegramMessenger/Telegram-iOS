@@ -357,7 +357,14 @@ public final class ShareController: ViewController {
         switch subject {
             case let .url(text):
                 self.defaultAction = ShareControllerAction(title: forcedActionTitle ?? self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
-                    UIPasteboard.general.string = text
+                    if let strongSelf = self, let segmentedValues = segmentedValues {
+                        let selectedValue = segmentedValues[strongSelf.controllerNode.selectedSegmentedIndex]
+                        if case let .url(text) = selectedValue.subject {
+                            UIPasteboard.general.string = text
+                        }
+                    } else {
+                        UIPasteboard.general.string = text
+                    }
                     self?.controllerNode.cancel?()
                     
                     self?.actionCompleted?()
@@ -499,7 +506,13 @@ public final class ShareController: ViewController {
             }
                         
             var shareSignals: [Signal<[MessageId?], NoError>] = []
-            switch strongSelf.subject {
+            var subject = strongSelf.subject
+            if let segmentedValues = strongSelf.segmentedValues {
+                let selectedValue = segmentedValues[strongSelf.controllerNode.selectedSegmentedIndex]
+                subject = selectedValue.subject
+            }
+            
+            switch subject {
             case let .url(url):
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
@@ -635,7 +648,12 @@ public final class ShareController: ViewController {
         self.controllerNode.shareExternal = { [weak self] in
             if let strongSelf = self {
                 var collectableItems: [CollectableExternalShareItem] = []
-                switch strongSelf.subject {
+                var subject = strongSelf.subject
+                if let segmentedValues = strongSelf.segmentedValues {
+                    let selectedValue = segmentedValues[strongSelf.controllerNode.selectedSegmentedIndex]
+                    subject = selectedValue.subject
+                }
+                switch subject {
                     case let .url(text):
                         collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", author: nil, timestamp: nil, mediaReference: nil))
                     case let .text(string):
