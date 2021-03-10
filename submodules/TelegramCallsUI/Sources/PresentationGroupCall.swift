@@ -146,6 +146,8 @@ public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCach
         
         private let queue: Queue
         private var contexts: [Int64: Record] = [:]
+
+        private let leaveDisposables = DisposableSet()
         
         init(queue: Queue) {
             self.queue = queue
@@ -180,6 +182,11 @@ public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCach
                     }
                 }
             })
+        }
+
+        public func leaveInBackground(account: Account, id: Int64, accessHash: Int64, source: UInt32) {
+            let disposable = leaveGroupCall(account: account, callId: id, accessHash: accessHash, source: source).start()
+            self.leaveDisposables.add(disposable)
         }
     }
     
@@ -923,7 +930,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             default:
                 break
             }
-            audioSessionControl.setup(synchronous: true)
+            audioSessionControl.setup(synchronous: false)
         }
         
         self.audioSessionShouldBeActive.set(true)
@@ -1412,7 +1419,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     |> switchToLatest
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] event in
-                    self?.memberEventsPipe.putNext(event)
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if event.peer.id == strongSelf.stateValue.myPeerId {
+                        return
+                    }
+                    strongSelf.memberEventsPipe.putNext(event)
                 }))
                 
                 if let isCurrentlyConnecting = self.isCurrentlyConnecting, isCurrentlyConnecting {
@@ -1601,18 +1614,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.markAsCanBeRemoved()
                 }))
             } else {
-                self.leaveDisposable.set((leaveGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, source: localSsrc)
-                |> deliverOnMainQueue).start(error: { [weak self] _ in
-                    guard let strongSelf = self else {
-                        return
+                if let contexts = self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl {
+                    let account = self.account
+                    let id = callInfo.id
+                    let accessHash = callInfo.accessHash
+                    let source = localSsrc
+                    contexts.impl.with { impl in
+                        impl.leaveInBackground(account: account, id: id, accessHash: accessHash, source: source)
                     }
-                    strongSelf.markAsCanBeRemoved()
-                }, completed: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.markAsCanBeRemoved()
-                }))
+                }
+                self.markAsCanBeRemoved()
             }
         } else {
             self.markAsCanBeRemoved()
