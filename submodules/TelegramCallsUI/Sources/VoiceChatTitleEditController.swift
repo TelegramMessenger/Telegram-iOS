@@ -162,8 +162,12 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
     }
     
     @objc func clearPressed() {
+        self.placeholderNode.isHidden = false
+        self.clearButton.isHidden = true
+        
         self.textInputNode.attributedText = nil
         self.deactivateInput()
+        self.updateHeight?()
     }
 }
 
@@ -424,7 +428,10 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
             return
         }
         dismissImpl?(true)
-        apply(contentNode.value)
+        
+        let previousValue = value ?? ""
+        let newValue = contentNode.value
+        apply(previousValue != newValue ? newValue : nil)
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)

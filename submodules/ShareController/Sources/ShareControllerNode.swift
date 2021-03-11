@@ -314,7 +314,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     let previousAlpha = node.alpha
                     node.alpha = alpha
                     if animated {
-                        node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32, timingFunction: alpha.isZero ? CAMediaTimingFunctionName.easeOut.rawValue : CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                        node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.08 : 0.32, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                     }
                     
                     if let inputNode = node as? ShareInputFieldNode, alpha.isZero {

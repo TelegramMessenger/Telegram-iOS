@@ -277,7 +277,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.currentPeer = view.peers[view.peerId]
                             strongSelf.currentGroupCallState = state
                             strongSelf.currentMembers = members
-                            
+                                
                             var isMuted = isMuted
                             if let state = state, let muteState = state.callState.muteState {
                                 if !muteState.canUnmute {
@@ -321,7 +321,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         var segments: [AnimatedCountLabelNode.Segment] = []
         
         if let presentationData = self.presentationData {
-            if let currentPeer = self.currentPeer {
+            if let voiceChatTitle = self.currentGroupCallState?.info?.title, !title.isEmpty {
+                title = voiceChatTitle
+            } else if let currentPeer = self.currentPeer {
                 title = currentPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             var membersCount: Int32?
