@@ -1199,6 +1199,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }, sendFile: nil,
                         sendSticker: nil,
                         requestMessageActionUrlAuth: nil,
+                        joinVoiceChat: nil,
                         present: { c, a in
                             self?.present(c, a)
                         }, dismissInput: {

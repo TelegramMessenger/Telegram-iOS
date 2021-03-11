@@ -169,13 +169,13 @@ public final class VoiceChatOverlayController: ViewController {
             
             if reclaim {
                 self.dismissed = true
-                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 175.0 / 2.0)
+                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 200.0 / 2.0)
                 if self.isSlidOffscreen {
                     self.isSlidOffscreen = false
                     self.isButtonHidden = true
                     actionButton.layer.sublayerTransform = CATransform3DIdentity
                     actionButton.update(snap: false, animated: false)
-                    actionButton.position = CGPoint(x: targetPosition.x, y: 175.0 / 2.0)
+                    actionButton.position = CGPoint(x: targetPosition.x, y: 200.0 / 2.0)
                     
                     leftButton.isHidden = false
                     rightButton.isHidden = false
@@ -191,7 +191,7 @@ public final class VoiceChatOverlayController: ViewController {
                     actionButton.layer.removeAllAnimations()
                     actionButton.layer.sublayerTransform = CATransform3DIdentity
                     actionButton.update(snap: false, animated: false)
-                    actionButton.position = CGPoint(x: targetPosition.x, y: 175.0 / 2.0)
+                    actionButton.position = CGPoint(x: targetPosition.x, y: 200.0 / 2.0)
                    
                     leftButton.isHidden = false
                     rightButton.isHidden = false

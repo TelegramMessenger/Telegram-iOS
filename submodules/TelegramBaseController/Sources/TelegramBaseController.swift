@@ -405,7 +405,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     }
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
-                        joinAsPeerId: nil,
+                        invite: nil,
                         activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title)
                     )
                 })
@@ -852,7 +852,73 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         })]
     }
     
-    open func joinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?, activeCall: CachedChannelData.ActiveCall) {
-        self.context.joinGroupCall(peerId: peerId, joinAsPeerId: joinAsPeerId, activeCall: activeCall)
+    open func joinGroupCall(peerId: PeerId, invite: String?, activeCall: CachedChannelData.ActiveCall) {
+        let context = self.context
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.context.joinGroupCall(peerId: peerId, invite: invite, requestJoinAsPeerId: { completion in
+            let currentAccountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId)
+            |> map { peer in
+                return [FoundPeer(peer: peer, subscribers: nil)]
+            }
+            let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
+                return transaction.getPeerCachedData(peerId: peerId)
+            }
+            
+            let _ = (combineLatest(currentAccountPeer, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId), cachedData)
+            |> map { currentAccountPeer, availablePeers, cachedData -> ([FoundPeer], CachedPeerData?) in
+                var result = currentAccountPeer
+                result.append(contentsOf: availablePeers)
+                return (result, cachedData)
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] peers, cachedData in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var defaultJoinAsPeerId: PeerId?
+                if let cachedData = cachedData as? CachedChannelData {
+                    defaultJoinAsPeerId = cachedData.callJoinPeerId
+                } else if let cachedData = cachedData as? CachedGroupData {
+                    defaultJoinAsPeerId = cachedData.callJoinPeerId
+                }
+                                
+                if peers.count == 1, let peer = peers.first {
+                    completion(peer.peer.id)
+                } else {
+                    if let defaultJoinAsPeerId = defaultJoinAsPeerId {
+                        completion(defaultJoinAsPeerId)
+                    } else {
+                        let controller = ActionSheetController(presentationData: presentationData)
+                        let dismissAction: () -> Void = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        
+                        var items: [ActionSheetItem] = []
+                        items.append(VoiceChatAccountHeaderActionSheetItem(title: presentationData.strings.VoiceChat_SelectAccount, text: presentationData.strings.VoiceChat_DisplayAsInfo))
+                        for peer in peers {
+                            var subtitle: String?
+                            if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
+                                subtitle = presentationData.strings.VoiceChat_PersonalAccount
+                            } else if let subscribers = peer.subscribers {
+                                subtitle = presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                            }
+                            
+                            items.append(VoiceChatPeerActionSheetItem(context: context, peer: peer.peer, title: peer.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
+                                dismissAction()
+                                completion(peer.peer.id)
+                            }))
+                        }
+                        
+                        controller.setItemGroups([
+                            ActionSheetItemGroup(items: items),
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                        ])
+                        strongSelf.present(controller, in: .window(.root))
+                    }
+                }
+            })
+        }, activeCall: activeCall)
     }
 }

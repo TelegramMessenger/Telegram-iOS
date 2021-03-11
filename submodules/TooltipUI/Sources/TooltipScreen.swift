@@ -297,7 +297,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         case let .point(rect, arrowPosition):
             let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.midX - backgroundWidth / 2.0, y: rect.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
                 case .right:
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.minX - backgroundWidth - bottomInset, y: rect.midY - backgroundHeight / 2.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
@@ -312,6 +312,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             if backgroundFrame.minY < layout.insets(options: .statusBar).top {
                 backgroundFrame.origin.y = rect.maxY + bottomInset
                 invertArrow = true
+            }
+            if case .top = arrowPosition, !invertArrow {
+                invertArrow = true
+                backgroundFrame.origin.y = rect.maxY + bottomInset
             }
             self.isArrowInverted = invertArrow
         case .top:
@@ -332,7 +336,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             let arrowFrame: CGRect
             
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     if invertArrow {
                         arrowFrame = CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: -arrowSize.height), size: arrowSize)
                     } else {
@@ -404,7 +408,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
            
             let startPoint: CGPoint
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
                     startPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
@@ -448,7 +452,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             
             let targetPoint: CGPoint
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
                     targetPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
@@ -484,8 +488,9 @@ public final class TooltipScreen: ViewController {
     }
     
     public enum ArrowPosition {
-        case bottom
+        case top
         case right
+        case bottom
     }
     
     public enum Location {

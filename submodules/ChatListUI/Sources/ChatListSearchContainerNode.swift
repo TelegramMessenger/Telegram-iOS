@@ -168,6 +168,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 }, sendFile: nil,
                 sendSticker: nil,
                 requestMessageActionUrlAuth: nil,
+                joinVoiceChat: nil,
                 present: { c, a in
                     present(c, a)
                 }, dismissInput: {

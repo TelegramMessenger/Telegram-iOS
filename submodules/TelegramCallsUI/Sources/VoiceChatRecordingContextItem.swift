@@ -36,31 +36,43 @@ final class VoiceChatRecordingContextItem: ContextMenuCustomItem {
 
 private let textFont = Font.regular(17.0)
 
-private class IconNode: ASDisplayNode {
+class VoiceChatRecordingIconNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private let dotNode: ASImageNode
     
-    override init() {
+    init(hasBackground: Bool) {
         let iconSize = 16.0 + (1.0 + UIScreenPixel) * 2.0
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.image = generateCircleImage(diameter: iconSize, lineWidth: 1.0 + UIScreenPixel, color: UIColor.white, backgroundColor: nil)
+        self.backgroundNode.isLayerBacked = true
         
         self.dotNode = ASImageNode()
         self.dotNode.displaysAsynchronously = false
         self.dotNode.displayWithoutProcessing = true
         self.dotNode.image = generateFilledCircleImage(diameter: 8.0, color: UIColor(rgb: 0xff3b30))
+        self.dotNode.isLayerBacked = true
         
         super.init()
         
-        self.addSubnode(self.backgroundNode)
+        self.isLayerBacked = true
+        
+        if hasBackground {
+            self.addSubnode(self.backgroundNode)
+        }
         self.addSubnode(self.dotNode)
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
+    override func didEnterHierarchy() {
+        self.setupAnimation()
+    }
+    
+    override func didExitHierarchy() {
+        self.dotNode.layer.removeAllAnimations()
+    }
+    
+    private func setupAnimation() {
         let animation = CAKeyframeAnimation(keyPath: "opacity")
         animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
         animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
@@ -89,7 +101,7 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
     private let highlightedBackgroundNode: ASDisplayNode
     private let textNode: ImmediateTextNode
     private let statusNode: ImmediateTextNode
-    private let iconNode: IconNode
+    private let iconNode: VoiceChatRecordingIconNode
     private let buttonNode: HighlightTrackingButtonNode
     
     private var timer: SwiftSignalKit.Timer?
@@ -132,7 +144,7 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
         self.buttonNode.isAccessibilityElement = true
         self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
         
-        self.iconNode = IconNode()
+        self.iconNode = VoiceChatRecordingIconNode(hasBackground: true)
         
         super.init()
         

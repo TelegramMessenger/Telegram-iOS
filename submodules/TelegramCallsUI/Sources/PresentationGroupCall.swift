@@ -351,6 +351,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var initialCall: CachedChannelData.ActiveCall?
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
+    private let invite: String?
     private var joinAsPeerId: PeerId
     
     public private(set) var isVideo: Bool
@@ -533,6 +534,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         initialCall: CachedChannelData.ActiveCall?,
         internalId: CallSessionInternalId,
         peerId: PeerId,
+        invite: String?,
         joinAsPeerId: PeerId?
     ) {
         self.account = accountContext.account
@@ -544,6 +546,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.initialCall = initialCall
         self.internalId = internalId
         self.peerId = peerId
+        self.invite = invite
         self.joinAsPeerId = joinAsPeerId ?? accountContext.account.peerId
         
         self.stateValue = PresentationGroupCallState.initialValue(myPeerId: self.joinAsPeerId, title: initialCall?.title)
@@ -1007,7 +1010,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         callId: callInfo.id,
                         accessHash: callInfo.accessHash,
                         preferMuted: true,
-                        joinPayload: joinPayload
+                        joinPayload: joinPayload,
+                        inviteHash: strongSelf.invite
                     )
                     |> deliverOnMainQueue).start(next: { joinCallResult in
                         guard let strongSelf = self else {

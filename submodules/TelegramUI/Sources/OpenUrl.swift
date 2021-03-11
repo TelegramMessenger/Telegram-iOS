@@ -214,7 +214,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 }, sendFile: nil,
                 sendSticker: nil,
                 requestMessageActionUrlAuth: nil,
-                present: { c, a in
+                joinVoiceChat: { peerId, invite, call in
+                    
+                }, present: { c, a in
                     context.sharedContext.applicationBindings.dismissNativeController()
                     
                     c.presentationArguments = a

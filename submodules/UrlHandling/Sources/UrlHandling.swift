@@ -340,7 +340,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                     return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
                             case let .voiceChat(invite):
-                                return .single(.peer(peer.id, .default))
+                                return .single(.joinVoiceChat(peer.id, invite))
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {

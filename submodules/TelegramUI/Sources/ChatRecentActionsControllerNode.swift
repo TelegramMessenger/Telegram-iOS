@@ -22,6 +22,7 @@ import LanguageLinkPreviewUI
 import PeerInfoUI
 import InviteLinksUI
 import UndoUI
+import TelegramCallsUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -893,6 +894,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }, sendFile: nil,
                         sendSticker: nil,
                         requestMessageActionUrlAuth: nil,
+                        joinVoiceChat: nil,
                         present: { c, a in
                             self?.presentController(c, a)
                         }, dismissInput: {
@@ -908,6 +910,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     #endif
                     case .settings:
                         break
+                    case let .joinVoiceChat(peerId, invite):
+                        strongSelf.presentController(VoiceChatJoinScreen(context: strongSelf.context, peerId: peerId, invite: invite, join: { call in
+                            
+                        }), nil)
                 }
             }
         }))
