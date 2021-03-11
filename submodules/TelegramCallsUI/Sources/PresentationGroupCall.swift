@@ -360,6 +360,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var internalState: InternalState = .requesting
     private let internalStatePromise = Promise<InternalState>(.requesting)
+    private var currentLocalSsrc: UInt32?
     
     private var callContext: OngoingGroupCallContext?
     private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
@@ -1003,6 +1004,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let strongSelf = self else {
                         return
                     }
+                    strongSelf.currentLocalSsrc = ssrc
                     strongSelf.requestDisposable.set((joinGroupCall(
                         account: strongSelf.account,
                         peerId: strongSelf.peerId,
@@ -1608,7 +1610,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError> {
-        if case let .established(callInfo, _, _, localSsrc, _) = self.internalState {
+        if let callInfo = self.internalState.callInfo, let localSsrc = self.currentLocalSsrc {
             if terminateIfPossible {
                 self.leaveDisposable.set((stopGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
