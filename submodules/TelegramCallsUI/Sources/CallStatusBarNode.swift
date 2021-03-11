@@ -322,7 +322,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         var displaySpeakerSubtitle = false
         
         if let presentationData = self.presentationData {
-            if let voiceChatTitle = self.currentGroupCallState?.info?.title, !title.isEmpty {
+            if let voiceChatTitle = self.currentGroupCallState?.info?.title, !voiceChatTitle.isEmpty {
                 title = voiceChatTitle
             } else if let currentPeer = self.currentPeer {
                 title = currentPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
