@@ -34,6 +34,8 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
     tulsi_build_command += ['--use_top_level_targets_for_symlinks']
     tulsi_build_command += ['--verbose_failures']
 
+    call_executable(tulsi_build_command)
+
     os.chdir(current_dir)
 
     bazel_wrapper_path = os.path.abspath('build-input/gen/project/bazel')

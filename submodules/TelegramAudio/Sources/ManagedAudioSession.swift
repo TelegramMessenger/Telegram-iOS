@@ -422,7 +422,7 @@ public final class ManagedAudioSession {
                     if let strongSelf = self {
                         for holder in strongSelf.holders {
                             if holder.id == id && holder.active {
-                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: false)
+                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: true)
                                 break
                             }
                         }
@@ -649,7 +649,17 @@ public final class ManagedAudioSession {
             try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
             try AVAudioSession.sharedInstance().setPreferredInput(nil)
         } catch let error {
-            print("ManagedAudioSession applyNone error \(error)")
+            print("ManagedAudioSession applyNone error \(error), waiting")
+
+            Thread.sleep(forTimeInterval: 2.0)
+
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+                try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                try AVAudioSession.sharedInstance().setPreferredInput(nil)
+            } catch let error {
+                print("ManagedAudioSession applyNone repeated error \(error), giving up")
+            }
         }
         
         if wasActive {
@@ -677,7 +687,7 @@ public final class ManagedAudioSession {
             do {
                 let nativeCategory = nativeCategoryForType(type, headphones: self.isHeadsetPluggedInValue, outputMode: outputMode)
                 
-                print("ManagedAudioSession setting category for \(type) (native: \(nativeCategory))")
+                print("ManagedAudioSession setting category for \(type) (native: \(nativeCategory)) activateNow: \(activateNow)")
                 var options: AVAudioSession.CategoryOptions = []
                 switch type {
                     case .play, .ambient:
@@ -841,7 +851,7 @@ public final class ManagedAudioSession {
     }
     
     private func updateOutputMode(_ outputMode: AudioSessionOutputMode) {
-        if let (type, currentOutputMode) = self.currentTypeAndOutputMode, currentOutputMode != outputMode {
+        if let (type, _) = self.currentTypeAndOutputMode {
             self.setup(type: type, outputMode: outputMode, activateNow: true)
         }
     }
