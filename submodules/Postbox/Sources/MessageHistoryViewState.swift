@@ -764,7 +764,7 @@ struct OrderedHistoryViewEntries {
         if self.lowerOrAtAnchor.count > 1 {
             for i in 1 ..< self.lowerOrAtAnchor.count {
                 if self.lowerOrAtAnchor[i].index < self.lowerOrAtAnchor[i - 1].index {
-                    assertionFailure()
+                    //assertionFailure()
                     break
                 }
             }
@@ -772,7 +772,7 @@ struct OrderedHistoryViewEntries {
         if self.higherThanAnchor.count > 1 {
             for i in 1 ..< self.higherThanAnchor.count {
                 if self.higherThanAnchor[i].index < self.higherThanAnchor[i - 1].index {
-                    assertionFailure()
+                    //assertionFailure()
                     break
                 }
             }
@@ -796,7 +796,7 @@ struct OrderedHistoryViewEntries {
             }
         }
         if fix {
-            assertionFailure()
+            //assertionFailure()
             self.lowerOrAtAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
             self.higherThanAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
         }
