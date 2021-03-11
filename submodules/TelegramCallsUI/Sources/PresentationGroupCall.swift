@@ -606,36 +606,37 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.audioSessionShouldBeActiveDisposable = (self.audioSessionShouldBeActive.get()
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self {
-                if value {
-                    if let audioSessionControl = strongSelf.audioSessionControl {
-                        //let audioSessionActive: Signal<Bool, NoError>
-                        if let callKitIntegration = strongSelf.callKitIntegration {
-                            _ = callKitIntegration.audioSessionActive
-                            |> filter { $0 }
-                            |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
-                                if let strongSelf = self, let _ = strongSelf.audioSessionControl {
-                                }
-                                subscriber.putNext(true)
-                                subscriber.putCompletion()
-                                return EmptyDisposable
-                            })
-                        } else {
-                            audioSessionControl.activate({ [weak self] _ in
-                                Queue.mainQueue().async {
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    strongSelf.audioSessionActive.set(.single(true))
-                                }
-                            })
-                        }
+            guard let strongSelf = self else {
+                return
+            }
+            if value {
+                if let audioSessionControl = strongSelf.audioSessionControl {
+                    //let audioSessionActive: Signal<Bool, NoError>
+                    if let callKitIntegration = strongSelf.callKitIntegration {
+                        _ = callKitIntegration.audioSessionActive
+                        |> filter { $0 }
+                        |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
+                            /*if let strongSelf = self, let _ = strongSelf.audioSessionControl {
+                            }*/
+                            subscriber.putNext(true)
+                            subscriber.putCompletion()
+                            return EmptyDisposable
+                        })
                     } else {
-                        strongSelf.audioSessionActive.set(.single(false))
+                        audioSessionControl.activate({ _ in
+                            Queue.mainQueue().async {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.audioSessionActive.set(.single(true))
+                            }
+                        })
                     }
                 } else {
                     strongSelf.audioSessionActive.set(.single(false))
                 }
+            } else {
+                strongSelf.audioSessionActive.set(.single(false))
             }
         })
         
@@ -1312,9 +1313,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 
                                 let _ = (strongSelf.accountContext.sharedContext.hasGroupCallOnScreen
                                 |> take(1)
-                                |> deliverOnMainQueue).start(next: { [weak self] hasGroupCallOnScreen in
+                                |> deliverOnMainQueue).start(next: { hasGroupCallOnScreen in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
                                     let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
-                                    if hasGroupCallOnScreen, let groupCallController = self?.accountContext.sharedContext.currentGroupCallController {
+                                    if hasGroupCallOnScreen, let groupCallController = strongSelf.accountContext.sharedContext.currentGroupCallController {
                                         var animateInAsReplacement = false
                                         groupCallController.forEachController { c in
                                             if let c = c as? UndoOverlayController {
