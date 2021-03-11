@@ -631,6 +631,7 @@ public final class VoiceChatController: ViewController {
         private let topPanelEdgeNode: ASDisplayNode
         private let topPanelBackgroundNode: ASDisplayNode
         private let optionsButton: VoiceChatHeaderButton
+        private var optionsButtonIsAvatar = false
         private let closeButton: VoiceChatHeaderButton
         private let topCornersNode: ASImageNode
         fileprivate let bottomPanelNode: ASDisplayNode
@@ -755,9 +756,8 @@ public final class VoiceChatController: ViewController {
                 self.topPanelEdgeNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
             }
             
-            self.optionsButton = VoiceChatHeaderButton(context: context)
-            self.optionsButton.setContent(.image(optionsButtonImage(dark: false)))
-            self.closeButton = VoiceChatHeaderButton(context: context)
+            self.optionsButton = VoiceChatHeaderButton(context: self.context)
+            self.closeButton = VoiceChatHeaderButton(context: self.context)
             self.closeButton.setContent(.image(closeButtonImage(dark: false)))
             
             self.titleNode = VoiceChatControllerTitleNode(theme: self.presentationData.theme)
@@ -864,8 +864,7 @@ public final class VoiceChatController: ViewController {
                     return transaction.getPeer(groupPeerId)
                 }
                 
-                
-                let _ = combineLatest(queue: Queue.mainQueue(), groupPeer, inviteLinksPromise.get()).start(next: { groupPeer, inviteLinks in
+                let _ = combineLatest(queue: Queue.mainQueue(), groupPeer, inviteLinksPromise.get() |> take(1)).start(next: { groupPeer, inviteLinks in
                     guard let strongSelf = self else {
                         return
                     }
@@ -873,14 +872,16 @@ public final class VoiceChatController: ViewController {
                         return
                     }
                     
-                    if let groupPeer = groupPeer as? TelegramChannel, let inviteLinks = inviteLinks {
+                    if let groupPeer = groupPeer as? TelegramChannel {
                         var canInvite = true
                         if case .broadcast = groupPeer.info, !(groupPeer.addressName?.isEmpty ?? true) {
                             canInvite = false
                         }
                         
                         if !canInvite {
-                            strongSelf.presentShare(inviteLinks)
+                            if let inviteLinks = inviteLinks {
+                                strongSelf.presentShare(inviteLinks)
+                            }
                             return
                         }
                     }
@@ -920,7 +921,7 @@ public final class VoiceChatController: ViewController {
                             }
                         } else {
                             let text: String
-                            if let peer = groupPeer as? TelegramChannel, case .broadcast = peer.info {
+                            if let groupPeer = groupPeer as? TelegramChannel, case .broadcast = groupPeer.info {
                                 text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToChannelFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0
                             } else {
                                 text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0
@@ -1353,12 +1354,13 @@ public final class VoiceChatController: ViewController {
             self.memberStatesDisposable = (combineLatest(queue: .mainQueue(),
                 self.call.state,
                 self.call.members,
-                invitedPeers
+                invitedPeers,
+                displayAsPeersPromise.get()
             )
             |> mapToThrottled { values in
                 return .single(values)
                 |> then(.complete() |> delay(0.1, queue: Queue.mainQueue()))
-            }).start(next: { [weak self] state, callMembers, invitedPeers in
+            }).start(next: { [weak self] state, callMembers, invitedPeers, displayAsPeers in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1382,6 +1384,16 @@ public final class VoiceChatController: ViewController {
                 strongSelf.currentSubtitle = subtitle
                 
                 if let callState = strongSelf.callState, callState.canManageCall {
+                    strongSelf.optionsButtonIsAvatar = false
+                    strongSelf.optionsButton.isUserInteractionEnabled = true
+                    strongSelf.optionsButton.alpha = 1.0
+                } else if displayAsPeers.count > 1 {
+                    strongSelf.optionsButtonIsAvatar = true
+                    for peer in displayAsPeers {
+                        if peer.peer.id == state.myPeerId {
+                            strongSelf.optionsButton.setContent(.avatar(peer.peer))
+                        }
+                    }
                     strongSelf.optionsButton.isUserInteractionEnabled = true
                     strongSelf.optionsButton.alpha = 1.0
                 } else {
@@ -1496,6 +1508,8 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 
+                let canManageCall = !strongSelf.optionsButtonIsAvatar
+                
                 let myPeerId = strongSelf.callState?.myPeerId
                 let darkTheme = strongSelf.darkTheme
                 
@@ -1559,14 +1573,16 @@ public final class VoiceChatController: ViewController {
                                 items.append(.separator)
                             }
                         }
-                        items.append(.separator)
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { (c, _) in
-                            if let mainItems = mainItemsImpl {
-                                c.setItems(mainItems())
-                            }
-                        })))
+                        if canManageCall {
+                            items.append(.separator)
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { (c, _) in
+                                if let mainItems = mainItemsImpl {
+                                    c.setItems(mainItems())
+                                }
+                            })))
+                        }
                         return items
                     }
                 }
@@ -1742,7 +1758,14 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: strongSelf.optionsButton.referenceNode)), items: mainItemsImpl?() ?? .single([]), reactionItems: [], gesture: gesture)
+                let items: Signal<[ContextMenuItem], NoError>
+                if canManageCall {
+                    items = mainItemsImpl?() ?? .single([])
+                } else {
+                    items = displayAsItems()
+                }
+                
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: strongSelf.optionsButton.referenceNode)), items: items, reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
             
@@ -2318,7 +2341,9 @@ public final class VoiceChatController: ViewController {
             }
             self.bottomCornersNode.image = cornersImage(top: false, bottom: true, dark: isFullscreen)
 
-            self.optionsButton.setContent(.image(optionsButtonImage(dark: isFullscreen)), animated: transition.isAnimated)
+            if !self.optionsButtonIsAvatar {
+                self.optionsButton.setContent(.image(optionsButtonImage(dark: isFullscreen)), animated: transition.isAnimated)
+            }
             self.closeButton.setContent(.image(closeButtonImage(dark: isFullscreen)), animated: transition.isAnimated)
             
             self.updateTitle(transition: transition)
@@ -2816,7 +2841,7 @@ public final class VoiceChatController: ViewController {
                 
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
-                if member.raiseHandRating != nil || member.hasRaiseHand {
+                if member.hasRaiseHand && !(member.muteState?.canUnmute ?? false) {
                     memberState = .raisedHand
                     memberMuteState = member.muteState
                 } else if member.peer.id == self.callState?.myPeerId {
