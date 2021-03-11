@@ -556,6 +556,16 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                     }
                     
                     return account.postbox.transaction { transaction -> JoinGroupCallResult in
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                            if let cachedData = cachedData as? CachedChannelData {
+                                return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            } else if let cachedData = cachedData as? CachedGroupData {
+                                return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            } else {
+                                return cachedData
+                            }
+                        })
+                        
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })

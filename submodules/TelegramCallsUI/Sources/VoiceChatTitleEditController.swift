@@ -15,6 +15,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
     private let backgroundNode: ASImageNode
     private let textInputNode: EditableTextNode
     private let placeholderNode: ASTextNode
+    private let clearButton: HighlightableButtonNode
     
     var updateHeight: (() -> Void)?
     var complete: (() -> Void)?
@@ -30,6 +31,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         set {
             self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputTextColor)
             self.placeholderNode.isHidden = !newValue.isEmpty
+            self.clearButton.isHidden = newValue.isEmpty
         }
     }
     
@@ -65,6 +67,13 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         
+        self.clearButton = HighlightableButtonNode()
+        self.clearButton.imageNode.displaysAsynchronously = false
+        self.clearButton.imageNode.displayWithoutProcessing = true
+        self.clearButton.displaysAsynchronously = false
+        self.clearButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.actionSheet.inputClearButtonColor), for: [])
+        self.clearButton.isHidden = true
+        
         super.init()
         
         self.textInputNode.delegate = self
@@ -72,6 +81,9 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.textInputNode)
         self.addSubnode(self.placeholderNode)
+        self.addSubnode(self.clearButton)
+        
+        self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
     }
     
     func updateTheme(_ theme: PresentationTheme) {
@@ -81,6 +93,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.textInputNode.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         self.textInputNode.tintColor = self.theme.actionSheet.controlAccentColor
+        self.clearButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.actionSheet.inputClearButtonColor), for: [])
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -96,7 +109,11 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         let placeholderSize = self.placeholderNode.measure(backgroundFrame.size)
         transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
         
-        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right, height: backgroundFrame.size.height)))
+        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 20.0, height: backgroundFrame.size.height)))
+        
+        if let image = self.clearButton.image(for: []) {
+            transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 8.0 - image.size.width, y: backgroundFrame.minY + floor((backgroundFrame.size.height - image.size.height) / 2.0)), size: image.size))
+        }
         
         return panelHeight
     }
@@ -113,6 +130,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.updateTextNodeText(animated: true)
         self.textChanged?(editableTextNode.textView.text)
         self.placeholderNode.isHidden = !(editableTextNode.textView.text ?? "").isEmpty
+        self.clearButton.isHidden = !self.placeholderNode.isHidden
     }
     
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
@@ -127,7 +145,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         let backgroundInsets = self.backgroundInsets
         let inputInsets = self.inputInsets
         
-        let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right, height: CGFloat.greatestFiniteMagnitude)).height))
+        let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right - 20.0, height: CGFloat.greatestFiniteMagnitude)).height))
         
         return min(61.0, max(33.0, unboundTextFieldHeight))
     }

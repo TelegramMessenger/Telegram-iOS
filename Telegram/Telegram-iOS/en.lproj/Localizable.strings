@@ -6258,3 +6258,4 @@ Sorry for the inconvenience.";
 
 "VoiceChat.MutedByAdmin" = "Muted by Admin";
 "VoiceChat.MutedByAdminHelp" = "Tap if you want to speak";
+"Invitation.JoinVoiceChat" = "Join Voice Chat";

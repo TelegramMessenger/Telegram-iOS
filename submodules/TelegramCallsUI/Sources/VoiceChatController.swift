@@ -23,13 +23,14 @@ import PresentationDataUtils
 import DirectionalPanGesture
 import PeerInfoUI
 import AvatarNode
+import TooltipUI
 
 private let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 private let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
 private let fullscreenBackgroundColor = UIColor(rgb: 0x000000)
 private let dimColor = UIColor(white: 0.0, alpha: 0.5)
 private let sideButtonSize = CGSize(width: 56.0, height: 56.0)
-private let bottomAreaHeight: CGFloat = 175.0
+private let bottomAreaHeight: CGFloat = 200.0
 
 private func cornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
@@ -63,6 +64,15 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
     
     private let titleNode: ASTextNode
     private let infoNode: ASTextNode
+    fileprivate let recordingIconNode: VoiceChatRecordingIconNode
+    
+    public var isRecording: Bool = false {
+        didSet {
+            self.recordingIconNode.isHidden = !self.isRecording
+        }
+    }
+    
+    var tapped: (() -> Void)?
     
     init(theme: PresentationTheme) {
         self.theme = theme
@@ -79,14 +89,27 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         self.infoNode.truncationMode = .byTruncatingTail
         self.infoNode.isOpaque = false
         
+        self.recordingIconNode = VoiceChatRecordingIconNode(hasBackground: false)
+        
         super.init()
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.infoNode)
+        self.addSubnode(self.recordingIconNode)
     }
-    
+        
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
+    }
+    
+    @objc private func tap() {
+        self.tapped?()
     }
     
     func update(size: CGSize, title: String, subtitle: String, transition: ContainedViewLayoutTransition) {
@@ -116,8 +139,13 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         
         let combinedHeight = titleSize.height + infoSize.height + titleInfoSpacing
         
-        self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+        self.titleNode.frame = titleFrame
         self.infoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - infoSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: infoSize)
+        
+        let iconSide = 16.0 + (1.0 + UIScreenPixel) * 2.0
+        let iconSize: CGSize = CGSize(width: iconSide, height: iconSide)
+        self.recordingIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 1.0, y: titleFrame.minY + 1.0), size: iconSize)
     }
 }
 
@@ -733,7 +761,6 @@ public final class VoiceChatController: ViewController {
             self.closeButton.setContent(.image(closeButtonImage(dark: false)))
             
             self.titleNode = VoiceChatControllerTitleNode(theme: self.presentationData.theme)
-            self.titleNode.isUserInteractionEnabled = false
             
             self.topCornersNode = ASImageNode()
             self.topCornersNode.displaysAsynchronously = false
@@ -792,6 +819,10 @@ public final class VoiceChatController: ViewController {
             let displayAsPeersPromise = Promise<[FoundPeer]>([])
             displayAsPeersPromise.set(displayAsPeers)
             
+            let inviteLinksPromise = Promise<GroupCallInviteLinks?>(nil)
+            inviteLinksPromise.set(.single(nil)
+            |> then(call.inviteLinks))
+            
             self.itemInteraction = Interaction(updateIsMuted: { [weak self] peerId, isMuted in
                 let _ = self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
             }, openPeer: { [weak self] peerId in
@@ -829,15 +860,29 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 let groupPeerId = strongSelf.call.peerId
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
+                let groupPeer = strongSelf.context.account.postbox.transaction { transaction -> Peer? in
                     return transaction.getPeer(groupPeerId)
                 }
-                |> deliverOnMainQueue).start(next: { groupPeer in
+                
+                
+                let _ = combineLatest(queue: Queue.mainQueue(), groupPeer, inviteLinksPromise.get()).start(next: { groupPeer, inviteLinks in
                     guard let strongSelf = self else {
                         return
                     }
                     guard let groupPeer = groupPeer else {
                         return
+                    }
+                    
+                    if let groupPeer = groupPeer as? TelegramChannel, let inviteLinks = inviteLinks {
+                        var canInvite = true
+                        if case .broadcast = groupPeer.info, !(groupPeer.addressName?.isEmpty ?? true) {
+                            canInvite = false
+                        }
+                        
+                        if !canInvite {
+                            strongSelf.presentShare(inviteLinks)
+                            return
+                        }
                     }
                     
                     var filters: [ChannelMembersSearchFilter] = []
@@ -1350,23 +1395,23 @@ public final class VoiceChatController: ViewController {
             })
             
             
-            let title: Signal<String?, NoError> = self.call.state
-            |> map { state -> String? in
-                return state.title
+            let titleAndRecording: Signal<(String?, Bool), NoError> = self.call.state
+            |> map { state -> (String?, Bool) in
+                return (state.title, state.recordingStartTimestamp != nil)
             }
-            self.peerViewDisposable = combineLatest(queue: Queue.mainQueue(), self.context.account.viewTracker.peerView(self.call.peerId), title).start(next: { [weak self] view, title in
+            self.peerViewDisposable = combineLatest(queue: Queue.mainQueue(), self.context.account.viewTracker.peerView(self.call.peerId), titleAndRecording).start(next: { [weak self] view, titleAndRecording in
                 guard let strongSelf = self else {
                     return
                 }
-                    
+                
+                let (title, isRecording) = titleAndRecording
                 if let peer = peerViewMainPeer(view) {
                     strongSelf.peer = peer
                     strongSelf.currentTitleIsCustom = title != nil
                     strongSelf.currentTitle = title ?? peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
                     
-                    if strongSelf.didSetDataReady {
-                        strongSelf.updateTitle(transition: .immediate)
-                    }
+                    strongSelf.updateTitle(transition: .immediate)
+                    strongSelf.titleNode.isRecording = isRecording
                 }
                 if !strongSelf.didSetDataReady {
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
@@ -1444,10 +1489,6 @@ public final class VoiceChatController: ViewController {
             self.audioOutputNode.addTarget(self, action: #selector(self.audioOutputPressed), forControlEvents: .touchUpInside)
             
             self.cameraButtonNode.addTarget(self, action: #selector(self.cameraPressed), forControlEvents: .touchUpInside)
-            
-            let inviteLinksPromise = Promise<GroupCallInviteLinks?>(nil)
-            inviteLinksPromise.set(.single(nil)
-            |> then(call.inviteLinks))
             
             let avatarSize = CGSize(width: 28.0, height: 28.0)
             self.optionsButton.contextAction = { [weak self] sourceNode, gesture in
@@ -1629,38 +1670,7 @@ public final class VoiceChatController: ViewController {
                             }, action: { [weak self] _, f in
                                 f(.default)
                               
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                
-                                let formatSendTitle: (String) -> String = { string in
-                                    var string = string
-                                    if string.contains("[") && string.contains("]") {
-                                        if let startIndex = string.firstIndex(of: "["), let endIndex = string.firstIndex(of: "]") {
-                                            string.removeSubrange(startIndex ... endIndex)
-                                        }
-                                    } else {
-                                        string = string.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
-                                    }
-                                    return string
-                                }
-                                
-                                var segmentedValues: [ShareControllerSegmentedValue]?
-                                if let speakerLink = inviteLinks.speakerLink {
-                                    segmentedValues = [ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
-                                        return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
-                                    }), ShareControllerSegmentedValue(title: strongSelf.presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
-                                        return formatSendTitle(strongSelf.presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
-                                    })]
-                                }
-                                let shareController = ShareController(context: strongSelf.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink)
-                                shareController.actionCompleted = { [weak self] in
-                                    if let strongSelf = self {
-                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                        strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                                    }
-                                }
-                                strongSelf.controller?.present(shareController, in: .window(.root))
+                                self?.presentShare(inviteLinks)
                             })))
                         }
                         
@@ -1858,6 +1868,15 @@ public final class VoiceChatController: ViewController {
                 }
             }))
             
+            self.titleNode.tapped = { [weak self] in
+                if let strongSelf = self, !strongSelf.titleNode.recordingIconNode.isHidden {
+                    let location = strongSelf.titleNode.recordingIconNode.convert(strongSelf.titleNode.recordingIconNode.bounds, to: nil)
+                    strongSelf.controller?.present(TooltipScreen(text: presentationData.strings.VoiceChat_RecordingInProgress, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                        return .dismiss(consume: false)
+                    }), in: .window(.root))
+                }
+            }
+            
             //self.isFullscreen = true
             //self.isExpanded = true
         }
@@ -1935,6 +1954,37 @@ public final class VoiceChatController: ViewController {
                 return true
             }
             self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: action), in: .current)
+        }
+        
+        private func presentShare(_ inviteLinks: GroupCallInviteLinks) {
+            let formatSendTitle: (String) -> String = { string in
+                var string = string
+                if string.contains("[") && string.contains("]") {
+                    if let startIndex = string.firstIndex(of: "["), let endIndex = string.firstIndex(of: "]") {
+                        string.removeSubrange(startIndex ... endIndex)
+                    }
+                } else {
+                    string = string.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
+                }
+                return string
+            }
+            
+            var segmentedValues: [ShareControllerSegmentedValue]?
+            if let speakerLink = inviteLinks.speakerLink {
+                segmentedValues = [ShareControllerSegmentedValue(title: self.presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: self.presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
+                    return formatSendTitle(self.presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
+                }), ShareControllerSegmentedValue(title: self.presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: self.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
+                    return formatSendTitle(self.presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
+                })]
+            }
+            let shareController = ShareController(context: self.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: self.darkTheme, forcedActionTitle: self.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink)
+            shareController.actionCompleted = { [weak self] in
+                if let strongSelf = self {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                }
+            }
+            self.controller?.present(shareController, in: .window(.root))
         }
         
         private var pressTimer: SwiftSignalKit.Timer?
