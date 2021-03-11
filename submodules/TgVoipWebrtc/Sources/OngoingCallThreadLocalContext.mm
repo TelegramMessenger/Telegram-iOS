@@ -7,6 +7,7 @@
 #import "Instance.h"
 #import "InstanceImpl.h"
 #import "reference/InstanceImplReference.h"
+#include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
 
@@ -158,7 +159,7 @@
         if (keepLandscape) {
             resolvedId += std::string(":landscape");
         }
-        _interface = tgcalls::VideoCaptureInterface::Create(resolvedId);
+        _interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), resolvedId);
     }
     return self;
 }
@@ -863,6 +864,7 @@ private:
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
+            .threads = tgcalls::StaticThreads::getThreads(),
             .networkStateUpdated = [weakSelf, queue, networkStateUpdated](tgcalls::GroupNetworkState networkState) {
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
