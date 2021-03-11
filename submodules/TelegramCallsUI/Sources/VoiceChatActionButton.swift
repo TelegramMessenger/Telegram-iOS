@@ -6,6 +6,7 @@ import SwiftSignalKit
 import LegacyComponents
 import AnimationUI
 import AppBundle
+import ManagedAnimationNode
 
 private let titleFont = Font.regular(15.0)
 private let subtitleFont = Font.regular(13.0)
@@ -46,8 +47,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     let bottomNode: ASDisplayNode
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
-    private let iconNode: VoiceChatMicrophoneNode
-    private let raiseHandNode: VoiceChatRaiseHandNode
+    private let iconNode: VoiceChatActionButtonIconNode
     private let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     
@@ -86,8 +86,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             if self.pressing {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
-                transition.updateTransformScale(node: self.raiseHandNode, scale: snap ? 0.5 : 0.9)
-                
+            
                 switch state {
                     case let .active(state):
                         switch state {
@@ -102,7 +101,6 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             } else {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                 transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
-                transition.updateTransformScale(node: self.raiseHandNode, scale: snap ? 0.5 : 1.0)
                 self.wasActiveWhenPressed = false
             }
         }
@@ -112,8 +110,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.bottomNode = ASDisplayNode()
         self.containerNode = ASDisplayNode()
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
-        self.iconNode = VoiceChatMicrophoneNode()
-        self.raiseHandNode = VoiceChatRaiseHandNode(color: nil)
+        self.iconNode = VoiceChatActionButtonIconNode()
         
         self.titleLabel = ImmediateTextNode()
         self.subtitleLabel = ImmediateTextNode()
@@ -127,7 +124,6 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.iconNode)
-        self.containerNode.addSubnode(self.raiseHandNode)
         
         self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
@@ -137,11 +133,9 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 if pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                     transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
-                    transition.updateTransformScale(node: strongSelf.raiseHandNode, scale: snap ? 0.5 : 0.9)
                 } else if !strongSelf.pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                     transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
-                    transition.updateTransformScale(node: strongSelf.raiseHandNode, scale: snap ? 0.5 : 1.0)
                 }
             }
         }
@@ -235,41 +229,39 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
-        let iconSize = CGSize(width: 68.0, height: 68.0)
+        let iconSize = CGSize(width: 100.0, height: 100.0)
         self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
         self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        
-        let raiseHandSize = CGSize(width: 68.0, height: 68.0)
-        self.raiseHandNode.bounds = CGRect(origin: CGPoint(), size: raiseHandSize)
-        self.raiseHandNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
     }
     
+    private var previousIcon: VoiceChatActionButtonIconAnimationState?
     private func applyIconParams() {
         guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
             return
         }
         
-        var iconMuted = true
-        var speakIcon = false
-        let iconColor: UIColor = UIColor(rgb: 0xffffff)
+        let icon: VoiceChatActionButtonIconAnimationState
         switch state {
             case let .active(state):
                 switch state {
                     case .on:
-                        iconMuted = false
+                        icon = .unmute
+                    case .muted:
+                        icon = .mute
                     case .cantSpeak:
-                        speakIcon = true
-                    default:
-                        break
+                        icon = .hand
                 }
             case .connecting:
-                break
+                if let previousIcon = previousIcon {
+                    icon = previousIcon
+                } else {
+                    icon = .mute
+                }
         }
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-        transition.updateAlpha(node: self.raiseHandNode, alpha: speakIcon ? 1.0 : 0.0)
-        transition.updateAlpha(node: self.iconNode, alpha: speakIcon ? 0.0 : 1.0)
+        self.previousIcon = icon
         
-        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, filled: true, color: iconColor), animated: true)
+        self.iconNode.enqueueState(icon)
+//        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, filled: true, color: iconColor), animated: true)
     }
     
     func update(snap: Bool, animated: Bool) {
@@ -336,7 +328,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     
     func playAnimation() {
-        self.raiseHandNode.playRandomAnimation()
+        self.iconNode.playRandomAnimation()
     }
 }
 
@@ -768,6 +760,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         growthAnimation.duration = 0.15
         growthAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeOut)
         growthAnimation.isRemovedOnCompletion = false
+        growthAnimation.fillMode = .forwards
         
         CATransaction.setCompletionBlock {
             self.animatingDisappearance = false
@@ -862,6 +855,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
                 self.foregroundCircleLayer.isHidden = false
+                self.foregroundCircleLayer.transform = CATransform3DMakeScale(1.0, 1.0, 1.0)
                 self.maskCircleLayer.isHidden = false
                 self.maskProgressLayer.isHidden = true
                 self.maskGradientLayer.isHidden = false
@@ -882,14 +876,18 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 CATransaction.begin()
                 let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
                 shrinkAnimation.fromValue = 1.0
-                shrinkAnimation.toValue = 0.0
+                shrinkAnimation.toValue = 0.00001
                 shrinkAnimation.duration = 0.15
                 shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+                shrinkAnimation.isRemovedOnCompletion = false
+                shrinkAnimation.fillMode = .forwards
                 
                 CATransaction.setCompletionBlock {
                     CATransaction.begin()
                     CATransaction.setDisableActions(true)
                     self.foregroundCircleLayer.isHidden = true
+                    self.foregroundCircleLayer.transform = CATransform3DMakeScale(0.0, 0.0, 1.0)
+                    self.foregroundCircleLayer.removeAllAnimations()
                     CATransaction.commit()
                 }
                 
@@ -906,6 +904,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     func updateAnimations() {
         if !self.isCurrentlyInHierarchy {
             self.foregroundGradientLayer.removeAllAnimations()
+            self.growingForegroundCircleLayer.removeAllAnimations()
             self.maskGradientLayer.removeAllAnimations()
             self.maskProgressLayer.removeAllAnimations()
             self.maskBlobView.stopAnimating()
@@ -1376,6 +1375,68 @@ final class BlobView: UIView {
         CATransaction.commit()
     }
 }
+
+enum VoiceChatActionButtonIconAnimationState: Equatable {
+    case unmute
+    case mute
+    case hand
+}
+
+final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
+    private var iconState: VoiceChatActionButtonIconAnimationState = .mute
+    
+    init() {
+        super.init(size: CGSize(width: 100.0, height: 100.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
+    }
+    
+    func enqueueState(_ state: VoiceChatActionButtonIconAnimationState) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .unmute:
+                switch state {
+                    case .mute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceMute")))
+                    case .hand:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandOn")))
+                    case .unmute:
+                        break
+                }
+            case .mute:
+                switch state {
+                    case .unmute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute")))
+                    case .hand:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandOn")))
+                    case .mute:
+                        break
+                }
+            case .hand:
+                switch state {
+                    case .mute, .unmute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandoff")))
+                    case .hand:
+                        break
+                }
+        }
+    }
+    
+    func playRandomAnimation() {
+        if case .hand = self.iconState {
+            if let animationName = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_5", "VoiceHand_6", "VoiceHand_7"].randomElement() {
+                self.trackTo(item: ManagedAnimationItem(source: .local(animationName)))
+            }
+        }
+    }
+}
+
 
 final class VoiceChatRaiseHandNode: ASDisplayNode {
     private let animationNode: AnimationNode

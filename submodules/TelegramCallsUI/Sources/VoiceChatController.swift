@@ -1623,13 +1623,15 @@ public final class VoiceChatController: ViewController {
                         let presentationData = strongSelf.presentationData
                         var items: [ContextMenuItem] = []
                         
-                        for peer in peers {
-                            if peer.peer.id == myPeerId {
-                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { c, _ in
-                                    c.setItems(displayAsItems())
-                                })))
-                                items.append(.separator)
-                                break
+                        if peers.count > 1 {
+                            for peer in peers {
+                                if peer.peer.id == myPeerId {
+                                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { c, _ in
+                                        c.setItems(displayAsItems())
+                                    })))
+                                    items.append(.separator)
+                                    break
+                                }
                             }
                         }
                         
