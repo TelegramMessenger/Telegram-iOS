@@ -216,7 +216,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         transition.updateSublayerTransformScale(node: strongSelf.buttonsContainer, scale: 0.1)
                         
                         if let theme = strongSelf.theme {
-                            strongSelf.activityIndicator.transitionToState(.progress(color: theme.chat.inputPanel.panelControlAccentColor, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {
+                            strongSelf.activityIndicator.transitionToState(.progress(color: theme.chat.inputPanel.panelControlAccentColor, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true), animated: false, completion: {
                             })
                         }
                     }

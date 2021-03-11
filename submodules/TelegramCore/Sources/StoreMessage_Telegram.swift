@@ -8,7 +8,11 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     var isSecret = false
     var isUnconsumedPersonalMention = false
     for attribute in attributes {
-        if let timerAttribute = attribute as? AutoremoveTimeoutMessageAttribute {
+        if let timerAttribute = attribute as? AutoclearTimeoutMessageAttribute {
+            if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
+                isSecret = true
+            }
+        } else if let timerAttribute = attribute as? AutoremoveTimeoutMessageAttribute {
             if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
                 isSecret = true
             }
@@ -116,16 +120,20 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
         case let .message(message):
             let chatPeerId = message.peerId
             return chatPeerId.peerId
-        case .messageEmpty:
-            return nil
-        case let .messageService(flags, _, fromId, chatPeerId, _, _, _):
+        case let .messageEmpty(_, _, peerId):
+            if let peerId = peerId {
+                return peerId.peerId
+            } else {
+                return nil
+            }
+        case let .messageService(_, _, _, chatPeerId, _, _, _, _):
             return chatPeerId.peerId
     }
 }
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
@@ -177,7 +185,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             return result
         case .messageEmpty:
             return []
-        case let .messageService(flags, _, fromId, chatPeerId, _, _, action):
+        case let .messageService(_, _, fromId, chatPeerId, _, _, action, _):
             let peerId: PeerId = chatPeerId.peerId
             var result = [peerId]
             
@@ -188,7 +196,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall:
+                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -221,7 +229,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(_, _, _, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, _, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if let replyTo = replyTo {
                 let peerId: PeerId = chatPeerId.peerId
                 
@@ -232,7 +240,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
             }
         case .messageEmpty:
             break
-        case let .messageService(_, _, _, chatPeerId, replyHeader, _, _):
+        case let .messageService(_, _, _, chatPeerId, replyHeader, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
                 case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
@@ -367,7 +375,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason, ttlPeriod):
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
                 
                 let peerId: PeerId
@@ -410,7 +418,13 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                        case let .messageFwdHeader(flags, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                            var forwardInfoFlags: MessageForwardInfo.Flags = []
+                            let isImported = (flags & (1 << 7)) != 0
+                            if isImported {
+                                forwardInfoFlags.insert(.isImported)
+                            }
+                            
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -444,11 +458,11 @@ extension StoreMessage {
                             }
                         
                             if let authorId = authorId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             } else if let sourceId = sourceId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             } else if let postAuthor = postAuthor ?? fromName {
-                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
+                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             }
                     }
                 }
@@ -464,11 +478,15 @@ extension StoreMessage {
                         medias.append(mediaValue)
                     
                         if let expirationTimer = expirationTimer, expirationTimer > 0 {
-                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                            attributes.append(AutoclearTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                             
                             consumableContent = (true, false)
                         }
                     }
+                }
+                
+                if let ttlPeriod = ttlPeriod {
+                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttlPeriod, countdownBeginTime: date))
                 }
                 
                 if let postAuthor = postAuthor {
@@ -602,7 +620,7 @@ extension StoreMessage {
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
-            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action):
+            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action, ttlPeriod):
                 let peerId: PeerId = chatPeerId.peerId
                 let authorId: PeerId? = fromId?.peerId ?? chatPeerId.peerId
                 
@@ -653,6 +671,10 @@ extension StoreMessage {
                 var media: [Media] = []
                 if let action = telegramMediaActionFromApiAction(action) {
                     media.append(action)
+                }
+                
+                if let ttlPeriod = ttlPeriod {
+                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttlPeriod, countdownBeginTime: date))
                 }
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil, isPinned: false)

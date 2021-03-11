@@ -121,11 +121,7 @@ private func logoutOptionsEntries(presentationData: PresentationData, canAddAcco
     entries.append(.changePhoneNumber(presentationData.theme, presentationData.strings.LogoutOptions_ChangePhoneNumberTitle, presentationData.strings.LogoutOptions_ChangePhoneNumberText))
     entries.append(.contactSupport(presentationData.theme, presentationData.strings.LogoutOptions_ContactSupportTitle, presentationData.strings.LogoutOptions_ContactSupportText))
     entries.append(.logout(presentationData.theme, presentationData.strings.LogoutOptions_LogOut))
-    if hasWallets {
-        entries.append(.logoutInfo(presentationData.theme, presentationData.strings.LogoutOptions_LogOutWalletInfo))
-    } else {
-        entries.append(.logoutInfo(presentationData.theme, presentationData.strings.LogoutOptions_LogOutInfo))
-    }
+    entries.append(.logoutInfo(presentationData.theme, presentationData.strings.LogoutOptions_LogOutInfo))
     return entries
 }
 
@@ -184,7 +180,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 dismissImpl?()
                 
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
-                }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
+                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {}, contentContext: nil)
             })

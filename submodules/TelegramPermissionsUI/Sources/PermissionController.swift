@@ -30,6 +30,7 @@ public final class PermissionController: ViewController {
     private var skip: (() -> Void)?
     public var proceed: ((Bool) -> Void)?
     
+    
     public init(context: AccountContext, splashScreen: Bool = true, splitTest: PermissionUISplitTest? = nil) {
         self.context = context
         self.splitTest = splitTest
@@ -207,7 +208,10 @@ public final class PermissionController: ViewController {
                         }
                     }
             }
-        } else {
+        } else if case let .custom(icon, _, _, _, _, _, _) = state {
+            if case .animation = icon, case .modal = self.navigationPresentation {
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: ASDisplayNode())
+            }
             self.allow = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.proceed?(true)
@@ -228,6 +232,9 @@ public final class PermissionController: ViewController {
         self.controllerNode.allow = { [weak self] in
             self?.allow?()
         }
+        self.controllerNode.dismiss = { [weak self] in
+            self?.dismiss()
+        }
         self.controllerNode.openPrivacyPolicy = { [weak self] in
             if let strongSelf = self {
                 strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
@@ -235,8 +242,16 @@ public final class PermissionController: ViewController {
         }
     }
     
+    @objc private func cancelPressed() {
+        self.dismiss()
+    }
+    
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        if let state = self.state, case .custom(.animation, _, _, _, _, _, _) = state, layout.size.width <= 320.0 {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.splashScreen ? 0.0 : self.navigationHeight, transition: transition)
     }

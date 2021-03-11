@@ -13,6 +13,7 @@ import AccountContext
 import OverlayStatusController
 import PresentationDataUtils
 import TelegramCallsUI
+import UndoUI
 
 public enum MediaAccessoryPanelVisibility {
     case none
@@ -320,12 +321,20 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     availableGroupCall = .single(nil)
                 }
                 
+                let previousCurrentGroupCall = Atomic<PresentationGroupCall?>(value: nil)
                 self.currentGroupCallDisposable = combineLatest(queue: .mainQueue(), availableGroupCall, currentGroupCall).start(next: { [weak self] availableState, currentGroupCall in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    let panelData = currentGroupCall != nil ? nil : availableState
+                    let previousCurrentGroupCall = previousCurrentGroupCall.swap(currentGroupCall)
+                    
+                    let panelData: GroupCallPanelData?
+                    if previousCurrentGroupCall != nil && currentGroupCall == nil && availableState?.participantCount == 1 {
+                        panelData = nil
+                    } else {
+                        panelData = currentGroupCall != nil || availableState?.participantCount == 0 ? nil : availableState
+                    }
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
                     strongSelf.groupCallPanelData = panelData
@@ -663,6 +672,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 nextRate = .x2
                             case .x2:
                                 nextRate = .x1
+                            default:
+                                nextRate = .x1
                         }
                         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
                             return settings.withUpdatedVoicePlaybackRate(nextRate)
@@ -674,6 +685,33 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             return
                         }
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
+                        
+                        var hasTooltip = false
+                        strongSelf.forEachController({ controller in
+                            if let controller = controller as? UndoOverlayController {
+                                hasTooltip = true
+                                controller.dismissWithCommitAction()
+                            }
+                            return true
+                        })
+                        
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        let slowdown = baseRate == .x1
+                        strongSelf.present(
+                            UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .audioRate(
+                                    slowdown: slowdown,
+                                    text: slowdown ? presentationData.strings.Conversation_AudioRateTooltipNormal : presentationData.strings.Conversation_AudioRateTooltipSpeedUp
+                                ),
+                                elevatedLayout: false,
+                                animateInAsReplacement: hasTooltip,
+                                action: { action in
+                                    return true
+                                }
+                            ),
+                            in: .current
+                        )
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in
@@ -813,7 +851,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         })]
     }
     
-    private func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
+    open func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
         self.context.joinGroupCall(peerId: peerId, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
     }
 }

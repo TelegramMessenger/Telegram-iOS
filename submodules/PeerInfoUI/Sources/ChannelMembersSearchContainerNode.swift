@@ -321,7 +321,9 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.openPeer = openPeer
         self.mode = mode
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
+        
         self.forceTheme = forceTheme
         if let forceTheme = self.forceTheme {
             self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
@@ -329,7 +331,14 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.emptyQueryListNode = ListView()
+        self.emptyQueryListNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         
@@ -408,7 +417,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                         if case .searchAdmins = mode {
-                            return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: memberId, adminRights: TelegramChatAdminRights(flags: []), rank: nil)
+                            return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: memberId, adminRights: nil, rank: nil)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
                             }
@@ -941,7 +950,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                             peers[creator.id] = creator
                                         }
                                         peers[peer.id] = peer
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .groupSpecific), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
                                     case .member:
                                         var peers: [PeerId: Peer] = [:]
                                         peers[peer.id] = peer

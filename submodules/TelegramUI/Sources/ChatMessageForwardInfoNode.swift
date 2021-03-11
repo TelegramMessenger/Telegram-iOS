@@ -193,12 +193,19 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                     }
                 }
                 
-                if peer.isScam {
+                if peer.isFake {
                     switch type {
                         case let .bubble(incoming):
-                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, type: incoming ? .regular : .outgoing)
+                            currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme.theme, strings: presentationData.strings, type: incoming ? .regular : .outgoing)
                         case .standalone:
-                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, type: .service)
+                            currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme.theme, strings: presentationData.strings, type: .service)
+                    }
+                } else if peer.isScam {
+                    switch type {
+                        case let .bubble(incoming):
+                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, strings: presentationData.strings, type: incoming ? .regular : .outgoing)
+                        case .standalone:
+                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, strings: presentationData.strings, type: .service)
                     }
                 } else {
                     currentCredibilityIconImage = nil

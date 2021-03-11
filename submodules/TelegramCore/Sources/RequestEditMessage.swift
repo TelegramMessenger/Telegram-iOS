@@ -60,7 +60,7 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
     case let .update(media):
         let generateUploadSignal: (Bool) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? = { forceReupload in
             let augmentedMedia = augmentMediaWithReference(media)
-            return mediaContentToUpload(network: network, postbox: postbox, auxiliaryMethods: stateManager.auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveAttribute: nil, messageId: nil, attributes: [])
+            return mediaContentToUpload(network: network, postbox: postbox, auxiliaryMethods: stateManager.auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveMessageAttribute: nil, autoclearMessageAttribute: nil, messageId: nil, attributes: [])
         }
         if let uploadSignal = generateUploadSignal(forceReupload) {
             uploadedMedia = .single(.progress(0.027))
@@ -316,7 +316,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
                     transaction.updateMessage(messageId, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                         }
                         var updatedLocalTags = currentMessage.localTags
                         updatedLocalTags.remove(.OutgoingLiveLocation)

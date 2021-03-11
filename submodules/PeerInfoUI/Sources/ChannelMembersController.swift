@@ -13,6 +13,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import ItemListPeerItem
+import InviteLinksUI
 
 private final class ChannelMembersControllerArguments {
     let context: AccountContext
@@ -181,24 +182,24 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelMembersControllerArguments
         switch self {
-            case let .addMember(theme, text):
+            case let .addMember(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.addMember()
                 })
-            case let .inviteLink(theme, text):
+            case let .inviteLink(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.inviteViaLink()
                 })
-            case let .addMemberInfo(theme, text):
+            case let .addMemberInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, participant, editing, enabled):
+            case let .peerItem(_, _, strings, dateTimeFormat, nameDisplayOrder, participant, editing, enabled):
                 let text: ItemListPeerItemText
                 if let user = participant.peer as? TelegramUser, let _ = user.botInfo {
                     text = .text(strings.Bot_GenericBotStatus, .secondary)
                 } else {
                     text = .presence
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: participant.presences[participant.peer.id], text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: participant.presences[participant.peer.id], text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: participant.peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
                     arguments.openPeer(participant.peer)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -262,7 +263,7 @@ private struct ChannelMembersControllerState: Equatable {
     }
 }
 
-private func ChannelMembersControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
+private func channelMembersControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?, isGroup: Bool) -> [ChannelMembersEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
@@ -276,35 +277,16 @@ private func ChannelMembersControllerEntries(context: AccountContext, presentati
         }
         
         if canAddMember {
-            entries.append(.addMember(presentationData.theme, presentationData.strings.Channel_Members_AddMembers))
+            entries.append(.addMember(presentationData.theme, isGroup ? presentationData.strings.Group_Members_AddMembers : presentationData.strings.Channel_Members_AddMembers))
             if let peer = view.peers[view.peerId] as? TelegramChannel, peer.addressName == nil {
                 entries.append(.inviteLink(presentationData.theme, presentationData.strings.Channel_Members_InviteLink))
             }
-            entries.append(.addMemberInfo(presentationData.theme, presentationData.strings.Channel_Members_AddMembersHelp))
+            entries.append(.addMemberInfo(presentationData.theme, isGroup ? presentationData.strings.Group_Members_AddMembersHelp : presentationData.strings.Channel_Members_AddMembersHelp))
         }
 
         
         var index: Int32 = 0
         let sortedParticipants = participants
-        /*
-         participants.sorted(by: { lhs, rhs in
-         let lhsInvitedAt: Int32
-         switch lhs.participant {
-         case .creator:
-         lhsInvitedAt = Int32.min
-         case let .member(_, invitedAt, _, _):
-         lhsInvitedAt = invitedAt
-         }
-         let rhsInvitedAt: Int32
-         switch rhs.participant {
-         case .creator:
-         rhsInvitedAt = Int32.min
-         case let .member(_, invitedAt, _, _):
-         rhsInvitedAt = invitedAt
-         }
-         return lhsInvitedAt < rhsInvitedAt
-         })
-         */
         for participant in sortedParticipants {
             var editable = true
             var canEditMembers = false
@@ -340,6 +322,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissInputImpl: (() -> Void)?
+    
+    var getControllerImpl: (() -> ViewController?)?
     
     let actionsDisposable = DisposableSet()
     
@@ -386,27 +370,30 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                 }
             }).start(error: { [weak contactsController] error in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String
-                switch error {
-                    case .limitExceeded:
-                        text = presentationData.strings.Channel_ErrorAddTooMuch
-                    case .tooMuchJoined:
-                        text = presentationData.strings.Invite_ChannelsTooMuch
-                    case .generic:
-                        text = presentationData.strings.Login_UnknownError
-                    case .restricted:
-                        text = presentationData.strings.Channel_ErrorAddBlocked
-                    case .notMutualContact:
-                        text = presentationData.strings.GroupInfo_AddUserLeftError
-                    case let .bot(memberId):
-                        let _ = (context.account.postbox.transaction { transaction in
-                            return transaction.getPeer(peerId)
-                        }
-                        |> deliverOnMainQueue).start(next: { peer in
+                let _ = (context.account.postbox.transaction { transaction in
+                    return transaction.getPeer(peerId)
+                }
+                |> deliverOnMainQueue).start(next: { peer in
+                    let text: String
+                    switch error {
+                        case .limitExceeded:
+                            text = presentationData.strings.Channel_ErrorAddTooMuch
+                        case .tooMuchJoined:
+                            text = presentationData.strings.Invite_ChannelsTooMuch
+                        case .generic:
+                            text = presentationData.strings.Login_UnknownError
+                        case .restricted:
+                            text = presentationData.strings.Channel_ErrorAddBlocked
+                        case .notMutualContact:
+                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                text = presentationData.strings.Channel_AddUserLeftError
+                            } else {
+                                text = presentationData.strings.GroupInfo_AddUserLeftError
+                            }
+                        case let .bot(memberId):
                             guard let peer = peer as? TelegramChannel else {
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 contactsController?.dismiss()
-                                
                                 return
                             }
                             
@@ -423,15 +410,15 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                             }
                             
                             contactsController?.dismiss()
-                        })
-                        return
-                    case .botDoesntSupportGroups:
-                        text = presentationData.strings.Channel_BotDoesntSupportGroups
-                    case .tooMuchBots:
-                        text = presentationData.strings.Channel_TooMuchBots
-                }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                contactsController?.dismiss()
+                            return
+                        case .botDoesntSupportGroups:
+                            text = presentationData.strings.Channel_BotDoesntSupportGroups
+                        case .tooMuchBots:
+                            text = presentationData.strings.Channel_TooMuchBots
+                    }
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    contactsController?.dismiss()
+                })
             }))
             
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -461,7 +448,10 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
-        presentControllerImpl?(channelVisibilityController(context: context, peerId: peerId, mode: .privateLink, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        if let controller = getControllerImpl?() {
+            dismissInputImpl?()
+            presentControllerImpl?(InviteLinkInviteController(context: context, peerId: peerId, parentNavigationController: controller.navigationController as? NavigationController), nil)
+        }
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -476,6 +466,11 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var isGroup = true
+        if let peer = peerViewMainPeer(view) as? TelegramChannel, case .broadcast = peer.info {
+            isGroup = false
+        }
+        
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let peers = peers, !peers.isEmpty {
@@ -527,8 +522,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
         let previous = previousPeers
         previousPeers = peers
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ChannelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(isGroup ? presentationData.strings.Group_Members_Title : presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers, isGroup: isGroup), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
         
         return (controllerState, (listState, arguments))
     }
@@ -549,6 +544,9 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    getControllerImpl =  { [weak controller] in
+        return controller
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if let loadMoreControl = loadMoreControl, case let .known(value) = offset, value < 40.0 {

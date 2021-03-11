@@ -554,6 +554,16 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                 }
             }
+            
+            if let entry = self.currentEntry(), case let .wallpaper(wallpaper, _) = entry, case let .file(_, _, _, _, true, _, _, _ , settings) = wallpaper, let color = settings.color {
+                if self.patternPanelNode?.backgroundColors != nil, let snapshotView = self.patternPanelNode?.scrollNode.view.snapshotContentTree() {
+                    self.patternPanelNode?.view.addSubview(snapshotView)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false) { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    }
+                }
+                self.patternPanelNode?.backgroundColors = (UIColor(rgb: color), nil, nil)
+            }
         }
     }
     

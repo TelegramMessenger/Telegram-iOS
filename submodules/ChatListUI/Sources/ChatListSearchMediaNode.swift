@@ -234,7 +234,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                             switch status {
                             case let .Fetching(_, progress):
                                 let adjustedProgress = max(progress, 0.027)
-                                statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                                statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                             case .Local:
                                 statusState = .none
                             case .Remote:
@@ -636,9 +636,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
     }
-    
-    let shouldReceiveExpandProgressUpdates: Bool = false
-    
+        
     private let listDisposable = MetaDisposable()
     private var hiddenMediaDisposable: Disposable?
     private var mediaItems: [VisualMediaItem] = []

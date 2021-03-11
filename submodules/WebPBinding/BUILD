@@ -14,7 +14,7 @@ objc_library(
         "PublicHeaders",
     ],
     deps = [
-        "//submodules/webp:webp",
+        "//third-party/webp:webp",
     ],
     sdk_frameworks = [
         "Foundation",

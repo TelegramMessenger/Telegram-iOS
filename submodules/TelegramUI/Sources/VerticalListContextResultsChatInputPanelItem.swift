@@ -364,7 +364,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                                     
                                     switch status {
                                     case let .Fetching(_, progress):
-                                        state = RadialStatusNodeState.progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                                        state = RadialStatusNodeState.progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false, animateRotation: true)
                                     case .Remote:
                                         state = .download(statusForegroundColor)
                                     case .Local:

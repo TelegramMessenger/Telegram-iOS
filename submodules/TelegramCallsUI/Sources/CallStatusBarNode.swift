@@ -305,9 +305,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         var effectiveLevel: Float = 0.0
                         var audioLevels = audioLevels
                         if !strongSelf.currentIsMuted {
-                            audioLevels.append((PeerId(0), myAudioLevel, true))
+                            audioLevels.append((PeerId(0), 0, myAudioLevel, true))
                         }
-                        effectiveLevel = audioLevels.map { $0.1 }.max() ?? 0.0
+                        effectiveLevel = audioLevels.map { $0.2 }.max() ?? 0.0
                         strongSelf.backgroundNode.audioLevel = effectiveLevel
                     }))
             }
@@ -348,8 +348,12 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             
             if let membersCount = membersCount {
                 var membersPart = presentationData.strings.VoiceChat_Status_Members(membersCount)
-                if let startIndex = membersPart.firstIndex(of: "["), let endIndex = membersPart.firstIndex(of: "]") {
-                    membersPart.removeSubrange(startIndex ... endIndex)
+                if membersPart.contains("[") && membersPart.contains("]") {
+                    if let startIndex = membersPart.firstIndex(of: "["), let endIndex = membersPart.firstIndex(of: "]") {
+                        membersPart.removeSubrange(startIndex ... endIndex)
+                    }
+                } else {
+                    membersPart = membersPart.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
                 }
                 
                 let rawTextAndRanges = presentationData.strings.VoiceChat_Status_MembersFormat("\(membersCount)", membersPart)

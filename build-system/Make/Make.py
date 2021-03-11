@@ -5,13 +5,14 @@ import os
 import shlex
 import sys
 import tempfile
+import subprocess
 
 from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironment
 from ProjectGeneration import generate
 
 
 class BazelCommandLine:
-    def __init__(self, bazel_path, bazel_x86_64_path, override_bazel_version, override_xcode_version):
+    def __init__(self, bazel_path, bazel_x86_64_path, override_bazel_version, override_xcode_version, bazel_user_root):
         self.build_environment = BuildEnvironment(
             base_path=os.getcwd(),
             bazel_path=bazel_path,
@@ -19,12 +20,14 @@ class BazelCommandLine:
             override_bazel_version=override_bazel_version,
             override_xcode_version=override_xcode_version
         )
+        self.bazel_user_root = bazel_user_root
         self.remote_cache = None
         self.cache_dir = None
         self.additional_args = None
         self.build_number = None
         self.configuration_args = None
         self.configuration_path = None
+        self.split_submodules = False
 
         self.common_args = [
             # https://docs.bazel.build/versions/master/command-line-reference.html
@@ -47,12 +50,6 @@ class BazelCommandLine:
         ]
 
         self.common_build_args = [
-            # https://github.com/bazelbuild/rules_swift
-            # If enabled and whole module optimisation is being used, the `*.swiftdoc`,
-            # `*.swiftmodule` and `*-Swift.h` are generated with a separate action
-            # rather than as part of the compilation.
-            '--features=swift.split_derived_files_generation',
-
             # https://github.com/bazelbuild/rules_swift
             # If enabled the skip function bodies frontend flag is passed when using derived
             # files generation.
@@ -110,17 +107,41 @@ class BazelCommandLine:
     def set_build_number(self, build_number):
         self.build_number = build_number
 
+    def set_split_swiftmodules(self, value):
+        self.split_submodules = value
+
     def set_configuration_path(self, path):
         self.configuration_path = path
 
     def set_configuration(self, configuration):
-        if configuration == 'debug_arm64':
+        if configuration == 'debug_universal':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                # Build universal binaries.
+                '--ios_multi_cpus=armv7,arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32'
+            ] + self.common_debug_args
+        elif configuration == 'debug_arm64':
             self.configuration_args = [
                 # bazel debug build configuration
                 '-c', 'dbg',
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32'
+            ] + self.common_debug_args
+        elif configuration == 'debug_armv7':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                '--ios_multi_cpus=armv7',
 
                 # Always build universal Watch binaries.
                 '--watchos_cpus=armv7k,arm64_32'
@@ -134,7 +155,30 @@ class BazelCommandLine:
                 '--ios_multi_cpus=arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32'
+                '--watchos_cpus=armv7k,arm64_32',
+
+                # Generate DSYM files when building.
+                '--apple_generate_dsym',
+
+                # Require DSYM files as build output.
+                '--output_groups=+dsyms'
+            ] + self.common_release_args
+        elif configuration == 'release_armv7':
+            self.configuration_args = [
+                # bazel optimized build configuration
+                '-c', 'opt',
+
+                # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
+                '--ios_multi_cpus=armv7',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32',
+
+                # Generate DSYM files when building.
+                '--apple_generate_dsym',
+
+                # Require DSYM files as build output.
+                '--output_groups=+dsyms'
             ] + self.common_release_args
         elif configuration == 'release_universal':
             self.configuration_args = [
@@ -156,9 +200,18 @@ class BazelCommandLine:
         else:
             raise Exception('Unknown configuration {}'.format(configuration))
 
+    def get_startup_bazel_arguments(self):
+        combined_arguments = []
+        if self.bazel_user_root is not None:
+            combined_arguments += ['--output_user_root={}'.format(self.bazel_user_root)]
+        return combined_arguments
+
     def invoke_clean(self):
         combined_arguments = [
-            self.build_environment.bazel_path,
+            self.build_environment.bazel_path
+        ]
+        combined_arguments += self.get_startup_bazel_arguments()
+        combined_arguments += [
             'clean',
             '--expunge'
         ]
@@ -181,7 +234,7 @@ class BazelCommandLine:
         if self.remote_cache is not None:
             combined_arguments += [
                 '--remote_cache={}'.format(self.remote_cache),
-                '--experimental_remote_downloader="{}"'.format(self.remote_cache)
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
             ]
         elif self.cache_dir is not None:
             combined_arguments += [
@@ -190,9 +243,25 @@ class BazelCommandLine:
 
         return combined_arguments
 
+    def get_additional_build_arguments(self):
+        combined_arguments = []
+        if self.split_submodules:
+            combined_arguments += [
+                # https://github.com/bazelbuild/rules_swift
+                # If enabled and whole module optimisation is being used, the `*.swiftdoc`,
+                # `*.swiftmodule` and `*-Swift.h` are generated with a separate action
+                # rather than as part of the compilation.
+                '--features=swift.split_derived_files_generation',
+            ]
+
+        return combined_arguments
+
     def invoke_build(self):
         combined_arguments = [
-            self.build_environment.bazel_path,
+            self.build_environment.bazel_path
+        ]
+        combined_arguments += self.get_startup_bazel_arguments()
+        combined_arguments += [
             'build',
             'Telegram/Telegram'
         ]
@@ -207,11 +276,12 @@ class BazelCommandLine:
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
         combined_arguments += self.get_define_arguments()
+        combined_arguments += self.get_additional_build_arguments()
 
         if self.remote_cache is not None:
             combined_arguments += [
                 '--remote_cache={}'.format(self.remote_cache),
-                '--experimental_remote_downloader="{}"'.format(self.remote_cache)
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
             ]
         elif self.cache_dir is not None:
             combined_arguments += [
@@ -220,7 +290,8 @@ class BazelCommandLine:
 
         combined_arguments += self.configuration_args
 
-        print('TelegramBuild: running {}'.format(combined_arguments))
+        print('TelegramBuild: running')
+        print(subprocess.list2cmdline(combined_arguments))
         call_executable(combined_arguments)
 
 
@@ -229,7 +300,8 @@ def clean(arguments):
         bazel_path=arguments.bazel,
         bazel_x86_64_path=None,
         override_bazel_version=arguments.overrideBazelVersion,
-        override_xcode_version=arguments.overrideXcodeVersion
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
     )
 
     bazel_command_line.invoke_clean()
@@ -274,13 +346,14 @@ def generate_project(arguments):
         bazel_path=arguments.bazel,
         bazel_x86_64_path=bazel_x86_64_path,
         override_bazel_version=arguments.overrideBazelVersion,
-        override_xcode_version=arguments.overrideXcodeVersion
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
     )
 
     if arguments.cacheDir is not None:
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
-        bazel_command_line.add_remote_cache(arguments.cacheDir)
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
 
     resolve_configuration(bazel_command_line, arguments)
 
@@ -289,12 +362,15 @@ def generate_project(arguments):
     disable_extensions = False
     if arguments.disableExtensions is not None:
         disable_extensions = arguments.disableExtensions
-
+    if arguments.disableProvisioningProfiles is not None:
+        disable_provisioning_profiles = arguments.disableProvisioningProfiles
+    
     call_executable(['killall', 'Xcode'], check_result=False)
 
     generate(
         build_environment=bazel_command_line.build_environment,
         disable_extensions=disable_extensions,
+        disable_provisioning_profiles=disable_provisioning_profiles,
         configuration_path=bazel_command_line.configuration_path,
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments()
     )
@@ -305,18 +381,21 @@ def build(arguments):
         bazel_path=arguments.bazel,
         bazel_x86_64_path=None,
         override_bazel_version=arguments.overrideBazelVersion,
-        override_xcode_version=arguments.overrideXcodeVersion
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
     )
 
     if arguments.cacheDir is not None:
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
-        bazel_command_line.add_remote_cache(arguments.cacheDir)
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
 
     resolve_configuration(bazel_command_line, arguments)
 
     bazel_command_line.set_configuration(arguments.configuration)
     bazel_command_line.set_build_number(arguments.buildNumber)
+
+    bazel_command_line.set_split_swiftmodules(not arguments.disableParallelSwiftmoduleGeneration)
 
     bazel_command_line.invoke_build()
 
@@ -359,6 +438,13 @@ if __name__ == '__main__':
         '--bazel',
         required=True,
         help='Use custom bazel binary',
+        metavar='path'
+    )
+
+    parser.add_argument(
+        '--bazelUserRoot',
+        required=False,
+        help='Use custom bazel user root (useful when reproducing a build)',
         metavar='path'
     )
 
@@ -431,6 +517,16 @@ if __name__ == '__main__':
             '''
     )
 
+    generateProjectParser.add_argument(
+        '--disableProvisioningProfiles',
+        action='store_true',
+        default=False,
+        help='''
+            This allows to build the project for simulator without having any codesigning identities installed.
+            Building for an actual device will fail.
+            '''
+    )
+
     buildParser = subparsers.add_parser('build', help='Build the app')
     buildParser.add_argument(
         '--buildNumber',
@@ -443,12 +539,21 @@ if __name__ == '__main__':
     buildParser.add_argument(
         '--configuration',
         choices=[
+            'debug_universal',
             'debug_arm64',
+            'debug_armv7',
             'release_arm64',
+            'release_armv7',
             'release_universal'
         ],
         required=True,
         help='Build configuration'
+    )
+    buildParser.add_argument(
+        '--disableParallelSwiftmoduleGeneration',
+        action='store_true',
+        default=False,
+        help='Generate .swiftmodule files in parallel to building modules, can speed up compilation on multi-core systems.'
     )
 
     if len(sys.argv) < 2:

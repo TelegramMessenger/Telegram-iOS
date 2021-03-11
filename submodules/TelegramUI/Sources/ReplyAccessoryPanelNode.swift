@@ -70,12 +70,19 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.imageNode)
         self.addSubnode(self.actionArea)
         
-        self.messageDisposable.set((context.account.postbox.messageAtId(messageId)
-        |> deliverOnMainQueue).start(next: { [weak self] message in
+        self.messageDisposable.set((context.account.postbox.messageView(messageId)
+        |> deliverOnMainQueue).start(next: { [weak self] messageView in
             if let strongSelf = self {
+                let message = messageView.message
                 var authorName = ""
                 var text = ""
-                if let author = message?.effectiveAuthor {
+                if let forwardInfo = message?.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                    if let author = forwardInfo.author {
+                        authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                    } else if let authorSignature = forwardInfo.authorSignature {
+                        authorName = authorSignature
+                    }
+                } else if let author = message?.effectiveAuthor {
                     authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {

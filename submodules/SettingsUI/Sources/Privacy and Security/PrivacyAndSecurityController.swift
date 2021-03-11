@@ -530,7 +530,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 return .single(false)
             }
         } else {
-            return .complete()
+            return .single(hasTwoStepAuth)
         }
     }
     

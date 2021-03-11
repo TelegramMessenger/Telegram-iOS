@@ -205,12 +205,12 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     
                                     let peerStatusSettings = PeerStatusSettings(apiSettings: userFull.settings)
                                     
-                                    var hasScheduledMessages = false
-                                    if (userFull.flags & 1 << 12) != 0 {
-                                        hasScheduledMessages = true
-                                    }
+                                    let hasScheduledMessages = (userFull.flags & 1 << 12) != 0
+                                    
+                                    let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(userFull.ttlPeriod))
                                 
                                     return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                        .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                             }
                         })
                         return true
@@ -257,7 +257,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                 
                                 let photo: TelegramMediaImage? = chatFull.chatPhoto.flatMap(telegramMediaImageFromApiPhoto)
                                 
-                                let exportedInvitation = ExportedInvitation(apiExportedInvite: chatFull.exportedInvite)
+                                let exportedInvitation = chatFull.exportedInvite.flatMap { ExportedInvitation(apiExportedInvite: $0) }
                                 let pinnedMessageId = chatFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                             
                                 var peers: [Peer] = []
@@ -355,7 +355,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts, inputCall):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts, inputCall, ttl, pendingSuggestions):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -382,7 +382,9 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             } else {
                                                 linkedDiscussionPeerId = nil
                                             }
-                                            
+
+                                            let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(ttl))
+                                           
                                             let peerGeoLocation: PeerGeoLocation?
                                             if let location = location {
                                                 peerGeoLocation = PeerGeoLocation(apiLocation: location)
@@ -513,7 +515,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
-                                                    .withUpdatedExportedInvitation(ExportedInvitation(apiExportedInvite: apiExportedInvite))
+                                                    .withUpdatedExportedInvitation(apiExportedInvite.flatMap { ExportedInvitation(apiExportedInvite: $0) })
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
                                                     .withUpdatedStickerPack(stickerPack)
@@ -528,6 +530,8 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedInvitedBy(invitedBy)
                                                     .withUpdatedPhoto(photo)
                                                     .withUpdatedActiveCall(updatedActiveCall)
+                                                    .withUpdatedAutoremoveTimeout(autoremoveTimeout)
+                                                    .withUpdatedPendingSuggestions(pendingSuggestions ?? [])
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
@@ -556,6 +560,16 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
             } else {
                 return .single(false)
             }
+        }
+    }
+}
+
+extension CachedPeerAutoremoveTimeout.Value {
+    init?(_ apiValue: Int32?) {
+        if let value = apiValue {
+            self.init(peerValue: value)
+        } else {
+            return nil
         }
     }
 }

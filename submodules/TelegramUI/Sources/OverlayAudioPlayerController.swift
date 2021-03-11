@@ -73,6 +73,11 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                     }
                 })
             }
+        }, requestSearchByArtist: { [weak self] artist in
+            if let strongSelf = self {
+                strongSelf.context.sharedContext.openSearch(filter: .music, query: artist)
+                strongSelf.dismiss()
+            }
         })
         
         self.ready.set(self.controllerNode.ready.get())

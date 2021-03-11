@@ -189,6 +189,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
                     self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateFast
                     self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
+                default:
+                    break
             }
         }
     }
@@ -383,6 +385,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
                 case .x2:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+                default:
+                    break
             }
         }
         if let (size, leftInset, rightInset) = self.validLayout {
@@ -394,10 +398,16 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         if scrollView.isDecelerating {
             self.changeTrack()
         }
+        
+        self.rateButton.alpha = 0.0
+        self.rateButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.changeTrack()
+        
+        self.rateButton.alpha = 1.0
+        self.rateButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -405,6 +415,9 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             return
         }
         self.changeTrack()
+        
+        self.rateButton.alpha = 1.0
+        self.rateButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
     private func changeTrack() {
@@ -453,9 +466,11 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.rightMaskNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         self.rightMaskNode.frame = CGRect(x: size.width - inset - 12.0, y: 0.0, width: 12.0, height: minHeight)
         
-        self.scrollNode.view.contentSize = contentSize
-        self.scrollNode.view.contentOffset = CGPoint(x: contentOffset, y: 0.0)
-        self.initialContentOffset = contentOffset
+        if !self.scrollNode.view.isTracking && !self.scrollNode.view.isTracking {
+            self.scrollNode.view.contentSize = contentSize
+            self.scrollNode.view.contentOffset = CGPoint(x: contentOffset, y: 0.0)
+            self.initialContentOffset = contentOffset
+        }
         
         let bounds = CGRect(origin: CGPoint(), size: size)
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))

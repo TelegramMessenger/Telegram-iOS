@@ -205,6 +205,10 @@ public final class MediaBox {
         return "\(id.uniqueId)"
     }
     
+    private func fileNameForId(_ id: String) -> String {
+        return "\(id)"
+    }
+    
     private func pathForId(_ id: MediaResourceId) -> String {
         return "\(self.basePath)/\(fileNameForId(id))"
     }
@@ -226,6 +230,17 @@ public final class MediaBox {
                 cacheString = "short-cache"
         }
         return ResourceStorePaths(partial:  "\(self.basePath)/\(cacheString)/\(fileNameForId(id))_partial:\(representation.uniqueId)", complete: "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)")
+    }
+    
+    public func cachedRepresentationPathForId(_ id: String, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration) -> String {
+        let cacheString: String
+        switch keepDuration {
+            case .general:
+                cacheString = "cache"
+            case .shortLived:
+                cacheString = "short-cache"
+        }
+        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id))_\(representationId)"
     }
     
     public func cachedRepresentationCompletePath(_ id: MediaResourceId, representation: CachedMediaResourceRepresentation) -> String {

@@ -12,3 +12,4 @@ submodules/sqlcipher/* linguist-vendored
 submodules/Stripe/* linguist-vendored
 submodules/ton/tonlib-src/* linguist-vendored
 submodules/webp/include/* linguist-vendored
+third-party/* linguist-vendored

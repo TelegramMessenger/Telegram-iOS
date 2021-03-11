@@ -6,3 +6,8 @@
 
 @end
 
+@interface UILabel (DateLabel)
+
++ (void)setDateLabelColor:(UIColor *)color;
+
+@end

@@ -7,14 +7,16 @@ struct IntermediateMessageForwardInfo {
     let date: Int32
     let authorSignature: String?
     let psaType: String?
+    let flags: MessageForwardInfo.Flags
     
-    init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?) {
+    init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?, flags: MessageForwardInfo.Flags) {
         self.authorId = authorId
         self.sourceId = sourceId
         self.sourceMessageId = sourceMessageId
         self.date = date
         self.authorSignature = authorSignature
         self.psaType = psaType
+        self.flags = flags
     }
     
     init(_ storeInfo: StoreMessageForwardInfo) {
@@ -24,6 +26,7 @@ struct IntermediateMessageForwardInfo {
         self.date = storeInfo.date
         self.authorSignature = storeInfo.authorSignature
         self.psaType = storeInfo.psaType
+        self.flags = storeInfo.flags
     }
 }
 

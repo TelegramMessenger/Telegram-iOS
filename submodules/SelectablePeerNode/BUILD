@@ -20,6 +20,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/LocalizedPeerData:LocalizedPeerData",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/CheckNode:CheckNode",
     ],
     visibility = [
         "//visibility:public",

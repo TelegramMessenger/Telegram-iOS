@@ -10,17 +10,9 @@ def remove_directory(path):
         shutil.rmtree(path)
 
 
-def generate(build_environment: BuildEnvironment, disable_extensions, configuration_path, bazel_app_arguments):
+def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, configuration_path, bazel_app_arguments):
     project_path = os.path.join(build_environment.base_path, 'build-input/gen/project')
     app_target = 'Telegram'
-
-    '''
-    TULSI_APP="build-input/gen/project/Tulsi.app"
-    TULSI="$TULSI_APP/Contents/MacOS/Tulsi"
-    
-    rm -rf "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj"
-    rm -rf "$TULSI_APP"
-    '''
 
     os.makedirs(project_path, exist_ok=True)
     remove_directory('{}/Tulsi.app'.format(project_path))
@@ -51,8 +43,6 @@ def generate(build_environment: BuildEnvironment, disable_extensions, configurat
 
     bazel_wrapper_arguments = []
     bazel_wrapper_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
-    if disable_extensions and False:
-        bazel_wrapper_arguments += ['--//Telegram:disableExtensions']
 
     with open(bazel_wrapper_path, 'wb') as bazel_wrapper:
         bazel_wrapper.write('''#!/bin/sh
@@ -90,6 +80,8 @@ def generate(build_environment: BuildEnvironment, disable_extensions, configurat
     bazel_build_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
     if disable_extensions:
         bazel_build_arguments += ['--//Telegram:disableExtensions']
+    if disable_provisioning_profiles:
+        bazel_build_arguments += ['--//Telegram:disableProvisioningProfiles']
 
     call_executable([
         tulsi_path,

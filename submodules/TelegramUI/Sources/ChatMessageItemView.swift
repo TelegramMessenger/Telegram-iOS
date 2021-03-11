@@ -143,7 +143,7 @@ enum ChatMessagePeekPreviewContent {
 private let voiceMessageDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
-    formatter.allowedUnits = [.second]
+    formatter.allowedUnits = [.minute, .second]
     formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
@@ -151,7 +151,7 @@ private let voiceMessageDurationFormatter: DateComponentsFormatter = {
 private let musicDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
-    formatter.allowedUnits = [.minute, .second]
+    formatter.allowedUnits = [.hour, .minute, .second]
     formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
@@ -519,6 +519,7 @@ final class ChatMessageAccessibilityData {
             
             result += "\n\(dateString)"
             if !isIncoming && item.read {
+                result += "\n"
                 if announceIncomingAuthors {
                     result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
                 } else {
@@ -647,6 +648,7 @@ public class ChatMessageItemView: ListViewItemNode {
     
     var item: ChatMessageItem?
     var accessibilityData: ChatMessageAccessibilityData?
+    var safeInsets = UIEdgeInsets()
     
     var awaitingAppliedReaction: (String?, () -> Void)?
     
@@ -756,7 +758,7 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateAutomaticMediaDownloadSettings() {
     }
     
-    func updateStickerSettings() {
+    func updateStickerSettings(forceStopAnimations: Bool) {
     }
     
     func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
@@ -812,8 +814,8 @@ public class ChatMessageItemView: ListViewItemNode {
                 case .payment:
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
                 case let .urlAuth(url, buttonId):
-                    item.controllerInteraction.requestMessageActionUrlAuth(url, item.message.id, buttonId)
-                case let .setupPoll(isQuiz):
+                    item.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: item.message.id, buttonId: buttonId))
+                case .setupPoll:
                     break
             }
         }
@@ -831,6 +833,10 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        return nil
+    }
+    
+    func getStatusNode() -> ASDisplayNode? {
         return nil
     }
 }

@@ -46,6 +46,7 @@ objc_library(
     ],
     weak_sdk_frameworks = [
         "Vision",
+        "PhotosUI",
     ],
     visibility = [
         "//visibility:public",

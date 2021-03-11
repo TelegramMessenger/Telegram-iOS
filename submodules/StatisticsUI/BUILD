@@ -28,6 +28,7 @@ swift_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/ItemListPeerItem:ItemListPeerItem",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
+        "//submodules/ContextUI:ContextUI",
     ],
     visibility = [
         "//visibility:public",

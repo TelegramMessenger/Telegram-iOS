@@ -1,30 +1,30 @@
 import Foundation
 import SwiftSignalKit
-import ValueBox
-import PostboxDataTypes
-import MessageHistoryReadStateTable
-import MessageHistoryMetadataTable
-import PreferencesTable
-import PeerTable
-import PostboxCoding
+//import ValueBox
+//import PostboxDataTypes
+//import MessageHistoryReadStateTable
+//import MessageHistoryMetadataTable
+//import PreferencesTable
+//import PeerTable
+//import PostboxCoding
 import AppLockState
 import NotificationsPresentationData
 import BuildConfig
 
-private let registeredTypes: Void = {
+/*private let registeredTypes: Void = {
     declareEncodable(InAppNotificationSettings.self, f: InAppNotificationSettings.init(decoder:))
     declareEncodable(TelegramChannel.self, f: TelegramChannel.init(decoder:))
-}()
+}()*/
 
 private func accountRecordIdPathName(_ id: Int64) -> String {
     return "account-\(UInt64(bitPattern: id))"
 }
 
-private final class ValueBoxLoggerImpl: ValueBoxLogger {
+/*private final class ValueBoxLoggerImpl: ValueBoxLogger {
     func log(_ what: String) {
         print("ValueBox: \(what)")
     }
-}
+}*/
 
 enum SyncProviderImpl {
     static func isLocked(withRootPath rootPath: String) -> Bool {
@@ -43,7 +43,7 @@ enum SyncProviderImpl {
         }
     }
     
-    static func addIncomingMessage(queue: Queue, withRootPath rootPath: String, accountId: Int64, encryptionParameters: DeviceSpecificEncryptionParameters, peerId: Int64, messageId: Int32, completion: @escaping (Int32) -> Void) {
+    /*static func addIncomingMessage(queue: Queue, withRootPath rootPath: String, accountId: Int64, encryptionParameters: DeviceSpecificEncryptionParameters, peerId: Int64, messageId: Int32, completion: @escaping (Int32) -> Void) {
         queue.async {
             let _ = registeredTypes
             
@@ -144,5 +144,5 @@ enum SyncProviderImpl {
                 completion(-1)
             }
         }
-    }
+    }*/
 }

@@ -38,11 +38,15 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {
+func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)? = nil, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
             context.sharedContext.openExternalUrl(context: context, urlContext: urlContext, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: dismissInput)
+        case let .urlAuth(url):
+            requestMessageActionUrlAuth?(.url(url))
+            dismissInput()
+            break
         case let .peer(peerId, navigation):
             if let peerId = peerId {
                 openPeer(peerId, defaultNavigationForPeerId(peerId, navigation: navigation))
@@ -55,7 +59,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup))
-            controller.peerSelected = { [weak controller] peerId in
+            controller.peerSelected = { [weak controller] peer in
+                let peerId = peer.id
+                
                 if payload.isEmpty {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
                         let _ = (addGroupMember(account: context.account, peerId: peerId, memberId: botPeerId)
@@ -263,7 +269,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     context.sharedContext.applicationBindings.dismissNativeController()
                 } else {
                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                    controller.peerSelected = { [weak controller] peerId in
+                    controller.peerSelected = { [weak controller] peer in
+                        let peerId = peer.id
+                        
                         if let strongController = controller {
                             strongController.dismiss()
                             continueWithPeer(peerId)
@@ -296,7 +304,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 case let .color(color):
                     signal = .single(.color(color.argb))
                 case let .gradient(topColor, bottomColor, rotation):
-                    signal = .single(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings()))
+                    signal = .single(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings(rotation: rotation)))
             }
             
             let _ = (signal

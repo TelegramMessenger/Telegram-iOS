@@ -293,7 +293,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! InstalledStickerPacksControllerArguments
         switch self {
-            case let .suggestOptions(theme, text, value):
+            case let .suggestOptions(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSuggestOptions()
                 }, tag: InstalledStickerPacksEntryTag.suggestOptions)
@@ -301,23 +301,23 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: count == 0 ? "" : "\(count)", labelStyle: .badge(theme.list.itemAccentColor), sectionId: self.section, style: .blocks, action: {
                     arguments.openFeatured()
                 })
-            case let .masks(theme, text):
+            case let .masks(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openMasks()
                 })
-            case let .archived(theme, text, count, archived):
+            case let .archived(_, text, count, archived):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: count == 0 ? "" : "\(count)", sectionId: self.section, style: .blocks, action: {
                     arguments.openArchived(archived)
                 })
-            case let .animatedStickers(theme, text, value):
+            case let .animatedStickers(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAnimatedStickers(value)
                 })
-            case let .animatedStickersInfo(theme, text):
+            case let .animatedStickersInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .packsTitle(theme, text):
+            case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .pack(_, theme, strings, info, topItem, count, animatedStickers, enabled, editing):
+            case let .pack(_, _, strings, info, topItem, count, animatedStickers, enabled, editing):
                 return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
@@ -326,7 +326,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 }, removePack: {
                     arguments.removePack(ArchivedStickerPackItem(info: info, topItems: topItem != nil ? [topItem!] : []))
                 })
-            case let .packsInfo(theme, text):
+            case let .packsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.openStickersBot()
                 })

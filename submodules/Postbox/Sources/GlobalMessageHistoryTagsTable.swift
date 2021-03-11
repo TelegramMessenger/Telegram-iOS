@@ -208,4 +208,13 @@ class GlobalMessageHistoryTagsTable: Table {
         }, limit: count)
         return indices
     }
+    
+    func getAll() -> [GlobalMessageHistoryTagsTableEntry] {
+        var indices: [GlobalMessageHistoryTagsTableEntry] = []
+        self.valueBox.scan(self.table, values: { key, value in
+            indices.append(parseEntry(key: key, value: value))
+            return true
+        })
+        return indices
+    }
 }

@@ -144,7 +144,7 @@ private final class MultiplexedRequestManagerContext {
     }
     
     private func updateState() {
-        let maxRequestsPerWorker = 2
+        let maxRequestsPerWorker = 3
         let maxWorkersPerTarget = 4
         
         var requestIndex = 0

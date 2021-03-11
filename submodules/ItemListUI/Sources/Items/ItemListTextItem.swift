@@ -150,8 +150,6 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = attributedText.string
                     
-                    strongSelf.activateArea.accessibilityLabel = attributedText.string
-                    
                     let _ = titleApply()
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleLayout.size)

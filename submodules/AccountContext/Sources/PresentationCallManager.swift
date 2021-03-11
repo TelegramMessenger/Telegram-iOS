@@ -96,6 +96,7 @@ public final class PresentationCallVideoView {
         case rotation270
     }
     
+    public let holder: AnyObject
     public let view: UIView
     public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     
@@ -105,6 +106,7 @@ public final class PresentationCallVideoView {
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
+        holder: AnyObject,
         view: UIView,
         setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> Orientation,
@@ -112,6 +114,7 @@ public final class PresentationCallVideoView {
         setOnOrientationUpdated: @escaping (((Orientation, CGFloat) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
     ) {
+        self.holder = holder
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
         self.getOrientation = getOrientation
@@ -261,11 +264,23 @@ public struct PresentationGroupCallMembers: Equatable {
     }
 }
 
+public final class PresentationGroupCallMemberEvent {
+    public let peer: Peer
+    public let joined: Bool
+    
+    public init(peer: Peer, joined: Bool) {
+        self.peer = peer
+        self.joined = joined
+    }
+}
+
 public protocol PresentationGroupCall: class {
     var account: Account { get }
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }
+    
+    var isVideo: Bool { get }
     
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
     
@@ -273,22 +288,34 @@ public protocol PresentationGroupCall: class {
     var state: Signal<PresentationGroupCallState, NoError> { get }
     var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> { get }
     var members: Signal<PresentationGroupCallMembers?, NoError> { get }
-    var audioLevels: Signal<[(PeerId, Float, Bool)], NoError> { get }
+    var audioLevels: Signal<[(PeerId, UInt32, Float, Bool)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
+    
+    var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     
     func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>
     
     func toggleIsMuted()
     func setIsMuted(action: PresentationGroupCallMuteAction)
+    func requestVideo()
+    func disableVideo()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
+    func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
+    func setFullSizeVideo(peerId: PeerId?)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
-    func updateMuteState(peerId: PeerId, isMuted: Bool)
+    func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
     
     func invitePeer(_ peerId: PeerId) -> Bool
     func removedPeer(_ peerId: PeerId)
     var invitedPeers: Signal<[PeerId], NoError> { get }
+    
+    var incomingVideoSources: Signal<[PeerId: UInt32], NoError> { get }
+    
+    func makeIncomingVideoView(source: UInt32, completion: @escaping (PresentationCallVideoView?) -> Void)
+    
+    func loadMoreMembers(token: String)
 }
 
 public protocol PresentationCallManager: class {

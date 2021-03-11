@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -28,6 +29,9 @@ struct ChatNavigationButton: Equatable {
 
 func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, subject: ChatControllerSubject?, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
+        if let _ = presentationInterfaceState.reportReason {
+            return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: " ", style: .plain, target: nil, action: nil))
+        }
         if case .replyThread = presentationInterfaceState.chatLocation {
             return nil
         }
@@ -44,6 +48,15 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
                     canClear = true
                 } else if let peer = peer as? TelegramChannel, case .group = peer.info, peer.addressName == nil && presentationInterfaceState.peerGeoLocation == nil {
                     canClear = true
+                } else if let peer = peer as? TelegramChannel {
+                    if case .broadcast = peer.info {
+                        title = strings.Conversation_ClearChannel
+                    }
+                    if peer.hasPermission(.changeInfo) {
+                        canClear = true
+                    } else {
+                        canClear = false
+                    }
                 } else {
                     canClear = false
                 }
@@ -57,13 +70,6 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             }
         }
     }
-    /*if let subject = subject, case .scheduledMessages = subject {
-        if let currentButton = currentButton, currentButton.action == .dismiss {
-            return currentButton
-        } else {
-            return ChatNavigationButton(action: .dismiss, buttonItem: UIBarButtonItem(title: strings.Common_Done, style: .plain, target: target, action: selector))
-        }
-    }*/
     return nil
 }
 

@@ -6,14 +6,21 @@ import Postbox
 import TelegramCore
 
 public struct ChatListNodeAdditionalCategory {
+    public enum Appearance {
+        case option
+        case action
+    }
+    
     public var id: Int
     public var icon: UIImage?
     public var title: String
+    public var appearance: Appearance
     
-    public init(id: Int, icon: UIImage?, title: String) {
+    public init(id: Int, icon: UIImage?, title: String, appearance: Appearance = .option) {
         self.id = id
         self.icon = icon
         self.title = title
+        self.appearance = appearance
     }
 }
 

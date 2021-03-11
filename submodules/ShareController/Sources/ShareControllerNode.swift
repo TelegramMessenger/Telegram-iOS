@@ -21,10 +21,6 @@ enum ShareExternalState {
     case done
 }
 
-func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
-    
-}
-
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let sharedContext: SharedAccountContext
     private var context: AccountContext?
@@ -34,6 +30,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let immediateExternalShare: Bool
     private var immediatePeerId: PeerId?
     private let shares: Int?
+    private let fromForeignApp: Bool
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -64,6 +61,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
     var openStats: (() -> Void)?
+    var completed: (([PeerId]) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -81,7 +79,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, shares: Int?, forcedTheme: PresentationTheme?) {
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, shares: Int?, fromForeignApp: Bool, forcedTheme: PresentationTheme?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.forcedTheme = forcedTheme
@@ -89,6 +87,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
         self.shares = shares
+        self.fromForeignApp = fromForeignApp
         self.presentError = presentError
         
         self.presetText = presetText
@@ -124,7 +123,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.wrappingScrollNode.view.canCancelContentTouches = true
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        if self.fromForeignApp {
+            self.dimNode.backgroundColor = .clear
+        } else {
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        }
         
         self.cancelButtonNode = ASButtonNode()
         self.cancelButtonNode.displaysAsynchronously = false
@@ -168,6 +171,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         super.init()
+        
+        self.isHidden = true
                 
         self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer, search in
             if let strongSelf = self {
@@ -579,6 +584,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 Queue.mainQueue().after(delay, {
                     self?.animateOut(shared: true, completion: {
                         self?.dismiss?(true)
+                        self?.completed?(peerIds)
                     })
                 })
             }
@@ -613,6 +619,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func animateIn() {
+        if let completion = self.outCompletion {
+            self.outCompletion = nil
+            completion()
+            return
+        }
         if self.contentNode != nil {
             self.isHidden = false
             
@@ -627,6 +638,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    var outCompletion: (() -> Void)?
     func animateOut(shared: Bool, completion: @escaping () -> Void) {
         if self.contentNode != nil {
             var dimCompleted = false
@@ -656,7 +668,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 internalCompletion()
             })
         } else {
-            completion()
+            self.outCompletion = completion
+            Queue.mainQueue().after(0.2) {
+                if let completion = self.outCompletion {
+                    self.outCompletion = nil
+                    completion()
+                }
+            }
         }
     }
     

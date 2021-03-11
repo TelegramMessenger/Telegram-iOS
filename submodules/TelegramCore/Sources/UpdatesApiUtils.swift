@@ -99,9 +99,9 @@ extension Api.Message {
         switch self {
             case let .message(message):
                 return message.id
-            case let .messageEmpty(id):
+            case let .messageEmpty(_, id, _):
                 return id
-            case let .messageService(_, id, _, _, _, _, _):
+            case let .messageService(_, id, _, _, _, _, _, _):
                 return id
         }
     }
@@ -115,9 +115,13 @@ extension Api.Message {
                 
                 let peerId: PeerId = message.peerId.peerId
                 return MessageId(peerId: peerId, namespace: namespace, id: id)
-            case .messageEmpty:
-                return nil
-            case let .messageService(flags, id, fromId, chatPeerId, _, _, _):
+            case let .messageEmpty(_, id, peerId):
+                if let peerId = peerId {
+                    return MessageId(peerId: peerId.peerId, namespace: Namespaces.Message.Cloud, id: id)
+                } else {
+                    return nil
+                }
+            case let .messageService(flags, id, fromId, chatPeerId, _, _, _, _):
                 let peerId: PeerId = chatPeerId.peerId
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
         }
@@ -380,13 +384,13 @@ extension Api.Updates {
                 } else {
                     return []
                 }
-            case let .updateShortSentMessage(_, id, _, _, _, _, _):
+            case let .updateShortSentMessage(_, id, _, _, _, _, _, _):
                 return [id]
             case .updatesTooLong:
                 return []
-            case let .updateShortMessage(_, id, _, _, _, _, _, _, _, _, _):
+            case let .updateShortMessage(_, id, _, _, _, _, _, _, _, _, _, _):
                 return [id]
-            case let .updateShortChatMessage(_, id, _, _, _, _, _, _, _, _, _, _):
+            case let .updateShortChatMessage(_, id, _, _, _, _, _, _, _, _, _, _, _):
                 return [id]
         }
     }
@@ -419,9 +423,9 @@ extension Api.Updates {
                 return []
             case .updatesTooLong:
                 return []
-            case let .updateShortMessage(_, id, userId, _, _, _, _, _, _, _, _):
+            case let .updateShortMessage(_, id, userId, _, _, _, _, _, _, _, _, _):
                 return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), namespace: Namespaces.Message.Cloud, id: id)]
-            case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _):
+            case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _, _):
                 return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), namespace: Namespaces.Message.Cloud, id: id)]
         }
     }
@@ -454,9 +458,9 @@ extension Api.Updates {
                 return [:]
             case .updatesTooLong:
                 return [:]
-            case let .updateShortMessage(_, id, userId, _, _, _, _, _, _, _, _):
+            case let .updateShortMessage(_, id, userId, _, _, _, _, _, _, _, _, _):
                 return [:]
-            case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _):
+            case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _, _):
                 return [:]
         }
     }
@@ -552,7 +556,7 @@ extension Api.EncryptedChat {
         switch self {
             case let .encryptedChat(id, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
-            case let .encryptedChatDiscarded(id):
+            case let .encryptedChatDiscarded(_, id):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
             case let .encryptedChatEmpty(id):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)

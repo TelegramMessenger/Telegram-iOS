@@ -20,8 +20,11 @@ open class ActionSheetController: ViewController, PresentableController, Standal
     
     public var dismissed: ((Bool) -> Void)?
     
-    public init(theme: ActionSheetControllerTheme) {
+    private var allowInputInset: Bool
+    
+    public init(theme: ActionSheetControllerTheme, allowInputInset: Bool = false) {
         self.theme = theme
+        self.allowInputInset = allowInputInset
         
         super.init(navigationBarPresentationData: nil)
         
@@ -41,7 +44,7 @@ open class ActionSheetController: ViewController, PresentableController, Standal
     }
     
     open override func loadDisplayNode() {
-        self.displayNode = ActionSheetControllerNode(theme: self.theme)
+        self.displayNode = ActionSheetControllerNode(theme: self.theme, allowInputInset: self.allowInputInset)
         self.displayNodeDidLoad()
         
         self.actionSheetNode.dismiss = { [weak self] cancelled in

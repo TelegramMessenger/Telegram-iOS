@@ -71,6 +71,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
                     PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                 }))
             }
+        case let .messageActionSetMessagesTTL(period):
+            return TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(period))
     }
 }
 

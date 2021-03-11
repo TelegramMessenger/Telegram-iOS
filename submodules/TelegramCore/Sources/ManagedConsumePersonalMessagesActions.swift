@@ -133,9 +133,9 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
             
             for (entry, disposable) in beginValidateOperations {
                 let signal = synchronizeUnseenPersonalMentionsTag(postbox: postbox, network: network, entry: entry)
-                    |> then(postbox.transaction { transaction -> Void in
-                        transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
-                    })
+                |> then(postbox.transaction { transaction -> Void in
+                    transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                })
                 disposable.set(signal.start())
             }
         })
@@ -171,7 +171,7 @@ private func synchronizeConsumeMessageContents(transaction: Transaction, postbox
                     transaction.updateMessage(id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                         }
                         var attributes = currentMessage.attributes
                         loop: for j in 0 ..< attributes.count {
@@ -197,7 +197,7 @@ private func synchronizeConsumeMessageContents(transaction: Transaction, postbox
                         transaction.updateMessage(id, update: { currentMessage in
                             var storeForwardInfo: StoreMessageForwardInfo?
                             if let forwardInfo = currentMessage.forwardInfo {
-                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                             }
                             var attributes = currentMessage.attributes
                             loop: for j in 0 ..< attributes.count {

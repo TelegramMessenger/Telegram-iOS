@@ -188,7 +188,7 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
                 return
             }
             if let status = status, case .buffering = status.status {
-                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false))
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true))
             } else {
                 strongSelf.statusNode.transitionToState(.none)
             }

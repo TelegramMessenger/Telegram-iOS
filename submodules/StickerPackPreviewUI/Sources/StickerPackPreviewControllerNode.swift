@@ -240,6 +240,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
                     return sourceNode
                 })
+                controller.visibilityUpdated = { [weak self] visible in
+                    if let strongSelf = self {
+                        strongSelf.contentGridNode.forceHidden = visible
+                    }
+                }
                 strongSelf.presentInGlobalOverlay?(controller, nil)
                 return controller
             }
@@ -406,9 +411,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         let minimallyRevealedRowCount: CGFloat = 3.5
         let initiallyRevealedRowCount = min(minimallyRevealedRowCount, CGFloat(rowCount))
         
-        let topInset = max(0.0, contentFrame.size.height - initiallyRevealedRowCount * itemWidth - titleAreaHeight - buttonHeight)
         let bottomGridInset = hasShareButton ? buttonHeight * 2.0 : buttonHeight
-        
+        let topInset = max(0.0, contentFrame.size.height - initiallyRevealedRowCount * itemWidth - titleAreaHeight - bottomGridInset)
+
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
         if let activityIndicator = self.activityIndicator {

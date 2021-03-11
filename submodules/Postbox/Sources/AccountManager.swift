@@ -53,7 +53,19 @@ final class AccountManagerImpl {
     private var noticeEntryViews = Bag<(MutableNoticeEntryView, ValuePipe<NoticeEntryView>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     
-    fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64) {
+    static func getCurrentRecords(basePath: String) -> (records: [AccountRecord], currentId: AccountRecordId?) {
+        let atomicStatePath = "\(basePath)/atomic-state"
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: atomicStatePath))
+            let atomicState = try JSONDecoder().decode(AccountManagerAtomicState.self, from: data)
+            return (atomicState.records.sorted(by: { $0.key.int64 < $1.key.int64 }).map({ $1 }), atomicState.currentRecordId)
+        } catch let e {
+            postboxLog("decode atomic state error: \(e)")
+            preconditionFailure()
+        }
+    }
+    
+    fileprivate init?(queue: Queue, basePath: String, isTemporary: Bool, isReadOnly: Bool, temporarySessionId: Int64) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         self.queue = queue
@@ -61,8 +73,14 @@ final class AccountManagerImpl {
         self.atomicStatePath = "\(basePath)/atomic-state"
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
-        self.guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
-        self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
+        guard let guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, isTemporary: isTemporary, isReadOnly: false, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+            return nil
+        }
+        self.guardValueBox = guardValueBox
+        guard let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+            return nil
+        }
+        self.valueBox = valueBox
         
         self.legacyMetadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
         self.legacyRecordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
@@ -72,7 +90,6 @@ final class AccountManagerImpl {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
             do {
-                
                 let atomicState = try JSONDecoder().decode(AccountManagerAtomicState.self, from: data)
                 self.currentAtomicState = atomicState
             } catch let e {
@@ -305,7 +322,6 @@ final class AccountManagerImpl {
         return (.single(AccountRecordsView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<AccountRecordsView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -325,7 +341,6 @@ final class AccountManagerImpl {
         return (.single(AccountSharedDataView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<AccountSharedDataView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -345,7 +360,6 @@ final class AccountManagerImpl {
         return (.single(NoticeEntryView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<NoticeEntryView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -365,7 +379,6 @@ final class AccountManagerImpl {
         return (.single(AccessChallengeDataView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<AccessChallengeDataView, NoError> in
-            return .complete()
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -451,7 +464,11 @@ public final class AccountManager {
     private let impl: QueueLocalObject<AccountManagerImpl>
     public let temporarySessionId: Int64
     
-    public init(basePath: String) {
+    public static func getCurrentRecords(basePath: String) -> (records: [AccountRecord], currentId: AccountRecordId?) {
+        return AccountManagerImpl.getCurrentRecords(basePath: basePath)
+    }
+    
+    public init(basePath: String, isTemporary: Bool, isReadOnly: Bool) {
         self.queue = sharedQueue
         self.basePath = basePath
         var temporarySessionId: Int64 = 0
@@ -459,7 +476,11 @@ public final class AccountManager {
         self.temporarySessionId = temporarySessionId
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return AccountManagerImpl(queue: queue, basePath: basePath, temporarySessionId: temporarySessionId)
+            if let value = AccountManagerImpl(queue: queue, basePath: basePath, isTemporary: isTemporary, isReadOnly: isReadOnly, temporarySessionId: temporarySessionId) {
+                return value
+            } else {
+                preconditionFailure()
+            }
         })
         self.mediaBox = MediaBox(basePath: basePath + "/media")
     }

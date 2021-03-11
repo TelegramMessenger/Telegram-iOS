@@ -137,11 +137,16 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.searchQuery = searchQuery
         self.searchResult = searchResult
         self.searchState = searchState
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+         
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         
@@ -174,7 +179,11 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
                 if let index = strongSelf.searchResult.messages.firstIndex(where: { $0.index == message.index }) {
-                    strongSelf.resultSelected?(strongSelf.searchResult.messages.count - index - 1)
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        strongSelf.resultSelected?(index)
+                    } else {
+                        strongSelf.resultSelected?(strongSelf.searchResult.messages.count - index - 1)
+                    }
                 }
                 strongSelf.listNode.clearHighlightAnimated(true)
             }
@@ -323,7 +332,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             options.insert(.PreferSynchronousDrawing)
             options.insert(.PreferSynchronousResourceLoading)
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
             })
         }
     }
@@ -331,8 +340,6 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (layout, navigationBarHeight)
-        
-        let topInset = navigationBarHeight
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         

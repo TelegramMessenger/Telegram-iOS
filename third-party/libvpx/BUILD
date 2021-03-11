@@ -10,6 +10,7 @@ headers = [
     "vpx_image.h",
     "vpx_integer.h",
     "vpx_version.h",
+    "vpx_ext_ratectrl.h",
 ]
 
 libs = [
@@ -28,6 +29,7 @@ genrule(
     name = "libvpx_build",
     srcs = [
         "build-libvpx-bazel.sh",
+        "0001-Support-arm64-simulator.patch",
         ":libvpx_sources",
     ],
     cmd_bash = 
@@ -40,6 +42,9 @@ genrule(
     elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
         BUILD_ARCH="arm64"
         PLATFORM_HEADER_DIR="arm64-darwin-gcc"
+    elif [ "$(TARGET_CPU)" == "ios_sim_arm64" ]; then
+        BUILD_ARCH="sim_arm64"
+        PLATFORM_HEADER_DIR="arm64-iphonesimulator-gcc"
     elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
         BUILD_ARCH="x86_64"
         PLATFORM_HEADER_DIR="x86_64-iphonesimulator-gcc"
@@ -58,14 +63,19 @@ genrule(
     ABS_YASM_DIR="$$(pwd)/$$(dirname $$YASM_DIR)/$$(basename $$YASM_DIR)"
 
     cp $(location :build-libvpx-bazel.sh) "$$BUILD_DIR/"
+    cp $(location :0001-Support-arm64-simulator.patch) "$$BUILD_DIR/"
 
     SOURCE_PATH="third-party/libvpx/libvpx"
 
     cp -R "$$SOURCE_PATH" "$$BUILD_DIR/"
 
+    pushd "$$BUILD_DIR/libvpx"
+    patch -p1 < ../0001-Support-arm64-simulator.patch
+    popd
+
     mkdir -p "$$BUILD_DIR/Public/libvpx"
 
-    PATH="$$PATH:$$ABS_YASM_DIR" arch -x86_64 sh $$BUILD_DIR/build-libvpx-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/libvpx" "$$BUILD_DIR"
+    sh $$BUILD_DIR/build-libvpx-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/libvpx" "$$BUILD_DIR"
     """ +
     "\n".join([
         "cp -f \"$$BUILD_DIR/VPX.framework/Headers/vpx/{}\" \"$(location Public/vpx/{})\"".format(header, header) for header in headers

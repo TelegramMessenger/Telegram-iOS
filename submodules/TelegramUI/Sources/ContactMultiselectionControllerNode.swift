@@ -57,6 +57,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var removeSelectedPeer: ((ContactListPeerId) -> Void)?
     var removeSelectedCategory: ((Int) -> Void)?
     var additionalCategorySelected: ((Int) -> Void)?
+    var complete: (() -> Void)?
     
     var editableTokens: [EditableTokenListToken] = []
     
@@ -68,7 +69,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     
     init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         var placeholder: String
         var includeChatList = false
@@ -87,6 +89,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         if case let .chatSelection(_, selectedChats, additionalCategories, chatListFilters) = mode {
             placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
             let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+            chatListNode.accessibilityPageScrolledString = { row, count in
+                return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            }
             chatListNode.updateState { state in
                 var state = state
                 for peerId in selectedChats {
@@ -123,7 +128,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 self?.openPeer?(peer)
             }
         case let .chats(chatsNode):
-            chatsNode.peerSelected = { [weak self] peer, _, _ in
+            chatsNode.peerSelected = { [weak self] peer, _, _, _ in
                 self?.openPeer?(.peer(peer: peer, isGlobal: false, participantCount: nil))
             }
             chatsNode.additionalCategorySelected = { [weak self] id in
@@ -213,6 +218,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     }
                 }
             }
+        }
+        self.tokenListNode.textReturned = { [weak self] in
+            self?.complete?()
         }
         
         self.presentationDataDisposable = (context.sharedContext.presentationData

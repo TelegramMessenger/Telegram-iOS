@@ -1,5 +1,5 @@
 import Foundation
-import ValueBox
+/*import ValueBox
 
 private func applicationSpecificSharedDataKey(_ value: Int32) -> ValueBoxKey {
     let key = ValueBoxKey(length: 4)
@@ -14,3 +14,4 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
 public struct ApplicationSpecificSharedDataKeys {
     public static let inAppNotificationSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.inAppNotificationSettings.rawValue)
 }
+*/

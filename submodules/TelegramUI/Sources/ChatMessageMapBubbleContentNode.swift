@@ -251,7 +251,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }
@@ -426,6 +426,17 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.pinNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.size.width - pinSize.width) / 2.0), y: imageFrame.minY + floor(imageFrame.size.height * 0.5 - 10.0 - pinSize.height / 2.0)), size: pinSize)
                             
                             pinApply()
+                            
+                            if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                                strongSelf.dateAndStatusNode.pressed = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                                }
+                            } else {
+                                strongSelf.dateAndStatusNode.pressed = nil
+                            }
                         }
                     })
                 })

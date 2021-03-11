@@ -7,7 +7,7 @@
 url=https://github.com/bazelbuild/rules_apple.git
 [submodule "build-system/bazel-rules/rules_swift"]
 	path = build-system/bazel-rules/rules_swift
-	url = https://github.com/bazelbuild/rules_swift.git
+url=https://github.com/ali-fareed/rules_swift.git
 [submodule "build-system/bazel-rules/apple_support"]
 	path = build-system/bazel-rules/apple_support
 	url = https://github.com/bazelbuild/apple_support.git
@@ -17,15 +17,12 @@ url=https://github.com/bazelbuild/rules_apple.git
 [submodule "build-system/tulsi"]
 	path = build-system/tulsi
 url=https://github.com/bazelbuild/tulsi.git
-[submodule "third-party/depot_tools"]
-	path = third-party/depot_tools
-	url = https://chromium.googlesource.com/chromium/tools/depot_tools.git
-[submodule "third-party/webrtc/webrtc-ios"]
-	path = third-party/webrtc/webrtc-ios
-url=https://github.com/ali-fareed/webrtc-ios.git
 [submodule "submodules/TgVoipWebrtc/tgcalls"]
 	path = submodules/TgVoipWebrtc/tgcalls
 url=../tgcalls.git
 [submodule "third-party/libvpx/libvpx"]
 	path = third-party/libvpx/libvpx
 	url = https://github.com/webmproject/libvpx.git
+[submodule "third-party/webrtc/webrtc"]
+	path = third-party/webrtc/webrtc
+	url = https://github.com/ali-fareed/webrtc.git

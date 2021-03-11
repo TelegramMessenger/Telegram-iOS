@@ -6,6 +6,7 @@ import MtProtoKit
 
 public enum CreateSecretChatError {
     case generic
+    case limitExceeded
 }
 
 public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
@@ -29,13 +30,17 @@ public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId,
                         return .fail(.generic)
                     }
                     
-                    return account.network.request(Api.functions.messages.requestEncryption(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gA: Buffer(data: ga)))
-                        |> mapError { _ -> CreateSecretChatError in
-                            return .generic
+                    return account.network.request(Api.functions.messages.requestEncryption(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gA: Buffer(data: ga)), automaticFloodWait: false)
+                        |> mapError { error -> CreateSecretChatError in
+                            if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+                                return .limitExceeded
+                            } else {
+                                return .generic
+                            }
                         }
                         |> mapToSignal { result -> Signal<PeerId, CreateSecretChatError> in
                             return account.postbox.transaction { transaction -> PeerId in
-                                updateSecretChat(encryptionProvider: account.network.encryptionProvider, accountPeerId: account.peerId, transaction: transaction, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
+                                updateSecretChat(encryptionProvider: account.network.encryptionProvider, accountPeerId: account.peerId, transaction: transaction, mediaBox: account.postbox.mediaBox, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
                                 
                                 return result.peerId
                             } |> mapError { _ -> CreateSecretChatError in return .generic }

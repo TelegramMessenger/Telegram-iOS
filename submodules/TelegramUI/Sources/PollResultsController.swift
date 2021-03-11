@@ -423,8 +423,6 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }
-    controller.isOpaqueWhenInOverlay = true
-    controller.blocksBackgroundWhenInOverlay = true
     controller.acceptsFocusWhenInOverlay = true
     
     return controller

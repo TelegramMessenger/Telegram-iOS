@@ -73,8 +73,18 @@ public final class ContextMenuActionItem {
     }
 }
 
+public protocol ContextMenuCustomNode: ASDisplayNode {
+    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void)
+    func updateTheme(presentationData: PresentationData)
+}
+
+public protocol ContextMenuCustomItem {
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
+}
+
 public enum ContextMenuItem {
     case action(ContextMenuActionItem)
+    case custom(ContextMenuCustomItem, Bool)
     case separator
 }
 
@@ -128,7 +138,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var didCompleteAnimationIn = false
     private var initialContinueGesturePoint: CGPoint?
     private var didMoveFromInitialGesturePoint = false
-    private var highlightedActionNode: ContextActionNode?
+    private var highlightedActionNode: ContextActionNodeProtocol?
     private var highlightedReaction: ReactionContextItem.Reaction?
     
     private let hapticFeedback = HapticFeedback()
@@ -174,6 +184,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.withoutBlurDimNode.alpha = 0.0
         
         self.dismissNode = ASDisplayNode()
+        self.dismissNode.isAccessibilityElement = true
+        self.dismissNode.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
+        self.dismissNode.accessibilityTraits = .button
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -565,7 +578,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
                 propertyAnimator?.stopAnimation(true)
             }
-            self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
+            self.effectView.effect = makeCustomZoomBlurEffect(isLight: presentationData.theme.rootController.keyboardColor == .light)
             self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: {
             })
@@ -583,7 +596,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         } else {
             UIView.animate(withDuration: 0.2 * animationDurationFactor, animations: {
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
+                self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
             }, completion: { [weak self] _ in
                 self?.didCompleteAnimationIn = true
                 self?.actionsContainerNode.animateIn()
@@ -1093,7 +1106,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         propertyAnimator?.stopAnimation(true)
                     }
                 }
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
+                self.effectView.effect = makeCustomZoomBlurEffect(isLight: presentationData.theme.rootController.keyboardColor == .light)
                 self.dimNode.alpha = 1.0
             }
             self.dimNode.isHidden = false
@@ -1364,15 +1377,28 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
+    
         if let previousActionsContainerNode = previousActionsContainerNode {
             if transition.isAnimated {
-                transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
-                previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
-                    previousActionsContainerNode?.removeFromSupernode()
-                })
-                
-                transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
-                if transition.isAnimated {
+                if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions {
+                    var initialFrame = self.actionsContainerNode.frame
+                    let delta = (previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height)
+                    initialFrame.origin.y = self.actionsContainerNode.frame.minY + previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height
+                    transition.animateFrame(node: self.actionsContainerNode, from: initialFrame)
+                    transition.animatePosition(node: previousActionsContainerNode, to: CGPoint(x: 0.0, y: -delta), removeOnCompletion: false, additive: true)
+                    previousActionsContainerNode.animateOut(offset: delta, transition: transition)
+                    
+                    previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                        previousActionsContainerNode?.removeFromSupernode()
+                    })
+                    self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                } else {
+                    transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
+                    previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                        previousActionsContainerNode?.removeFromSupernode()
+                    })
+                    
+                    transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
                     self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             } else {
@@ -1484,9 +1510,16 @@ public protocol ContextExtractedContentSource: class {
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
     var blurBackground: Bool { get }
+    var shouldBeDismissed: Signal<Bool, NoError> { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
     func putBack() -> ContextControllerPutBackViewInfo?
+}
+
+public extension ContextExtractedContentSource {
+    var shouldBeDismissed: Signal<Bool, NoError> {
+        return .single(false)
+    }
 }
 
 public protocol ContextControllerContentSource: class {
@@ -1529,6 +1562,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((ReactionContextItem.Reaction) -> Void)?
     
+    private var shouldBeDismissedDisposable: Disposable?
+    
     public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, displayTextSelectionTip: Bool = false) {
         self.account = account
         self.presentationData = presentationData
@@ -1541,8 +1576,19 @@ public final class ContextController: ViewController, StandalonePresentableContr
         
         super.init(navigationBarPresentationData: nil)
         
-        if case let .extracted(extractedSource) = source, !extractedSource.blurBackground {
-            self.statusBar.statusBarStyle = .Ignore
+        if case let .extracted(extractedSource) = source {
+            if !extractedSource.blurBackground {
+                self.statusBar.statusBarStyle = .Ignore
+            }
+            self.shouldBeDismissedDisposable = (extractedSource.shouldBeDismissed
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.dismiss(result: .default, completion: {})
+            })
         } else {
             self.statusBar.statusBarStyle = .Hide
         }
@@ -1551,6 +1597,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.shouldBeDismissedDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {

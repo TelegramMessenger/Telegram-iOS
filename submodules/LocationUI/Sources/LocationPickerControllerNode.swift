@@ -287,6 +287,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.emptyResultsTextNode = ImmediateTextNode()
         self.emptyResultsTextNode.maximumNumberOfLines = 0

@@ -378,7 +378,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
+    public func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights?, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
         return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights, rank: rank)
         |> map(Optional.init)
         |> deliverOnMainQueue
@@ -418,8 +418,8 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func join(account: Account, peerId: PeerId) -> Signal<Never, JoinChannelError> {
-        return joinChannel(account: account, peerId: peerId)
+    public func join(account: Account, peerId: PeerId, hash: String?) -> Signal<Never, JoinChannelError> {
+        return joinChannel(account: account, peerId: peerId, hash: hash)
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
             if let strongSelf = self, let updated = result {

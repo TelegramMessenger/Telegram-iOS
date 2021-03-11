@@ -17,16 +17,16 @@ There are several things we require from **all developers** for the moment.
 2. Clone the project from GitHub:
 
 ```
-git clone --recursive https://github.com/TelegramMessenger/Telegram-iOS.git
+git clone --recursive -j8 https://github.com/TelegramMessenger/Telegram-iOS.git
 ```
 
-3. Download Bazel 3.7.0
+3. Download Bazel 4.0.0
 
 ```
 mkdir -p $HOME/bazel-dist
 cd $HOME/bazel-dist
-curl -O -L https://github.com/bazelbuild/bazel/releases/download/3.7.0/bazel-3.7.0-darwin-x86_64
-mv bazel-3.7.0* bazel
+curl -O -L https://github.com/bazelbuild/bazel/releases/download/4.0.0/bazel-4.0.0-darwin-x86_64
+mv bazel-* bazel
 ```
 
 Verify that it's working
@@ -75,7 +75,19 @@ python3 build-system/Make/Make.py \
     --disableExtensions
 ```
 
-Tip: use `--disableExtensions` when developing to speed up development by not building application extensions.
+It is possible to generate a project that does not require any codesigning certificates to be installed: add `--disableProvisioningProfiles` flag:
+```
+python3 build-system/Make/Make.py \
+    --bazel="$HOME/bazel-dist/bazel" \
+    --cacheDir="$HOME/telegram-bazel-cache" \
+    generateProject \
+    --configurationPath="$HOME/telegram-configuration" \
+    --disableExtensions \
+    --disableProvisioningProfiles
+```
+
+
+Tip: use `--disableExtensions` when developing to speed up development by not building application extensions and the WatchOS app.
 
 
 # Tips

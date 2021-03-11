@@ -15,11 +15,13 @@ public final class AlertControllerTheme: Equatable {
     public let primaryColor: UIColor
     public let secondaryColor: UIColor
     public let accentColor: UIColor
+    public let contrastColor: UIColor
     public let destructiveColor: UIColor
     public let disabledColor: UIColor
+    public let controlBorderColor: UIColor
     public let baseFontSize: CGFloat
     
-    public init(backgroundType: ActionSheetControllerThemeBackgroundType, backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disabledColor: UIColor, baseFontSize: CGFloat) {
+    public init(backgroundType: ActionSheetControllerThemeBackgroundType, backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, contrastColor: UIColor, destructiveColor: UIColor, disabledColor: UIColor, controlBorderColor: UIColor, baseFontSize: CGFloat) {
         self.backgroundType = backgroundType
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -27,8 +29,10 @@ public final class AlertControllerTheme: Equatable {
         self.primaryColor = primaryColor
         self.secondaryColor = secondaryColor
         self.accentColor = accentColor
+        self.contrastColor = contrastColor
         self.destructiveColor = destructiveColor
         self.disabledColor = disabledColor
+        self.controlBorderColor = controlBorderColor
         self.baseFontSize = baseFontSize
     }
     

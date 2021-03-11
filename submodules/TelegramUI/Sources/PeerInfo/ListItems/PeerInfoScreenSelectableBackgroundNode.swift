@@ -4,7 +4,7 @@ import TelegramPresentationData
 
 final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
-    private let buttonNode: HighlightTrackingButtonNode
+    private let button: HighlightTrackingButton
     
     let bringToFrontForHighlight: () -> Void
     
@@ -12,7 +12,7 @@ final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
     
     var pressed: (() -> Void)? {
         didSet {
-            self.buttonNode.isUserInteractionEnabled = self.pressed != nil
+            self.button.isUserInteractionEnabled = self.pressed != nil
         }
     }
     
@@ -23,15 +23,16 @@ final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.alpha = 0.0
         
-        self.buttonNode = HighlightTrackingButtonNode()
+        self.button = HighlightTrackingButton()
+        self.button.isAccessibilityElement = false
         
         super.init()
         
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.buttonNode)
+        self.view.addSubview(self.button)
         
-        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+        self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+        self.button.highligthedChanged = { [weak self] highlighted in
             self?.updateIsHighlighted(highlighted)
         }
     }
@@ -57,6 +58,6 @@ final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
     func update(size: CGSize, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
         self.backgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
     }
 }

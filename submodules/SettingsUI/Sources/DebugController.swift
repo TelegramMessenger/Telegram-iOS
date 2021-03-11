@@ -199,7 +199,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             actionSheet?.dismissAnimated()
                             
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                            controller.peerSelected = { [weak controller] peerId in
+                            controller.peerSelected = { [weak controller] peer in
+                                let peerId = peer.id
+                                
                                 if let strongController = controller {
                                     strongController.dismiss()
                                     
@@ -267,7 +269,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 actionSheet?.dismissAnimated()
                                 
                                 let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                                controller.peerSelected = { [weak controller] peerId in
+                                controller.peerSelected = { [weak controller] peer in
+                                    let peerId = peer.id
+                                    
                                     if let strongController = controller {
                                         strongController.dismiss()
                                         
@@ -347,7 +351,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             actionSheet?.dismissAnimated()
                             
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                            controller.peerSelected = { [weak controller] peerId in
+                            controller.peerSelected = { [weak controller] peer in
+                                let peerId = peer.id
+                                
                                 if let strongController = controller {
                                     strongController.dismiss()
                                     
@@ -409,7 +415,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             return
                         }
                         let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                        controller.peerSelected = { [weak controller] peerId in
+                        controller.peerSelected = { [weak controller] peer in
+                            let peerId = peer.id
+                            
                             if let strongController = controller {
                                 strongController.dismiss()
                                 
@@ -438,7 +446,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 actionSheet?.dismissAnimated()
                                 
                                 let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                                controller.peerSelected = { [weak controller] peerId in
+                                controller.peerSelected = { [weak controller] peer in
+                                    let peerId = peer.id
+                                    
                                     if let strongController = controller {
                                         strongController.dismiss()
                                         
@@ -738,6 +748,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .voiceConference:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
+                guard let _ = arguments.context else {
+                    return
+                }
             })
         case let .preferredVideoCodec(_, title, value, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {

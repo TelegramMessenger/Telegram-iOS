@@ -82,7 +82,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func buttonPressed() {
-        guard let context = self.context, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
+        guard let _ = self.context, let presentationInterfaceState = self.presentationInterfaceState, let _ = presentationInterfaceState.renderedPeer?.peer else {
             return
         }
         
@@ -91,7 +91,6 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
-            let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
         }
         

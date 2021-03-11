@@ -10,9 +10,9 @@ public func removePeerChat(account: Account, peerId: PeerId, reportChatSpam: Boo
     }
 }
 
-public func terminateSecretChat(transaction: Transaction, peerId: PeerId) {
+public func terminateSecretChat(transaction: Transaction, peerId: PeerId, requestRemoteHistoryRemoval: Bool) {
     if let state = transaction.getPeerChatState(peerId) as? SecretChatState, state.embeddedState != .terminated {
-        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: false), state: state).withUpdatedEmbeddedState(.terminated)
+        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: false, requestRemoteHistoryRemoval: requestRemoteHistoryRemoval), state: state).withUpdatedEmbeddedState(.terminated)
         if updatedState != state {
             transaction.setPeerChatState(peerId, state: updatedState)
             if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
@@ -48,7 +48,7 @@ public func removePeerChat(account: Account, transaction: Transaction, mediaBox:
     })
     if peerId.namespace == Namespaces.Peer.SecretChat {
         if let state = transaction.getPeerChatState(peerId) as? SecretChatState, state.embeddedState != .terminated {
-            let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: reportChatSpam), state: state).withUpdatedEmbeddedState(.terminated)
+            let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: reportChatSpam, requestRemoteHistoryRemoval: deleteGloballyIfPossible), state: state).withUpdatedEmbeddedState(.terminated)
             if updatedState != state {
                 transaction.setPeerChatState(peerId, state: updatedState)
                 if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {

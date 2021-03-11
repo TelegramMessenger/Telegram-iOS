@@ -271,7 +271,6 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
         if self.revealOptions == options {
             return
         }
-        let previousOptions = self.revealOptions
         let wasEmpty = self.revealOptions.isEmpty
         self.revealOptions = options
         let isEmpty = options.isEmpty

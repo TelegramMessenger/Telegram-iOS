@@ -51,6 +51,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func deleteIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListDeleteIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: theme.list.itemDestructiveColor)
+        })
+    }
+    
     public static func stickerUnreadDotImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListStickerItemUnreadDot.rawValue, { theme in
             return generateFilledCircleImage(diameter: 6.0, color: theme.list.itemAccentColor)
@@ -79,14 +85,13 @@ public struct PresentationResourcesItemList {
     
     public static func itemListReorderIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListReorderIndicatorIcon.rawValue, { theme in
-            generateImage(CGSize(width: 16.0, height: 9.0), contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.list.controlSecondaryColor.cgColor)
-                
-                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: 1.5)))
-                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 3.5), size: CGSize(width: size.width, height: 1.5)))
-                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 7), size: CGSize(width: size.width, height: 1.5)))
-            })
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/Reorder"), color: theme.list.controlSecondaryColor)
+        })
+    }
+    
+    public static func linkIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListLinkIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Contact List/LinkActionIcon"), color: theme.list.itemAccentColor)
         })
     }
     
