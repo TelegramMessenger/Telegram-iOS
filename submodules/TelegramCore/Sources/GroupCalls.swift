@@ -356,7 +356,7 @@ public struct JoinGroupCallResult {
     public var connectionMode: ConnectionMode
 }
 
-public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         if let joinAs = joinAs {
             return transaction.getPeer(joinAs).flatMap(apiInputPeer)
@@ -377,8 +377,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
         if let _ = inviteHash {
             flags |= (1 << 1)
         }
-        
-        return account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, params: .dataJSON(data: joinPayload)))
+
+        let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, params: .dataJSON(data: joinPayload)))
         |> mapError { error -> JoinGroupCallError in
             if error.errorDescription == "GROUPCALL_ANONYMOUS_FORBIDDEN" {
                 return .anonymousNotAllowed
@@ -387,92 +387,32 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
             }
             return .generic
         }
-        |> mapToSignal { updates -> Signal<JoinGroupCallResult, JoinGroupCallError> in
-            let admins: Signal<(Set<PeerId>, [Api.User]), JoinGroupCallError>
-            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                admins = account.postbox.transaction { transaction -> Api.InputChannel? in
-                    return transaction.getPeer(peerId).flatMap(apiInputChannel)
-                }
-                |> castError(JoinGroupCallError.self)
-                |> mapToSignal { inputChannel -> Signal<Api.channels.ChannelParticipants, JoinGroupCallError> in
-                    guard let inputChannel = inputChannel else {
-                        return .fail(.generic)
-                    }
-                    
-                    return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100, hash: 0))
-                    |> `catch` { _  in
-                        return .single(.channelParticipantsNotModified)
-                    }
-                }
-                |> map { admins -> (Set<PeerId>, [Api.User]) in
-                    var adminIds = Set<PeerId>()
-                    var apiUsers: [Api.User] = []
-                    
-                    switch admins {
-                    case let .channelParticipants(_, participants, users):
-                        apiUsers.append(contentsOf: users)
-                        
-                        for participant in participants {
-                            let parsedParticipant = ChannelParticipant(apiParticipant: participant)
-                            switch parsedParticipant {
-                            case .creator:
-                                adminIds.insert(parsedParticipant.peerId)
-                            case let .member(_, _, adminInfo, _, _):
-                                if let adminInfo = adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
-                                    adminIds.insert(parsedParticipant.peerId)
-                                }
-                            }
-                        }
-                    default:
-                        break
-                    }
-                    
-                    return (adminIds, apiUsers)
-                }
-            } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-                admins = account.postbox.transaction { transaction -> (Set<PeerId>, [Api.User]) in
-                    var result = Set<PeerId>()
-                    if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedGroupData {
-                        if let participants = cachedData.participants {
-                            for participant in participants.participants {
-                                if case .creator = participant {
-                                    result.insert(participant.peerId)
-                                } else if case .admin = participant {
-                                    result.insert(participant.peerId)
-                                }
-                            }
-                        }
-                    }
-                    return (result, [])
-                }
-                |> castError(JoinGroupCallError.self)
-            } else {
-                admins = .fail(.generic)
-            }
-            
+
+        let getParticipantsRequest = getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", ssrcs: [], limit: 100)
+        |> mapError { _ -> JoinGroupCallError in
+            return .generic
+        }
+        
+        return combineLatest(
+            joinRequest,
+            getParticipantsRequest
+        )
+        |> mapToSignal { updates, participantsState -> Signal<JoinGroupCallResult, JoinGroupCallError> in            
             let peer = account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(peerId)
             }
             |> castError(JoinGroupCallError.self)
             
             return combineLatest(
-                account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
-                |> mapError { _ -> JoinGroupCallError in
-                    return .generic
-                },
-                getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", ssrcs: [], limit: 100)
-                |> mapError { _ -> JoinGroupCallError in
-                    return .generic
-                },
-                admins,
+                peerAdminIds |> castError(JoinGroupCallError.self) |> take(1),
                 peer
             )
-            |> mapToSignal { result, state, admins, peer -> Signal<JoinGroupCallResult, JoinGroupCallError> in
+            |> mapToSignal { peerAdminIds, peer -> Signal<JoinGroupCallResult, JoinGroupCallError> in
                 guard let peer = peer else {
                     return .fail(.generic)
                 }
                 
-                var state = state
+                var state = participantsState
                 if let channel = peer as? TelegramChannel {
                     state.isCreator = channel.flags.contains(.isCreator)
                 } else if let group = peer as? TelegramGroup {
@@ -514,71 +454,53 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 
                 var apiUsers: [Api.User] = []
                 
-                let (adminIds, adminUsers) = admins
-                apiUsers.append(contentsOf: adminUsers)
-                
-                state.adminIds = adminIds
-                
-                switch result {
-                case let .groupCall(call, _, _, chats, users):
-                    guard let _ = GroupCallInfo(call) else {
-                        return .fail(.generic)
+                state.adminIds = Set(peerAdminIds)
+                    
+                var peers: [Peer] = []
+                var peerPresences: [PeerId: PeerPresence] = [:]
+
+                for user in apiUsers {
+                    let telegramUser = TelegramUser(user: user)
+                    peers.append(telegramUser)
+                    if let presence = TelegramUserPresence(apiUser: user) {
+                        peerPresences[telegramUser.id] = presence
                     }
-                    
-                    apiUsers.append(contentsOf: users)
-                    
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
-                    
-                    for user in apiUsers {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
-                        }
-                    }
-                    
-                    for chat in chats {
-                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(peer)
-                        }
-                    }
-                    
-                    let connectionMode: JoinGroupCallResult.ConnectionMode
-                    if let clientParams = parsedCall.clientParams, let clientParamsData = clientParams.data(using: .utf8), let dict = (try? JSONSerialization.jsonObject(with: clientParamsData, options: [])) as? [String: Any] {
-                        if let stream = dict["stream"] as? Bool, stream {
-                            connectionMode = .broadcast
-                        } else {
-                            connectionMode = .rtc
-                        }
-                    } else {
-                        connectionMode = .broadcast
-                    }
-                    
-                    return account.postbox.transaction { transaction -> JoinGroupCallResult in
-                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                            if let cachedData = cachedData as? CachedChannelData {
-                                return cachedData.withUpdatedCallJoinPeerId(joinAs)
-                            } else if let cachedData = cachedData as? CachedGroupData {
-                                return cachedData.withUpdatedCallJoinPeerId(joinAs)
-                            } else {
-                                return cachedData
-                            }
-                        })
-                        
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
-                        
-                        return JoinGroupCallResult(
-                            callInfo: parsedCall,
-                            state: state,
-                            connectionMode: connectionMode
-                        )
-                    }
-                    |> castError(JoinGroupCallError.self)
                 }
+
+                let connectionMode: JoinGroupCallResult.ConnectionMode
+                if let clientParams = parsedCall.clientParams, let clientParamsData = clientParams.data(using: .utf8), let dict = (try? JSONSerialization.jsonObject(with: clientParamsData, options: [])) as? [String: Any] {
+                    if let stream = dict["stream"] as? Bool, stream {
+                        connectionMode = .broadcast
+                    } else {
+                        connectionMode = .rtc
+                    }
+                } else {
+                    connectionMode = .broadcast
+                }
+
+                return account.postbox.transaction { transaction -> JoinGroupCallResult in
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                        if let cachedData = cachedData as? CachedChannelData {
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                        } else if let cachedData = cachedData as? CachedGroupData {
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                        } else {
+                            return cachedData
+                        }
+                    })
+
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                        return updated
+                    })
+                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+
+                    return JoinGroupCallResult(
+                        callInfo: parsedCall,
+                        state: state,
+                        connectionMode: connectionMode
+                    )
+                }
+                |> castError(JoinGroupCallError.self)
             }
         }
     }

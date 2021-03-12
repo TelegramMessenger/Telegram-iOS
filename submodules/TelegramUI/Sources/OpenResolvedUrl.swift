@@ -465,9 +465,15 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .joinVoiceChat(peerId, invite):
             dismissInput()
-            openPeer(peerId, defaultNavigationForPeerId(peerId, navigation: .default))
-            present(VoiceChatJoinScreen(context: context, peerId: peerId, invite: invite, join: { call in
-                joinVoiceChat?(peerId, invite, call)
-            }), nil)
+            if let navigationController = navigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), completion: { chatController in
+                    guard let chatController = chatController as? ChatControllerImpl else {
+                        return
+                    }
+                    navigationController.currentWindow?.present(VoiceChatJoinScreen(context: context, peerId: peerId, invite: invite, join: { [weak chatController] call in
+                        chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: call)
+                    }), on: .root, blockInteraction: false, completion: {})
+                }))
+            }
     }
 }
