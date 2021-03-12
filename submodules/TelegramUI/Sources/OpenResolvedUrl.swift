@@ -465,6 +465,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .joinVoiceChat(peerId, invite):
             dismissInput()
+            if let navigationController = navigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+            }
             present(VoiceChatJoinScreen(context: context, peerId: peerId, invite: invite, join: { call in
                 joinVoiceChat?(peerId, invite, call)
             }), nil)
