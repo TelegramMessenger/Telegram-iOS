@@ -1814,7 +1814,7 @@ public final class VoiceChatController: ViewController {
                         }
 
                         let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, apply: { title in
-                            if let strongSelf = self, let title = title {
+                            if let strongSelf = self {
                                 strongSelf.call.setShouldBeRecording(true, title: title)
 
                                 strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
