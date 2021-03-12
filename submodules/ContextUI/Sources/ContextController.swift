@@ -1267,6 +1267,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                     
                     var contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalContentFrame.minY + contentTopInset)
+                    contentHeight = max(contentHeight, actionsSize.height + originalActionsFrame.minY + actionsBottomInset)
                     
                     var overflowOffset: CGFloat
                     var contentContainerFrame: CGRect
