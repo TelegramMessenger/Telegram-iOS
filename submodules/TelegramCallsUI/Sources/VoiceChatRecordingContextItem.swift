@@ -74,9 +74,9 @@ class VoiceChatRecordingIconNode: ASDisplayNode {
     
     private func setupAnimation() {
         let animation = CAKeyframeAnimation(keyPath: "opacity")
-        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.55 as NSNumber]
         animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-        animation.duration = 0.5
+        animation.duration = 0.7
         animation.autoreverses = true
         animation.repeatCount = Float.infinity
         self.dotNode.layer.add(animation, forKey: "recording")

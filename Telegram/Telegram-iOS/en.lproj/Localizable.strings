@@ -6261,3 +6261,5 @@ Sorry for the inconvenience.";
 "Invitation.JoinVoiceChat" = "Join Voice Chat";
 
 "VoiceChat.CancelSpeakRequest" = "Cancel Request to Speak";
+
+"VoiceChat.RemovePeerConfirmationChannel" = "Are you sure you want to remove %@ from the channel?";

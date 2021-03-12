@@ -16,6 +16,7 @@ public enum DeleteChatPeerAction {
     case clearCache
     case clearCacheSuggestion
     case removeFromGroup
+    case removeFromChannel
 }
 
 private let avatarFont = avatarPlaceholderFont(size: 26.0)
@@ -142,6 +143,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 }
             case .removeFromGroup:
                 text = strings.VoiceChat_RemovePeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+            case .removeFromChannel:
+                text = strings.VoiceChat_RemovePeerConfirmationChannel(peer.displayTitle(strings: strings, displayOrder: nameOrder))
             default:
                 break
             }
