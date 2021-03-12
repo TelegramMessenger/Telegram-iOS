@@ -530,6 +530,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var processedMissingSsrcs = Set<UInt32>()
     private let missingSsrcsDisposable = MetaDisposable()
     private var isRequestingMissingSsrcs: Bool = false
+
+    private var peerUpdatesSubscription: Disposable?
     
     init(
         accountContext: AccountContext,
@@ -761,6 +763,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         let _ = (self.account.postbox.loadedPeerWithId(peerId)
         |> deliverOnMainQueue).start(next: { [weak self] peer in
+            guard let strongSelf = self else {
+                return
+            }
             var canManageCall = false
             if let peer = peer as? TelegramGroup {
                 if case .creator = peer.role {
@@ -774,14 +779,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 } else if (peer.adminRights?.rights.contains(.canManageCalls) == true) {
                     canManageCall = true
                 }
+                strongSelf.peerUpdatesSubscription = strongSelf.accountContext.account.viewTracker.polledChannel(peerId: peer.id).start()
             }
-            if let strongSelf = self {
-                var updatedValue = strongSelf.stateValue
-                updatedValue.canManageCall = canManageCall
-                strongSelf.stateValue = updatedValue
-            }
+            var updatedValue = strongSelf.stateValue
+            updatedValue.canManageCall = canManageCall
+            strongSelf.stateValue = updatedValue
         })
-
         
         self.requestCall(movingFromBroadcastToRtc: false)
     }
@@ -815,6 +818,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.audioOutputStateDisposable?.dispose()
         
         self.removedChannelMembersDisposable?.dispose()
+
+        self.peerUpdatesSubscription?.dispose()
     }
     
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
