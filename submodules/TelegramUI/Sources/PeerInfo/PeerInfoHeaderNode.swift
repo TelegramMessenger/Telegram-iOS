@@ -111,7 +111,30 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         if self.theme != presentationData.theme || self.icon != icon || self.isActive != isActive {
             self.theme = presentationData.theme
             self.icon = icon
+            
+            let isActiveUpdated = self.isActive != isActive
             self.isActive = isActive
+            
+            
+            if isActiveUpdated {
+                if let snapshotView = self.backgroundNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.backgroundNode.view.frame
+                    self.view.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+                if let snapshotView = self.textNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.textNode.view.frame
+                    self.view.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
+            
             self.backgroundNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(isActive ? presentationData.theme.list.itemAccentColor.cgColor : presentationData.theme.list.itemDisabledTextColor.cgColor)

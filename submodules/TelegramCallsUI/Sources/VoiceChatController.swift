@@ -549,6 +549,7 @@ public final class VoiceChatController: ViewController {
                         let peer = peerEntry.peer
                         
                         var text: VoiceChatParticipantItem.ParticipantText
+                        var expandedText: VoiceChatParticipantItem.ParticipantText?
                         let icon: VoiceChatParticipantItem.Icon
                         switch peerEntry.state {
                         case .listening:
@@ -586,10 +587,14 @@ public final class VoiceChatController: ViewController {
                             text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
                             icon = .wantsToSpeak
                         }
+                        
+                        if let about = peerEntry.about, !about.isEmpty {
+                            expandedText = .text(about, .generic)
+                        }
                                                 
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: !peerEntry.isMyPeer || peerEntry.canManageCall || peerEntry.raisedHand, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, expandedText: expandedText, icon: icon, enabled: true, selectable: !peerEntry.isMyPeer || peerEntry.canManageCall || peerEntry.raisedHand, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
                             if let ssrc = peerEntry.ssrc {
                                 return interaction.getPeerVideo(ssrc)
                             } else {
@@ -2054,7 +2059,7 @@ public final class VoiceChatController: ViewController {
                     return formatSendTitle(self.presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
                 })]
             }
-            let shareController = ShareController(context: self.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: self.darkTheme, forcedActionTitle: self.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink)
+            let shareController = ShareController(context: self.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: self.darkTheme, forcedActionTitle: self.presentationData.strings.VoiceChat_CopyInviteLink)
             shareController.actionCompleted = { [weak self] in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

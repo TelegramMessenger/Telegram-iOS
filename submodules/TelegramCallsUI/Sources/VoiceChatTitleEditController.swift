@@ -431,7 +431,7 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
         
         let previousValue = value ?? ""
         let newValue = contentNode.value
-        apply(previousValue != newValue ? newValue : nil)
+        apply(previousValue != newValue || value == nil ? newValue : nil)
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)

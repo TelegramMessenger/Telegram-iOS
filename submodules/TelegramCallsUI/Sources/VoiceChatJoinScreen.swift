@@ -108,6 +108,7 @@ public final class VoiceChatJoinScreen: ViewController {
                     
                     let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title)
                     if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
+                        strongSelf.dismiss()
                         strongSelf.join(activeCall)
                     } else {
                         strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount)
