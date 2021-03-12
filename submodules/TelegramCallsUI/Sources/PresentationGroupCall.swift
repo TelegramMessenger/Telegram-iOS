@@ -1309,10 +1309,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     return rawAdminIds
                 }
                 |> distinctUntilChanged
+
+                let myPeerId = self.joinAsPeerId
                 
                 var initialState = initialState
                 if let participantsContext = self.participantsContext, let immediateState = participantsContext.immediateState {
-                    initialState.mergeActivity(from: immediateState)
+                    initialState.mergeActivity(from: immediateState, myPeerId: myPeerId, previousMyPeerId: self.ignorePreviousJoinAsPeerId?.0)
                 }
                 
                 let participantsContext = GroupCallParticipantsContext(
@@ -1325,7 +1327,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 )
                 self.temporaryParticipantsContext = nil
                 self.participantsContext = participantsContext
-                let myPeerId = self.joinAsPeerId
                 let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
                     if let peer = transaction.getPeer(myPeerId) {
                         return (peer, transaction.getPeerCachedData(peerId: myPeerId))
