@@ -828,6 +828,7 @@ public final class GroupCallParticipantsContext {
                 public var participationStatusChange: ParticipationStatusChange
                 public var volume: Int32?
                 public var about: String?
+                public var isMin: Bool
                 
                 init(
                     peerId: PeerId,
@@ -839,7 +840,8 @@ public final class GroupCallParticipantsContext {
                     muteState: Participant.MuteState?,
                     participationStatusChange: ParticipationStatusChange,
                     volume: Int32?,
-                    about: String?
+                    about: String?,
+                    isMin: Bool
                 ) {
                     self.peerId = peerId
                     self.ssrc = ssrc
@@ -851,6 +853,7 @@ public final class GroupCallParticipantsContext {
                     self.participationStatusChange = participationStatusChange
                     self.volume = volume
                     self.about = about
+                    self.isMin = isMin
                 }
             }
             
@@ -1586,6 +1589,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
             }
             let isRemoved = (flags & (1 << 1)) != 0
             let justJoined = (flags & (1 << 4)) != 0
+            let isMin = (flags & (1 << 8)) != 0
             
             let participationStatusChange: GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate.ParticipationStatusChange
             if isRemoved {
@@ -1614,7 +1618,8 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 muteState: muteState,
                 participationStatusChange: participationStatusChange,
                 volume: volume,
-                about: about
+                about: about,
+                isMin: isMin
             )
         }
     }
@@ -1647,6 +1652,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                 }
                 let isRemoved = (flags & (1 << 1)) != 0
                 let justJoined = (flags & (1 << 4)) != 0
+                let isMin = (flags & (1 << 8)) != 0
                 
                 let participationStatusChange: GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate.ParticipationStatusChange
                 if isRemoved {
@@ -1675,7 +1681,8 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     muteState: muteState,
                     participationStatusChange: participationStatusChange,
                     volume: volume,
-                    about: about
+                    about: about,
+                    isMin: isMin
                 ))
             }
         }

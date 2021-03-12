@@ -726,7 +726,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             raiseHandNode.playRandomAnimation()
                             
                             strongSelf.raiseHandTimer = SwiftSignalKit.Timer(timeout: Double.random(in: 8.0 ... 10.5), repeat: true, completion: {
-                                strongSelf.raiseHandNode?.playRandomAnimation()
+                                self?.raiseHandNode?.playRandomAnimation()
                             }, queue: Queue.mainQueue())
                             strongSelf.raiseHandTimer?.start()
                         }

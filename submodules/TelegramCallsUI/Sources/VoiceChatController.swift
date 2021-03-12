@@ -1082,11 +1082,12 @@ public final class VoiceChatController: ViewController {
                         guard let strongSelf = self else {
                             return
                         }
+                        let callPeerId = strongSelf.call.peerId
                         
                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
-                            if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
+                            if let peer = transaction.getPeer(callPeerId), let addressName = peer.addressName, !addressName.isEmpty {
                                 return "https://t.me/\(addressName)"
-                            } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
+                            } else if let cachedData = transaction.getPeerCachedData(peerId: callPeerId) {
                                 if let cachedData = cachedData as? CachedChannelData {
                                     return cachedData.exportedInvitation?.link
                                 } else if let cachedData = cachedData as? CachedGroupData {
@@ -1459,7 +1460,7 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.audioOutputStateDisposable = (call.audioOutputState
+            self.audioOutputStateDisposable = (self.call.audioOutputState
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 guard let strongSelf = self else {
                     return
@@ -1474,7 +1475,7 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.audioLevelsDisposable = (call.audioLevels
+            self.audioLevelsDisposable = (self.call.audioLevels
             |> deliverOnMainQueue).start(next: { [weak self] levels in
                 guard let strongSelf = self else {
                     return
@@ -1508,7 +1509,7 @@ public final class VoiceChatController: ViewController {
                 strongSelf.itemInteraction?.updateAudioLevels(levels)
             })
             
-            self.myAudioLevelDisposable = (call.myAudioLevel
+            self.myAudioLevelDisposable = (self.call.myAudioLevel
             |> deliverOnMainQueue).start(next: { [weak self] level in
                 guard let strongSelf = self else {
                     return
