@@ -1039,9 +1039,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             if channel.flags.contains(.hasVoiceChat) {
                 hasVoiceChat = true
             }
-            if !hasVoiceChat && (channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls)) {
-                canStartVoiceChat = true
-            }
+        }
+        if !hasVoiceChat && (channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls)) {
+            canStartVoiceChat = true
         }
         switch channel.participationStatus {
         case .member:
