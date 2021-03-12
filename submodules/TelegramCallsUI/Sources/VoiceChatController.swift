@@ -30,7 +30,7 @@ private let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
 private let fullscreenBackgroundColor = UIColor(rgb: 0x000000)
 private let dimColor = UIColor(white: 0.0, alpha: 0.5)
 private let sideButtonSize = CGSize(width: 56.0, height: 56.0)
-private let bottomAreaHeight: CGFloat = 200.0
+private let bottomAreaHeight: CGFloat = 205.0
 
 private func cornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
@@ -589,7 +589,7 @@ public final class VoiceChatController: ViewController {
                                                 
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: !peerEntry.isMyPeer || peerEntry.canManageCall, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, icon: icon, enabled: true, selectable: !peerEntry.isMyPeer || peerEntry.canManageCall || peerEntry.raisedHand, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
                             if let ssrc = peerEntry.ssrc {
                                 return interaction.getPeerVideo(ssrc)
                             } else {
@@ -1141,7 +1141,20 @@ public final class VoiceChatController: ViewController {
                         f(.default)
                     })))*/
                     
-                    if peer.id != strongSelf.callState?.myPeerId {
+                    if peer.id == strongSelf.callState?.myPeerId {
+                        if entry.raisedHand {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_CancelSpeakRequest, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/RevokeSpeak"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                let _ = strongSelf.call.lowerHand()
+                                f(.default)
+                            })))
+                        }
+                    } else {
                         if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
                             if callState.adminIds.contains(peer.id) {
                                 if let _ = muteState {

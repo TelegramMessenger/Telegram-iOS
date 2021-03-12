@@ -536,9 +536,9 @@ public func stopGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
         return account.postbox.transaction { transaction -> Void in
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                 if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.withUpdatedActiveCall(nil)
+                    return cachedData.withUpdatedActiveCall(nil).withUpdatedCallJoinPeerId(nil)
                 } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.withUpdatedActiveCall(nil)
+                    return cachedData.withUpdatedActiveCall(nil).withUpdatedCallJoinPeerId(nil)
                 } else {
                     return cachedData
                 }
@@ -1489,6 +1489,10 @@ public final class GroupCallParticipantsContext {
     
     public func raiseHand() {
         self.updateMuteState(peerId: self.myPeerId, muteState: nil, volume: nil, raiseHand: true)
+    }
+    
+    public func lowerHand() {
+        self.updateMuteState(peerId: self.myPeerId, muteState: nil, volume: nil, raiseHand: false)
     }
     
     public func updateShouldBeRecording(_ shouldBeRecording: Bool, title: String?) {

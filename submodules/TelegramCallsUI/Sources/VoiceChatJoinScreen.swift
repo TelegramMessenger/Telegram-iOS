@@ -90,12 +90,28 @@ public final class VoiceChatJoinScreen: ViewController {
                 return .single(nil)
             }
         }
+        
+        let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
+            return transaction.getPeerCachedData(peerId: peerId)
+        }
+        |> castError(GetCurrentGroupCallError.self)
             
-        self.disposable.set((signal
-        |> deliverOnMainQueue).start(next: { [weak self] peerAndCall in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData).start(next: { [weak self] peerAndCall, availablePeers, cachedData in
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
-                    strongSelf.controllerNode.setPeer(call: CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title), peer: peer, title: call.info.title, memberCount: call.info.participantCount)
+                    var defaultJoinAsPeerId: PeerId?
+                    if let cachedData = cachedData as? CachedChannelData {
+                        defaultJoinAsPeerId = cachedData.callJoinPeerId
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        defaultJoinAsPeerId = cachedData.callJoinPeerId
+                    }
+                    
+                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title)
+                    if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
+                        strongSelf.join(activeCall)
+                    } else {
+                        strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount)
+                    }
                 } else {
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.InviteLinks_InviteLinkExpired, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     strongSelf.dismiss()

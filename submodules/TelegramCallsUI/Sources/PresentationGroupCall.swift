@@ -1396,7 +1396,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             let about: String?
                             if let cachedData = cachedData as? CachedUserData {
                                 about = cachedData.about
-                            } else if let cachedData = cachedData as? CachedUserData {
+                            } else if let cachedData = cachedData as? CachedChannelData {
                                 about = cachedData.about
                             } else {
                                 about = nil
@@ -1431,13 +1431,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         
                         if participant.peer.id == strongSelf.joinAsPeerId {
+                            let previousRaisedHand = strongSelf.stateValue.raisedHand
                             if !(strongSelf.stateValue.muteState?.canUnmute ?? false) {
                                 strongSelf.stateValue.raisedHand = participant.raiseHandRating != nil
                             }
                             
-                            if let muteState = participant.muteState, muteState.canUnmute && strongSelf.stateValue.raisedHand {
-                                strongSelf.stateValue.raisedHand = false
-                                
+                            if let muteState = participant.muteState, muteState.canUnmute && previousRaisedHand {                            
                                 let _ = (strongSelf.accountContext.sharedContext.hasGroupCallOnScreen
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { hasGroupCallOnScreen in
@@ -1833,6 +1832,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContext?.raiseHand()
     }
     
+    public func lowerHand() {
+        guard let membersValue = self.membersValue else {
+            return
+        }
+        for participant in membersValue.participants {
+            if participant.peer.id == self.joinAsPeerId {
+                if participant.raiseHandRating == nil {
+                    return
+                }
+                break
+            }
+        }
+        
+        self.participantsContext?.lowerHand()
+    }
+    
     public func requestVideo() {
         if self.videoCapturer == nil {
             let videoCapturer = OngoingCallVideoCapturer()
@@ -2039,9 +2054,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.checkCallDisposable?.dispose()
         self.checkCallDisposable = nil
         
-        self.stateValue.networkState = .connecting
-
-        if !movingFromBroadcastToRtc {
+        if movingFromBroadcastToRtc {
+            self.stateValue.networkState = .connected
+        } else {
             self.stateValue.networkState = .connecting
         }
         

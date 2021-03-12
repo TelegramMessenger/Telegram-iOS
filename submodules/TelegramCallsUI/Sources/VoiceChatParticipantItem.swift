@@ -777,7 +777,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     let animationSize = CGSize(width: 36.0, height: 36.0)
                     strongSelf.iconNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     strongSelf.animationNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
-                    strongSelf.raiseHandNode?.frame = CGRect(origin: CGPoint(), size: CGSize(width: 32.0, height: 32.0))
+                    strongSelf.raiseHandNode?.frame = CGRect(origin: CGPoint(), size: animationSize).insetBy(dx: -6.0, dy: -6.0)
                     
                     strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset + actionOffset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     
