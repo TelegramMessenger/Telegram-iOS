@@ -585,7 +585,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: "anim_vcflag", colors: [:], scale: 0.066)
+                self.animationNode = AnimationNode(animation: "anim_vcspeak", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)

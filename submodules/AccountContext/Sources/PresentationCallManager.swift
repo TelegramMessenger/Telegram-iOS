@@ -312,6 +312,7 @@ public protocol PresentationGroupCall: class {
     func toggleIsMuted()
     func setIsMuted(action: PresentationGroupCallMuteAction)
     func raiseHand()
+    func lowerHand()
     func requestVideo()
     func disableVideo()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)

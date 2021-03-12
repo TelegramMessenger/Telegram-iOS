@@ -1775,13 +1775,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if historyView.filteredEntries.isEmpty {
                         if let firstEntry = historyView.originalView.entries.first {
                             var isPeerJoined = false
+                            var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
                             for media in firstEntry.message.media {
-                                if let action = media as? TelegramMediaAction, action.action == .peerJoined {
-                                    isPeerJoined = true
-                                    break
+                                if let action = media as? TelegramMediaAction {
+                                    if action.action == .peerJoined {
+                                        emptyType = .joined
+                                        break
+                                    } else if action.action == .historyCleared {
+                                        emptyType = .clearedHistory
+                                        break
+                                    }
                                 }
                             }
-                            loadState = .empty(isPeerJoined ? .joined : .generic)
+                            loadState = .empty(emptyType)
                         } else {
                             loadState = .empty(.generic)
                         }
