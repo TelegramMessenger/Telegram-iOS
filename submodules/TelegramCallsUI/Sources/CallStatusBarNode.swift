@@ -429,7 +429,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let contentHeight: CGFloat = 24.0
         let verticalOrigin: CGFloat = size.height - contentHeight
         
-        let transition: ContainedViewLayoutTransition = wasEmpty ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
+        let sizeChanged = self.titleNode.frame.size.width != titleSize.width
+        
+        let transition: ContainedViewLayoutTransition = wasEmpty || sizeChanged ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
         transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
         
