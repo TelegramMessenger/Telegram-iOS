@@ -426,6 +426,8 @@ final class CallListControllerNode: ASDisplayNode {
                 case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
                     if let channel = renderedPeer.peer as? TelegramChannel, channel.flags.contains(.hasActiveVoiceChat) {
                         result.append(channel)
+                    } else if let group = renderedPeer.peer as? TelegramGroup, group.flags.contains(.hasActiveVoiceChat) {
+                        result.append(group)
                     }
                 default:
                     break

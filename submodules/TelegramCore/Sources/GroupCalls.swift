@@ -452,7 +452,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                     return .fail(.generic)
                 }
                 
-                var apiUsers: [Api.User] = []
+                let apiUsers: [Api.User] = []
                 
                 state.adminIds = Set(peerAdminIds)
                     
@@ -755,7 +755,7 @@ public final class GroupCallParticipantsContext {
         public var totalCount: Int
         public var version: Int32
         
-        public mutating func mergeActivity(from other: State) {
+        public mutating func mergeActivity(from other: State, myPeerId: PeerId, previousMyPeerId: PeerId?) {
             var indexMap: [PeerId: Int] = [:]
             for i in 0 ..< other.participants.count {
                 indexMap[other.participants[i].peer.id] = i
@@ -764,6 +764,9 @@ public final class GroupCallParticipantsContext {
             for i in 0 ..< self.participants.count {
                 if let index = indexMap[self.participants[i].peer.id] {
                     self.participants[i].mergeActivity(from: other.participants[index])
+                    if self.participants[i].peer.id == myPeerId || self.participants[i].peer.id == previousMyPeerId {
+                        self.participants[i].joinTimestamp = other.participants[index].joinTimestamp
+                    }
                 }
             }
             
@@ -1292,9 +1295,11 @@ public final class GroupCallParticipantsContext {
                         assertionFailure()
                         continue
                     }
+                    var previousJoinTimestamp: Int32?
                     var previousActivityTimestamp: Double?
                     var previousActivityRank: Int?
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
+                        previousJoinTimestamp = updatedParticipants[index].joinTimestamp
                         previousActivityTimestamp = updatedParticipants[index].activityTimestamp
                         previousActivityRank = updatedParticipants[index].activityRank
                         updatedParticipants.remove(at: index)
@@ -1302,7 +1307,7 @@ public final class GroupCallParticipantsContext {
                         updatedTotalCount += 1
                         strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, joined: true))
                     }
-                    
+
                     var activityTimestamp: Double?
                     if let previousActivityTimestamp = previousActivityTimestamp, let updatedActivityTimestamp = participantUpdate.activityTimestamp {
                         activityTimestamp = max(updatedActivityTimestamp, previousActivityTimestamp)
@@ -1314,7 +1319,7 @@ public final class GroupCallParticipantsContext {
                         peer: peer,
                         ssrc: participantUpdate.ssrc,
                         jsonParams: participantUpdate.jsonParams,
-                        joinTimestamp: participantUpdate.joinTimestamp,
+                        joinTimestamp: previousJoinTimestamp ?? participantUpdate.joinTimestamp,
                         raiseHandRating: participantUpdate.raiseHandRating,
                         hasRaiseHand: participantUpdate.raiseHandRating != nil,
                         activityTimestamp: activityTimestamp,
@@ -1777,9 +1782,8 @@ public func groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox,
         return network.request(Api.functions.phone.getGroupCallJoinAs(peer: inputPeer))
         |> retryRequest
         |> mapToSignal { result in
-            var peers:[Peer]
             switch result {
-            case let .joinAsPeers(peers, chats, users):
+            case let .joinAsPeers(_, chats, _):
                 var subscribers: [PeerId: Int32] = [:]
                 let peers = chats.compactMap(parseTelegramGroupOrChannel)
                 for chat in chats {
