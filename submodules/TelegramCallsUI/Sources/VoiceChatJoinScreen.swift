@@ -601,13 +601,17 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private let avatarNode: AvatarNode
-    private let titleNode: ASTextNode
-    private let countNode: ASTextNode
+    private let titleNode: ImmediateTextNode
+    private let countNode: ImmediateTextNode
     
     init(context: AccountContext, peer: Peer, title: String?, memberCount: Int, theme: PresentationTheme, strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) {
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.titleNode = ASTextNode()
-        self.countNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 4
+        self.titleNode.textAlignment = .center
+        
+        self.countNode = ImmediateTextNode()
+        self.countNode.textAlignment = .center
         
         super.init()
         
@@ -637,18 +641,22 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
     }
     
     func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        let nodeHeight: CGFloat = self.countNode.isHidden ? 204.0 : 224.0
+        let sideInset: CGFloat = 16.0
+        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
+        let countSize = self.countNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
+        
+        var nodeHeight: CGFloat = 185.0 + titleSize.height
+        if !self.countNode.isHidden {
+            nodeHeight += 20.0
+        }
         
         let verticalOrigin = size.height - nodeHeight
-        
         let avatarSize: CGFloat = 75.0
-        
+
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floor((size.width - avatarSize) / 2.0), y: verticalOrigin + 22.0), size: CGSize(width: avatarSize, height: avatarSize)))
-        
-        let titleSize = self.titleNode.measure(size)
+                
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: verticalOrigin + 22.0 + avatarSize + 15.0), size: titleSize))
-        
-        let countSize = self.countNode.measure(size)
+    
         transition.updateFrame(node: self.countNode, frame: CGRect(origin: CGPoint(x: floor((size.width - countSize.width) / 2.0), y: verticalOrigin + 22.0 + avatarSize + 15.0 + titleSize.height + 1.0), size: countSize))
         
         self.contentOffsetUpdated?(-size.height + nodeHeight - 64.0, transition)

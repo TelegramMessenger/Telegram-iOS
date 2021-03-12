@@ -76,7 +76,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 participantCount: 0,
                 clientParams: nil,
                 streamDcId: nil,
-                title: nil,
+                title: call.title,
                 recordingStartTimestamp: nil
             ),
             topParticipants: [],
@@ -1531,6 +1531,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.stateValue.recordingStartTimestamp = state.recordingStartTimestamp
                     strongSelf.stateValue.title = state.title
                                         
+                    strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
+                        id: callInfo.id,
+                        accessHash: callInfo.accessHash,
+                        participantCount: state.totalCount,
+                        clientParams: nil,
+                        streamDcId: nil,
+                        title: state.title,
+                        recordingStartTimestamp: state.recordingStartTimestamp
+                    ))))
+                    
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
                         participantCount: state.totalCount,
                         topParticipants: topParticipants,

@@ -1262,33 +1262,45 @@ public final class VoiceChatController: ViewController {
                                         return
                                     }
 
-                                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
-                                    var items: [ActionSheetItem] = []
-
-                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
-
-                                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                        
+                                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.call.peerId)
+                                    |> deliverOnMainQueue).start(next: { [weak self] chatPeer in
                                         guard let strongSelf = self else {
                                             return
                                         }
                                         
-                                        let _ = strongSelf.context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: strongSelf.context.account, peerId: strongSelf.call.peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
-                                        strongSelf.call.removedPeer(peer.id)
+                                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
+                                        var items: [ActionSheetItem] = []
                                         
-                                        strongSelf.presentUndoOverlay(content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
-                                    }))
+                                        var action: DeleteChatPeerAction = .removeFromGroup
+                                        if let chatPeer = chatPeer as? TelegramChannel, case .broadcast = chatPeer.info {
+                                            action = .removeFromChannel
+                                        }
+                                        
+                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: action, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
 
-                                    actionSheet.setItemGroups([
-                                        ActionSheetItemGroup(items: items),
-                                        ActionSheetItemGroup(items: [
-                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                                actionSheet?.dismissAnimated()
-                                            })
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                            
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            
+                                            let _ = strongSelf.context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: strongSelf.context.account, peerId: strongSelf.call.peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
+                                            strongSelf.call.removedPeer(peer.id)
+                                            
+                                            strongSelf.presentUndoOverlay(content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
+                                        }))
+
+                                        actionSheet.setItemGroups([
+                                            ActionSheetItemGroup(items: items),
+                                            ActionSheetItemGroup(items: [
+                                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                                    actionSheet?.dismissAnimated()
+                                                })
+                                            ])
                                         ])
-                                    ])
-                                    strongSelf.controller?.present(actionSheet, in: .window(.root))
+                                        strongSelf.controller?.present(actionSheet, in: .window(.root))
+                                    })
                                 })
                             })))
                         }
