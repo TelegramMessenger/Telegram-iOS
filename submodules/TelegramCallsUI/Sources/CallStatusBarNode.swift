@@ -319,9 +319,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let textFont = Font.regular(13.0)
         let textColor = UIColor.white
         var segments: [AnimatedCountLabelNode.Segment] = []
+        var displaySpeakerSubtitle = false
         
         if let presentationData = self.presentationData {
-            if let voiceChatTitle = self.currentGroupCallState?.info?.title, !title.isEmpty {
+            if let voiceChatTitle = self.currentGroupCallState?.info?.title, !voiceChatTitle.isEmpty {
                 title = voiceChatTitle
             } else if let currentPeer = self.currentPeer {
                 title = currentPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
@@ -347,6 +348,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             if let speakingPeer = speakingPeer {
                 speakerSubtitle = speakingPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
+            displaySpeakerSubtitle = speakerSubtitle != title && !speakerSubtitle.isEmpty
             
             if let membersCount = membersCount {
                 var membersPart = presentationData.strings.VoiceChat_Status_Members(membersCount)
@@ -402,17 +404,17 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             self.backgroundNode.connectingColor = color
         }
         
-        if self.subtitleNode.segments != segments && speakerSubtitle.isEmpty {
+        if self.subtitleNode.segments != segments && !displaySpeakerSubtitle {
             self.subtitleNode.segments = segments
         }
         
         let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
-        alphaTransition.updateAlpha(node: self.subtitleNode, alpha: !speakerSubtitle.isEmpty ? 0.0 : 1.0)
-        alphaTransition.updateAlpha(node: self.speakerNode, alpha: !speakerSubtitle.isEmpty ? 1.0 : 0.0)
+        alphaTransition.updateAlpha(node: self.subtitleNode, alpha: displaySpeakerSubtitle ? 0.0 : 1.0)
+        alphaTransition.updateAlpha(node: self.speakerNode, alpha: displaySpeakerSubtitle ? 1.0 : 0.0)
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white)
         
-        if !speakerSubtitle.isEmpty {
+        if displaySpeakerSubtitle {
             self.speakerNode.attributedText = NSAttributedString(string: speakerSubtitle, font: Font.regular(13.0), textColor: .white)
         }
         
@@ -431,7 +433,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
         transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
         
-        if !speakerSubtitle.isEmpty {
+        if displaySpeakerSubtitle {
             self.speakerNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - speakerSize.height) / 2.0)), size: speakerSize)
         }
         
