@@ -70,7 +70,7 @@ private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
                     let dy = v1.y - v2.y
                     return sqrt(dx * dx + dy * dy)
                 }
-                if distance(firstLocation, secondLocation) > 100 {
+                if distance(firstLocation, secondLocation) > 70 {
                     self.state = .failed
                 }
             }

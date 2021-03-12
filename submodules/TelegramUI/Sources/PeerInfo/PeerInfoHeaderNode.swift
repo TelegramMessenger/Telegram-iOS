@@ -1388,6 +1388,15 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 overrideImage = AvatarNodeImageOverride.none
                 item = nil
             }
+            
+            if let _ = overrideImage {
+                self.containerNode.isGestureEnabled = false
+            } else if peer.profileImageRepresentations.isEmpty {
+                self.containerNode.isGestureEnabled = false
+            } else {
+                self.containerNode.isGestureEnabled = false
+            }
+            
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             self.isFirstAvatarLoading = false
             

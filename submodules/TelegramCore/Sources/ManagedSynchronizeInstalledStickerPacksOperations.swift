@@ -243,7 +243,6 @@ private func installRemoteStickerPacks(network: Network, infos: [StickerPackColl
 }
 
 private func removeRemoteStickerPacks(network: Network, infos: [StickerPackCollectionInfo]) -> Signal<Void, NoError> {
-    var signals: [Signal<Void, NoError>] = []
     if infos.count > 0 {
         if infos.count > 1 {
             return network.request(Api.functions.messages.toggleStickerSets(flags: 1 << 0, stickersets: infos.map { .inputStickerSetID(id: $0.id.id, accessHash: $0.accessHash) }))
@@ -267,7 +266,6 @@ private func removeRemoteStickerPacks(network: Network, infos: [StickerPackColle
 }
 
 private func archiveRemoteStickerPacks(network: Network, infos: [StickerPackCollectionInfo]) -> Signal<Void, NoError> {
-    var signals: [Signal<Void, NoError>] = []
     if infos.count > 0 {
         if infos.count > 1 {
             return network.request(Api.functions.messages.toggleStickerSets(flags: 1 << 1, stickersets: infos.map { .inputStickerSetID(id: $0.id.id, accessHash: $0.accessHash) }))

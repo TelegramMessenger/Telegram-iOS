@@ -639,7 +639,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    var animatingOut = false
+    private var animatingOut = false
     var outCompletion: (() -> Void)?
     func animateOut(shared: Bool, completion: @escaping () -> Void) {
         guard !self.animatingOut else {

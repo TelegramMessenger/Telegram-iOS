@@ -1270,12 +1270,7 @@ public final class VoiceChatController: ViewController {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
                                         var items: [ActionSheetItem] = []
                                         
-                                        var action: DeleteChatPeerAction = .removeFromGroup
-                                        if let chatPeer = chatPeer as? TelegramChannel, case .broadcast = chatPeer.info {
-                                            action = .removeFromChannel
-                                        }
-                                        
-                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: action, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: chatPeer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
 
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()

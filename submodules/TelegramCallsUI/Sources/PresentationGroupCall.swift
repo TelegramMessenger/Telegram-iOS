@@ -445,6 +445,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var markedAsCanBeRemoved = false
     
     private let wasRemoved = Promise<Bool>(false)
+    private var leaving = false
     
     private var stateValue: PresentationGroupCallState {
         didSet {
@@ -1391,7 +1392,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
 
-                    if !participants.contains(where: { $0.peer.id == myPeerId }) {
+                    if !participants.contains(where: { $0.peer.id == myPeerId }) && !strongSelf.leaving {
                         if let (myPeer, cachedData) = myPeerAndCachedData {
                             let about: String?
                             if let cachedData = cachedData as? CachedUserData {
@@ -1436,7 +1437,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.stateValue.raisedHand = participant.raiseHandRating != nil
                             }
                             
-                            if let muteState = participant.muteState, muteState.canUnmute && previousRaisedHand {                            
+                            if let muteState = participant.muteState, muteState.canUnmute && previousRaisedHand { 
                                 let _ = (strongSelf.accountContext.sharedContext.hasGroupCallOnScreen
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { hasGroupCallOnScreen in
@@ -1444,17 +1445,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                         return
                                     }
                                     let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
-                                    if hasGroupCallOnScreen, let groupCallController = strongSelf.accountContext.sharedContext.currentGroupCallController {
-                                        var animateInAsReplacement = false
-                                        groupCallController.forEachController { c in
-                                            if let c = c as? UndoOverlayController {
-                                                animateInAsReplacement = true
-                                                c.dismiss()
-                                            }
-                                            return true
-                                        }
-                                        groupCallController.present(UndoOverlayController(presentationData: presentationData, content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_YouCanNowSpeak), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return true }), in: .current)
-                                    } else {
+                                    if !hasGroupCallOnScreen {
                                         let title: String?
                                         if let voiceChatTitle = strongSelf.stateValue.title {
                                             title = voiceChatTitle
@@ -1760,6 +1751,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError> {
+        self.leaving = true
         if let callInfo = self.internalState.callInfo, let localSsrc = self.currentLocalSsrc {
             if terminateIfPossible {
                 self.leaveDisposable.set((stopGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)

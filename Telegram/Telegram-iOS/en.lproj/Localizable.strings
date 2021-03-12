@@ -6263,3 +6263,6 @@ Sorry for the inconvenience.";
 "VoiceChat.CancelSpeakRequest" = "Cancel Request to Speak";
 
 "VoiceChat.RemovePeerConfirmationChannel" = "Are you sure you want to remove %@ from the channel?";
+"VoiceChat.RemoveAndBanPeerConfirmation" = "“Do you want to remove %1$@ from the voice chat and ban them in %2$@?";
+
+"Notification.VoiceChatStartedChannel" = "Voice chat started";

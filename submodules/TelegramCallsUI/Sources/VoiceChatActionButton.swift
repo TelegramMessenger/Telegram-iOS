@@ -1410,7 +1410,17 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
     
     func playRandomAnimation() {
         if case .hand = self.iconState {
-            if let animationName = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_5", "VoiceHand_6", "VoiceHand_7"].randomElement() {
+            var useTiredAnimation = false
+            let val = Float.random(in: 0.0..<1.0)
+            if val <= 0.01 {
+                useTiredAnimation = true
+            }
+            
+            let normalAnimations = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_7"]
+            let tiredAnimations = ["VoiceHand_5", "VoiceHand_6"]
+            let animations = useTiredAnimation ? tiredAnimations : normalAnimations
+            
+            if let animationName = animations.randomElement() {
                 self.trackTo(item: ManagedAnimationItem(source: .local(animationName)))
             }
         }
