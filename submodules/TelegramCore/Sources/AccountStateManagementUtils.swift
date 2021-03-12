@@ -50,7 +50,7 @@ private func activeChannelsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<Peer
         }
     }
     
-    return peerIds
+    return peerIds.intersection(peerIdsRequiringLocalChatStateFromUpdateGroups(groups))
 }
 
 private func associatedMessageIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<MessageId> {
@@ -110,13 +110,15 @@ private func peerIdsRequiringLocalChatStateFromUpdateGroups(_ groups: [UpdateGro
     for group in groups {
         peerIds.formUnion(peerIdsRequiringLocalChatStateFromUpdates(group.updates))
         
-        for chat in group.chats {
+        /*for chat in group.chats {
             if let channel = parseTelegramGroupOrChannel(chat: chat) as? TelegramChannel {
-                if case .member = channel.participationStatus {
-                    peerIds.insert(channel.id)
+                if let accessHash = channel.accessHash, case .personal = accessHash {
+                    if case .member = channel.participationStatus {
+                        peerIds.insert(channel.id)
+                    }
                 }
             }
-        }
+        }*/
         
         switch group {
         case let .ensurePeerHasLocalState(peerId):
