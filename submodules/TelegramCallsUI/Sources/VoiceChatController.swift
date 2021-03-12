@@ -2340,8 +2340,8 @@ public final class VoiceChatController: ViewController {
                 return
             }
             self.isFullscreen = isFullscreen
-            
-            self.controller?.statusBar.statusBarStyle = isFullscreen ? .White : .Ignore
+
+            self.controller?.statusBar.updateStatusBarStyle(isFullscreen ? .White : .Ignore, animated: true)
                         
             var size = layout.size
             if case .regular = layout.metrics.widthClass {
