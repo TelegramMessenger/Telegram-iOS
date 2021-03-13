@@ -123,6 +123,7 @@ public final class VoiceChatJoinScreen: ViewController {
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
                     if call.info.id == currentGroupCallId {
+                        strongSelf.dismiss()
                         strongSelf.context.sharedContext.navigateToCurrentCall()
                         return
                     }

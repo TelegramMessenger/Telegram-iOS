@@ -604,6 +604,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canEditMessages,
                     .canDeleteMessages,
                     .canInviteUsers,
+                    .canManageCalls,
                     .canAddAdmins
                 ]
             case .group:

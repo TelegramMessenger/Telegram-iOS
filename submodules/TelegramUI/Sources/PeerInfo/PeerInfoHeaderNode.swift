@@ -115,8 +115,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             let isActiveUpdated = self.isActive != isActive
             self.isActive = isActive
             
-            
-            if isActiveUpdated {
+            if isActiveUpdated, !self.containerNode.alpha.isZero {
                 if let snapshotView = self.backgroundNode.view.snapshotContentTree() {
                     snapshotView.frame = self.backgroundNode.view.frame
                     self.view.addSubview(snapshotView)
@@ -125,7 +124,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                         snapshotView?.removeFromSuperview()
                     })
                 }
-                if let snapshotView = self.textNode.view.snapshotContentTree() {
+                if !isExpanded, let snapshotView = self.textNode.view.snapshotContentTree() {
                     snapshotView.frame = self.textNode.view.frame
                     self.view.addSubview(snapshotView)
                     
