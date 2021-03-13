@@ -446,7 +446,7 @@ public final class InviteLinkViewController: ViewController {
             }, editLink: { [weak self] invite in
                 self?.editButtonPressed()
             }, contextAction: { [weak self] invite, node, gesture in
-                guard let node = node as? ContextExtractedContentContainingNode else {
+                guard let node = node as? ContextReferenceContentNode else {
                     return
                 }
                 
@@ -558,7 +558,7 @@ public final class InviteLinkViewController: ViewController {
                     })))
                 }
                            
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground:  false)), items: .single(items), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             })
             
