@@ -3353,7 +3353,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if additive {
                 buttonTransition.updateFrameAdditiveToCenter(node: buttonNode, frame: apparentButtonFrame)
             } else {
-                buttonTransition.updateFrame(node: buttonNode, frame: apparentButtonFrame, beginWithCurrentState: true)
+                buttonTransition.updateFrame(node: buttonNode, frame: apparentButtonFrame)
             }
             let buttonText: String
             let buttonIcon: PeerInfoHeaderButtonIcon

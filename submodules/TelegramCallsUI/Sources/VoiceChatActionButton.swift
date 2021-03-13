@@ -897,6 +897,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                     self.updateGlowScale(nil)
                     if case .blob = transition {
                         self.playDeactivationAnimation()
+                    } else if case .disabled = transition {
+                        self.playDeactivationAnimation()
                     }
                     self.transition = nil
                 }
@@ -1410,6 +1412,10 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
     
     func playRandomAnimation() {
         if case .hand = self.iconState {
+            if let next = self.trackStack.first, case let .local(name) = next.source, name.hasPrefix("VoiceHand_") {
+                return
+            }
+            
             var useTiredAnimation = false
             let val = Float.random(in: 0.0..<1.0)
             if val <= 0.01 {
