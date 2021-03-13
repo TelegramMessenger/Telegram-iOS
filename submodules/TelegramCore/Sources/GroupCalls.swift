@@ -1301,10 +1301,14 @@ public final class GroupCallParticipantsContext {
                     var previousJoinTimestamp: Int32?
                     var previousActivityTimestamp: Double?
                     var previousActivityRank: Int?
+                    var previousMuteState: GroupCallParticipantsContext.Participant.MuteState?
+                    var previousVolume: Int32?
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         previousJoinTimestamp = updatedParticipants[index].joinTimestamp
                         previousActivityTimestamp = updatedParticipants[index].activityTimestamp
                         previousActivityRank = updatedParticipants[index].activityRank
+                        previousMuteState = updatedParticipants[index].muteState
+                        previousVolume = updatedParticipants[index].volume
                         updatedParticipants.remove(at: index)
                     } else if case .joined = participantUpdate.participationStatusChange {
                         updatedTotalCount += 1
@@ -1317,6 +1321,19 @@ public final class GroupCallParticipantsContext {
                     } else {
                         activityTimestamp = participantUpdate.activityTimestamp ?? previousActivityTimestamp
                     }
+
+                    var volume = participantUpdate.volume
+                    var muteState = participantUpdate.muteState
+                    if participantUpdate.isMin {
+                        if let previousMuteState = previousMuteState {
+                            if previousMuteState.mutedByYou {
+                                muteState = previousMuteState
+                            }
+                        }
+                        if let previousVolume = previousVolume {
+                            volume = previousVolume
+                        }
+                    }
                     
                     let participant = Participant(
                         peer: peer,
@@ -1327,8 +1344,8 @@ public final class GroupCallParticipantsContext {
                         hasRaiseHand: participantUpdate.raiseHandRating != nil,
                         activityTimestamp: activityTimestamp,
                         activityRank: previousActivityRank,
-                        muteState: participantUpdate.muteState,
-                        volume: participantUpdate.volume,
+                        muteState: muteState,
+                        volume: volume,
                         about: participantUpdate.about
                     )
                     updatedParticipants.append(participant)
