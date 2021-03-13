@@ -1394,7 +1394,7 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
             case .mute:
                 switch state {
                     case .unmute:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute"), frames: .range(startFrame: 0, endFrame: 12), duration: 0.2))
                     case .hand:
                         self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandOff")))
                     case .mute:
