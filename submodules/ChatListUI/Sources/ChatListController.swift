@@ -1339,17 +1339,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    override public func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        
-        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
-        
+    func dismissAllUndoControllers() {
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
             return true
         })
+    }
+    
+    override public func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
+        
+        self.dismissAllUndoControllers()
         
         self.featuredFiltersDisposable.set(nil)
     }

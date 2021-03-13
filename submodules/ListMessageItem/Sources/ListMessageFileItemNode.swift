@@ -439,7 +439,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             
                             if !voice {
-                                iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                                if file.fileName?.lowercased().hasPrefix(".ogg") == true {
+                                    iconImage = .none
+                                } else {
+                                    iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                                }
                             } else {
                                 titleText = NSAttributedString(string: " ", font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                                 descriptionText = NSAttributedString(string: item.message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)

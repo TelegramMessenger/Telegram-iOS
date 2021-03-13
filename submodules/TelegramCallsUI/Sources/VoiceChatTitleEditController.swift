@@ -430,7 +430,7 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
         dismissImpl?(true)
         
         let previousValue = value ?? ""
-        let newValue = contentNode.value
+        let newValue = contentNode.value.trimmingCharacters(in: .whitespacesAndNewlines)
         apply(previousValue != newValue || value == nil ? newValue : nil)
     }
     

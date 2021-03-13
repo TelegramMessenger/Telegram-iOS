@@ -115,8 +115,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             let isActiveUpdated = self.isActive != isActive
             self.isActive = isActive
             
-            
-            if isActiveUpdated {
+            if isActiveUpdated, !self.containerNode.alpha.isZero {
                 if let snapshotView = self.backgroundNode.view.snapshotContentTree() {
                     snapshotView.frame = self.backgroundNode.view.frame
                     self.view.addSubview(snapshotView)
@@ -125,7 +124,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                         snapshotView?.removeFromSuperview()
                     })
                 }
-                if let snapshotView = self.textNode.view.snapshotContentTree() {
+                if !isExpanded, let snapshotView = self.textNode.view.snapshotContentTree() {
                     snapshotView.frame = self.textNode.view.frame
                     self.view.addSubview(snapshotView)
                     
@@ -1388,6 +1387,15 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 overrideImage = AvatarNodeImageOverride.none
                 item = nil
             }
+            
+            if let _ = overrideImage {
+                self.containerNode.isGestureEnabled = false
+            } else if peer.profileImageRepresentations.isEmpty {
+                self.containerNode.isGestureEnabled = false
+            } else {
+                self.containerNode.isGestureEnabled = false
+            }
+            
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             self.isFirstAvatarLoading = false
             
@@ -3445,7 +3453,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if !buttonKeys.contains(key) {
                 if let buttonNode = self.buttonNodes[key] {
                     self.buttonNodes.removeValue(forKey: key)
-                    buttonNode.removeFromSupernode()
+                    transition.updateAlpha(node: buttonNode, alpha: 0.0) { [weak buttonNode] _ in
+                        buttonNode?.removeFromSupernode()
+                    }
                 }
             }
         }

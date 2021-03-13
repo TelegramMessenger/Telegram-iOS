@@ -137,8 +137,6 @@ open class ManagedAnimationNode: ASDisplayNode {
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
     
-    public var isPlaying = false
-    
     public init(size: CGSize) {
         self.intrinsicSize = size
         

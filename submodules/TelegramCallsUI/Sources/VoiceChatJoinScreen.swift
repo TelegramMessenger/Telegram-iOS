@@ -95,17 +95,46 @@ public final class VoiceChatJoinScreen: ViewController {
             return transaction.getPeerCachedData(peerId: peerId)
         }
         |> castError(GetCurrentGroupCallError.self)
+        
+        let currentGroupCallId: Signal<Int64?, GetCurrentGroupCallError>
+        if let callManager = context.sharedContext.callManager {
+            currentGroupCallId = callManager.currentGroupCallSignal
+            |> castError(GetCurrentGroupCallError.self)
+            |> mapToSignal { call -> Signal<Int64?, GetCurrentGroupCallError> in
+                if let call = call {
+                    return call.summaryState
+                    |> castError(GetCurrentGroupCallError.self)
+                    |> map { state -> Int64? in
+                        return state?.info?.id
+                    }
+                    |> filter { id in
+                        return id != nil
+                    }
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> take(1)
+        } else {
+            currentGroupCallId = .single(nil)
+        }
             
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData).start(next: { [weak self] peerAndCall, availablePeers, cachedData in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCallId).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallId in
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
+                    if call.info.id == currentGroupCallId {
+                        strongSelf.dismiss()
+                        strongSelf.context.sharedContext.navigateToCurrentCall()
+                        return
+                    }
+                    
                     var defaultJoinAsPeerId: PeerId?
                     if let cachedData = cachedData as? CachedChannelData {
                         defaultJoinAsPeerId = cachedData.callJoinPeerId
                     } else if let cachedData = cachedData as? CachedGroupData {
                         defaultJoinAsPeerId = cachedData.callJoinPeerId
                     }
-                    
+                                    
                     let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title)
                     if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
                         strongSelf.dismiss()
@@ -481,13 +510,20 @@ public final class VoiceChatJoinScreen: ViewController {
             }
         }
         
+        private var animatingOut = false
         func animateOut(completion: (() -> Void)? = nil) {
+            guard !self.animatingOut else {
+                return
+            }
+            self.animatingOut = true
+            
             if self.contentNode != nil {
                 var dimCompleted = false
                 var offsetCompleted = false
                 
                 let internalCompletion: () -> Void = { [weak self] in
                     if let strongSelf = self, dimCompleted && offsetCompleted {
+                        strongSelf.animatingOut = false
                         strongSelf.dismiss?()
                     }
                     completion?()

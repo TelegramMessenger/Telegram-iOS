@@ -574,7 +574,7 @@ public final class VoiceChatController: ViewController {
                             } else {
                                 let volumeValue = peerEntry.volume.flatMap { $0 / 100 }
                                 if let volume = volumeValue, volume != 100 {
-                                    text = .text("\(volume)% \(presentationData.strings.VoiceChat_StatusSpeaking)", .constructive)
+                                    text = .text( presentationData.strings.VoiceChat_StatusSpeakingVolume("\(volume)%").0, .constructive)
                                 } else {
                                     text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
                                 }
@@ -1271,12 +1271,7 @@ public final class VoiceChatController: ViewController {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
                                         var items: [ActionSheetItem] = []
                                         
-                                        var action: DeleteChatPeerAction = .removeFromGroup
-                                        if let chatPeer = chatPeer as? TelegramChannel, case .broadcast = chatPeer.info {
-                                            action = .removeFromChannel
-                                        }
-                                        
-                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: action, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: chatPeer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
 
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()
@@ -1799,7 +1794,19 @@ public final class VoiceChatController: ViewController {
                             if let strongSelf = self {
                                 strongSelf.call.setShouldBeRecording(false, title: nil)
 
-                                strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { _ in return false })
+                                strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { [weak self] value in
+                                    if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                                        let context = strongSelf.context
+                                        strongSelf.controller?.dismiss(completion: {
+                                            Queue.mainQueue().justDispatch {
+                                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                            }
+                                        })
+                                        
+                                        return true
+                                    }
+                                    return false
+                                })
                             }
                         })])
                         self?.controller?.present(alertController, in: .window(.root))

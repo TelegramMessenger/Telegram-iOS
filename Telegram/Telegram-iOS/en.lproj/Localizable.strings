@@ -5697,6 +5697,7 @@ Sorry for the inconvenience.";
 "Media.LimitedAccessChangeSettings" = "Change Settings";
 
 "VoiceChat.StatusSpeaking" = "speaking";
+"VoiceChat.StatusSpeakingVolume" = "%@ speaking";
 "VoiceChat.StatusListening" = "listening";
 "VoiceChat.StatusInvited" = "invited";
 
@@ -5768,7 +5769,7 @@ Sorry for the inconvenience.";
 "VoiceChat.EndConfirmationEnd" = "End";
 
 "VoiceChat.InviteMemberToGroupFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the group?";
-"VoiceChat.InviteMemberToChannelFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the channel?";
+"VoiceChat.InviteMemberToChannelFirstText" = "%1$@ isn't a subscriber of \"%2$@\" yet. Add them to the channel?";
 "VoiceChat.InviteMemberToGroupFirstAdd" = "Add";
 
 "VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";
@@ -5810,8 +5811,6 @@ Sorry for the inconvenience.";
 
 "VoiceChat.PeerJoinedText" = "%@ joined the voice chat";
 
-"VoiceChat.Rec" = "REC";
-
 "VoiceChat.StartRecording" = "Start Recording";
 "VoiceChat.StopRecording" = "Stop Recording";
 
@@ -5826,7 +5825,7 @@ Sorry for the inconvenience.";
 "VoiceChat.StopRecordingTitle" = "Stop Recording?";
 "VoiceChat.StopRecordingStop" = "Stop";
 
-"VoiceChat.RecordingSaved" = "Audio saved to Saved Messages.";
+"VoiceChat.RecordingSaved" = "Audio saved to **Saved Messages**.";
 
 "VoiceChat.StatusMutedForYou" = "muted for you";
 "VoiceChat.StatusMutedYou" = "put you on mute";
@@ -6263,3 +6262,6 @@ Sorry for the inconvenience.";
 "VoiceChat.CancelSpeakRequest" = "Cancel Request to Speak";
 
 "VoiceChat.RemovePeerConfirmationChannel" = "Are you sure you want to remove %@ from the channel?";
+"VoiceChat.RemoveAndBanPeerConfirmation" = "Do you want to remove %1$@ from the voice chat and ban them in %2$@?";
+
+"Notification.VoiceChatStartedChannel" = "Voice chat started";

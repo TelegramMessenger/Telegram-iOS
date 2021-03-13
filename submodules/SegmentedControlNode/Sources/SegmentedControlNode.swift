@@ -290,9 +290,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
     
     public func updateLayout(_ layout: SegmentedControlLayout, transition: ContainedViewLayoutTransition) -> CGSize {
         self.validLayout = layout
-        
-        let calculatedWidth: CGFloat = 0.0
-        
+                
         let width: CGFloat
         let height: CGFloat
         switch layout {
@@ -300,6 +298,14 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
                 width = targetWidth
                 height = 32.0
             case let .sizeToFit(maximumWidth, minimumWidth, targetHeight):
+                var calculatedWidth: CGFloat = 0.0
+                var maxWidth: CGFloat = 0.0
+                for item in self.itemNodes {
+                    let size = item.calculateSizeThatFits(CGSize(width: maximumWidth, height: targetHeight))
+                    maxWidth = max(maxWidth, size.width)
+                }
+                calculatedWidth = ceil(maxWidth * CGFloat(self.itemNodes.count))
+                
                 width = max(minimumWidth, min(maximumWidth, calculatedWidth))
                 height = targetHeight
         }

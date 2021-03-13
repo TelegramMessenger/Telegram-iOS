@@ -897,6 +897,8 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                     self.updateGlowScale(nil)
                     if case .blob = transition {
                         self.playDeactivationAnimation()
+                    } else if case .disabled = transition {
+                        self.playDeactivationAnimation()
                     }
                     self.transition = nil
                 }
@@ -1392,7 +1394,7 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
             case .mute:
                 switch state {
                     case .unmute:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute"), frames: .range(startFrame: 0, endFrame: 12), duration: 0.2))
                     case .hand:
                         self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandOff")))
                     case .mute:
@@ -1410,7 +1412,21 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
     
     func playRandomAnimation() {
         if case .hand = self.iconState {
-            if let animationName = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_5", "VoiceHand_6", "VoiceHand_7"].randomElement() {
+            if let next = self.trackStack.first, case let .local(name) = next.source, name.hasPrefix("VoiceHand_") {
+                return
+            }
+            
+            var useTiredAnimation = false
+            let val = Float.random(in: 0.0..<1.0)
+            if val <= 0.01 {
+                useTiredAnimation = true
+            }
+            
+            let normalAnimations = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_7"]
+            let tiredAnimations = ["VoiceHand_5", "VoiceHand_6"]
+            let animations = useTiredAnimation ? tiredAnimations : normalAnimations
+            
+            if let animationName = animations.randomElement() {
                 self.trackTo(item: ManagedAnimationItem(source: .local(animationName)))
             }
         }
