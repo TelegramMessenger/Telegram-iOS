@@ -2884,8 +2884,22 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 membersUpdated = true
             }
             
-            let infoUpdated = false // previousData != nil && (previousData?.cachedData == nil) != (data.cachedData == nil)
+            var infoUpdated = false // previousData != nil && (previousData?.cachedData == nil) != (data.cachedData == nil)
+           
+            var previousCall: CachedChannelData.ActiveCall?
+            var currentCall: CachedChannelData.ActiveCall?
             
+            if let previousCachedData = previousData?.cachedData as? CachedChannelData, let cachedData = data.cachedData as? CachedChannelData {
+                previousCall = previousCachedData.activeCall
+                currentCall = cachedData.activeCall
+            } else if let previousCachedData = previousData?.cachedData as? CachedGroupData, let cachedData = data.cachedData as? CachedGroupData {
+                previousCall = previousCachedData.activeCall
+                currentCall = cachedData.activeCall
+            }
+            
+            if (previousCall == nil) != (currentCall == nil) {
+                infoUpdated = true
+            }
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && (membersUpdated || infoUpdated) ? .animated(duration: 0.3, curve: .spring) : .immediate)
         }
     }
@@ -3905,11 +3919,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }, completed: { [weak self] in
                     dismissStatus?()
-                    
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
                 }))
             }
             
@@ -5795,7 +5804,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         
             let navigationBarHeight: CGFloat = !self.isSettings && layout.isModalOverlay ? 56.0 : 44.0
             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
-            self.headerNode.navigationButtonContainer.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight))
+          
+            transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
             self.headerNode.navigationButtonContainer.isWhite = self.headerNode.isAvatarExpanded
             
             var navigationButtons: [PeerInfoHeaderNavigationButtonSpec] = []

@@ -702,7 +702,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             nodeToAnimateIn = animationNode
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: false, color: color), animated: true)
-                        strongSelf.actionButtonNode.isUserInteractionEnabled = item.contextAction != nil
+                        strongSelf.actionButtonNode.isUserInteractionEnabled = false
                     } else if let animationNode = strongSelf.animationNode {
                         hadMicrophoneNode = true
                         strongSelf.animationNode = nil
@@ -730,6 +730,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             }, queue: Queue.mainQueue())
                             strongSelf.raiseHandTimer?.start()
                         }
+                        strongSelf.actionButtonNode.isUserInteractionEnabled = false
                     } else if let raiseHandNode = strongSelf.raiseHandNode {
                         hadRaiseHandNode = true
                         strongSelf.raiseHandNode = nil

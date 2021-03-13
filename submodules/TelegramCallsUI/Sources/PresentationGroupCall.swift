@@ -361,6 +361,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var temporaryJoinTimestamp: Int32
     private var temporaryActivityTimestamp: Double?
     private var temporaryActivityRank: Int?
+    private var temporaryMuteState: GroupCallParticipantsContext.Participant.MuteState?
     
     private var internalState: InternalState = .requesting
     private let internalStatePromise = Promise<InternalState>(.requesting)
@@ -887,7 +888,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             hasRaiseHand: false,
                             activityTimestamp: strongSelf.temporaryActivityTimestamp,
                             activityRank: strongSelf.temporaryActivityRank,
-                            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                            muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                             volume: nil,
                             about: about
                         ))
@@ -968,7 +969,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             hasRaiseHand: false,
                             activityTimestamp: strongSelf.temporaryActivityTimestamp,
                             activityRank: strongSelf.temporaryActivityRank,
-                            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                            muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                             volume: nil,
                             about: about
                         ))
@@ -1412,7 +1413,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 hasRaiseHand: false,
                                 activityTimestamp: strongSelf.temporaryActivityTimestamp,
                                 activityRank: strongSelf.temporaryActivityRank,
-                                muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                                muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                                 volume: nil,
                                 about: about
                             ))
@@ -1739,6 +1740,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         strongSelf.temporaryJoinTimestamp = participant.joinTimestamp
                         strongSelf.temporaryActivityTimestamp = participant.activityTimestamp
                         strongSelf.temporaryActivityRank = participant.activityRank
+                        strongSelf.temporaryMuteState = participant.muteState
                     }
                 }
                 strongSelf.switchToTemporaryParticipantsContext(sourceContext: participantsContext, oldMyPeerId: previousPeerId)

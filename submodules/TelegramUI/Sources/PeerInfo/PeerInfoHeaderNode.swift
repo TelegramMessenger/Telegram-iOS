@@ -3353,7 +3353,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if additive {
                 buttonTransition.updateFrameAdditiveToCenter(node: buttonNode, frame: apparentButtonFrame)
             } else {
-                buttonTransition.updateFrame(node: buttonNode, frame: apparentButtonFrame)
+                buttonTransition.updateFrame(node: buttonNode, frame: apparentButtonFrame, beginWithCurrentState: true)
             }
             let buttonText: String
             let buttonIcon: PeerInfoHeaderButtonIcon
@@ -3453,7 +3453,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if !buttonKeys.contains(key) {
                 if let buttonNode = self.buttonNodes[key] {
                     self.buttonNodes.removeValue(forKey: key)
-                    buttonNode.removeFromSupernode()
+                    transition.updateAlpha(node: buttonNode, alpha: 0.0) { [weak buttonNode] _ in
+                        buttonNode?.removeFromSupernode()
+                    }
                 }
             }
         }
