@@ -152,6 +152,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         transition.updateAlpha(node: self.scrubberNode, alpha: alpha)
     }
     
+    func animateTo(_ timestamp: Double) {
+        self.scrubberNode.animateTo(timestamp)
+    }
+    
     func setStatusSignal(_ status: Signal<MediaPlayerStatus, NoError>?) {
         let mappedStatus: Signal<MediaPlayerStatus, NoError>?
         if let status = status {

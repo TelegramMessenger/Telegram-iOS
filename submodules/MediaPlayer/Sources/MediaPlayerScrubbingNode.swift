@@ -769,6 +769,18 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
+    private var animateToValue: Double?
+    private var animating = false
+    public func animateTo(_ timestamp: Double) {
+        self.animateToValue = timestamp
+        ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).animateView({
+            self.updateProgress()
+        }, completion: { finished in
+            self.animateToValue = nil
+            self.animating = false
+        })
+    }
+    
     private func updateProgress() {
         let bounds = self.bounds
         
@@ -789,6 +801,15 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 } else {
                     timestampAndDuration = (statusValue.timestamp, statusValue.duration)
                 }
+            }
+        }
+        
+        if let animateToValue = animateToValue {
+            if animating {
+                return
+            } else if let (_, duration) = timestampAndDuration {
+                animating = true
+                timestampAndDuration = (animateToValue, duration)
             }
         }
         
