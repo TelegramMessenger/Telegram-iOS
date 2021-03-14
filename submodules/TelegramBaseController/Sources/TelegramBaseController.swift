@@ -902,7 +902,11 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
                                 subtitle = presentationData.strings.VoiceChat_PersonalAccount
                             } else if let subscribers = peer.subscribers {
-                                subtitle = presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                                if let peer = peer.peer as? TelegramChannel, case .broadcast = peer.info {
+                                    subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                                } else {
+                                    subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(subscribers)
+                                }
                             }
                             
                             items.append(VoiceChatPeerActionSheetItem(context: context, peer: peer.peer, title: peer.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
