@@ -596,6 +596,99 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
+            case let .sticker(account, file, text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                
+                let stillStickerNode = TransformImageNode()
+                
+                self.stillStickerNode = stillStickerNode
+                
+                enum StickerThumbnailItem {
+                    case still(TelegramMediaImageRepresentation)
+                    case animated(MediaResource)
+                }
+                
+                var thumbnailItem: StickerThumbnailItem?
+                var resourceReference: MediaResourceReference?
+                
+                if file.isAnimatedSticker {
+                    thumbnailItem = .animated(file.resource)
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)
+                } else if let dimensions = file.dimensions, let resource = chatMessageStickerResource(file: file, small: true) as? TelegramMediaResource {
+                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: []))
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: resource)
+                }
+                
+                var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+                var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
+                
+                let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
+                
+                if let thumbnailItem = thumbnailItem {
+                    switch thumbnailItem {
+                    case let .still(representation):
+                        let stillImageSize = representation.dimensions.cgSize.aspectFitted(imageBoundingSize)
+                        self.stickerImageSize = stillImageSize
+                        
+                        updatedImageSignal = chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource)
+                    case let .animated(resource):
+                        self.stickerImageSize = imageBoundingSize
+                        
+                        updatedImageSignal = chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true)
+                    }
+                    if let resourceReference = resourceReference {
+                        updatedFetchSignal = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference)
+                    }
+                } else {
+                    updatedImageSignal = .single({ _ in return nil })
+                    updatedFetchSignal = .complete()
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+            
+                if let updatedFetchSignal = updatedFetchSignal {
+                    self.fetchResourceDisposable = updatedFetchSignal.start()
+                }
+            
+                if let updatedImageSignal = updatedImageSignal {
+                    stillStickerNode.setSignal(updatedImageSignal)
+                }
+            
+                if let thumbnailItem = thumbnailItem {
+                    switch thumbnailItem {
+                    case .still:
+                        break
+                    case let .animated(resource):
+                        let animatedStickerNode = AnimatedStickerNode()
+                        self.animatedStickerNode = animatedStickerNode
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .cached)
+                    }
+                }
+            case let .copy(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_copy", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -624,7 +717,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak:
+            case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy:
                 break
             case .dice:
                 self.panelWrapperNode.clipsToBounds = true

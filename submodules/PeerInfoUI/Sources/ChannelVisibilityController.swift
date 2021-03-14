@@ -28,7 +28,6 @@ private final class ChannelVisibilityControllerArguments {
     let updateCurrentType: (CurrentChannelType) -> Void
     let updatePublicLinkText: (String?, String) -> Void
     let scrollToPublicLinkText: () -> Void
-    let displayPrivateLinkMenu: (String) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let revokePeerId: (PeerId) -> Void
     let copyLink: (ExportedInvitation) -> Void
@@ -36,12 +35,11 @@ private final class ChannelVisibilityControllerArguments {
     let linkContextAction: (ASDisplayNode, ContextGesture?) -> Void
     let manageInviteLinks: () -> Void
     
-    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void) {
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void) {
         self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
         self.scrollToPublicLinkText = scrollToPublicLinkText
-        self.displayPrivateLinkMenu = displayPrivateLinkMenu
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.revokePeerId = revokePeerId
         self.copyLink = copyLink
@@ -831,7 +829,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     var dismissImpl: (() -> Void)?
     var nextImpl: (() -> Void)?
-    var displayPrivateLinkMenuImpl: ((String) -> Void)?
     var scrollToPublicLinkTextImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
@@ -883,8 +880,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         }
     }, scrollToPublicLinkText: {
         scrollToPublicLinkTextImpl?()
-    }, displayPrivateLinkMenu: { text in
-        displayPrivateLinkMenuImpl?(text)
     }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.revealedRevokePeerId) || (peerId != nil && fromPeerId == nil) {
@@ -1382,35 +1377,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 if let navigationController = controller.navigationController as? NavigationController {
                     navigationController.replaceAllButRootController(context.sharedContext.makeChatController(context: context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)), animated: true)
                 }
-            }
-        }
-    }
-    displayPrivateLinkMenuImpl = { [weak controller] text in
-        if let strongController = controller {
-            var resultItemNode: ListViewItemNode?
-            let _ = strongController.frameForItemNode({ itemNode in
-                if let itemNode = itemNode as? ItemListActionItemNode {
-                    if let tag = itemNode.tag as? ChannelVisibilityEntryTag {
-                        if tag == .privateLink {
-                            resultItemNode = itemNode
-                            return true
-                        }
-                    }
-                }
-                return false
-            })
-            if let resultItemNode = resultItemNode {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopyLink, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopyLink), action: {
-                    UIPasteboard.general.string = text
-                })])
-                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
-                    if let strongController = controller, let resultItemNode = resultItemNode {
-                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
-                    } else {
-                        return nil
-                    }
-                }))
             }
         }
     }

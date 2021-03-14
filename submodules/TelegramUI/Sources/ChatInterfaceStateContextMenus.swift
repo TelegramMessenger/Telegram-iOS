@@ -18,6 +18,7 @@ import SaveToCameraRoll
 import PresentationDataUtils
 import TelegramPresentationData
 import TelegramStringFormatting
+import UndoUI
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -560,6 +561,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 }
                             }
                             storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                            
+                            let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                            controllerInteraction.displayUndo(content)
                         }
                         if resourceAvailable {
                             for media in message.media {
@@ -573,6 +577,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                         copyTextWithEntities()
                                                     } else {
                                                         UIPasteboard.general.image = image
+                                                        let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_ImageCopied)
+                                                        controllerInteraction.displayUndo(content)
                                                     }
                                                 } else {
                                                     copyTextWithEntities()

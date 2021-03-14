@@ -15,6 +15,7 @@ import SaveToCameraRoll
 import GalleryUI
 import OpenInExternalAppUI
 import LocationUI
+import UndoUI
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -137,6 +138,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar.share = { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                 let shareController = ShareController(context: context, subject: .url(content.url))
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
+                }
                 strongSelf.present(shareController, nil)
             }
         }

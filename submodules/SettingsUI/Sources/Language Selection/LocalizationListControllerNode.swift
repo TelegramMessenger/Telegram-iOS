@@ -15,6 +15,7 @@ import ShareController
 import SearchBarNode
 import SearchUI
 import ActivityIndicator
+import UndoUI
 
 private enum LanguageListSection: ItemListSectionId {
     case official
@@ -530,6 +531,12 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 return
             }
             let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/setlanguage/\(info.languageCode)"))
+            shareController.actionCompleted = { [weak self] in
+                if let strongSelf = self {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                }
+            }
             strongSelf.present(shareController, nil)
         }))
         controller.setItemGroups([

@@ -181,8 +181,8 @@ final class ChatRecentActionsController: TelegramBaseController {
     override func loadDisplayNode() {
         self.displayNode = ChatRecentActionsControllerNode(context: self.context, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
-        }, presentController: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+        }, presentController: { [weak self] c, t, a in
+            self?.present(c, in: t, with: a, blockInteraction: true)
         }, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         })

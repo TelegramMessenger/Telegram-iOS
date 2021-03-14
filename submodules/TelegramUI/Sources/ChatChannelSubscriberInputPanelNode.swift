@@ -230,9 +230,30 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             }
             
             if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.pinnedMessage != interfaceState.pinnedMessage {
+                
                 if let action = actionForPeer(peer: peer, interfaceState: interfaceState, isMuted: interfaceState.peerIsMuted) {
+                    let previousAction = self.action
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
+                    
+                    var offset: CGFloat = 30.0
+                    if let previousAction = previousAction, previousAction == .muteNotifications && action == .unmuteNotifications || previousAction == .unmuteNotifications && action == .muteNotifications {
+                        if previousAction == .muteNotifications {
+                            offset *= -1.0
+                        }
+                        if let snapshotView = self.button.view.snapshotContentTree() {
+                            snapshotView.frame = self.button.frame
+                            self.button.supernode?.view.addSubview(snapshotView)
+                            
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                            snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.2,  removeOnCompletion: false, additive: true)
+                            self.button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            self.button.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
+                        }
+                    }
+                    
                     self.button.setTitle(title, with: Font.regular(17.0), with: color, for: [])
                 } else {
                     self.action = nil

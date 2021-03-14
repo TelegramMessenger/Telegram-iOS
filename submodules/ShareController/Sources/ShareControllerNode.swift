@@ -576,9 +576,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         if let signal = self.share?(self.inputFieldNode.text, peerIds) {
-            self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
-            let timestamp = CACurrentMediaTime()
             var wasDone = false
+            let timestamp = CACurrentMediaTime()
             let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
                 let minDelay: Double = shouldDelay ? 0.9 : 0.6
                 let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
@@ -589,11 +588,30 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     })
                 })
             }
+            if self.fromForeignApp {
+                self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+            } else {
+                self.animateOut(shared: true, completion: { [weak self] in
+                    self?
+                        .completed?(peerIds)
+                })
+            }
+            let fromForeignApp = self.fromForeignApp
             self.shareDisposable.set((signal
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                guard let strongSelf = self else {
                     return
                 }
+                
+                if case .done = status, !fromForeignApp {
+                    strongSelf.dismiss?(true)
+                    strongSelf.completed?(peerIds)
+                }
+                
+                guard let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                    return
+                }
+                
                 switch status {
                     case .preparing:
                         contentNode.state = .preparing
@@ -601,18 +619,22 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                         contentNode.state = .progress(value)
                     case .done:
                         contentNode.state = .done
-                        if !wasDone {
-                            if strongSelf.hapticFeedback == nil {
-                                strongSelf.hapticFeedback = HapticFeedback()
+                        if fromForeignApp {
+                            if !wasDone {
+                                if strongSelf.hapticFeedback == nil {
+                                    strongSelf.hapticFeedback = HapticFeedback()
+                                }
+                                strongSelf.hapticFeedback?.success()
+                                
+                                wasDone = true
+                                doneImpl(true)
                             }
-                            strongSelf.hapticFeedback?.success()
-                            
-                            wasDone = true
-                            doneImpl(true)
+                        } else {
+                            strongSelf.dismiss?(true)
                         }
                 }
             }, completed: {
-                if !wasDone {
+                if !wasDone && fromForeignApp {
                     doneImpl(false)
                 }
             }))
@@ -776,7 +798,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             openShare(false)
         }
         peersContentNode.segmentedSelectedIndexUpdated = { [weak self] index in
-            if let strongSelf = self, let segmentedValues = strongSelf.segmentedValues {
+            if let strongSelf = self, let _ = strongSelf.segmentedValues {
                 strongSelf.selectedSegmentedIndex = index
                 strongSelf.updateButton()
             }

@@ -837,8 +837,8 @@ final class ChatEmptyNode: ASDisplayNode {
                 contentType = .group
             } else if let _ = interfaceState.peerNearbyData {
                 contentType = .peerNearby
-            } else if let _ = peer as? TelegramUser {
-                if peer.isDeleted {
+            } else if let peer = peer as? TelegramUser {
+                if peer.isDeleted || peer.botInfo != nil || peer.flags.contains(.isSupport) {
                     contentType = .regular
                 } else if case .clearedHistory = emptyType {
                     contentType = .regular

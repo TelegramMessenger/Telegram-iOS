@@ -30,15 +30,22 @@ public final class OpenInActionSheetController: ActionSheetController {
         return self._ready
     }
     
-    public init(context: AccountContext, item: OpenInItem, additionalAction: OpenInControllerAction? = nil, openUrl: @escaping (String) -> Void) {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
+    public init(context: AccountContext, forceTheme: PresentationTheme? = nil, item: OpenInItem, additionalAction: OpenInControllerAction? = nil, openUrl: @escaping (String) -> Void) {
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme = forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+    
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
         self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                var presentationData = presentationData
+                if let forceTheme = forceTheme {
+                    presentationData = presentationData.withUpdated(theme: forceTheme)
+                }
                 strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
         })

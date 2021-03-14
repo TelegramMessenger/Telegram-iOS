@@ -12,6 +12,7 @@ import ShareController
 import StickerResources
 import AlertUI
 import PresentationDataUtils
+import UndoUI
 
 public enum StickerPackPreviewControllerMode {
     case `default`
@@ -109,7 +110,16 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 }
                 
                 if let stickerPackContentsValue = strongSelf.stickerPackContentsValue, case let .result(info, _, _) = stickerPackContentsValue, !info.shortName.isEmpty {
-                    strongSelf.present(ShareController(context: strongSelf.context, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true), in: .window(.root))
+                    let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true)
+                    
+                    let parentNavigationController = strongSelf.parentNavigationController
+                    shareController.actionCompleted = { [weak parentNavigationController] in
+                        if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        }
+                    }
+                    strongSelf.present(shareController, in: .window(.root))
                     strongSelf.dismiss()
                 }
             }

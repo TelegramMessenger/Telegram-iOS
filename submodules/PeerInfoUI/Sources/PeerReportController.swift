@@ -87,61 +87,69 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                     reportReason = .custom
                 }
                 
+                var passthrough = passthrough
+                if [.fake, .custom].contains(reportReason) {
+                    passthrough = false
+                }
+                
                 let displaySuccess = {
                     if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                         parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
                     }
                 }
                 
-                let action: (String) -> Void = { message in
-                    if passthrough {
-                        completion(reportReason, true)
-                    } else {
-                        switch subject {
-                            case let .peer(peerId):
-                                let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
-                                |> deliverOnMainQueue).start(completed: {
-                                    displaySuccess()
-                                    completion(nil, false)
-                                })
-                            case let .messages(messageIds):
-                                let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
-                                |> deliverOnMainQueue).start(completed: {
-                                    displaySuccess()
-                                    completion(nil, false)
-                                })
-                            case let .profilePhoto(peerId, photoId):
-                                let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: "")
-                                |> deliverOnMainQueue).start(completed: {
-                                    displaySuccess()
-                                    completion(nil, false)
-                                })
+                if passthrough {
+                    completion(reportReason, true)
+                } else {
+                    let action: (String) -> Void = { message in
+                        if passthrough {
+                            completion(reportReason, true)
+                        } else {
+                            switch subject {
+                                case let .peer(peerId):
+                                    let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                    |> deliverOnMainQueue).start(completed: {
+                                        displaySuccess()
+                                        completion(nil, false)
+                                    })
+                                case let .messages(messageIds):
+                                    let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
+                                    |> deliverOnMainQueue).start(completed: {
+                                        displaySuccess()
+                                        completion(nil, false)
+                                    })
+                                case let .profilePhoto(peerId, photoId):
+                                    let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                    |> deliverOnMainQueue).start(completed: {
+                                        displaySuccess()
+                                        completion(nil, false)
+                                    })
+                            }
                         }
                     }
+                    
+                    let controller = ActionSheetController(presentationData: presentationData, allowInputInset: true)
+                    let dismissAction: () -> Void = { [weak controller] in
+                        controller?.dismissAnimated()
+                    }
+                    var message = ""
+                    var items: [ActionSheetItem] = []
+                    items.append(ReportPeerHeaderActionSheetItem(context: context, text: presentationData.strings.Report_AdditionalDetailsText))
+                    items.append(ReportPeerDetailsActionSheetItem(context: context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
+                        message = text
+                    }))
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
+                        dismissAction()
+             
+                        action(message)
+                    }))
+                    
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: items),
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                    parent?.present(controller, in: .window(.root))
                 }
-                
-                let controller = ActionSheetController(presentationData: presentationData, allowInputInset: true)
-                let dismissAction: () -> Void = { [weak controller] in
-                    controller?.dismissAnimated()
-                }
-                var message = ""
-                var items: [ActionSheetItem] = []
-                items.append(ReportPeerHeaderActionSheetItem(context: context, text: presentationData.strings.Report_AdditionalDetailsText))
-                items.append(ReportPeerDetailsActionSheetItem(context: context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
-                    message = text
-                }))
-                items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
-                    dismissAction()
-         
-                    action(message)
-                }))
-                
-                controller.setItemGroups([
-                    ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                ])
-                parent?.present(controller, in: .window(.root))
-
                 f(.dismissWithoutContent)
             })))
         }
@@ -228,24 +236,24 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                                 let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
-                                    completion(nil, false)
+                                    completion(nil, true)
                                 })
                             case let .messages(messageIds):
                                 let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
-                                    completion(nil, false)
+                                    completion(nil, true)
                                 })
                             case let .profilePhoto(peerId, photoId):
                                 let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
-                                    completion(nil, false)
+                                    completion(nil, true)
                                 })
                         }
                     }
                 }
-                
+                                
                 if [.fake, .custom].contains(reportReason) {
                     let controller = ActionSheetController(presentationData: presentationData, allowInputInset: true)
                     let dismissAction: () -> Void = { [weak controller] in

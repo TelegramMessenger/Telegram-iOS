@@ -492,7 +492,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.addSubnode(toolbarNode)
                 self.toolbarNode = toolbarNode
                 if case let .animated(duration, curve) = transition {
-                    toolbarNode.layer.animatePosition(from: CGPoint(x: 0.0, y: toolbarFrame.height / 2.0), to: CGPoint(), duration: duration, mediaTimingFunction: curve.mediaTimingFunction, additive: true)
+                    toolbarNode.layer.animatePosition(from: CGPoint(x: 0.0, y: toolbarFrame.height), to: CGPoint(), duration: duration, mediaTimingFunction: curve.mediaTimingFunction, additive: true)
                 }
             }
                 
@@ -516,7 +516,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else if let toolbarNode = self.toolbarNode {
             self.toolbarNode = nil
             if case let .animated(duration, curve) = transition {
-                toolbarNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: toolbarNode.frame.size.height / 2.0), duration: duration, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: false, additive: true, completion: { [weak toolbarNode] _ in
+                toolbarNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: toolbarNode.frame.size.height), duration: duration, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: false, additive: true, completion: { [weak toolbarNode] _ in
                     toolbarNode?.removeFromSupernode()
                 })
             } else {
