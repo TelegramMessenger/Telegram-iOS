@@ -1287,13 +1287,42 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 
                 let accountContext = self.accountContext
                 let peerId = self.peerId
-                let rawAdminIds = Signal<Set<PeerId>, NoError> { subscriber in
-                    let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
-                        subscriber.putNext(Set(list.list.map { $0.peer.id }))
-                    })
-                    return disposable
+                let rawAdminIds: Signal<Set<PeerId>, NoError>
+                if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    rawAdminIds = Signal { subscriber in
+                        let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
+                            var peerIds = Set<PeerId>()
+                            for item in list.list {
+                                if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
+                                    peerIds.insert(item.peer.id)
+                                }
+                            }
+                            subscriber.putNext(peerIds)
+                        })
+                        return disposable
+                    }
+                    |> distinctUntilChanged
+                    |> runOn(.mainQueue())
+                } else {
+                    rawAdminIds = accountContext.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
+                    |> map { views -> Set<PeerId> in
+                        guard let view = views.views[.cachedPeerData(peerId: peerId)] as? CachedPeerDataView else {
+                            return Set()
+                        }
+                        guard let cachedData = view.cachedPeerData as? CachedGroupData, let participants = cachedData.participants else {
+                            return Set()
+                        }
+                        return Set(participants.participants.compactMap { item -> PeerId? in
+                            switch item {
+                            case .creator, .admin:
+                                return item.peerId
+                            default:
+                                return nil
+                            }
+                        })
+                    }
+                    |> distinctUntilChanged
                 }
-                |> runOn(.mainQueue())
                 
                 let adminIds = combineLatest(queue: .mainQueue(),
                     rawAdminIds,
