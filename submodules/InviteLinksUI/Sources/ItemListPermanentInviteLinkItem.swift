@@ -171,10 +171,11 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         
         self.fieldButtonNode = HighlightTrackingButtonNode()
     
-        self.addressButtonNode = HighlightTrackingButtonNode()
-        self.referenceContainerNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
+        self.referenceContainerNode = ContextReferenceContentNode()
+        
+        self.addressButtonNode = HighlightTrackingButtonNode()
         self.addressButtonIconNode = ASImageNode()
         self.addressButtonIconNode.contentMode = .center
         self.addressButtonIconNode.displaysAsynchronously = false
@@ -436,9 +437,10 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + (alignCentrally ? floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0) : 14.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
                     
-                    strongSelf.addressButtonNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0 - 14.0, y: verticalInset), size: CGSize(width: 52.0, height: 52.0))
-                    strongSelf.referenceContainerNode.frame = strongSelf.addressButtonNode.bounds
-                    strongSelf.addressButtonIconNode.frame = strongSelf.addressButtonNode.bounds
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0 - 14.0, y: verticalInset), size: CGSize(width: 52.0, height: 52.0))
+                    strongSelf.addressButtonNode.frame = strongSelf.containerNode.bounds
+                    strongSelf.referenceContainerNode.frame =  strongSelf.containerNode.bounds
+                    strongSelf.addressButtonIconNode.frame = strongSelf.containerNode.bounds
                                         
                     let shareButtonNode: SolidRoundedButtonNode
                     if let currentShareButtonNode = strongSelf.shareButtonNode {

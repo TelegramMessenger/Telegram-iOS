@@ -956,7 +956,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
         _shutterIsBusy = true;
         
-        TGDispatchAfter(0.25, dispatch_get_main_queue(), ^
+        TGDispatchAfter(0.05, dispatch_get_main_queue(), ^
         {
             [_previewView blink];
         });
