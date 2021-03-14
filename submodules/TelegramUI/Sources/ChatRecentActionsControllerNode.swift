@@ -807,9 +807,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect) {
         var actions: [ContextMenuAction] = []
-            if !message.text.isEmpty {
-                actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+        if !message.text.isEmpty {
+            actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = message.text
+                
+                let content: UndoOverlayContent = .copy(text: self.presentationData.strings.Conversation_TextCopied)
+                self.presentController(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
             }))
         }
         

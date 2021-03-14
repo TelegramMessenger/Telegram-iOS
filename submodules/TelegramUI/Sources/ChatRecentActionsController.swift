@@ -38,6 +38,8 @@ final class ChatRecentActionsController: TelegramBaseController {
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
+        self.automaticallyControlPresentationContextLayout = false
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.interaction = ChatRecentActionsInteraction(displayInfoAlert: { [weak self] in
@@ -197,6 +199,10 @@ final class ChatRecentActionsController: TelegramBaseController {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        var childrenLayout = layout
+        childrenLayout.intrinsicInsets.bottom += 49.0
+        self.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }

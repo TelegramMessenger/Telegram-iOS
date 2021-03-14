@@ -1755,6 +1755,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss(completion: {})
                         UIPasteboard.general.string = linkForCopying
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     })))
                 }
                 
@@ -4571,6 +4574,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         guard let data = self.data, let peer = data.peer, let controller = self.controller else {
             return
         }
+        let context = self.context
         switch subject {
         case .bio:
             var text: String?
@@ -4582,8 +4586,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 text = cachedData.about
             }
             if let text = text, !text.isEmpty {
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
                     UIPasteboard.general.string = text
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                 })])
                 controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                     if let controller = self?.controller, let sourceNode = sourceNode {
@@ -4594,8 +4601,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }))
             }
         case let .phone(phone):
-            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
                 UIPasteboard.general.string = phone
+                
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_PhoneCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             })])
             controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                 if let controller = self?.controller, let sourceNode = sourceNode {
@@ -4607,13 +4617,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .link:
             if let addressName = peer.addressName {
                 let text: String
+                let content: UndoOverlayContent
                 if peer is TelegramChannel {
                     text = "https://t.me/\(addressName)"
+                    content = .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied)
                 } else {
                     text = "@" + addressName
+                    content = .copy(text: self.presentationData.strings.Conversation_UsernameCopied)
                 }
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
                     UIPasteboard.general.string = text
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                 })])
                 controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                     if let controller = self?.controller, let sourceNode = sourceNode {
