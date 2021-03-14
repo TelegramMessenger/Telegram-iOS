@@ -538,7 +538,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 var canManageGroupCalls = false
                                 if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
-                                    if case .group = channel.info, channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+                                    if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
                                         canManageGroupCalls = true
                                     }
                                 } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramGroup {

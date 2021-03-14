@@ -250,7 +250,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         public var participantCount: Int
         public var topParticipants: [GroupCallParticipantsContext.Participant]
         public var activeSpeakers: Set<PeerId>
-        
+    
         public init(
             participantCount: Int,
             topParticipants: [GroupCallParticipantsContext.Participant],
@@ -352,7 +352,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var initialCall: CachedChannelData.ActiveCall?
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
-    private let invite: String?
+    private var invite: String?
     private var joinAsPeerId: PeerId
     private var ignorePreviousJoinAsPeerId: (PeerId, UInt32)?
     
@@ -1714,6 +1714,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 })
             }
         }
+    }
+    
+    public func reconnect(with invite: String) {
+        self.invite = invite
+        self.requestCall(movingFromBroadcastToRtc: false)
     }
     
     public func reconnect(as peerId: PeerId) {

@@ -70,6 +70,7 @@ public final class VoiceChatJoinScreen: ViewController {
         
         let context = self.context
         let peerId = self.peerId
+        let invite = self.invite
         let signal = updatedCurrentPeerGroupCall(account: context.account, peerId: peerId)
         |> castError(GetCurrentGroupCallError.self)
         |> mapToSignal { call -> Signal<(Peer, GroupCallSummary)?, GetCurrentGroupCallError> in
@@ -96,19 +97,23 @@ public final class VoiceChatJoinScreen: ViewController {
         }
         |> castError(GetCurrentGroupCallError.self)
         
-        let currentGroupCallId: Signal<Int64?, GetCurrentGroupCallError>
+        let currentGroupCall: Signal<(PresentationGroupCall, Int64, Bool)?, GetCurrentGroupCallError>
         if let callManager = context.sharedContext.callManager {
-            currentGroupCallId = callManager.currentGroupCallSignal
+            currentGroupCall = callManager.currentGroupCallSignal
             |> castError(GetCurrentGroupCallError.self)
-            |> mapToSignal { call -> Signal<Int64?, GetCurrentGroupCallError> in
+            |> mapToSignal { call -> Signal<(PresentationGroupCall, Int64, Bool)?, GetCurrentGroupCallError> in
                 if let call = call {
                     return call.summaryState
                     |> castError(GetCurrentGroupCallError.self)
-                    |> map { state -> Int64? in
-                        return state?.info?.id
+                    |> map { state -> (PresentationGroupCall, Int64, Bool)? in
+                        if let state = state, let info = state.info {
+                            return (call, info.id, state.callState.muteState?.canUnmute ?? true)
+                        } else {
+                            return nil
+                        }
                     }
-                    |> filter { id in
-                        return id != nil
+                    |> filter { value in
+                        return value != nil
                     }
                 } else {
                     return .single(nil)
@@ -116,14 +121,18 @@ public final class VoiceChatJoinScreen: ViewController {
             }
             |> take(1)
         } else {
-            currentGroupCallId = .single(nil)
+            currentGroupCall = .single(nil)
         }
             
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCallId).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallId in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
-                    if call.info.id == currentGroupCallId {
+                    if let (currentGroupCall, currentGroupCallId, canUnmute) = currentGroupCallIdAndCanUnmute, call.info.id == currentGroupCallId {
                         strongSelf.dismiss()
+                        
+                        if let invite = invite, !canUnmute {
+                            currentGroupCall.reconnect(with: invite)
+                        }
                         strongSelf.context.sharedContext.navigateToCurrentCall()
                         return
                     }

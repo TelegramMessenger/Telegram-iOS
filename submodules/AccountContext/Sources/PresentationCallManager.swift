@@ -306,6 +306,7 @@ public protocol PresentationGroupCall: class {
     
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     
+    func reconnect(with invite: String)
     func reconnect(as peerId: PeerId)
     func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>
     
