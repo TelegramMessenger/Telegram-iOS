@@ -6265,3 +6265,17 @@ Sorry for the inconvenience.";
 "VoiceChat.RemoveAndBanPeerConfirmation" = "Do you want to remove %1$@ from the voice chat and ban them in %2$@?";
 
 "Notification.VoiceChatStartedChannel" = "Voice chat started";
+
+"Conversation.MessageCopied" = "Message copied to clipboard";
+"Conversation.LinkCopied" = "Link copied to clipboard";
+"Conversation.TextCopied" = "Text copied to clipboard";
+"Conversation.HashtagCopied" = "Hashtag copied to clipboard";
+"Conversation.PhoneCopied" = "Phone copied to clipboard";
+"Conversation.EmailCopied" = "Email copied to clipboard";
+"Conversation.UsernameCopied" = "Username copied to clipboard";
+"Conversation.CardNumberCopied" = "Card number copied to clipboard";
+
+"Conversation.StickerAddedToFavorites" = "Sticker was added to Favorites";
+"Conversation.StickerRemovedFromFavorites" = "Sticker was removed from Favorites";
+
+"Conversation.DeletedFromContacts" = "**%@** deleted from your contacts";

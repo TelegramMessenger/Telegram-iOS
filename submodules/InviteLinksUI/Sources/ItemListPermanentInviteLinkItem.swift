@@ -198,8 +198,8 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         
         self.containerNode.addSubnode(self.referenceContainerNode)
         self.referenceContainerNode.addSubnode(self.addressButtonIconNode)
-        self.addressButtonNode.addSubnode(self.containerNode)
-        self.addSubnode(self.addressButtonNode)
+        self.referenceContainerNode.addSubnode(self.addressButtonNode)
+        self.addSubnode(self.containerNode)
         
         self.addSubnode(self.activateArea)
         

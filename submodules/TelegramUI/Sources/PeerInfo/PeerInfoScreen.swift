@@ -3828,6 +3828,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openUsername(value: String) {
         let shareController = ShareController(context: self.context, subject: .url("https://t.me/\(value)"))
+        shareController.actionCompleted = { [weak self] in
+            if let strongSelf = self {
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+            }
+        }
         self.view.endEditing(true)
         self.controller?.present(shareController, in: .window(.root))
     }
@@ -4080,8 +4086,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                         
                         strongSelf.activeActionDisposable.set((deleteSignal
-                        |> deliverOnMainQueue).start(completed: {
-                            self?.controller?.dismiss()
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            if let strongSelf = self, let peer = strongSelf.data?.peer {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .info(text: presentationData.strings.Conversation_DeletedFromContacts(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                
+                                strongSelf.controller?.dismiss()
+                            }
                         }))
                         
                         deleteSendMessageIntents(peerId: strongSelf.peerId)
@@ -4331,6 +4342,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             if let peer = peer as? TelegramUser, let username = peer.username {
                 let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/\(username)"))
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }
+                }
                 strongSelf.view.endEditing(true)
                 strongSelf.controller?.present(shareController, in: .window(.root))
             }

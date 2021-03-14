@@ -5986,17 +5986,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let stickerFile = stickerFile {
                     let postbox = strongSelf.context.account.postbox
                     let network = strongSelf.context.account.network
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Signal<Void, NoError> in
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Signal<Bool, NoError> in
                         if getIsStickerSaved(transaction: transaction, fileId: stickerFile.fileId) {
                             removeSavedSticker(transaction: transaction, mediaId: stickerFile.fileId)
-                            return .complete()
+                            return .single(false)
                         } else {
                             return addSavedSticker(postbox: postbox, network: network, file: stickerFile)
-                                |> `catch` { _ -> Signal<Void, NoError> in
-                                    return .complete()
-                                }
+                            |> `catch` { _ -> Signal<Void, NoError> in
+                                return .complete()
+                            }
+                            |> map { _ -> Bool in
+                                return true
+                            }
+                            |> then(.single(true))
                         }
-                    } |> switchToLatest).start()
+                    }
+                    |> switchToLatest
+                    |> deliverOnMainQueue).start(next: { [weak self] added in
+                        if let strongSelf = self {
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(account: strongSelf.context.account, file: stickerFile, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: false, action: { _ in return false }), in: .current)
+                        }
+                    })
                 }
             }
         }, presentController: { [weak self] controller, arguments in

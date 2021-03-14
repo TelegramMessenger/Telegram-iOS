@@ -591,7 +591,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             if self.fromForeignApp {
                 self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
             } else {
-                self.animateOut(shared: true, completion: {
+                self.animateOut(shared: true, completion: { [weak self] in
+                    self?
+                        .completed?(peerIds)
                 })
             }
             let fromForeignApp = self.fromForeignApp
@@ -629,7 +631,6 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                             }
                         } else {
                             strongSelf.dismiss?(true)
-                            strongSelf.completed?(peerIds)
                         }
                 }
             }, completed: {

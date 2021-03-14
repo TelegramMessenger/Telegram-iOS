@@ -402,15 +402,15 @@ private final class VisualMediaItemNode: ASDisplayNode {
             }
             self.item = (item, media, size, mediaDimensions)
             
-            let progressDiameter: CGFloat = 40.0
-            self.statusNode.frame = CGRect(origin: CGPoint(x: floor((size.width - progressDiameter) / 2.0), y: floor((size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
-            
-            self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 18.0 - 3.0), size: CGSize(width: 50.0, height: 50.0))
-            
-            self.selectionNode?.frame = CGRect(origin: CGPoint(), size: size)
-            
             self.updateHiddenMedia()
         }
+        
+        let progressDiameter: CGFloat = 40.0
+        self.statusNode.frame = CGRect(origin: CGPoint(x: floor((size.width - progressDiameter) / 2.0), y: floor((size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
+        
+        self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 18.0 - 3.0), size: CGSize(width: 50.0, height: 50.0))
+        
+        self.selectionNode?.frame = CGRect(origin: CGPoint(), size: size)
         
         if let (item, media, _, mediaDimensions) = self.item {
             self.item = (item, media, size, mediaDimensions)

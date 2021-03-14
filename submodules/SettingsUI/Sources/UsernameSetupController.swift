@@ -10,6 +10,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import ShareController
+import UndoUI
 
 private final class UsernameSetupControllerArguments {
     let account: Account
@@ -279,7 +280,12 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
             }
             if !currentAddressName.isEmpty {
                 dismissInputImpl?()
-                presentControllerImpl?(ShareController(context: context, subject: .url("https://t.me/\(currentAddressName)")), nil)
+                let shareController = ShareController(context: context, subject: .url("https://t.me/\(currentAddressName)"))
+                shareController.actionCompleted = {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                }
+                presentControllerImpl?(shareController, nil)
             }
         })
     })

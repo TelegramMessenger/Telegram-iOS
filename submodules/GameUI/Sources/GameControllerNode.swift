@@ -10,6 +10,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import ShareController
+import UndoUI
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -167,7 +168,16 @@ final class GameControllerNode: ViewControllerTracingNode {
     func shareWithoutScore() {
         if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
             let url = "https://t.me/\(addressName)?game=\(gameName)"
-            self.present(ShareController(context: self.context, subject: .url(url), showInChat: nil, externalShare: true), nil)
+            
+            let context = self.context
+            let shareController = ShareController(context: context, subject: .url(url), showInChat: nil, externalShare: true)
+            shareController.actionCompleted = { [weak self] in
+                if let strongSelf = self {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                }
+            }
+            self.present(shareController, nil)
         }
     }
 }
