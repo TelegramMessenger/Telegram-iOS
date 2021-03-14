@@ -806,9 +806,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         }
                         
                         if warnAboutPrivate {
-                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, true)), nil)
+                            controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_PrivateMessageLinkCopiedLong))
                         } else {
-                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
+                            controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_LinkCopied))
                         }
                     }
                 })

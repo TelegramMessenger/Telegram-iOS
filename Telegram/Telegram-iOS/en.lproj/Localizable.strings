@@ -6275,6 +6275,7 @@ Sorry for the inconvenience.";
 "Conversation.EmailCopied" = "Email copied to clipboard";
 "Conversation.UsernameCopied" = "Username copied to clipboard";
 "Conversation.CardNumberCopied" = "Card number copied to clipboard";
+"Conversation.PrivateMessageLinkCopiedLong" = "Link copied to clipboard. This link will only work for members of this chat.";
 
 "Conversation.StickerAddedToFavorites" = "Sticker was added to Favorites";
 "Conversation.StickerRemovedFromFavorites" = "Sticker was removed from Favorites";
