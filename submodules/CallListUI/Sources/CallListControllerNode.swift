@@ -474,6 +474,8 @@ final class CallListControllerNode: ASDisplayNode {
             } else {
                 previousWasEmptyOrSingleHole = true
             }
+
+            var disableAnimations = false
             
             if previousWasEmptyOrSingleHole {
                 reason = .initial
@@ -482,7 +484,26 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             } else {
                 if previous?.originalView === update.view {
+                    let previousCalls = previous?.filteredEntries.compactMap { item -> PeerId? in
+                        switch item {
+                        case let .groupCall(peer, _, _):
+                            return peer.id
+                        default:
+                            return nil
+                        }
+                    }
+                    let updatedCalls = processedView.filteredEntries.compactMap { item -> PeerId? in
+                        switch item {
+                        case let .groupCall(peer, _, _):
+                            return peer.id
+                        default:
+                            return nil
+                        }
+                    }
                     reason = .interactiveChanges
+                    if previousCalls != updatedCalls {
+                        disableAnimations = true
+                    }
                 } else {
                     switch update.type {
                         case .Initial:
@@ -500,7 +521,7 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             }
             
-            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: false, account: context.account, scrollPosition: update.scrollPosition)
+            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: disableAnimations, account: context.account, scrollPosition: update.scrollPosition)
             |> map({ mappedCallListNodeViewListTransition(context: context, presentationData: state.presentationData, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }

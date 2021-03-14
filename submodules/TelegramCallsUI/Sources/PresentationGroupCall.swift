@@ -1422,7 +1422,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     
                     for participant in participants {
-                        members.participants.append(participant)
+                        var participant = participant
                         
                         if topParticipants.count < 3 {
                             topParticipants.append(participant)
@@ -1470,6 +1470,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             var filteredMuteState = participant.muteState
                             if isReconnectingAsSpeaker || strongSelf.currentConnectionMode != .rtc {
                                 filteredMuteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false)
+                                participant.muteState = filteredMuteState
                             }
 
                             if let muteState = filteredMuteState {
@@ -1507,6 +1508,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             updatedInvitedPeers.remove(at: index)
                             didUpdateInvitedPeers = true
                         }
+
+                        members.participants.append(participant)
                     }
                     
                     members.totalCount = state.totalCount

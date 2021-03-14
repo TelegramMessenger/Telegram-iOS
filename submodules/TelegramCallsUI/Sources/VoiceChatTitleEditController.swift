@@ -414,7 +414,6 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
     
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-        apply(nil)
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
         applyImpl?()
     })]
