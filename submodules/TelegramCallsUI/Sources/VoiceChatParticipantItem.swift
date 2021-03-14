@@ -555,7 +555,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.disabledOverlayNode = nil
                     }
                     
-                    if let animateStatusTransitionFromUp = animateStatusTransitionFromUp {
+                    if let animateStatusTransitionFromUp = animateStatusTransitionFromUp, !strongSelf.contextSourceNode.isExtractedToContextPreview {
                         let offset: CGFloat = animateStatusTransitionFromUp ? -7.0 : 7.0
                         if let snapshotView = strongSelf.statusNode.view.snapshotContentTree() {
                             strongSelf.statusNode.view.superview?.insertSubview(snapshotView, belowSubview: strongSelf.statusNode.view)
