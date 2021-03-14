@@ -413,6 +413,7 @@ public final class VoiceChatController: ViewController {
             var canManageCall: Bool
             var volume: Int32?
             var raisedHand: Bool
+            var displayRaisedHandStatus: Bool
             
             var stableId: PeerId {
                 return self.peer.id
@@ -453,6 +454,9 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.raisedHand != rhs.raisedHand {
+                    return false
+                }
+                if lhs.displayRaisedHandStatus != rhs.displayRaisedHandStatus {
                     return false
                 }
                 return true
@@ -584,7 +588,11 @@ public final class VoiceChatController: ViewController {
                             text = .text(presentationData.strings.VoiceChat_StatusInvited, .generic)
                             icon = .invite(true)
                         case .raisedHand:
-                            text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
+                            if let about = peerEntry.about, !about.isEmpty && !peerEntry.displayRaisedHandStatus {
+                                text = .text(about, .generic)
+                            } else {
+                                text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
+                            }
                             icon = .wantsToSpeak
                         }
                         
@@ -712,6 +720,15 @@ public final class VoiceChatController: ViewController {
 
         private let displayAsPeersPromise = Promise<[FoundPeer]>([])
         private let inviteLinksPromise = Promise<GroupCallInviteLinks?>(nil)
+        
+        
+        private var raisedHandDisplayDisposables: [PeerId: Disposable] = [:]
+        private var displayedRaisedHands = Set<PeerId>() {
+            didSet {
+                self.displayedRaisedHandsPromise.set(self.displayedRaisedHands)
+            }
+        }
+        private let displayedRaisedHandsPromise = ValuePromise<Set<PeerId>>(Set())
         
         private var currentDominantSpeakerWithVideo: (PeerId, UInt32)?
         
@@ -2921,16 +2938,40 @@ public final class VoiceChatController: ViewController {
                 if member.hasRaiseHand && !(member.muteState?.canUnmute ?? false) {
                     memberState = .raisedHand
                     memberMuteState = member.muteState
-                } else if member.peer.id == self.callState?.myPeerId {
-                    if muteState == nil {
-                        memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
-                    } else {
-                        memberState = .listening
-                        memberMuteState = member.muteState
+                    
+                    if self.raisedHandDisplayDisposables[member.peer.id] == nil {
+                        var displayedRaisedHands = self.displayedRaisedHands
+                        displayedRaisedHands.insert(member.peer.id)
+                        self.displayedRaisedHands = displayedRaisedHands
+                        
+                        let signal: Signal<Never, NoError> = Signal.complete() |> delay(3.0, queue: Queue.mainQueue())
+                        self.raisedHandDisplayDisposables[member.peer.id] = signal.start(completed: { [weak self] in
+                            if let strongSelf = self {
+                                var displayedRaisedHands = strongSelf.displayedRaisedHands
+                                displayedRaisedHands.remove(member.peer.id)
+                                strongSelf.displayedRaisedHands = displayedRaisedHands
+                                
+                                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
+                            }
+                        })
                     }
                 } else {
-                    memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
-                    memberMuteState = member.muteState
+                    if member.peer.id == self.callState?.myPeerId {
+                        if muteState == nil {
+                            memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
+                        } else {
+                            memberState = .listening
+                            memberMuteState = member.muteState
+                        }
+                    } else {
+                        memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
+                        memberMuteState = member.muteState
+                    }
+                    
+                    if let disposable = self.raisedHandDisplayDisposables[member.peer.id] {
+                        disposable.dispose()
+                        self.raisedHandDisplayDisposables[member.peer.id] = nil
+                    }
                 }
                 
                 entries.append(.peer(PeerEntry(
@@ -2944,7 +2985,8 @@ public final class VoiceChatController: ViewController {
                     muteState: memberMuteState,
                     canManageCall: self.callState?.canManageCall ?? false,
                     volume: member.volume,
-                    raisedHand: member.raiseHandRating != nil
+                    raisedHand: member.raiseHandRating != nil,
+                    displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id)
                 )))
                 index += 1
             }
@@ -2966,7 +3008,8 @@ public final class VoiceChatController: ViewController {
                     muteState: nil,
                     canManageCall: false,
                     volume: nil,
-                    raisedHand: false
+                    raisedHand: false,
+                    displayRaisedHandStatus: false
                 )))
                 index += 1
             }

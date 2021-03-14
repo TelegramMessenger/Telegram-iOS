@@ -2911,6 +2911,24 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 currentCall = cachedData.activeCall
             }
             
+            
+            var previousCallsPrivate: Bool?
+            var currentCallsPrivate: Bool?
+            var previousVideoCallsAvailable: Bool? = true
+            var currentVideoCallsAvailable: Bool?
+            
+            if let previousCachedData = previousData?.cachedData as? CachedUserData, let cachedData = data.cachedData as? CachedUserData {
+                previousCallsPrivate = previousCachedData.callsPrivate ?? false
+                currentCallsPrivate = cachedData.callsPrivate
+                
+                previousVideoCallsAvailable = previousCachedData.videoCallsAvailable ?? true
+                currentVideoCallsAvailable = cachedData.videoCallsAvailable
+            }
+            
+            if previousCallsPrivate != currentCallsPrivate || previousVideoCallsAvailable != currentVideoCallsAvailable {
+                infoUpdated = true
+            }
+            
             if (previousCall == nil) != (currentCall == nil) {
                 infoUpdated = true
             }

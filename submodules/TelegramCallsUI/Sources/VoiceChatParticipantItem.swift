@@ -334,6 +334,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
+            var expandedStatusAttributedString: NSAttributedString?
             
             let rightInset: CGFloat = params.rightInset
         
@@ -403,6 +404,23 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             case .none:
                 break
             }
+            
+            if let expandedText = item.expandedText, case let .text(text, textColor) = expandedText {
+                let textColorValue: UIColor
+                switch textColor {
+                case .generic:
+                    textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
+                case .accent:
+                    textColorValue = item.presentationData.theme.list.itemAccentColor
+                case .constructive:
+                    textColorValue = UIColor(rgb: 0x34c759)
+                case .destructive:
+                    textColorValue = UIColor(rgb: 0xff3b30)
+                }
+                expandedStatusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
+            } else {
+                expandedStatusAttributedString = statusAttributedString
+            }
 
             let leftInset: CGFloat = 65.0 + params.leftInset
             let verticalInset: CGFloat = 8.0
@@ -429,7 +447,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                               
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - rightInset - 30.0 - titleIconsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 4, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(TextNodeLayoutArguments(attributedString: expandedStatusAttributedString, backgroundColor: nil, maximumNumberOfLines: 4, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = UIEdgeInsets()
     
@@ -799,7 +817,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     let animationSize = CGSize(width: 36.0, height: 36.0)
                     strongSelf.iconNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     strongSelf.animationNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
-                    strongSelf.raiseHandNode?.frame = CGRect(origin: CGPoint(), size: animationSize).insetBy(dx: -6.0, dy: -6.0)
+                    strongSelf.raiseHandNode?.frame = CGRect(origin: CGPoint(), size: animationSize).insetBy(dx: -6.0, dy: -6.0).offsetBy(dx: -2.0, dy: 0.0)
                     
                     strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset + actionOffset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     

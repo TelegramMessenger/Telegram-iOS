@@ -562,8 +562,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             }
                             storeMessageTextInPasteboard(message.text, entities: messageEntities)
                             
-                            let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
-                            controllerInteraction.displayUndo(content)
+                            Queue.mainQueue().after(0.2, {
+                                let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                                controllerInteraction.displayUndo(content)
+                            })
                         }
                         if resourceAvailable {
                             for media in message.media {
@@ -577,8 +579,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                         copyTextWithEntities()
                                                     } else {
                                                         UIPasteboard.general.image = image
-                                                        let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_ImageCopied)
-                                                        controllerInteraction.displayUndo(content)
+                                                        
+                                                        Queue.mainQueue().after(0.2, {
+                                                            let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_ImageCopied)
+                                                            controllerInteraction.displayUndo(content)
+                                                        })
                                                     }
                                                 } else {
                                                     copyTextWithEntities()
@@ -804,12 +809,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 warnAboutPrivate = true
                             }
                         }
-                        
-                        if warnAboutPrivate {
-                            controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_PrivateMessageLinkCopiedLong))
-                        } else {
-                            controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_LinkCopied))
-                        }
+                        Queue.mainQueue().after(0.2, {
+                            if warnAboutPrivate {
+                                controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_PrivateMessageLinkCopiedLong))
+                            } else {
+                                controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_LinkCopied))
+                            }
+                        })
                     }
                 })
                 f(.default)
