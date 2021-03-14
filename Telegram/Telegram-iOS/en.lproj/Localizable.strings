@@ -6269,6 +6269,7 @@ Sorry for the inconvenience.";
 "Conversation.MessageCopied" = "Message copied to clipboard";
 "Conversation.LinkCopied" = "Link copied to clipboard";
 "Conversation.TextCopied" = "Text copied to clipboard";
+"Conversation.ImageCopied" = "Image copied to clipboard";
 "Conversation.HashtagCopied" = "Hashtag copied to clipboard";
 "Conversation.PhoneCopied" = "Phone copied to clipboard";
 "Conversation.EmailCopied" = "Email copied to clipboard";
