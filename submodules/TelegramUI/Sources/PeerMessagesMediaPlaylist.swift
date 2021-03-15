@@ -117,7 +117,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                             }
                             
                             let albumArt: SharedMediaPlaybackAlbumArt?
-                            if file.fileName?.lowercased().hasPrefix(".ogg") == true {
+                            if file.fileName?.lowercased().hasSuffix(".ogg") == true {
                                 albumArt = nil
                             } else {
                                 albumArt = SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false))

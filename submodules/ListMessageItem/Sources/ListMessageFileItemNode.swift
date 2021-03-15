@@ -439,7 +439,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             
                             if !voice {
-                                if file.fileName?.lowercased().hasPrefix(".ogg") == true {
+                                if file.fileName?.lowercased().hasSuffix(".ogg") == true {
                                     iconImage = .none
                                 } else {
                                     iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
