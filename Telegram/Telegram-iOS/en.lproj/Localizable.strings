@@ -6291,3 +6291,7 @@ Sorry for the inconvenience.";
 "VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
 "VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
 "VoiceChat.LeaveAndEndVoiceChat" = "End Voice Chat";
+
+"VoiceChat.ForwardTooltip.Chat" = "Invite link forwarded to **%@**";
+"VoiceChat.ForwardTooltip.TwoChats" = "Invite link forwarded to **%@** and **%@**";
+"VoiceChat.ForwardTooltip.ManyChats" = "Invite link forwarded to **%@** and %@ others";

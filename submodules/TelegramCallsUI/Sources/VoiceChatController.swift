@@ -1152,7 +1152,13 @@ public final class VoiceChatController: ViewController {
                     let peer = entry.peer
                     if let muteState = muteState, !muteState.canUnmute || muteState.mutedByYou {
                     } else {
-                        items.append(.custom(VoiceChatVolumeContextItem(value: entry.volume.flatMap { CGFloat($0) / 10000.0 } ?? 1.0, valueChanged: { newValue, finished in
+                        let minValue: CGFloat
+                        if let callState = strongSelf.callState, callState.canManageCall && callState.adminIds.contains(peer.id) && muteState == nil {
+                            minValue = 0.01
+                        } else {
+                            minValue = 0.0
+                        }
+                        items.append(.custom(VoiceChatVolumeContextItem(minValue: minValue, value: entry.volume.flatMap { CGFloat($0) / 10000.0 } ?? 1.0, valueChanged: { newValue, finished in
                             if finished && newValue.isZero {
                                 let updatedMuteState = strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
                                 muteStatePromise.set(.single(updatedMuteState))
@@ -1791,7 +1797,7 @@ public final class VoiceChatController: ViewController {
                         return
                     }
 
-                    let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditTitleTitle, text: presentationData.strings.VoiceChat_EditTitleText, placeholder: presentationData.strings.VoiceChat_Title, value: strongSelf.callState?.title, apply: { title in
+                    let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditTitleTitle, text: presentationData.strings.VoiceChat_EditTitleText, placeholder: chatPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), value: strongSelf.callState?.title, apply: { title in
                         if let strongSelf = self, let title = title {
                             strongSelf.call.updateTitle(title)
 
@@ -2178,6 +2184,42 @@ public final class VoiceChatController: ViewController {
                 })]
             }
             let shareController = ShareController(context: self.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: self.darkTheme, forcedActionTitle: self.presentationData.strings.VoiceChat_CopyInviteLink)
+            shareController.completed = { [weak self] peerIds in
+                if let strongSelf = self {
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                        var peers: [Peer] = []
+                        for peerId in peerIds {
+                            if let peer = transaction.getPeer(peerId) {
+                                peers.append(peer)
+                            }
+                        }
+                        return peers
+                    } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                        if let strongSelf = self {
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let text: String
+                            var isSavedMessages = false
+                            if peers.count == 1, let peer = peers.first {
+                                isSavedMessages = peer.id == strongSelf.context.account.peerId
+                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).0
+                            } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).0
+                            } else if let peer = peers.first {
+                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.VoiceChat_ForwardTooltip_ManyChats(peerName, "\(peers.count - 1)").0
+                            } else {
+                                text = ""
+                            }
+                            
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: isSavedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        }
+                    })
+                }
+            }
             shareController.actionCompleted = { [weak self] in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

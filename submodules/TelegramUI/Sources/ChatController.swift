@@ -5492,7 +5492,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if case .mediaRecording = subject, let _ = strongSelf.presentationInterfaceState.activeGroupCallInfo {
+            if case .mediaRecording = subject, strongSelf.presentationInterfaceState.hasActiveGroupCall {
                 let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                 if let rect = rect {
                     strongSelf.mediaRestrictedTooltipController?.dismiss()
