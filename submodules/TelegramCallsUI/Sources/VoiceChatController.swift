@@ -108,6 +108,14 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
     }
     
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if point.y > 0.0 && point.y < self.frame.size.height && point.x > min(self.titleNode.frame.minX, self.infoNode.frame.minX) && point.x < max(self.recordingIconNode.frame.maxX, self.infoNode.frame.maxX) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     @objc private func tap() {
         self.tapped?()
     }
@@ -413,6 +421,7 @@ public final class VoiceChatController: ViewController {
             var canManageCall: Bool
             var volume: Int32?
             var raisedHand: Bool
+            var displayRaisedHandStatus: Bool
             
             var stableId: PeerId {
                 return self.peer.id
@@ -453,6 +462,9 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.raisedHand != rhs.raisedHand {
+                    return false
+                }
+                if lhs.displayRaisedHandStatus != rhs.displayRaisedHandStatus {
                     return false
                 }
                 return true
@@ -584,7 +596,11 @@ public final class VoiceChatController: ViewController {
                             text = .text(presentationData.strings.VoiceChat_StatusInvited, .generic)
                             icon = .invite(true)
                         case .raisedHand:
-                            text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
+                            if let about = peerEntry.about, !about.isEmpty && !peerEntry.displayRaisedHandStatus {
+                                text = .text(about, .generic)
+                            } else {
+                                text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
+                            }
                             icon = .wantsToSpeak
                         }
                         
@@ -713,6 +729,15 @@ public final class VoiceChatController: ViewController {
 
         private let displayAsPeersPromise = Promise<[FoundPeer]>([])
         private let inviteLinksPromise = Promise<GroupCallInviteLinks?>(nil)
+        
+        
+        private var raisedHandDisplayDisposables: [PeerId: Disposable] = [:]
+        private var displayedRaisedHands = Set<PeerId>() {
+            didSet {
+                self.displayedRaisedHandsPromise.set(self.displayedRaisedHands)
+            }
+        }
+        private let displayedRaisedHandsPromise = ValuePromise<Set<PeerId>>(Set())
         
         private var currentDominantSpeakerWithVideo: (PeerId, UInt32)?
         
@@ -1425,6 +1450,7 @@ public final class VoiceChatController: ViewController {
                     strongSelf.optionsButton.isUserInteractionEnabled = true
                     strongSelf.optionsButton.alpha = 1.0
                 } else {
+                    strongSelf.optionsButtonIsAvatar = false
                     strongSelf.optionsButton.isUserInteractionEnabled = false
                     strongSelf.optionsButton.alpha = 0.0
                 }
@@ -1668,9 +1694,21 @@ public final class VoiceChatController: ViewController {
             
             self.titleNode.tapped = { [weak self] in
                 if let strongSelf = self, !strongSelf.titleNode.recordingIconNode.isHidden {
+                    var ignore = false
+                    strongSelf.controller?.forEachController { controller -> Bool in
+                        if controller is TooltipScreen {
+                            ignore = true
+                        }
+                        return true
+                    }
+                    
+                    guard !ignore else {
+                        return
+                    }
+                    
                     let location = strongSelf.titleNode.recordingIconNode.convert(strongSelf.titleNode.recordingIconNode.bounds, to: nil)
                     strongSelf.controller?.present(TooltipScreen(text: presentationData.strings.VoiceChat_RecordingInProgress, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
-                        return .dismiss(consume: false)
+                        return .dismiss(consume: true)
                     }), in: .window(.root))
                 }
             }
@@ -1903,7 +1941,11 @@ public final class VoiceChatController: ViewController {
                     if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
                         subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
                     } else if let subscribers = peer.subscribers {
-                        subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                        if let peer = peer.peer as? TelegramChannel, case .broadcast = peer.info {
+                            subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                        } else {
+                            subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(subscribers)
+                        }
                     }
 
                     let isSelected = peer.peer.id == myPeerId
@@ -2039,12 +2081,60 @@ public final class VoiceChatController: ViewController {
         
         @objc private func leavePressed() {
             self.hapticFeedback.impact(.light)
-            
-            self.leaveDisposable.set((self.call.leave(terminateIfPossible: false)
-            |> deliverOnMainQueue).start(completed: { [weak self] in
-                self?.controller?.dismiss(closing: true)
-            }))
             self.controller?.dismissAllTooltips()
+            
+            if let callState = self.callState, callState.canManageCall {
+                let action: () -> Void = { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    let _ = (strongSelf.call.leave(terminateIfPossible: true)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(completed: {
+                        self?.controller?.dismiss()
+                    })
+                }
+                
+                let actionSheet = ActionSheetController(presentationData: self.presentationData.withUpdated(theme: self.darkTheme))
+                var items: [ActionSheetItem] = []
+                
+                items.append(ActionSheetTextItem(title: self.presentationData.strings.VoiceChat_LeaveConfirmation))
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveVoiceChat, color: .accent, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    strongSelf.leaveDisposable.set((strongSelf.call.leave(terminateIfPossible: false)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        self?.controller?.dismiss(closing: true)
+                    }))
+                }))
+                
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                     action()
+                }))
+
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                self.controller?.present(actionSheet, in: .window(.root))
+            } else {
+                self.leaveDisposable.set((self.call.leave(terminateIfPossible: false)
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    self?.controller?.dismiss(closing: true)
+                }))
+            }
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -2144,8 +2234,12 @@ public final class VoiceChatController: ViewController {
                             self.hapticFeedback.impact(.light)
                         case .ended, .cancelled:
                             self.actionButton.pressing = false
-                            self.call.raiseHand()
-                            self.actionButton.playAnimation()
+                            
+                            let location = gestureRecognizer.location(in: self.actionButton.view)
+                            if self.actionButton.hitTest(location, with: nil) != nil {
+                                self.call.raiseHand()
+                                self.actionButton.playAnimation()
+                            }
                         default:
                             break
                     }
@@ -2929,16 +3023,40 @@ public final class VoiceChatController: ViewController {
                 if member.hasRaiseHand && !(member.muteState?.canUnmute ?? false) {
                     memberState = .raisedHand
                     memberMuteState = member.muteState
-                } else if member.peer.id == self.callState?.myPeerId {
-                    if muteState == nil {
-                        memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
-                    } else {
-                        memberState = .listening
-                        memberMuteState = member.muteState
+                    
+                    if self.raisedHandDisplayDisposables[member.peer.id] == nil {
+                        var displayedRaisedHands = self.displayedRaisedHands
+                        displayedRaisedHands.insert(member.peer.id)
+                        self.displayedRaisedHands = displayedRaisedHands
+                        
+                        let signal: Signal<Never, NoError> = Signal.complete() |> delay(3.0, queue: Queue.mainQueue())
+                        self.raisedHandDisplayDisposables[member.peer.id] = signal.start(completed: { [weak self] in
+                            if let strongSelf = self {
+                                var displayedRaisedHands = strongSelf.displayedRaisedHands
+                                displayedRaisedHands.remove(member.peer.id)
+                                strongSelf.displayedRaisedHands = displayedRaisedHands
+                                
+                                strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
+                            }
+                        })
                     }
                 } else {
-                    memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
-                    memberMuteState = member.muteState
+                    if member.peer.id == self.callState?.myPeerId {
+                        if muteState == nil {
+                            memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
+                        } else {
+                            memberState = .listening
+                            memberMuteState = member.muteState
+                        }
+                    } else {
+                        memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
+                        memberMuteState = member.muteState
+                    }
+                    
+                    if let disposable = self.raisedHandDisplayDisposables[member.peer.id] {
+                        disposable.dispose()
+                        self.raisedHandDisplayDisposables[member.peer.id] = nil
+                    }
                 }
                 
                 entries.append(.peer(PeerEntry(
@@ -2952,7 +3070,8 @@ public final class VoiceChatController: ViewController {
                     muteState: memberMuteState,
                     canManageCall: self.callState?.canManageCall ?? false,
                     volume: member.volume,
-                    raisedHand: member.raiseHandRating != nil
+                    raisedHand: member.raiseHandRating != nil,
+                    displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id)
                 )))
                 index += 1
             }
@@ -2974,7 +3093,8 @@ public final class VoiceChatController: ViewController {
                     muteState: nil,
                     canManageCall: false,
                     volume: nil,
-                    raisedHand: false
+                    raisedHand: false,
+                    displayRaisedHandStatus: false
                 )))
                 index += 1
             }
@@ -3374,6 +3494,9 @@ public final class VoiceChatController: ViewController {
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
+            }
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
             }
             return true
         })

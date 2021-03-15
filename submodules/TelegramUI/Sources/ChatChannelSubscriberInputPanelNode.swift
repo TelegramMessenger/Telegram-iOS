@@ -133,6 +133,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         super.init()
         
+        self.clipsToBounds = true
+        
         self.addSubnode(self.button)
         self.addSubnode(self.discussButton)
         self.view.addSubview(self.activityIndicator)

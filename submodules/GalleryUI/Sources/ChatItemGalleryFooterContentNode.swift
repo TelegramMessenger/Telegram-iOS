@@ -136,11 +136,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var currentMessageText: NSAttributedString?
     private var currentAuthorNameText: String?
     private var currentDateText: String?
-    
+        
     private var currentMessage: Message?
-    
     private var currentWebPageAndMedia: (TelegramMediaWebpage, Media)?
-    
     private let messageContextDisposable = MetaDisposable()
     
     private var videoFramePreviewNode: (ASImageNode, ImmediateTextNode)?
@@ -148,10 +146,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat, CGFloat)?
     
     var playbackControl: (() -> Void)?
-    var seekBackward: (() -> Void)?
-    var seekForward: (() -> Void)?
-    
+    var seekBackward: ((Double) -> Void)?
+    var seekForward: ((Double) -> Void)?
+    var setPlayRate: ((Double) -> Void)?
     var fetchControl: (() -> Void)?
+    
+    private var seekTimer: SwiftSignalKit.Timer?
+    private var currentIsPaused: Bool = true
+    private var seekRate: Double = 1.0
     
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
     var openActionOptions: ((GalleryControllerInteractionTapAction) -> Void)?
@@ -169,6 +171,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.statusButtonNode.isHidden = true
                         self.statusNode.isHidden = true
                     case let .fetch(status, seekable):
+                        self.currentIsPaused = true
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
                         self.backwardButton.isHidden = !seekable
@@ -197,6 +200,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.statusNode.transitionToState(statusState, completion: {})
                         self.statusButtonNode.isUserInteractionEnabled = statusState != .none
                     case let .playback(paused, seekable):
+                        self.currentIsPaused = paused
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
                         self.backwardButton.isHidden = !seekable
@@ -390,6 +394,79 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         super.didLoad()
         self.scrollNode.view.delegate = self
         self.scrollNode.view.showsVerticalScrollIndicator = false
+        
+        let backwardLongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.seekBackwardLongPress(_:)))
+        backwardLongPressGestureRecognizer.minimumPressDuration = 0.3
+        self.backwardButton.view.addGestureRecognizer(backwardLongPressGestureRecognizer)
+        
+        let forwardLongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.seekForwardLongPress(_:)))
+        forwardLongPressGestureRecognizer.minimumPressDuration = 0.3
+        self.forwardButton.view.addGestureRecognizer(forwardLongPressGestureRecognizer)
+    }
+    
+    private var wasPlaying = false
+    @objc private func seekBackwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        switch gestureRecognizer.state {
+            case .began:
+                self.wasPlaying = !(self.currentIsPaused ?? true)
+                if self.wasPlaying {
+                    self.playbackControl?()
+                }
+                
+                var time: Double = 0.0
+                let seekTimer = SwiftSignalKit.Timer(timeout: 0.1, repeat: true, completion: { [weak self] in
+                    if let strongSelf = self {
+                        var delta: Double = 0.8
+                        if time >= 4.0 {
+                            delta = 3.2
+                        } else if time >= 2.0 {
+                            delta = 1.6
+                        }
+                        time += 0.1
+                        
+                        strongSelf.seekBackward?(delta)
+                    }
+                }, queue: Queue.mainQueue())
+                self.seekTimer = seekTimer
+                seekTimer.start()
+            case .ended, .cancelled:
+                self.seekTimer?.invalidate()
+                self.seekTimer = nil
+                if self.wasPlaying {
+                    self.playbackControl?()
+                    self.wasPlaying = false
+                }
+            default:
+                break
+        }
+    }
+    
+    @objc private func seekForwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        switch gestureRecognizer.state {
+            case .began:
+                self.seekRate = 4.0
+                self.setPlayRate?(self.seekRate)
+                let seekTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
+                    if let strongSelf = self {
+                        if strongSelf.seekRate == 4.0 {
+                            strongSelf.seekRate = 8.0
+                        }
+                        strongSelf.setPlayRate?(strongSelf.seekRate)
+                        if strongSelf.seekRate == 8.0 {
+                            strongSelf.seekTimer?.invalidate()
+                            strongSelf.seekTimer = nil
+                        }
+                    }
+                }, queue: Queue.mainQueue())
+                self.seekTimer = seekTimer
+                seekTimer.start()
+            case .ended, .cancelled:
+                self.setPlayRate?(1.0)
+                self.seekTimer?.invalidate()
+                self.seekTimer = nil
+            default:
+                break
+        }
     }
     
     private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any], _ index: Int) -> GalleryControllerInteractionTapAction? {
@@ -1106,11 +1183,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
     
     @objc func backwardButtonPressed() {
-        self.seekBackward?()
+        self.seekBackward?(15.0)
     }
     
     @objc func forwardButtonPressed() {
-        self.seekForward?()
+        self.seekForward?(15.0)
     }
     
     @objc private func statusPressed() {

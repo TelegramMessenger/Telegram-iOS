@@ -55,7 +55,7 @@ public final class VoiceChatJoinScreen: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = Node(context: self.context, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
-        })
+        }, asSpeaker: self.invite != nil)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -187,6 +187,7 @@ public final class VoiceChatJoinScreen: ViewController {
     class Node: ViewControllerTracingNode, UIScrollViewDelegate {
         private let context: AccountContext
         private var presentationData: PresentationData
+        private let asSpeaker: Bool
         
         private var call: CachedChannelData.ActiveCall?
         
@@ -222,10 +223,10 @@ public final class VoiceChatJoinScreen: ViewController {
         
         private let disposable = MetaDisposable()
         
-        init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
+        init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, asSpeaker: Bool) {
             self.context = context
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
+            self.asSpeaker = asSpeaker
             self.requestLayout = requestLayout
             
             let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
@@ -633,7 +634,7 @@ public final class VoiceChatJoinScreen: ViewController {
             transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 1.0)
             
             self.actionButtonNode.isEnabled = true
-            self.actionButtonNode.setTitle(self.presentationData.strings.Invitation_JoinVoiceChat, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+            self.actionButtonNode.setTitle(self.asSpeaker ? self.presentationData.strings.Invitation_JoinVoiceChatAsSpeaker : self.presentationData.strings.Invitation_JoinVoiceChatAsListener, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             
             self.transitionToContentNode(VoiceChatPreviewContentNode(context: self.context, peer: peer, title: title, memberCount: memberCount, theme: self.presentationData.theme, strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder))
         }

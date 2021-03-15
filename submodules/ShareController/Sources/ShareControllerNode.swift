@@ -591,10 +591,16 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             if self.fromForeignApp {
                 self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
             } else {
-                self.animateOut(shared: true, completion: { [weak self] in
-                    self?
-                        .completed?(peerIds)
+                self.animateOut(shared: true, completion: {
                 })
+                self.completed?(peerIds)
+                
+                Queue.mainQueue().after(0.15) {
+                    if self.hapticFeedback == nil {
+                        self.hapticFeedback = HapticFeedback()
+                    }
+                    self.hapticFeedback?.success()
+                }
             }
             let fromForeignApp = self.fromForeignApp
             self.shareDisposable.set((signal
@@ -605,7 +611,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 
                 if case .done = status, !fromForeignApp {
                     strongSelf.dismiss?(true)
-                    strongSelf.completed?(peerIds)
+                    return
                 }
                 
                 guard let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {

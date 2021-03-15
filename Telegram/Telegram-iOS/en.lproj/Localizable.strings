@@ -6257,7 +6257,8 @@ Sorry for the inconvenience.";
 
 "VoiceChat.MutedByAdmin" = "Muted by Admin";
 "VoiceChat.MutedByAdminHelp" = "Tap if you want to speak";
-"Invitation.JoinVoiceChat" = "Join Voice Chat";
+"Invitation.JoinVoiceChatAsSpeaker" = "Join as Speaker";
+"Invitation.JoinVoiceChatAsListener" = "Join as Listener";
 
 "VoiceChat.CancelSpeakRequest" = "Cancel Request to Speak";
 
@@ -6281,3 +6282,12 @@ Sorry for the inconvenience.";
 "Conversation.StickerRemovedFromFavorites" = "Sticker was removed from Favorites";
 
 "Conversation.DeletedFromContacts" = "**%@** deleted from your contacts";
+
+"Conversation.VoiceChat" = "Voice Chat";
+
+"Conversation.JoinVoiceChatAsSpeaker" = "JOIN AS SPEAKER";
+"Conversation.JoinVoiceChatAsListener" = "JOIN AS LISTENER";
+
+"VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
+"VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
+"VoiceChat.LeaveAndEndVoiceChat" = "Leave and End Voice Chat";

@@ -134,6 +134,11 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
     }
     
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        let updatedText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: text)
+        if updatedText.count > 40 {
+            self.textInputNode.layer.addShakeAnimation()
+            return false
+        }
         if text == "\n" {
             self.complete?()
             return false

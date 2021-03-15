@@ -1059,7 +1059,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         setViewFrame(_inputField, inputFieldFrame);
     }
     
-    _doneButtonWrapper.frame = CGRectMake(self.frame.size.width - 47.0, CGRectGetMaxY(_fieldBackground.frame) - _doneButton.frame.size.height + 8.0, _doneButton.frame.size.width, _doneButton.frame.size.height);
+    _doneButtonWrapper.frame = CGRectMake(self.frame.size.width - 47.0, CGRectGetMaxY(_fieldBackground.frame) - _doneButton.frame.size.height + (TGIsPad() ? 7.0 : 8.0), _doneButton.frame.size.width, _doneButton.frame.size.height);
 }
 
 @end

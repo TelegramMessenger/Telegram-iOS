@@ -115,6 +115,12 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             let isActiveUpdated = self.isActive != isActive
             self.isActive = isActive
             
+            var isGestureEnabled = false
+            if [.mute, .voiceChat, .more].contains(icon) {
+                isGestureEnabled = true
+            }
+            self.containerNode.isGestureEnabled = isGestureEnabled
+            
             if isActiveUpdated, !self.containerNode.alpha.isZero {
                 if let snapshotView = self.backgroundNode.view.snapshotContentTree() {
                     snapshotView.frame = self.backgroundNode.view.frame
