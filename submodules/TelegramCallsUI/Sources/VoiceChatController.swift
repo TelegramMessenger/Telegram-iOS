@@ -108,6 +108,14 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
     }
     
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if point.y > 0.0 && point.y < self.frame.size.height && point.x > min(self.titleNode.frame.minX, self.infoNode.frame.minX) && point.x < max(self.recordingIconNode.frame.maxX, self.infoNode.frame.maxX) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     @objc private func tap() {
         self.tapped?()
     }
@@ -1676,9 +1684,21 @@ public final class VoiceChatController: ViewController {
             
             self.titleNode.tapped = { [weak self] in
                 if let strongSelf = self, !strongSelf.titleNode.recordingIconNode.isHidden {
+                    var ignore = false
+                    strongSelf.controller?.forEachController { controller -> Bool in
+                        if controller is TooltipScreen {
+                            ignore = true
+                        }
+                        return true
+                    }
+                    
+                    guard !ignore else {
+                        return
+                    }
+                    
                     let location = strongSelf.titleNode.recordingIconNode.convert(strongSelf.titleNode.recordingIconNode.bounds, to: nil)
                     strongSelf.controller?.present(TooltipScreen(text: presentationData.strings.VoiceChat_RecordingInProgress, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
-                        return .dismiss(consume: false)
+                        return .dismiss(consume: true)
                     }), in: .window(.root))
                 }
             }
@@ -3417,6 +3437,9 @@ public final class VoiceChatController: ViewController {
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
+            }
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
             }
             return true
         })
