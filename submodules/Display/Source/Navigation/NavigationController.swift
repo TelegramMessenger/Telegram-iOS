@@ -1199,6 +1199,14 @@ open class NavigationController: UINavigationController, ContainableController, 
         let globalOverlayContainerParent = GlobalOverlayContainerParent()
         self.displayNode.addSubnode(globalOverlayContainerParent)
         self.globalOverlayContainerParent = globalOverlayContainerParent
+        
+        if let inCallStatusBar = self.inCallStatusBar, inCallStatusBar.supernode == nil {
+            if let globalScrollToTopNode = self.globalScrollToTopNode {
+                self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalScrollToTopNode)
+            } else {
+                self.displayNode.addSubnode(inCallStatusBar)
+            }
+        }
     }
     
     public func pushViewController(_ controller: ViewController) {
@@ -1504,14 +1512,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
                 
-                if let bottomOverlayContainer = bottomOverlayContainer {
-                    self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: bottomOverlayContainer)
-                } else if let globalScrollToTopNode = self.globalScrollToTopNode {
-                    self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalScrollToTopNode)
-                } else if let globalOverlayContainerParent = self.globalOverlayContainerParent {
-                    self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalOverlayContainerParent)
-                } else {
-                    self.displayNode.addSubnode(inCallStatusBar)
+                if self._displayNode != nil {
+                    if let bottomOverlayContainer = bottomOverlayContainer {
+                        self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: bottomOverlayContainer)
+                    } else if let globalScrollToTopNode = self.globalScrollToTopNode {
+                        self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalScrollToTopNode)
+                    } else {
+                        self.displayNode.addSubnode(inCallStatusBar)
+                    }
                 }
                 if case let .animated(duration, _) = transition {
                     inCallStatusBar.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: duration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, additive: true)
