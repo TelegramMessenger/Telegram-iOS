@@ -582,7 +582,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.audioOutputStatePromise.set(.single(([], .speaker)))
         }
         
-        self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] control in
+        self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, activateImmediately: true, manualActivate: { [weak self] control in
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: control)
@@ -1486,14 +1486,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         if let ssrc = participant.ssrc {
                             strongSelf.ssrcMapping[ssrc] = participant.peer.id
                         }
-
-                        var filteredMuteState = participant.muteState
-                        if isReconnectingAsSpeaker || strongSelf.currentConnectionMode != .rtc {
-                            filteredMuteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false)
-                            participant.muteState = filteredMuteState
-                        }
                         
                         if participant.peer.id == strongSelf.joinAsPeerId {
+                            var filteredMuteState = participant.muteState
+                            if isReconnectingAsSpeaker || strongSelf.currentConnectionMode != .rtc {
+                                filteredMuteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false)
+                                participant.muteState = filteredMuteState
+                            }
+
                             let previousRaisedHand = strongSelf.stateValue.raisedHand
                             if !(strongSelf.stateValue.muteState?.canUnmute ?? false) {
                                 strongSelf.stateValue.raisedHand = participant.raiseHandRating != nil

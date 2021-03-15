@@ -960,9 +960,6 @@ public final class GroupCallParticipantsContext {
         let accountPeerId = self.account.peerId
         return self.statePromise.get()
         |> map { state -> State in
-            if state.overlayState.isEmpty {
-                return state.state
-            }
             var publicState = state.state
             var sortAgain = false
             let canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
