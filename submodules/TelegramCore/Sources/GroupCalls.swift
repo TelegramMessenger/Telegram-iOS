@@ -1814,6 +1814,11 @@ public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64
 public struct GroupCallInviteLinks {
     public let listenerLink: String
     public let speakerLink: String?
+    
+    public init(listenerLink: String, speakerLink: String?) {
+        self.listenerLink = listenerLink
+        self.speakerLink = speakerLink
+    }
 }
 
 public func groupCallInviteLinks(account: Account, callId: Int64, accessHash: Int64) -> Signal<GroupCallInviteLinks?, NoError> {

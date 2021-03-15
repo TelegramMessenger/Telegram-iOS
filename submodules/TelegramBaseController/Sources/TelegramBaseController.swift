@@ -896,7 +896,15 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         }
                         
                         var items: [ActionSheetItem] = []
-                        items.append(VoiceChatAccountHeaderActionSheetItem(title: presentationData.strings.VoiceChat_SelectAccount, text: presentationData.strings.VoiceChat_DisplayAsInfo))
+                        var isGroup = false
+                        for peer in peers {
+                            if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
+                                isGroup = true
+                                break
+                            }
+                        }
+                            
+                        items.append(VoiceChatAccountHeaderActionSheetItem(title: presentationData.strings.VoiceChat_SelectAccount, text: isGroup ? presentationData.strings.VoiceChat_DisplayAsInfoGroup : presentationData.strings.VoiceChat_DisplayAsInfo))
                         for peer in peers {
                             var subtitle: String?
                             if peer.peer.id.namespace == Namespaces.Peer.CloudUser {

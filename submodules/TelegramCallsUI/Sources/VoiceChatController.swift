@@ -1153,7 +1153,7 @@ public final class VoiceChatController: ViewController {
                     if let muteState = muteState, !muteState.canUnmute || muteState.mutedByYou {
                     } else {
                         let minValue: CGFloat
-                        if let callState = strongSelf.callState, callState.canManageCall && callState.adminIds.contains(peer.id) && muteState == nil {
+                        if let callState = strongSelf.callState, callState.canManageCall && callState.adminIds.contains(peer.id) && muteState != nil {
                             minValue = 0.01
                         } else {
                             minValue = 0.0
@@ -1939,7 +1939,16 @@ public final class VoiceChatController: ViewController {
                 }
 
                 var items: [ContextMenuItem] = []
-                items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
+                
+                var isGroup = false
+                for peer in peers {
+                    if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
+                        isGroup = true
+                        break
+                    }
+                }
+                
+                items.append(.custom(VoiceChatInfoContextItem(text: isGroup ? strongSelf.presentationData.strings.VoiceChat_DisplayAsInfoGroup : strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Accounts"), color: theme.actionSheet.primaryTextColor)
                 }), true))
 
@@ -2176,58 +2185,75 @@ public final class VoiceChatController: ViewController {
                 return string
             }
             
-            var segmentedValues: [ShareControllerSegmentedValue]?
-            if let speakerLink = inviteLinks.speakerLink {
-                segmentedValues = [ShareControllerSegmentedValue(title: self.presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: self.presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
-                    return formatSendTitle(self.presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
-                }), ShareControllerSegmentedValue(title: self.presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: self.presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
-                    return formatSendTitle(self.presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
-                })]
-            }
-            let shareController = ShareController(context: self.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: self.darkTheme, forcedActionTitle: self.presentationData.strings.VoiceChat_CopyInviteLink)
-            shareController.completed = { [weak self] peerIds in
+            let _ = (self.context.account.postbox.loadedPeerWithId(self.call.peerId)
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                        var peers: [Peer] = []
-                        for peerId in peerIds {
-                            if let peer = transaction.getPeer(peerId) {
-                                peers.append(peer)
-                            }
+                    var inviteLinks = inviteLinks
+                    
+                    if let peer = peer as? TelegramChannel, case .group = peer.info, !peer.flags.contains(.isGigagroup), !(peer.addressName ?? "").isEmpty, let callState = strongSelf.callState, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
+                        let isMuted = defaultParticipantMuteState == .muted
+                        
+                        if !isMuted {
+                            inviteLinks = GroupCallInviteLinks(listenerLink: inviteLinks.listenerLink, speakerLink: nil)
                         }
-                        return peers
-                    } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    }
+                    
+                    let presentationData = strongSelf.presentationData
+                    
+                    var segmentedValues: [ShareControllerSegmentedValue]?
+                    if let speakerLink = inviteLinks.speakerLink {
+                        segmentedValues = [ShareControllerSegmentedValue(title: presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
+                            return formatSendTitle(presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
+                        }), ShareControllerSegmentedValue(title: presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
+                            return formatSendTitle(presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
+                        })]
+                    }
+                    let shareController = ShareController(context: strongSelf.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: strongSelf.darkTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink)
+                    shareController.completed = { [weak self] peerIds in
+                        if let strongSelf = self {
+                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                                var peers: [Peer] = []
+                                for peerId in peerIds {
+                                    if let peer = transaction.getPeer(peerId) {
+                                        peers.append(peer)
+                                    }
+                                }
+                                return peers
+                            } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                if let strongSelf = self {
+                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                    
+                                    let text: String
+                                    var isSavedMessages = false
+                                    if peers.count == 1, let peer = peers.first {
+                                        isSavedMessages = peer.id == strongSelf.context.account.peerId
+                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).0
+                                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).0
+                                    } else if let peer = peers.first {
+                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.VoiceChat_ForwardTooltip_ManyChats(peerName, "\(peers.count - 1)").0
+                                    } else {
+                                        text = ""
+                                    }
+                                    
+                                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: isSavedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                }
+                            })
+                        }
+                    }
+                    shareController.actionCompleted = { [weak self] in
                         if let strongSelf = self {
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                            
-                            let text: String
-                            var isSavedMessages = false
-                            if peers.count == 1, let peer = peers.first {
-                                isSavedMessages = peer.id == strongSelf.context.account.peerId
-                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).0
-                            } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).0
-                            } else if let peer = peers.first {
-                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                text = presentationData.strings.VoiceChat_ForwardTooltip_ManyChats(peerName, "\(peers.count - 1)").0
-                            } else {
-                                text = ""
-                            }
-                            
-                            strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: isSavedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                         }
-                    })
+                    }
+                    strongSelf.controller?.present(shareController, in: .window(.root))
                 }
-            }
-            shareController.actionCompleted = { [weak self] in
-                if let strongSelf = self {
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                }
-            }
-            self.controller?.present(shareController, in: .window(.root))
+            })
         }
         
         private var pressTimer: SwiftSignalKit.Timer?

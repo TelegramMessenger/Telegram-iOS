@@ -4277,7 +4277,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             } else {
                 var items: [ContextMenuItem] = []
                 
-                items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
+                var isGroup = false
+                for peer in peers {
+                    if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
+                        isGroup = true
+                        break
+                    }
+                }
+                
+                items.append(.custom(VoiceChatInfoContextItem(text: isGroup ? strongSelf.presentationData.strings.VoiceChat_DisplayAsInfoGroup : strongSelf.presentationData.strings.VoiceChat_DisplayAsInfo, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Accounts"), color: theme.actionSheet.primaryTextColor)
                 }), true))
                 
