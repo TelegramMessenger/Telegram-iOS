@@ -355,12 +355,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var invite: String?
     private var joinAsPeerId: PeerId
     private var ignorePreviousJoinAsPeerId: (PeerId, UInt32)?
+    private var reconnectingAsPeer: Peer?
     
     public private(set) var isVideo: Bool
     
     private var temporaryJoinTimestamp: Int32
     private var temporaryActivityTimestamp: Double?
     private var temporaryActivityRank: Int?
+    private var temporaryRaiseHandRating: Int64?
+    private var temporaryHasRaiseHand: Bool = false
     private var temporaryMuteState: GroupCallParticipantsContext.Participant.MuteState?
     
     private var internalState: InternalState = .requesting
@@ -489,6 +492,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.memberEventsPipe.signal()
     }
     private let memberEventsPipeDisposable = MetaDisposable()
+
+    private let reconnectedAsEventsPipe = ValuePipe<Peer>()
+    public var reconnectedAsEvents: Signal<Peer, NoError> {
+        return self.reconnectedAsEventsPipe.signal()
+    }
     
     private let joinDisposable = MetaDisposable()
     private let requestDisposable = MetaDisposable()
@@ -884,8 +892,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             ssrc: nil,
                             jsonParams: nil,
                             joinTimestamp: strongSelf.temporaryJoinTimestamp,
-                            raiseHandRating: nil,
-                            hasRaiseHand: false,
+                            raiseHandRating: strongSelf.temporaryRaiseHandRating,
+                            hasRaiseHand: strongSelf.temporaryHasRaiseHand,
                             activityTimestamp: strongSelf.temporaryActivityTimestamp,
                             activityRank: strongSelf.temporaryActivityRank,
                             muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
@@ -965,8 +973,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             ssrc: nil,
                             jsonParams: nil,
                             joinTimestamp: strongSelf.temporaryJoinTimestamp,
-                            raiseHandRating: nil,
-                            hasRaiseHand: false,
+                            raiseHandRating: strongSelf.temporaryRaiseHandRating,
+                            hasRaiseHand: strongSelf.temporaryHasRaiseHand,
                             activityTimestamp: strongSelf.temporaryActivityTimestamp,
                             activityRank: strongSelf.temporaryActivityRank,
                             muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
@@ -1084,13 +1092,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     let peerAdminIds: Signal<[PeerId], NoError>
                     let peerId = strongSelf.peerId
                     if strongSelf.peerId.namespace == Namespaces.Peer.CloudChannel {
-                        peerAdminIds = strongSelf.account.postbox.transaction { transaction -> [PeerId] in
-                            var result: [PeerId] = []
-                            if let entry = transaction.retrieveItemCacheEntry(id: cachedChannelAdminRanksEntryId(peerId: peerId)) as? CachedChannelAdminRanks {
-                                result = Array(entry.ranks.keys)
-                            }
-                            return result
+                        peerAdminIds = Signal { subscriber in
+                            let (disposable, _) = strongSelf.accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.accountContext.account.postbox, network: strongSelf.accountContext.account.network, accountPeerId: strongSelf.accountContext.account.peerId, peerId: peerId, updated: { list in
+                                var peerIds = Set<PeerId>()
+                                for item in list.list {
+                                    if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
+                                        peerIds.insert(item.peer.id)
+                                    }
+                                }
+                                subscriber.putNext(Array(peerIds))
+                            })
+                            return disposable
                         }
+                        |> distinctUntilChanged
+                        |> runOn(.mainQueue())
                     } else {
                         peerAdminIds = strongSelf.account.postbox.transaction { transaction -> [PeerId] in
                             var result: [PeerId] = []
@@ -1217,6 +1232,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
                             strongSelf.toneRenderer = toneRenderer
                             toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        }
+
+                        if let peer = strongSelf.reconnectingAsPeer {
+                            strongSelf.reconnectingAsPeer = nil
+                            strongSelf.reconnectedAsEventsPipe.putNext(peer)
                         }
                     }
                 }))
@@ -1438,8 +1458,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 ssrc: nil,
                                 jsonParams: nil,
                                 joinTimestamp: strongSelf.temporaryJoinTimestamp,
-                                raiseHandRating: nil,
-                                hasRaiseHand: false,
+                                raiseHandRating: strongSelf.temporaryRaiseHandRating,
+                                hasRaiseHand: strongSelf.temporaryHasRaiseHand,
                                 activityTimestamp: strongSelf.temporaryActivityTimestamp,
                                 activityRank: strongSelf.temporaryActivityRank,
                                 muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
@@ -1764,6 +1784,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             guard let strongSelf = self, let _ = myPeer else {
                 return
             }
+
+            strongSelf.reconnectingAsPeer = myPeer
             
             let previousPeerId = strongSelf.joinAsPeerId
             if let localSsrc = strongSelf.currentLocalSsrc {
@@ -1777,6 +1799,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         strongSelf.temporaryJoinTimestamp = participant.joinTimestamp
                         strongSelf.temporaryActivityTimestamp = participant.activityTimestamp
                         strongSelf.temporaryActivityRank = participant.activityRank
+                        strongSelf.temporaryRaiseHandRating = participant.raiseHandRating
+                        strongSelf.temporaryHasRaiseHand = participant.hasRaiseHand
                         strongSelf.temporaryMuteState = participant.muteState
                     }
                 }

@@ -422,7 +422,7 @@ public final class ManagedAudioSession {
                     if let strongSelf = self {
                         for holder in strongSelf.holders {
                             if holder.id == id && holder.active {
-                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: true)
+                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: false)
                                 break
                             }
                         }
@@ -501,7 +501,7 @@ public final class ManagedAudioSession {
             }
         }
     }
-    
+
     public func dropAll() {
         self.queue.async {
             self.updateHolders(interruption: true)
