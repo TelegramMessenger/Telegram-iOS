@@ -440,7 +440,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             
                             if !voice {
                                 if file.fileName?.lowercased().hasSuffix(".ogg") == true {
-                                    iconImage = .none
+                                    iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: "", performer: "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: "", performer: "", isThumbnail: false)))
                                 } else {
                                     iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
                                 }
