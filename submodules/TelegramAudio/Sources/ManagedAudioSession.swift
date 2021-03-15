@@ -413,7 +413,7 @@ public final class ManagedAudioSession {
         }, deactivate: deactivate)
     }
     
-    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, manualActivate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in }, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void = { _, _ in }) -> Disposable {
+    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activateImmediately: Bool = false, manualActivate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in }, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void = { _, _ in }) -> Disposable {
         let id = OSAtomicIncrement32(&self.nextId)
         let queue = self.queue
         queue.async {
@@ -422,7 +422,7 @@ public final class ManagedAudioSession {
                     if let strongSelf = self {
                         for holder in strongSelf.holders {
                             if holder.id == id && holder.active {
-                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: false)
+                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: activateImmediately)
                                 break
                             }
                         }

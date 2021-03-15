@@ -960,9 +960,6 @@ public final class GroupCallParticipantsContext {
         let accountPeerId = self.account.peerId
         return self.statePromise.get()
         |> map { state -> State in
-            if state.overlayState.isEmpty {
-                return state.state
-            }
             var publicState = state.state
             var sortAgain = false
             let canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
@@ -1015,20 +1012,26 @@ public final class GroupCallParticipantsContext {
     private var isLoadingMore: Bool = false
     private var shouldResetStateFromServer: Bool = false
     private var missingSsrcs = Set<UInt32>()
-    
-    private var nextActivityRank: Int = 0
+
     private var activityRankResetTimer: SwiftSignalKit.Timer?
     
     private let updateDefaultMuteDisposable = MetaDisposable()
     private let updateShouldBeRecordingDisposable = MetaDisposable()
+
+    public struct ServiceState {
+        fileprivate var nextActivityRank: Int = 0
+    }
+
+    public private(set) var serviceState: ServiceState
     
-    public init(account: Account, peerId: PeerId, myPeerId: PeerId, id: Int64, accessHash: Int64, state: State) {
+    public init(account: Account, peerId: PeerId, myPeerId: PeerId, id: Int64, accessHash: Int64, state: State, previousServiceState: ServiceState?) {
         self.account = account
         self.myPeerId = myPeerId
         self.id = id
         self.accessHash = accessHash
         self.stateValue = InternalState(state: state, overlayState: OverlayState())
         self.statePromise = ValuePromise<InternalState>(self.stateValue)
+        self.serviceState = previousServiceState ?? ServiceState()
         
         self.updatesDisposable.set((self.account.stateManager.groupCallParticipantUpdates
         |> deliverOnMainQueue).start(next: { [weak self] updates in
@@ -1167,9 +1170,15 @@ public final class GroupCallParticipantsContext {
     }
     
     private func takeNextActivityRank() -> Int {
-        let value = self.nextActivityRank
-        self.nextActivityRank += 1
+        let value = self.serviceState.nextActivityRank
+        self.serviceState.nextActivityRank += 1
         return value
+    }
+
+    public func updateAdminIds(_ adminIds: Set<PeerId>) {
+        if self.stateValue.state.adminIds != adminIds {
+            self.stateValue.state.adminIds = adminIds
+        }
     }
     
     public func reportSpeakingParticipants(ids: [PeerId: UInt32]) {
