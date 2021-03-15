@@ -235,7 +235,6 @@ public class ContactsController: ViewController {
                                 scrollToEndIfExists = true
                             }
                             
-                            
                             let _ = (strongSelf.preloadedSticker.get()
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { [weak self] greetingSticker in
