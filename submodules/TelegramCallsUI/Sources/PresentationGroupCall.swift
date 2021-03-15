@@ -100,7 +100,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 myPeerId: account.peerId,
                 id: call.id,
                 accessHash: call.accessHash,
-                state: state
+                state: state,
+                previousServiceState: nil
             )
                         
             strongSelf.participantsContext = context
@@ -842,7 +843,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         }
         if let sourceContext = sourceContext, let initialState = sourceContext.immediateState {
-            let temporaryParticipantsContext = GroupCallParticipantsContext(account: self.account, peerId: self.peerId, myPeerId: myPeerId, id: sourceContext.id, accessHash: sourceContext.accessHash, state: initialState)
+            let temporaryParticipantsContext = GroupCallParticipantsContext(account: self.account, peerId: self.peerId, myPeerId: myPeerId, id: sourceContext.id, accessHash: sourceContext.accessHash, state: initialState, previousServiceState: sourceContext.serviceState)
             self.temporaryParticipantsContext = temporaryParticipantsContext
             self.participantsContextStateDisposable.set((combineLatest(queue: .mainQueue(),
                 myPeer,
@@ -1364,8 +1365,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let myPeerId = self.joinAsPeerId
                 
                 var initialState = initialState
+                var serviceState: GroupCallParticipantsContext.ServiceState?
                 if let participantsContext = self.participantsContext, let immediateState = participantsContext.immediateState {
                     initialState.mergeActivity(from: immediateState, myPeerId: myPeerId, previousMyPeerId: self.ignorePreviousJoinAsPeerId?.0)
+                    serviceState = participantsContext.serviceState
                 }
                 
                 let participantsContext = GroupCallParticipantsContext(
@@ -1374,7 +1377,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     myPeerId: self.joinAsPeerId,
                     id: callInfo.id,
                     accessHash: callInfo.accessHash,
-                    state: initialState
+                    state: initialState,
+                    previousServiceState: serviceState
                 )
                 self.temporaryParticipantsContext = nil
                 self.participantsContext = participantsContext
@@ -1397,6 +1401,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let strongSelf = self else {
                         return
                     }
+
+                    strongSelf.participantsContext?.updateAdminIds(adminIds)
                     
                     var topParticipants: [GroupCallParticipantsContext.Participant] = []
                     
@@ -1480,6 +1486,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         if let ssrc = participant.ssrc {
                             strongSelf.ssrcMapping[ssrc] = participant.peer.id
                         }
+
+                        var filteredMuteState = participant.muteState
+                        if isReconnectingAsSpeaker || strongSelf.currentConnectionMode != .rtc {
+                            filteredMuteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false)
+                            participant.muteState = filteredMuteState
+                        }
                         
                         if participant.peer.id == strongSelf.joinAsPeerId {
                             let previousRaisedHand = strongSelf.stateValue.raisedHand
@@ -1512,14 +1524,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                             text = presentationData.strings.VoiceChat_YouCanNowSpeak
                                         }
                                         strongSelf.accountContext.sharedContext.mainWindow?.present(UndoOverlayController(presentationData: presentationData, content: .voiceChatCanSpeak(text: text), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), on: .root, blockInteraction: false, completion: {})
+                                        strongSelf.playTone(.unmuted)
                                     }
                                 })
-                            }
-                            
-                            var filteredMuteState = participant.muteState
-                            if isReconnectingAsSpeaker || strongSelf.currentConnectionMode != .rtc {
-                                filteredMuteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false)
-                                participant.muteState = filteredMuteState
                             }
 
                             if let muteState = filteredMuteState {
@@ -1732,6 +1739,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.isAudioSessionActive = value
             self.toneRenderer?.setAudioSessionActive(value)
         }
+    }
+
+    public func playTone(_ tone: PresentationGroupCallTone) {
+        let name: String
+        switch tone {
+        case .unmuted:
+            name = "voip_group_unmuted.mp3"
+        case .recordingStarted:
+            name = "voip_group_recording_started.mp3"
+        }
+
+        let toneRenderer = PresentationCallToneRenderer(tone: .custom(name: name, loopCount: 1))
+        self.toneRenderer = toneRenderer
+        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
     }
     
     private func markAsCanBeRemoved() {

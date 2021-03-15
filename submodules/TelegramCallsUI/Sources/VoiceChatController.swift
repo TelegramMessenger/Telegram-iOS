@@ -1874,6 +1874,7 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.call.setShouldBeRecording(true, title: title)
 
                                 strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+                                strongSelf.call.playTone(.recordingStarted)
                             }
                         })
                         self?.controller?.present(controller, in: .window(.root))

@@ -286,6 +286,11 @@ public final class PresentationGroupCallMemberEvent {
     }
 }
 
+public enum PresentationGroupCallTone {
+    case unmuted
+    case recordingStarted
+}
+
 public protocol PresentationGroupCall: class {
     var account: Account { get }
     var accountContext: AccountContext { get }
@@ -321,6 +326,8 @@ public protocol PresentationGroupCall: class {
     func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
     func setFullSizeVideo(peerId: PeerId?)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
+
+    func playTone(_ tone: PresentationGroupCallTone)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
     func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?)
