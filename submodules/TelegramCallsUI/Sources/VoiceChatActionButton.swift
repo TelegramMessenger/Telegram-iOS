@@ -716,7 +716,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.state != .connecting && strongSelf.state != .disabled {
+            if strongSelf.state != .connecting {
                 return
             }
             strongSelf.maskBlobView.isHidden = true
@@ -745,7 +745,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.state != .connecting && strongSelf.state != .disabled {
+            if strongSelf.state != .connecting {
                 return
             }
             strongSelf.maskBlobView.isHidden = true
@@ -766,7 +766,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             self.animatingDisappearance = false
             self.growingForegroundCircleLayer.isHidden = true
             self.disableGlowAnimations = false
-            if self.state != .connecting && self.state != .disabled {
+            if self.state != .connecting {
                 return
             }
             CATransaction.begin()

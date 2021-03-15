@@ -1593,15 +1593,15 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            self.memberEventsDisposable.set((self.call.memberEvents
-            |> deliverOnMainQueue).start(next: { [weak self] event in
-                guard let strongSelf = self else {
-                    return
-                }
-                if event.joined {
-                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
-                }
-            }))
+//            self.memberEventsDisposable.set((self.call.memberEvents
+//            |> deliverOnMainQueue).start(next: { [weak self] event in
+//                guard let strongSelf = self else {
+//                    return
+//                }
+//                if event.joined {
+//                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
+//                }
+//            }))
 
             self.reconnectedAsEventsDisposable.set((self.call.reconnectedAsEvents
             |> deliverOnMainQueue).start(next: { [weak self] peer in

@@ -919,7 +919,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             var image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>? = nil
                         
             if file.isMusic {
-                if file.fileName?.lowercased().hasPrefix(".ogg") == true {
+                if file.fileName?.lowercased().hasSuffix(".ogg") == true {
                 } else {
                     var title: String?
                     var performer: String?
