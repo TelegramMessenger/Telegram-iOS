@@ -305,6 +305,7 @@ public protocol PresentationGroupCall: class {
     var isMuted: Signal<Bool, NoError> { get }
     
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
+    var reconnectedAsEvents: Signal<Peer, NoError> { get }
     
     func reconnect(with invite: String)
     func reconnect(as peerId: PeerId)

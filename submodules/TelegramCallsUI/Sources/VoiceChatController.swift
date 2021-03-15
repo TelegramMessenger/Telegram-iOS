@@ -705,6 +705,7 @@ public final class VoiceChatController: ViewController {
         private let inviteDisposable = MetaDisposable()
         
         private let memberEventsDisposable = MetaDisposable()
+        private let reconnectedAsEventsDisposable = MetaDisposable()
         private let voiceSourcesDisposable = MetaDisposable()
         
         private var requestedVideoSources = Set<UInt32>()
@@ -1575,6 +1576,14 @@ public final class VoiceChatController: ViewController {
                     strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                 }
             }))
+
+            self.reconnectedAsEventsDisposable.set((self.call.reconnectedAsEvents
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
+            }))
             
             self.voiceSourcesDisposable.set((self.call.incomingVideoSources
             |> deliverOnMainQueue).start(next: { [weak self] sources in
@@ -1682,6 +1691,7 @@ public final class VoiceChatController: ViewController {
             self.myAudioLevelDisposable?.dispose()
             self.inviteDisposable.dispose()
             self.memberEventsDisposable.dispose()
+            self.reconnectedAsEventsDisposable.dispose()
             self.voiceSourcesDisposable.dispose()
         }
 
@@ -1928,8 +1938,6 @@ public final class VoiceChatController: ViewController {
 
                         if peer.peer.id != myPeerId {
                             strongSelf.call.reconnect(as: peer.peer.id)
-
-                            strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer.peer, text: strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                         }
                     })))
 
