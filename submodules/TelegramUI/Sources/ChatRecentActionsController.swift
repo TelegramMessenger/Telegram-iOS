@@ -46,9 +46,9 @@ final class ChatRecentActionsController: TelegramBaseController {
             if let strongSelf = self {
                 let text: String
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
-                } else {
                     text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelChannelAlertText
+                } else {
+                    text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
                 }
                 self?.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
