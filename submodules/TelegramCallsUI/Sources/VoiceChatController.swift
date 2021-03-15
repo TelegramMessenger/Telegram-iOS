@@ -2157,8 +2157,12 @@ public final class VoiceChatController: ViewController {
                             self.hapticFeedback.impact(.light)
                         case .ended, .cancelled:
                             self.actionButton.pressing = false
-                            self.call.raiseHand()
-                            self.actionButton.playAnimation()
+                            
+                            let location = gestureRecognizer.location(in: self.actionButton.view)
+                            if self.actionButton.hitTest(location, with: nil) != nil {
+                                self.call.raiseHand()
+                                self.actionButton.playAnimation()
+                            }
                         default:
                             break
                     }

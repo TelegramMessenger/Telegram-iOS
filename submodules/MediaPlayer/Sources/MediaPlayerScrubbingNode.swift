@@ -773,9 +773,9 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     private var animating = false
     public func animateTo(_ timestamp: Double) {
         self.animateToValue = timestamp
-        ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).animateView({
+        UIView.animate(withDuration: 0.2, delay: 0.0, options: [.curveEaseInOut, .allowAnimatedContent, .layoutSubviews], animations: {
             self.updateProgress()
-        }, completion: { finished in
+        }, completion: { _ in
             self.animateToValue = nil
             self.animating = false
         })
@@ -804,11 +804,11 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
             }
         }
         
-        if let animateToValue = animateToValue {
-            if animating {
+        if let animateToValue = self.animateToValue {
+            if self.animating {
                 return
             } else if let (_, duration) = timestampAndDuration {
-                animating = true
+                self.animating = true
                 timestampAndDuration = (animateToValue, duration)
             }
         }
@@ -822,6 +822,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 let foregroundContentFrame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
                 node.foregroundContentNode.position = foregroundContentFrame.center
                 node.foregroundContentNode.bounds = CGRect(origin: CGPoint(), size: foregroundContentFrame.size)
+                
                 
                 node.bufferingNode.frame = backgroundFrame
                 node.bufferingNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
@@ -872,19 +873,28 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             handleNodeContainer.isHidden = false
                         }
                     } else if let statusValue = self.statusValue {
-                        let actualTimestamp: Double
-                        if statusValue.generationTimestamp.isZero || !isPlaying {
+                        var actualTimestamp: Double
+                        if statusValue.generationTimestamp.isZero || !isPlaying || self.animateToValue != nil {
                             actualTimestamp = timestamp
                         } else {
                             let currentTimestamp = CACurrentMediaTime()
                             actualTimestamp = timestamp + (currentTimestamp - statusValue.generationTimestamp) * statusValue.baseRate
                         }
+                        
                         var progress = CGFloat(actualTimestamp / duration)
                         if progress.isNaN || !progress.isFinite {
                             progress = 0.0
                         }
                         progress = min(1.0, progress)
-                        node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
+                        
+                        let foregroundFrame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
+                        if let _ = self.animateToValue {
+                            let previousFrame = node.foregroundNode.frame
+                            node.foregroundNode.frame = foregroundFrame
+                            node.foregroundNode.layer.animateFrame(from: previousFrame, to: foregroundFrame, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                        } else {
+                            node.foregroundNode.frame = foregroundFrame
+                        }
                         
                         if let handleNodeContainer = node.handleNodeContainer {
                             handleNodeContainer.bounds = bounds.offsetBy(dx: -floorToScreenPixels(bounds.size.width * progress), dy: 0.0)

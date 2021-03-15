@@ -10519,7 +10519,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongController.dismiss()
                 } else if peerId == strongSelf.context.account.peerId {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                        if case .info = value, let strongSelf = self, let navigationController = strongSelf.effectiveNavigationController {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(context.account.peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
+                            return true
+                        }
+                        return false
+                    }), in: .current)
                     
                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
                         return .forward(source: message.id, grouping: .auto, attributes: [])
