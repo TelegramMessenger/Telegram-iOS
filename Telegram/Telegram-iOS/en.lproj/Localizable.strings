@@ -6191,7 +6191,7 @@ Sorry for the inconvenience.";
 "VoiceChat.SelectAccount" = "Select Account";
 "VoiceChat.DisplayAs" = "Display Me As...";
 "VoiceChat.DisplayAsInfo" = "Choose whether you want to be displayed as your personal account or as your channel.";
-"VoiceChat.DisplayAsInfoGroup" = "Choose whether you want to be displayed as your personal account or as your group.";
+"VoiceChat.DisplayAsInfoGroup" = "Choose whether you want to be displayed as your personal account, this group, or one of your channels.";
 "VoiceChat.DisplayAsSuccess" = "Members of this voice chat will now see your as **%@**.";
 "VoiceChat.PersonalAccount" = "personal account";
 "VoiceChat.EditTitle" = "Edit Voice Chat Title";

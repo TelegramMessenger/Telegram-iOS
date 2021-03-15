@@ -1508,6 +1508,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: bottomOverlayContainer)
                 } else if let globalScrollToTopNode = self.globalScrollToTopNode {
                     self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalScrollToTopNode)
+                } else if let globalOverlayContainerParent = self.globalOverlayContainerParent {
+                    self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalOverlayContainerParent)
                 } else {
                     self.displayNode.addSubnode(inCallStatusBar)
                 }

@@ -4294,7 +4294,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
                         subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
                     } else if let subscribers = peer.subscribers {
-                        subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                        if let peer = peer.peer as? TelegramChannel, case .broadcast = peer.info {
+                            subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                        } else {
+                            subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(subscribers)
+                        }
                     }
 
                     let avatarSize = CGSize(width: 28.0, height: 28.0)

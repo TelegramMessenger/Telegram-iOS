@@ -3445,7 +3445,7 @@ public final class VoiceChatController: ViewController {
     
     private let idleTimerExtensionDisposable = MetaDisposable()
     
-    private weak var currentOverlayController: VoiceChatOverlayController?
+    public weak var currentOverlayController: VoiceChatOverlayController?
     
     private var validLayout: ContainerViewLayout?
     

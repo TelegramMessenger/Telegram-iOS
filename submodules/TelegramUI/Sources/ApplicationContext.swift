@@ -25,6 +25,7 @@ import SettingsUI
 import AppLock
 import AccountUtils
 import ContextUI
+import TelegramCallsUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -760,6 +761,11 @@ final class AuthorizedApplicationContext {
         })
         
         self.rootController.setForceInCallStatusBar((self.context.sharedContext as! SharedAccountContextImpl).currentCallStatusBarNode)
+        if let groupCallController = self.context.sharedContext.currentGroupCallController as? VoiceChatController {
+            if let overlayController = groupCallController.currentOverlayController {
+                self.rootController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
+            }
+        }
     }
     
     deinit {
