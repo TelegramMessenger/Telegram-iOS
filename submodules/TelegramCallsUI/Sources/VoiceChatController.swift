@@ -1449,6 +1449,7 @@ public final class VoiceChatController: ViewController {
                     strongSelf.optionsButton.isUserInteractionEnabled = true
                     strongSelf.optionsButton.alpha = 1.0
                 } else {
+                    strongSelf.optionsButtonIsAvatar = false
                     strongSelf.optionsButton.isUserInteractionEnabled = false
                     strongSelf.optionsButton.alpha = 0.0
                 }
@@ -2072,12 +2073,60 @@ public final class VoiceChatController: ViewController {
         
         @objc private func leavePressed() {
             self.hapticFeedback.impact(.light)
-            
-            self.leaveDisposable.set((self.call.leave(terminateIfPossible: false)
-            |> deliverOnMainQueue).start(completed: { [weak self] in
-                self?.controller?.dismiss(closing: true)
-            }))
             self.controller?.dismissAllTooltips()
+            
+            if let callState = self.callState, callState.canManageCall {
+                let action: () -> Void = { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    let _ = (strongSelf.call.leave(terminateIfPossible: true)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(completed: {
+                        self?.controller?.dismiss()
+                    })
+                }
+                
+                let actionSheet = ActionSheetController(presentationData: self.presentationData.withUpdated(theme: self.darkTheme))
+                var items: [ActionSheetItem] = []
+                
+                items.append(ActionSheetTextItem(title: self.presentationData.strings.VoiceChat_LeaveConfirmation))
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveVoiceChat, color: .accent, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    strongSelf.leaveDisposable.set((strongSelf.call.leave(terminateIfPossible: false)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        self?.controller?.dismiss(closing: true)
+                    }))
+                }))
+                
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                     action()
+                }))
+
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                self.controller?.present(actionSheet, in: .window(.root))
+            } else {
+                self.leaveDisposable.set((self.call.leave(terminateIfPossible: false)
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    self?.controller?.dismiss(closing: true)
+                }))
+            }
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {

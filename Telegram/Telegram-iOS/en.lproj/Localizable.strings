@@ -6287,3 +6287,7 @@ Sorry for the inconvenience.";
 
 "Conversation.JoinVoiceChatAsSpeaker" = "JOIN AS SPEAKER";
 "Conversation.JoinVoiceChatAsListener" = "JOIN AS LISTENER";
+
+"VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
+"VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
+"VoiceChat.LeaveAndEndVoiceChat" = "Leave and End Voice Chat";
