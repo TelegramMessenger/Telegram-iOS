@@ -174,62 +174,95 @@ public enum MessageActionUrlAuthResult {
     case request(String, Peer, Bool)
 }
 
-public func requestMessageActionUrlAuth(account: Account, messageId: MessageId, buttonId: Int32) -> Signal<MessageActionUrlAuthResult, NoError> {
-    return account.postbox.loadedPeerWithId(messageId.peerId)
-    |> take(1)
-    |> mapToSignal { peer in
-        if let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.requestUrlAuth(peer: inputPeer, msgId: messageId.id, buttonId: buttonId))
+public enum MessageActionUrlSubject {
+    case message(id: MessageId, buttonId: Int32)
+    case url(String)
+}
+
+public func requestMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject) -> Signal<MessageActionUrlAuthResult, NoError> {
+    let request: Signal<Api.UrlAuthResult?, MTRpcError>
+    var flags: Int32 = 0
+    switch subject {
+        case let .message(messageId, buttonId):
+            flags |= (1 << 1)
+            request = account.postbox.loadedPeerWithId(messageId.peerId)
+            |> take(1)
+            |> castError(MTRpcError.self)
+            |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
+                if let inputPeer = apiInputPeer(peer) {
+                    return account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil))
+                    |> map(Optional.init)
+                } else {
+                    return .single(nil)
+                }
+            }
+        case let .url(url):
+            flags |= (1 << 2)
+            request = account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url))
             |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.UrlAuthResult?, NoError> in
-                return .single(nil)
-            }
-            |> map { result -> MessageActionUrlAuthResult in
-                guard let result = result else {
-                    return .default
-                }
-                switch result {
-                    case .urlAuthResultDefault:
-                        return .default
-                    case let .urlAuthResultAccepted(url):
-                        return .accepted(url)
-                    case let .urlAuthResultRequest(flags, bot, domain):
-                        return .request(domain, TelegramUser(user: bot), (flags & (1 << 0)) != 0)
-                }
-            }
-        } else {
-            return .single(.default)
+    }
+    
+    return request
+    |> `catch` { _ -> Signal<Api.UrlAuthResult?, NoError> in
+        return .single(nil)
+    }
+    |> map { result -> MessageActionUrlAuthResult in
+        guard let result = result else {
+            return .default
+        }
+        switch result {
+            case .urlAuthResultDefault:
+                return .default
+            case let .urlAuthResultAccepted(url):
+                return .accepted(url)
+            case let .urlAuthResultRequest(flags, bot, domain):
+                return .request(domain, TelegramUser(user: bot), (flags & (1 << 0)) != 0)
         }
     }
 }
 
-public func acceptMessageActionUrlAuth(account: Account, messageId: MessageId, buttonId: Int32, allowWriteAccess: Bool) -> Signal<MessageActionUrlAuthResult, NoError> {
-    return account.postbox.loadedPeerWithId(messageId.peerId)
-    |> take(1)
-    |> mapToSignal { peer in
-        if let inputPeer = apiInputPeer(peer) {
-            var flags: Int32 = 0
-            if allowWriteAccess {
-                flags |= Int32(1 << 0)
+public func acceptMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject, allowWriteAccess: Bool) -> Signal<MessageActionUrlAuthResult, NoError> {
+    var flags: Int32 = 0
+    if allowWriteAccess {
+        flags |= Int32(1 << 0)
+    }
+    
+    let request: Signal<Api.UrlAuthResult?, MTRpcError>
+    switch subject {
+        case let .message(messageId, buttonId):
+            flags |= (1 << 1)
+            request = account.postbox.loadedPeerWithId(messageId.peerId)
+            |> take(1)
+            |> castError(MTRpcError.self)
+            |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
+                if let inputPeer = apiInputPeer(peer) {
+                    let flags: Int32 = 1 << 1
+                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil))
+                    |> map(Optional.init)
+                } else {
+                    return .single(nil)
+                }
             }
-            return account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId))
+        case let .url(url):
+            flags |= (1 << 2)
+            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url))
             |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.UrlAuthResult?, NoError> in
-                return .single(nil)
-            }
-            |> map { result -> MessageActionUrlAuthResult in
-                guard let result = result else {
-                    return .default
-                }
-                switch result {
-                    case let .urlAuthResultAccepted(url):
-                        return .accepted(url)
-                    default:
-                        return .default
-                }
-            }
-        } else {
-            return .single(.default)
+    }
+    
+
+    return request
+    |> `catch` { _ -> Signal<Api.UrlAuthResult?, NoError> in
+        return .single(nil)
+    }
+    |> map { result -> MessageActionUrlAuthResult in
+        guard let result = result else {
+            return .default
+        }
+        switch result {
+            case let .urlAuthResultAccepted(url):
+                return .accepted(url)
+            default:
+                return .default
         }
     }
 }

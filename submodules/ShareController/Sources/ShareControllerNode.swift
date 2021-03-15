@@ -21,10 +21,6 @@ enum ShareExternalState {
     case done
 }
 
-func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
-    
-}
-
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let sharedContext: SharedAccountContext
     private var context: AccountContext?
@@ -33,8 +29,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private var immediatePeerId: PeerId?
-    private let shares: Int?
     private let fromForeignApp: Bool
+    private let segmentedValues: [ShareControllerSegmentedValue]?
+    var selectedSegmentedIndex: Int = 0
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -83,16 +80,16 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, shares: Int?, fromForeignApp: Bool, forcedTheme: PresentationTheme?) {
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forcedTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.forcedTheme = forcedTheme
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
-        self.shares = shares
         self.fromForeignApp = fromForeignApp
         self.presentError = presentError
+        self.segmentedValues = segmentedValues
         
         self.presetText = presetText
         
@@ -175,6 +172,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         super.init()
+        
+        self.isHidden = true
                 
         self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer, search in
             if let strongSelf = self {
@@ -238,8 +237,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.addSubnode(self.actionSeparatorNode)
         self.contentContainerNode.addSubnode(self.actionsBackgroundNode)
-        self.contentContainerNode.addSubnode(self.actionButtonNode)
         self.contentContainerNode.addSubnode(self.inputFieldNode)
+        self.contentContainerNode.addSubnode(self.actionButtonNode)
         
         self.inputFieldNode.updateHeight = { [weak self] in
             if let strongSelf = self {
@@ -315,7 +314,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     let previousAlpha = node.alpha
                     node.alpha = alpha
                     if animated {
-                        node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32)
+                        node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.08 : 0.32, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                     }
                     
                     if let inputNode = node as? ShareInputFieldNode, alpha.isZero {
@@ -461,13 +460,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
-        transition.updateFrame(node: self.actionsBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: bottomGridInset)))
+        transition.updateFrame(node: self.actionsBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: bottomGridInset)), beginWithCurrentState: true)
         
         transition.updateFrame(node: self.actionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - actionButtonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
         
-        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: inputHeight)))
+        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: inputHeight)), beginWithCurrentState: true)
         
-        transition.updateFrame(node: self.actionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.actionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)), beginWithCurrentState: true)
         
         let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
         
@@ -577,9 +576,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         if let signal = self.share?(self.inputFieldNode.text, peerIds) {
-            self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
-            let timestamp = CACurrentMediaTime()
             var wasDone = false
+            let timestamp = CACurrentMediaTime()
             let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
                 let minDelay: Double = shouldDelay ? 0.9 : 0.6
                 let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
@@ -590,11 +588,29 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     })
                 })
             }
+            if self.fromForeignApp {
+                self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+            } else {
+                self.animateOut(shared: true, completion: {
+                })
+                self.completed?(peerIds)
+            }
+            let fromForeignApp = self.fromForeignApp
             self.shareDisposable.set((signal
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                guard let strongSelf = self else {
                     return
                 }
+                
+                if case .done = status, !fromForeignApp {
+                    strongSelf.dismiss?(true)
+                    return
+                }
+                
+                guard let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                    return
+                }
+                
                 switch status {
                     case .preparing:
                         contentNode.state = .preparing
@@ -602,18 +618,22 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                         contentNode.state = .progress(value)
                     case .done:
                         contentNode.state = .done
-                        if !wasDone {
-                            if strongSelf.hapticFeedback == nil {
-                                strongSelf.hapticFeedback = HapticFeedback()
+                        if fromForeignApp {
+                            if !wasDone {
+                                if strongSelf.hapticFeedback == nil {
+                                    strongSelf.hapticFeedback = HapticFeedback()
+                                }
+                                strongSelf.hapticFeedback?.success()
+                                
+                                wasDone = true
+                                doneImpl(true)
                             }
-                            strongSelf.hapticFeedback?.success()
-                            
-                            wasDone = true
-                            doneImpl(true)
+                        } else {
+                            strongSelf.dismiss?(true)
                         }
                 }
             }, completed: {
-                if !wasDone {
+                if !wasDone && fromForeignApp {
                     doneImpl(false)
                 }
             }))
@@ -621,6 +641,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func animateIn() {
+        if let completion = self.outCompletion {
+            self.outCompletion = nil
+            completion()
+            return
+        }
         if self.contentNode != nil {
             self.isHidden = false
             
@@ -635,7 +660,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    private var animatingOut = false
+    var outCompletion: (() -> Void)?
     func animateOut(shared: Bool, completion: @escaping () -> Void) {
+        guard !self.animatingOut else {
+            return
+        }
+        self.animatingOut = true
+        
         if self.contentNode != nil {
             var dimCompleted = false
             var offsetCompleted = false
@@ -643,6 +675,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let internalCompletion: () -> Void = { [weak self] in
                 if dimCompleted && offsetCompleted {
                     if let strongSelf = self {
+                        strongSelf.animatingOut = false
                         strongSelf.isHidden = true
                         strongSelf.dimNode.layer.removeAllAnimations()
                         strongSelf.layer.removeAllAnimations()
@@ -664,7 +697,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 internalCompletion()
             })
         } else {
-            completion()
+            self.animatingOut = false
+            self.outCompletion = completion
+            Queue.mainQueue().after(0.2) {
+                if let completion = self.outCompletion {
+                    self.outCompletion = nil
+                    completion()
+                }
+            }
         }
     }
     
@@ -690,7 +730,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         let animated = self.peersContentNode == nil
         let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
-        }, extendedInitialReveal: self.presetText != nil, statsCount: self.shares)
+        }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
             let _ = (recentlySearchedPeers(postbox: context.account.postbox)
@@ -756,12 +796,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         peersContentNode.openShare = {
             openShare(false)
         }
-        if let openStats = self.openStats {
-            peersContentNode.openStats = { [weak self] in
-                openStats()
-                self?.animateOut(shared: true, completion: {
-                    self?.dismiss?(true)
-                })
+        peersContentNode.segmentedSelectedIndexUpdated = { [weak self] index in
+            if let strongSelf = self, let _ = strongSelf.segmentedValues {
+                strongSelf.selectedSegmentedIndex = index
+                strongSelf.updateButton()
             }
         }
         if self.immediateExternalShare {
@@ -827,6 +865,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
                 self.actionButtonNode.isEnabled = false
                 self.actionButtonNode.badge = nil
+            } else if let segmentedValues = self.segmentedValues {
+                let value = segmentedValues[self.selectedSegmentedIndex]
+                self.actionButtonNode.setTitle(value.actionTitle, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+                self.actionButtonNode.isEnabled = true
+                self.actionButtonNode.badge = nil
             } else if let defaultAction = self.defaultAction {
                 self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
                 self.actionButtonNode.isEnabled = true
@@ -837,8 +880,15 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.actionButtonNode.badge = nil
             }
         } else {
+            let text: String
+            if let segmentedValues = self.segmentedValues {
+                let value = segmentedValues[self.selectedSegmentedIndex]
+                text = value.formatSendTitle(self.controllerInteraction!.selectedPeers.count)
+            } else {
+                text = self.presentationData.strings.ShareMenu_Send
+            }
             self.actionButtonNode.isEnabled = true
-            self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+            self.actionButtonNode.setTitle(text, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             self.actionButtonNode.badge = "\(self.controllerInteraction!.selectedPeers.count)"
         }
     }

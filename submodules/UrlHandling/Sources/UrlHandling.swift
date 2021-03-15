@@ -17,6 +17,7 @@ public enum ParsedInternalPeerUrlParameter {
     case groupBotStart(String)
     case channelMessage(Int32)
     case replyThread(Int32, Int32)
+    case voiceChat(String?)
 }
 
 public enum ParsedInternalUrl {
@@ -135,7 +136,11 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     return .peerName(peerName, .groupBotStart(value))
                                 } else if queryItem.name == "game" {
                                     return nil
+                                } else if queryItem.name == "voicechat" {
+                                    return .peerName(peerName, .voiceChat(value))
                                 }
+                            } else if queryItem.name == "voicechat" {
+                                return .peerName(peerName, .voiceChat(nil))
                             }
                         }
                     }
@@ -334,6 +339,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                     }
                                     return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
+                            case let .voiceChat(invite):
+                                return .single(.joinVoiceChat(peer.id, invite))
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
@@ -494,27 +501,31 @@ public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
 
 private struct UrlHandlingConfiguration {
     static var defaultValue: UrlHandlingConfiguration {
-        return UrlHandlingConfiguration(token: nil, domains: [])
+        return UrlHandlingConfiguration(token: nil, domains: [], urlAuthDomains: [])
     }
     
     public let token: String?
     public let domains: [String]
+    public let urlAuthDomains: [String]
     
-    fileprivate init(token: String?, domains: [String]) {
+    fileprivate init(token: String?, domains: [String], urlAuthDomains: [String]) {
         self.token = token
         self.domains = domains
+        self.urlAuthDomains = urlAuthDomains
     }
     
     static func with(appConfiguration: AppConfiguration) -> UrlHandlingConfiguration {
-        if let data = appConfiguration.data, let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
-            return UrlHandlingConfiguration(token: token, domains: domains)
-        } else {
-            return .defaultValue
+        if let data = appConfiguration.data {
+            let urlAuthDomains = data["url_auth_domains"] as? [String] ?? []
+            if let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
+                return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: urlAuthDomains)
+            }
         }
+        return .defaultValue
     }
 }
 
-public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+public func resolveUrlImpl(account: Account, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
     
     return account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
@@ -522,15 +533,21 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
         let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
         
         var url = url
-        if !(url.hasPrefix("http") || url.hasPrefix("https")) {
-            url = "http://\(url)"
+        if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
+            if !(url.hasPrefix("http") || url.hasPrefix("https")) {
+                url = "http://\(url)"
+            }
         }
-        if let urlValue = URL(string: url), let host = urlValue.host, urlHandlingConfiguration.domains.contains(host.lowercased()), var components = URLComponents(string: url) {
-            components.scheme = "https"
-            var queryItems = components.queryItems ?? []
-            queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
-            components.queryItems = queryItems
-            url = components.url?.absoluteString ?? url
+        if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
+            if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
+                components.scheme = "https"
+                var queryItems = components.queryItems ?? []
+                queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
+                components.queryItems = queryItems
+                url = components.url?.absoluteString ?? url
+            } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
+                return .single(.urlAuth(url))
+            }
         }
         
         for basePath in baseTelegramMePaths {

@@ -708,7 +708,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     selectionNode.frame = selectionFrame
                                     selectionNode.updateSelected(selection, animated: isAnimated)
                                 } else {
-                                    let selectionNode = FileMessageSelectionNode(theme: presentationData.theme.theme, incoming: incoming, noPreview: file.isMusic || file.previewRepresentations.isEmpty, toggle: { [weak self] value in
+                                    let type: FileMessageSelectionNode.NodeType
+                                    if file.isVoice {
+                                        type = .voice
+                                    } else if file.isMusic || file.previewRepresentations.isEmpty {
+                                        type = .file
+                                    } else {
+                                        type = .media
+                                    }
+                                    let selectionNode = FileMessageSelectionNode(theme: presentationData.theme.theme, incoming: incoming, type: type, toggle: { [weak self] value in
                                         self?.toggleSelection(value)
                                     })
                                     strongSelf.selectionNode = selectionNode
@@ -909,19 +917,23 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
 
         if state != .none && self.statusNode == nil {
             var image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>? = nil
+                        
             if file.isMusic {
-                var title: String?
-                var performer: String?
-                
-                for attribute in file.attributes {
-                    if case let .Audio(_, _, titleValue, performerValue, _) = attribute {
-                        title = titleValue
-                        performer = performerValue
-                        break
+                if file.fileName?.lowercased().hasSuffix(".ogg") == true {
+                } else {
+                    var title: String?
+                    var performer: String?
+                    
+                    for attribute in file.attributes {
+                        if case let .Audio(_, _, titleValue, performerValue, _) = attribute {
+                            title = titleValue
+                            performer = performerValue
+                            break
+                        }
                     }
+                    
+                    image = playerAlbumArt(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
                 }
-                
-                image = playerAlbumArt(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
             }
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
             self.statusNode = statusNode
@@ -999,7 +1011,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         }
         
-        let cutoutFrame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel)).offsetBy(dx: progressFrame.minX - 6.0, dy: progressFrame.minY)
+        var cutoutFrame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel)).offsetBy(dx: progressFrame.minX - 6.0, dy: progressFrame.minY)
+        if file.isVoice {
+            cutoutFrame.origin.y += 6.0
+        }
         
         if streamingState == .none && self.selectionNode == nil {
             self.statusNode?.setCutout(nil, animated: animated)
@@ -1119,16 +1134,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
 
 
 final class FileMessageSelectionNode: ASDisplayNode {
+    enum NodeType {
+        case media
+        case file
+        case voice
+    }
     private let toggle: (Bool) -> Void
     
     private var selected = false
     private let checkNode: CheckNode
-    private let noPreview: Bool
+    private let type: NodeType
     
-    public init(theme: PresentationTheme, incoming: Bool, noPreview: Bool, toggle: @escaping (Bool) -> Void) {
-        self.noPreview = noPreview
+    public init(theme: PresentationTheme, incoming: Bool, type: NodeType, toggle: @escaping (Bool) -> Void) {
+        self.type = type
         self.toggle = toggle
-        self.checkNode = CheckNode(theme: noPreview ? CheckNodeTheme(backgroundColor: theme.list.itemCheckColors.fillColor, strokeColor: theme.list.itemCheckColors.foregroundColor, borderColor: incoming ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor, overlayBorder: false, hasInset: false, hasShadow: false) : CheckNodeTheme(theme: theme, style: .overlay))
+        self.checkNode = CheckNode(theme: type != .media ? CheckNodeTheme(backgroundColor: theme.list.itemCheckColors.fillColor, strokeColor: theme.list.itemCheckColors.foregroundColor, borderColor: incoming ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor, overlayBorder: false, hasInset: false, hasShadow: false) : CheckNodeTheme(theme: theme, style: .overlay))
         self.checkNode.isUserInteractionEnabled = false
         
         super.init()
@@ -1172,12 +1192,16 @@ final class FileMessageSelectionNode: ASDisplayNode {
         
         let checkSize: CGSize
         let checkOrigin: CGPoint
-        if self.noPreview {
-            checkSize = CGSize(width: 20.0, height: 20.0)
-            checkOrigin = CGPoint(x: 29.0, y: 26.0)
-        } else {
-            checkSize = CGSize(width: 28.0, height: 28.0)
-            checkOrigin = CGPoint(x: 41.0, y: -3.0)
+        switch self.type {
+            case .media:
+                checkSize = CGSize(width: 28.0, height: 28.0)
+                checkOrigin = CGPoint(x: 41.0, y: -3.0)
+            case .file:
+                checkSize = CGSize(width: 20.0, height: 20.0)
+                checkOrigin = CGPoint(x: 29.0, y: 26.0)
+            case .voice:
+                checkSize = CGSize(width: 20.0, height: 20.0)
+                checkOrigin = CGPoint(x: 29.0, y: 23.0)
         }
         self.checkNode.frame = CGRect(origin: checkOrigin, size: checkSize)
     }

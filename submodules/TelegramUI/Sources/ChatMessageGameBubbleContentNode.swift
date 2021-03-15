@@ -31,6 +31,13 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    override func accessibilityActivate() -> Bool {
+        if let item = self.item {
+            item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true, false)
+        }
+        return true
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }

@@ -35,11 +35,7 @@ NumberPluralizationForm numberPluralizationForm(unsigned int lc, int n) {
             
             // set4
         case 0x6265: // be
-        case 0x6273: // bs
-        case 0x6872: // hr
         case 0x7275: // ru
-        case 0x7368: // sh
-        case 0x7372: // sr
         case 0x756b: // uk
             if (((n % 10) == 1) && ((n % 100) != 11)) // n mod 10 is 1 and n mod 100 is not 11
                 return NumberPluralizationFormOne;
@@ -47,6 +43,19 @@ NumberPluralizationForm numberPluralizationForm(unsigned int lc, int n) {
                 return NumberPluralizationFormFew;
             if (((n % 10) == 0) || (((n % 10) >= 5 && (n % 10) <= 9)) || (((n % 100) >= 11 && (n % 100) <= 14))) // n mod 10 is 0 or n mod 10 in 5..9 or n mod 100 in 11..14
                 return NumberPluralizationFormMany;
+            break;
+        
+            // set4 - bugfix
+        case 0x6273: // bs
+        case 0x6872: // hr
+        case 0x7368: // sh
+        case 0x7372: // sr
+            if (((n % 10) == 1) && ((n % 100) != 11)) // n mod 10 is 1 and n mod 100 is not 11
+                return NumberPluralizationFormOne;
+            if ((((n % 10) >= 2 && (n % 10) <= 4)) && (((n % 100) < 12 || (n % 100) > 14))) // n mod 10 in 2..4 and n mod 100 not in 12..14
+                return NumberPluralizationFormFew;
+            if (((n % 10) == 0) || (((n % 10) >= 5 && (n % 10) <= 9)) || (((n % 100) >= 11 && (n % 100) <= 14))) // n mod 10 is 0 or n mod 10 in 5..9 or n mod 100 in 11..14
+                return NumberPluralizationFormOther;
             break;
             
             // set5

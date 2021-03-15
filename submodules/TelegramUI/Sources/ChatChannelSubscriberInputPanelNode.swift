@@ -133,6 +133,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         super.init()
         
+        self.clipsToBounds = true
+        
         self.addSubnode(self.button)
         self.addSubnode(self.discussButton)
         self.view.addSubview(self.activityIndicator)
@@ -168,7 +170,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         case .join:
             self.activityIndicator.isHidden = false
             self.activityIndicator.startAnimating()
-            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id)
+            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id, hash: nil)
             |> afterDisposed { [weak self] in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -189,7 +191,9 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         }
                     }))
                     return
-                default:
+                case .tooMuchUsers:
+                    text = presentationInterfaceState.strings.Conversation_UsersTooMuchError
+                case .generic:
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
                     } else {
@@ -228,9 +232,30 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             }
             
             if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.pinnedMessage != interfaceState.pinnedMessage {
+                
                 if let action = actionForPeer(peer: peer, interfaceState: interfaceState, isMuted: interfaceState.peerIsMuted) {
+                    let previousAction = self.action
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
+                    
+                    var offset: CGFloat = 30.0
+                    if let previousAction = previousAction, previousAction == .muteNotifications && action == .unmuteNotifications || previousAction == .unmuteNotifications && action == .muteNotifications {
+                        if previousAction == .muteNotifications {
+                            offset *= -1.0
+                        }
+                        if let snapshotView = self.button.view.snapshotContentTree() {
+                            snapshotView.frame = self.button.frame
+                            self.button.supernode?.view.addSubview(snapshotView)
+                            
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                            snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.2,  removeOnCompletion: false, additive: true)
+                            self.button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            self.button.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
+                        }
+                    }
+                    
                     self.button.setTitle(title, with: Font.regular(17.0), with: color, for: [])
                 } else {
                     self.action = nil
@@ -244,7 +269,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         if self.discussButton.isHidden {
             if let action = self.action, action == .muteNotifications || action == .unmuteNotifications {
-                let buttonWidth = self.button.titleNode.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
+                let buttonWidth = self.button.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
                 self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                 
                 if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, peer.flags.contains(.isGigagroup) {

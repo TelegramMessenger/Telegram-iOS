@@ -16,6 +16,7 @@ import ShareController
 import GalleryUI
 import HexColor
 import CounterContollerTitleView
+import UndoUI
 
 public enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)
@@ -710,8 +711,12 @@ public class WallpaperGalleryController: ViewController {
                             optionsString = "?\(options.joined(separator: "&"))"
                         }
                         
-                        let controller = ShareController(context: context, subject: .url("https://t.me/bg/\(file.slug)\(optionsString)"))
-                        self?.present(controller, in: .window(.root), blockInteraction: true)
+                        let shareController = ShareController(context: context, subject: .url("https://t.me/bg/\(file.slug)\(optionsString)"))
+                        shareController.actionCompleted = { [weak self] in
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        }
+                        self?.present(shareController, in: .window(.root), blockInteraction: true)
                     }
                 })
             case let .file(_, _, _, _, isPattern, _, slug, _, settings):
@@ -745,6 +750,10 @@ public class WallpaperGalleryController: ViewController {
                 break
         }
         if let controller = controller {
+            controller.actionCompleted = { [weak self] in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+            }
             self.present(controller, in: .window(.root), blockInteraction: true)
         }
     }

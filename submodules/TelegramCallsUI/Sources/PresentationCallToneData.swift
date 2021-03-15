@@ -74,7 +74,7 @@ private func loadToneData(name: String, addSilenceDuration: Double = 0.0) -> Dat
     return data
 }
 
-enum PresentationCallTone {
+enum PresentationCallTone: Equatable {
     case ringing
     case connecting
     case busy
@@ -83,6 +83,7 @@ enum PresentationCallTone {
     case groupJoined
     case groupLeft
     case groupConnecting
+    case custom(name: String, loopCount: Int?)
     
     var loopCount: Int? {
         switch self {
@@ -96,6 +97,8 @@ enum PresentationCallTone {
                 return 1
             case .groupConnecting:
                 return nil
+            case let .custom(_, loopCount):
+                return loopCount
             default:
                 return nil
         }
@@ -120,5 +123,7 @@ func presentationCallToneData(_ tone: PresentationCallTone) -> Data? {
             return loadToneData(name: "voip_group_left.mp3")
         case .groupConnecting:
             return loadToneData(name: "voip_group_connecting.mp3", addSilenceDuration: 2.0)
+        case let .custom(name, _):
+            return loadToneData(name: name)
     }
 }

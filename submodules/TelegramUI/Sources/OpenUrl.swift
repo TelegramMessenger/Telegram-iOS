@@ -213,7 +213,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 }, sendFile: nil,
                 sendSticker: nil,
-                present: { c, a in
+                requestMessageActionUrlAuth: nil,
+                joinVoiceChat: { peerId, invite, call in
+                    
+                }, present: { c, a in
                     context.sharedContext.applicationBindings.dismissNativeController()
                     
                     c.presentationArguments = a
@@ -226,7 +229,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         }
         
         let handleInternalUrl: (String) -> Void = { url in
-            let _ = (context.sharedContext.resolveUrl(account: context.account, url: url)
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: url, skipUrlAuth: true)
             |> deliverOnMainQueue).start(next: handleResolvedUrl)
         }
         
@@ -580,6 +583,25 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/addtheme/\(parameter)"
                         }
                     }
+                } else if parsedUrl.host == "privatepost" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var channelId: Int64?
+                        var postId: Int32?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "channel" {
+                                        channelId = Int64(value)
+                                    } else if queryItem.name == "post" {
+                                        postId = Int32(value)
+                                    }
+                                }
+                            }
+                        }
+                        if let channelId = channelId, let postId = postId {
+                            convertedUrl = "https://t.me/c/\(channelId)/\(postId)"
+                        }
+                    }
                 }
                 
                 if parsedUrl.host == "resolve" {
@@ -589,6 +611,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var startGroup: String?
                         var game: String?
                         var post: String?
+                        var voiceChat: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -602,7 +625,11 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         game = value
                                     } else if queryItem.name == "post" {
                                         post = value
+                                    } else if queryItem.name == "voicechat" {
+                                        voiceChat = value
                                     }
+                                } else if queryItem.name == "voicechat" {
+                                    voiceChat = ""
                                 }
                             }
                         }
@@ -618,6 +645,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 result += "?startgroup=\(startGroup)"
                             } else if let game = game {
                                 result += "?game=\(game)"
+                            } else if let voiceChat = voiceChat {
+                                if !voiceChat.isEmpty {
+                                    result += "?voicechat=\(voiceChat)"
+                                } else {
+                                    result += "?voicechat="
+                                }
                             }
                             convertedUrl = result
                         }

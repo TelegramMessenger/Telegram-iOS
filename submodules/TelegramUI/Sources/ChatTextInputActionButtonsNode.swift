@@ -135,8 +135,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     }
     
     func updateAccessibility() {
+        self.accessibilityTraits = .button
         if !self.micButton.alpha.isZero {
-            self.accessibilityTraits = .button
             switch self.micButton.mode {
                 case .audio:
                     self.accessibilityLabel = self.strings.VoiceOver_Chat_RecordModeVoiceMessage
@@ -146,7 +146,6 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                     self.accessibilityHint = self.strings.VoiceOver_Chat_RecordModeVideoMessageInfo
             }
         } else {
-            self.accessibilityTraits = .button
             self.accessibilityLabel = self.strings.MediaPicker_Send
             self.accessibilityHint = nil
         }

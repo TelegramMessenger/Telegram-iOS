@@ -1420,10 +1420,17 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         if let navigationController = (controller?.navigationController as? NavigationController) {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                         }
-                    }, error: { [weak controller] _ in
+                    }, error: { [weak controller] error in
                         if let controller = controller {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            let text: String
+                            switch error {
+                                case .limitExceeded:
+                                    text = presentationData.strings.TwoStepAuth_FloodError
+                                default:
+                                    text = presentationData.strings.Login_UnknownError
+                            }
+                            controller.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         }
                     }))
                 })]), in: .window(.root))
@@ -1438,6 +1445,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
             
         }, sendFile: nil,
         sendSticker: nil,
+        requestMessageActionUrlAuth: nil,
+        joinVoiceChat: nil,
         present: { c, a in
             presentControllerImpl?(c, a)
         }, dismissInput: {

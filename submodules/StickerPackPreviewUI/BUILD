@@ -27,6 +27,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/ArchivedStickerPacksNotice:ArchivedStickerPacksNotice",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",

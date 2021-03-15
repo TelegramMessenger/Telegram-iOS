@@ -59,6 +59,21 @@ private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
         } else {
             let touch = touches.first!
             self.initialLocation = touch.location(in: self.view)
+            
+            let touchesArray = Array(touches)
+            if touchesArray.count == 2, let firstTouch = touchesArray.first, let secondTouch = touchesArray.last {
+                let firstLocation = firstTouch.location(in: self.view)
+                let secondLocation = secondTouch.location(in: self.view)
+                
+                func distance(_ v1: CGPoint, _ v2: CGPoint) -> CGFloat {
+                    let dx = v1.x - v2.x
+                    let dy = v1.y - v2.y
+                    return sqrt(dx * dx + dy * dy)
+                }
+                if distance(firstLocation, secondLocation) > 70 {
+                    self.state = .failed
+                }
+            }
         }
     }
     
@@ -622,6 +637,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         nextClientId += 1
         
         super.init()
+        
+        self.accessibilityPageScrolledString = { [weak self] row, count in
+            if let strongSelf = self {
+                return strongSelf.currentPresentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            } else {
+                return ""
+            }
+        }
         
         self.dynamicBounceEnabled = !self.currentPresentationData.disableAnimations
         self.experimentalSnapScrollToItem = true
@@ -1752,13 +1775,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if historyView.filteredEntries.isEmpty {
                         if let firstEntry = historyView.originalView.entries.first {
                             var isPeerJoined = false
+                            var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
                             for media in firstEntry.message.media {
-                                if let action = media as? TelegramMediaAction, action.action == .peerJoined {
-                                    isPeerJoined = true
-                                    break
+                                if let action = media as? TelegramMediaAction {
+                                    if action.action == .peerJoined {
+                                        emptyType = .joined
+                                        break
+                                    } else if action.action == .historyCleared {
+                                        emptyType = .clearedHistory
+                                        break
+                                    }
                                 }
                             }
-                            loadState = .empty(isPeerJoined ? .joined : .generic)
+                            loadState = .empty(emptyType)
                         } else {
                             loadState = .empty(.generic)
                         }

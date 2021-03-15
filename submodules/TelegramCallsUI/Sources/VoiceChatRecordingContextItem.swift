@@ -8,11 +8,23 @@ import AppBundle
 import ContextUI
 import TelegramStringFormatting
 
+func generateStartRecordingIcon(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 18.0, height: 18.0), opaque: false, rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        context.setLineWidth(1.0 + UIScreenPixel)
+        context.setStrokeColor(color.cgColor)
+        context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
+        context.setFillColor(color.cgColor)
+        context.fillEllipse(in: bounds.insetBy(dx: 5.0, dy: 5.0))
+    })
+}
+
 final class VoiceChatRecordingContextItem: ContextMenuCustomItem {
-    fileprivate let timestamp: Double
+    fileprivate let timestamp: Int32
     fileprivate let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void
     
-    init(timestamp: Double, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    init(timestamp: Int32, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.timestamp = timestamp
         self.action = action
     }
@@ -24,35 +36,47 @@ final class VoiceChatRecordingContextItem: ContextMenuCustomItem {
 
 private let textFont = Font.regular(17.0)
 
-private class IconNode: ASDisplayNode {
+class VoiceChatRecordingIconNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private let dotNode: ASImageNode
     
-    override init() {
+    init(hasBackground: Bool) {
         let iconSize = 16.0 + (1.0 + UIScreenPixel) * 2.0
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.image = generateCircleImage(diameter: iconSize, lineWidth: 1.0 + UIScreenPixel, color: UIColor.white, backgroundColor: nil)
+        self.backgroundNode.isLayerBacked = true
         
         self.dotNode = ASImageNode()
         self.dotNode.displaysAsynchronously = false
         self.dotNode.displayWithoutProcessing = true
         self.dotNode.image = generateFilledCircleImage(diameter: 8.0, color: UIColor(rgb: 0xff3b30))
+        self.dotNode.isLayerBacked = true
         
         super.init()
         
-        self.addSubnode(self.backgroundNode)
+        self.isLayerBacked = true
+        
+        if hasBackground {
+            self.addSubnode(self.backgroundNode)
+        }
         self.addSubnode(self.dotNode)
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
+    override func didEnterHierarchy() {
+        self.setupAnimation()
+    }
+    
+    override func didExitHierarchy() {
+        self.dotNode.layer.removeAllAnimations()
+    }
+    
+    private func setupAnimation() {
         let animation = CAKeyframeAnimation(keyPath: "opacity")
-        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.55 as NSNumber]
         animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-        animation.duration = 0.5
+        animation.duration = 0.7
         animation.autoreverses = true
         animation.repeatCount = Float.infinity
         self.dotNode.layer.add(animation, forKey: "recording")
@@ -77,7 +101,7 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
     private let highlightedBackgroundNode: ASDisplayNode
     private let textNode: ImmediateTextNode
     private let statusNode: ImmediateTextNode
-    private let iconNode: IconNode
+    private let iconNode: VoiceChatRecordingIconNode
     private let buttonNode: HighlightTrackingButtonNode
     
     private var timer: SwiftSignalKit.Timer?
@@ -120,7 +144,7 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
         self.buttonNode.isAccessibilityElement = true
         self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
         
-        self.iconNode = IconNode()
+        self.iconNode = VoiceChatRecordingIconNode(hasBackground: true)
         
         super.init()
         
@@ -175,8 +199,8 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
             return
         }
         
-        let currentTime = CFAbsoluteTimeGetCurrent()
-        let duration = currentTime - item.timestamp
+        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        let duration = max(0, timestamp - item.timestamp)
         
         let subtextFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
         self.statusNode.attributedText = NSAttributedString(string: stringForDuration(Int32(duration)), font: subtextFont, textColor: presentationData.theme.contextMenu.secondaryColor)
@@ -206,7 +230,12 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
         let verticalSpacing: CGFloat = 2.0
         let combinedTextHeight = textSize.height + verticalSpacing + statusSize.height
         return (CGSize(width: max(textSize.width, statusSize.width) + sideInset + rightTextInset, height: verticalInset * 2.0 + combinedTextHeight), { size, transition in
+            let hadLayout = self.validLayout != nil
             self.validLayout = size
+            
+            if !hadLayout {
+                self.updateTime(transition: .immediate)
+            }
             let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
             let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
             transition.updateFrameAdditive(node: self.textNode, frame: textFrame)

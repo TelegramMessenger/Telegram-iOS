@@ -511,7 +511,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         peerContextAction(peer.peer, .search(nil), node, gesture)
                     }
                 })
-            case let .message(message, peer, readState, presentationData, totalCount, selected, displayCustomHeader):
+            case let .message(message, peer, readState, presentationData, _, selected, displayCustomHeader):
                 let header = ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                 let selection: ChatHistoryMessageSelection = selected.flatMap { .selectable(selected: $0) } ?? .none
                 if let tagMask = tagMask, tagMask != .photoOrVideo {
@@ -965,7 +965,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             let resolvedMessage = .single(nil)
-            |> then(context.sharedContext.resolveUrl(account: context.account, url: finalQuery)
+                |> then(context.sharedContext.resolveUrl(account: context.account, url: finalQuery, skipUrlAuth: true)
             |> mapToSignal { resolvedUrl -> Signal<Message?, NoError> in
                 if case let .channelMessage(_, messageId) = resolvedUrl {
                     return downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: messageId)

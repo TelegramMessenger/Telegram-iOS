@@ -37,6 +37,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let displayDuration: TooltipScreen.DisplayDuration
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
     private let requestDismiss: () -> Void
+    private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
     private let scrollingContainer: ASDisplayNode
     private let containerNode: ASDisplayNode
@@ -53,7 +54,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
+    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?) {
         self.tooltipStyle = style
         self.icon = icon
         self.customContentNode = customContentNode
@@ -61,6 +62,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.displayDuration = displayDuration
         self.shouldDismissOnTouch = shouldDismissOnTouch
         self.requestDismiss = requestDismiss
+        self.openActiveTextItem = openActiveTextItem
         
         self.containerNode = ASDisplayNode()
         self.backgroundContainerNode = ASDisplayNode()
@@ -216,15 +218,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 if let (attributeText, fullText) = strongSelf.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                openActiveTextItem(.url(url, concealed), .tap)
+                openActiveTextItem?(.url(url, concealed), .tap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                openActiveTextItem(.mention(mention.peerId, mention.mention), .tap)
+                openActiveTextItem?(.mention(mention.peerId, mention.mention), .tap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                openActiveTextItem(.textMention(mention), .tap)
+                openActiveTextItem?(.textMention(mention), .tap)
             } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                openActiveTextItem(.botCommand(command), .tap)
+                openActiveTextItem?(.botCommand(command), .tap)
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                openActiveTextItem(.hashtag(hashtag.hashtag), .tap)
+                openActiveTextItem?(.hashtag(hashtag.hashtag), .tap)
             }
         }
         
@@ -237,15 +239,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 if let (attributeText, fullText) = strongSelf.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                openActiveTextItem(.url(url, concealed), .longTap)
+                openActiveTextItem?(.url(url, concealed), .longTap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                openActiveTextItem(.mention(mention.peerId, mention.mention), .longTap)
+                openActiveTextItem?(.mention(mention.peerId, mention.mention), .longTap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                openActiveTextItem(.textMention(mention), .longTap)
+                openActiveTextItem?(.textMention(mention), .longTap)
             } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                openActiveTextItem(.botCommand(command), .longTap)
+                openActiveTextItem?(.botCommand(command), .longTap)
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                openActiveTextItem(.hashtag(hashtag.hashtag), .longTap)
+                openActiveTextItem?(.hashtag(hashtag.hashtag), .longTap)
             }
         }
     }
@@ -297,7 +299,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         case let .point(rect, arrowPosition):
             let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.midX - backgroundWidth / 2.0, y: rect.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
                 case .right:
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.minX - backgroundWidth - bottomInset, y: rect.midY - backgroundHeight / 2.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
@@ -312,6 +314,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             if backgroundFrame.minY < layout.insets(options: .statusBar).top {
                 backgroundFrame.origin.y = rect.maxY + bottomInset
                 invertArrow = true
+            }
+            if case .top = arrowPosition, !invertArrow {
+                invertArrow = true
+                backgroundFrame.origin.y = rect.maxY + bottomInset
             }
             self.isArrowInverted = invertArrow
         case .top:
@@ -332,7 +338,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             let arrowFrame: CGRect
             
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     if invertArrow {
                         arrowFrame = CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: -arrowSize.height), size: arrowSize)
                     } else {
@@ -367,7 +373,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let event = event {
-            if let result = self.textNode.hitTest(self.view.convert(point, to: self.textNode.view), with: event) {
+            if let _ = self.openActiveTextItem, let result = self.textNode.hitTest(self.view.convert(point, to: self.textNode.view), with: event) {
                 return result
             }
             
@@ -404,7 +410,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
            
             let startPoint: CGPoint
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
                     startPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
@@ -448,7 +454,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             
             let targetPoint: CGPoint
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
                     targetPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
@@ -484,8 +490,9 @@ public final class TooltipScreen: ViewController {
     }
     
     public enum ArrowPosition {
-        case bottom
+        case top
         case right
+        case bottom
     }
     
     public enum Location {
@@ -511,7 +518,7 @@ public final class TooltipScreen: ViewController {
     private let location: TooltipScreen.Location
     private let displayDuration: DisplayDuration
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
-    private let openActiveTextItem: (TooltipActiveTextItem, TooltipActiveTextAction) -> Void
+    private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
     private var controllerNode: TooltipScreenNode {
         return self.displayNode as! TooltipScreenNode
@@ -525,7 +532,7 @@ public final class TooltipScreen: ViewController {
     
     private var dismissTimer: Foundation.Timer?
     
-    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
+    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil) {
         self.text = text
         self.textEntities = textEntities
         self.style = style

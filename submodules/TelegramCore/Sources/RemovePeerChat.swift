@@ -74,4 +74,8 @@ public func removePeerChat(account: Account, transaction: Transaction, mediaBox:
         }
     }
     transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
+    
+    if peerId.namespace == Namespaces.Peer.CloudChannel {
+        transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers)
+    }
 }

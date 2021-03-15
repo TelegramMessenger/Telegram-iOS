@@ -188,10 +188,21 @@ public func checkPublicChannelCreationAvailability(account: Account, location: B
     }
 }
 
-public func adminedPublicChannels(account: Account, location: Bool = false) -> Signal<[Peer], NoError> {
+public enum AdminedPublicChannelsScope {
+    case all
+    case forLocation
+    case forVoiceChat
+}
+
+public func adminedPublicChannels(account: Account, scope: AdminedPublicChannelsScope = .all) -> Signal<[Peer], NoError> {
     var flags: Int32 = 0
-    if location {
+    switch scope {
+    case .all:
+        break
+    case .forLocation:
         flags |= (1 << 0)
+    case .forVoiceChat:
+        flags |= (1 << 2)
     }
     
     return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))

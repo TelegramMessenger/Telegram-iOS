@@ -32,6 +32,11 @@ public enum UndoOverlayContent {
     case autoDelete(isOn: Bool, title: String?, text: String)
     case gigagroupConversion(text: String)
     case linkRevoked(text: String)
+    case voiceChatRecording(text: String)
+    case voiceChatFlag(text: String)
+    case voiceChatCanSpeak(text: String)
+    case sticker(account: Account, file: TelegramMediaFile, text: String)
+    case copy(text: String)
 }
 
 public enum UndoOverlayAction {

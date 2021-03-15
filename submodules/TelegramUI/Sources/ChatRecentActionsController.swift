@@ -38,15 +38,17 @@ final class ChatRecentActionsController: TelegramBaseController {
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
+        self.automaticallyControlPresentationContextLayout = false
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.interaction = ChatRecentActionsInteraction(displayInfoAlert: { [weak self] in
             if let strongSelf = self {
                 let text: String
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
-                } else {
                     text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelChannelAlertText
+                } else {
+                    text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
                 }
                 self?.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
@@ -181,8 +183,8 @@ final class ChatRecentActionsController: TelegramBaseController {
     override func loadDisplayNode() {
         self.displayNode = ChatRecentActionsControllerNode(context: self.context, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
-        }, presentController: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+        }, presentController: { [weak self] c, t, a in
+            self?.present(c, in: t, with: a, blockInteraction: true)
         }, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         })
@@ -197,6 +199,10 @@ final class ChatRecentActionsController: TelegramBaseController {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        var childrenLayout = layout
+        childrenLayout.intrinsicInsets.bottom += 49.0
+        self.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }

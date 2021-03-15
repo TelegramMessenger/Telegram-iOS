@@ -202,6 +202,8 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                                 }
                                 |> map { [$0] }
                             )
+                        } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
+                            return .fail(.addMemberError(.notMutualContact))
                         } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
                             return .fail(.addMemberError(.restricted))
                         } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {

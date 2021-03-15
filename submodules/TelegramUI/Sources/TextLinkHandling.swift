@@ -16,6 +16,7 @@ import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import PresentationDataUtils
 import UrlWhitelist
+import UndoUI
 
 func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let presentImpl: (ViewController, Any?) -> Void = { controllerToPresent, _ in
@@ -44,17 +45,19 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
             }
         }, sendFile: nil,
         sendSticker: nil,
+        requestMessageActionUrlAuth: nil,
+        joinVoiceChat: nil,
         present: presentImpl, dismissInput: {}, contentContext: nil)
     }
     
     let openLinkImpl: (String) -> Void = { [weak controller] url in
-        navigateDisposable.set((context.sharedContext.resolveUrl(account: context.account, url: url) |> deliverOnMainQueue).start(next: { result in
+        navigateDisposable.set((context.sharedContext.resolveUrl(account: context.account, url: url, skipUrlAuth: true) |> deliverOnMainQueue).start(next: { result in
             if let controller = controller {
                 switch result {
                     case let .externalUrl(url):
                         context.sharedContext.applicationBindings.openUrl(url)
-                    case let .peer(peerId, _):
-                        openResolvedPeerImpl(peerId, .default)
+                    case let .peer(peerId, navigation):
+                        openResolvedPeerImpl(peerId, navigation)
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = controller.navigationController as? NavigationController {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true)))
@@ -145,6 +148,18 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         ActionSheetButtonItem(title: presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             UIPasteboard.general.string = url
+                            
+                            let content: UndoOverlayContent
+                            if url.hasPrefix("tel:") {
+                                content = .copy(text: presentationData.strings.Conversation_PhoneCopied)
+                            } else if url.hasPrefix("mailto:") {
+                                content = .copy(text: presentationData.strings.Conversation_EmailCopied)
+                            } else {
+                                content = .linkCopied(text: presentationData.strings.Conversation_LinkCopied)
+                            }
+                            
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controller.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         }),
                         ActionSheetButtonItem(title: presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -169,6 +184,9 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             UIPasteboard.general.string = mention
+                            
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controller.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_UsernameCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         })
                     ]), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -188,6 +206,9 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             UIPasteboard.general.string = hashtag
+                            
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controller.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_HashtagCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         })
                     ]), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in

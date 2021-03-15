@@ -696,8 +696,8 @@ static void addRoundedRectToPath(CGContextRef context, CGRect rect, CGFloat oval
             (id)UIColorRGB(0x80c864).CGColor, //green
             (id)UIColorRGB(0xfcde65).CGColor, //yellow
             (id)UIColorRGB(0xfc964d).CGColor, //orange
-            (id)[UIColor blackColor].CGColor, //black
-            (id)[UIColor whiteColor].CGColor  //white
+            (id)UIColorRGB(0x000000).CGColor, //black
+            (id)UIColorRGB(0xffffff).CGColor  //white
         ];
     });
     return colors;

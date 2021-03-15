@@ -240,13 +240,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 
                 if titleFakeIcon != self.titleFakeIcon {
                     self.titleFakeIcon = titleFakeIcon
-                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, type: .regular) : nil
+                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, strings: self.strings, type: .regular) : nil
                     updated = true
                 }
                 
                 if titleScamIcon != self.titleScamIcon {
                     self.titleScamIcon = titleScamIcon
-                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, type: .regular) : nil
+                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, strings: self.strings, type: .regular) : nil
                     updated = true
                 }
                 
@@ -378,7 +378,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if let user = peer as? TelegramUser {
-                                    if servicePeer {
+                                    if user.isDeleted {
+                                        state = .none
+                                    } else if servicePeer {
                                         let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if user.flags.contains(.isSupport) {

@@ -6,21 +6,23 @@ import TelegramPresentationData
 
 public func stringForTimestamp(day: Int32, month: Int32, year: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
     let separator = dateTimeFormat.dateSeparator
+    let suffix = dateTimeFormat.dateSuffix
     switch dateTimeFormat.dateFormat {
     case .monthFirst:
-        return String(format: "%d%@%d%@%02d", month, separator, day, separator, year - 100)
+        return String(format: "%02d%@%02d%@%02d%@", month, separator, day, separator, year - 100, suffix)
     case .dayFirst:
-        return String(format: "%d%@%02d%@%02d", day, separator, month, separator, year - 100)
+        return String(format: "%02d%@%02d%@%02d%@", day, separator, month, separator, year - 100, suffix)
     }
 }
 
 public func stringForTimestamp(day: Int32, month: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
     let separator = dateTimeFormat.dateSeparator
+    let suffix = dateTimeFormat.dateSuffix
     switch dateTimeFormat.dateFormat {
     case .monthFirst:
-        return String(format: "%d%@%d", month, separator, day)
+        return String(format: "%02d%@%02d%@", month, separator, day, suffix)
     case .dayFirst:
-        return String(format: "%d%@%02d", day, separator, month)
+        return String(format: "%02d%@%02d%@", day, separator, month, suffix)
     }
 }
 

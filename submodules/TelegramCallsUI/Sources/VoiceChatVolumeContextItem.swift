@@ -7,16 +7,18 @@ import AppBundle
 import ContextUI
 
 final class VoiceChatVolumeContextItem: ContextMenuCustomItem {
+    private let minValue: CGFloat
     private let value: CGFloat
     private let valueChanged: (CGFloat, Bool) -> Void
     
-    init(value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+    init(minValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+        self.minValue = minValue
         self.value = value
         self.valueChanged = valueChanged
     }
     
     func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
-        return VoiceChatVolumeContextItemNode(presentationData: presentationData, getController: getController, value: self.value, valueChanged: self.valueChanged)
+        return VoiceChatVolumeContextItemNode(presentationData: presentationData, getController: getController, minValue: self.minValue, value: self.value, valueChanged: self.valueChanged)
     }
 }
 
@@ -32,6 +34,7 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
     private let foregroundIconNode: VoiceChatSpeakerNode
     private let foregroundTextNode: ImmediateTextNode
     
+    let minValue: CGFloat
     var value: CGFloat = 1.0 {
         didSet {
             self.updateValue()
@@ -42,8 +45,9 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
     
     private let hapticFeedback = HapticFeedback()
 
-    init(presentationData: PresentationData, getController: @escaping () -> ContextController?, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+    init(presentationData: PresentationData, getController: @escaping () -> ContextController?, minValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
         self.presentationData = presentationData
+        self.minValue = minValue
         self.value = value
         self.valueChanged = valueChanged
         
@@ -154,7 +158,7 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
                 
                 let translation: CGFloat = gestureRecognizer.translation(in: gestureRecognizer.view).x
                 let delta = translation / self.bounds.width * 2.0
-                self.value = max(0.0, min(2.0, self.value + delta))
+                self.value = max(self.minValue, min(2.0, self.value + delta))
                 gestureRecognizer.setTranslation(CGPoint(), in: gestureRecognizer.view)
                 
                 if self.value == 2.0 && previousValue != 2.0 {
@@ -172,11 +176,13 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
                 } else if self.value == 0.0 && previousValue != 0.0 {
                     self.hapticFeedback.impact(.soft)
                 }
-                self.valueChanged(self.value, false)
+                if abs(previousValue - self.value) >= 0.01 {
+                    self.valueChanged(self.value, false)
+                }
             case .ended:
                 let translation: CGFloat = gestureRecognizer.translation(in: gestureRecognizer.view).x
                 let delta = translation / self.bounds.width * 2.0
-                self.value = max(0.0, min(2.0, self.value + delta))
+                self.value = max(self.minValue, min(2.0, self.value + delta))
                 self.valueChanged(self.value, true)
             default:
                 break
@@ -185,7 +191,7 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
     
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
         let location = gestureRecognizer.location(in: gestureRecognizer.view)
-        self.value = max(0.0, min(2.0, location.x / self.bounds.width * 2.0))
+        self.value = max(self.minValue, min(2.0, location.x / self.bounds.width * 2.0))
         self.valueChanged(self.value, true)
     }
 }

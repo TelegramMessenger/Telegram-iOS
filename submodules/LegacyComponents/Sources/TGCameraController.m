@@ -136,6 +136,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     bool _shutterIsBusy;
     
+    UIImpactFeedbackGenerator *_feedbackGenerator;
+    
     NSMutableSet *_previousQRCodes;
 }
 @end
@@ -172,6 +174,10 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         _saveCapturedMedia = saveCapturedMedia;
         
         _previousQRCodes = [[NSMutableSet alloc] init];
+        
+        if (iosMajorVersion() >= 10) {
+            _feedbackGenerator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+        }
     }
     return self;
 }
@@ -905,6 +911,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 - (void)shutterPressed
 {
+    if (iosMajorVersion() >= 13.0) {
+        [_feedbackGenerator impactOccurredWithIntensity:0.5];
+    } else {
+        [_feedbackGenerator impactOccurred];
+    }
+    
     PGCameraMode cameraMode = _camera.cameraMode;
     switch (cameraMode)
     {
@@ -939,6 +951,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 - (void)shutterReleased
 {
+    if (iosMajorVersion() >= 13.0) {
+        [_feedbackGenerator impactOccurredWithIntensity:0.6];
+    } else {
+        [_feedbackGenerator impactOccurred];
+    }
+    
     [_switchToVideoTimer invalidate];
     _switchToVideoTimer = nil;
     
@@ -955,12 +973,14 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         _camera.disabled = true;
 
         _shutterIsBusy = true;
+        
+        TGDispatchAfter(0.05, dispatch_get_main_queue(), ^
+        {
+            [_previewView blink];
+        });
+        
         if (![self willPresentResultController])
         {
-            TGDispatchAfter(0.35, dispatch_get_main_queue(), ^
-            {
-                [_previewView blink];
-            });
         }
         else
         {

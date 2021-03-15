@@ -75,6 +75,7 @@ public struct Namespaces {
         public static let proximityNotificationStoredState: Int8 = 11
         public static let cachedPeerInvitationImporters: Int8 = 12
         public static let cachedPeerExportedInvitations: Int8 = 13
+        public static let cachedGroupCallDisplayAsPeers: Int8 = 14
     }
     
     public struct UnorderedItemList {

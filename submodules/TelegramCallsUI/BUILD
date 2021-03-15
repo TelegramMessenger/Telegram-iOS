@@ -40,6 +40,8 @@ swift_library(
         "//submodules/PeerInfoUI:PeerInfoUI",
         "//submodules/AnimatedCountLabelNode:AnimatedCountLabelNode",
         "//submodules/DeviceProximity:DeviceProximity",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/TemporaryCachedPeerDataManager:TemporaryCachedPeerDataManager",
     ],
     visibility = [
         "//visibility:public",

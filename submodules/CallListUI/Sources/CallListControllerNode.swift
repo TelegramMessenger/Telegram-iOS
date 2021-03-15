@@ -12,6 +12,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import TelegramNotices
+import ChatListSearchItemHeader
 
 private struct CallListNodeListViewTransition {
     let callListView: CallListNodeView
@@ -374,7 +375,7 @@ final class CallListControllerNode: ASDisplayNode {
                 }
                 
                 if let activeCall = activeCall {
-                    strongSelf.context.joinGroupCall(peerId: peerId, activeCall: activeCall)
+                    strongSelf.context.joinGroupCall(peerId: peerId, invite: nil, requestJoinAsPeerId: nil, activeCall: activeCall)
                 }
             }))
         })
@@ -425,6 +426,8 @@ final class CallListControllerNode: ASDisplayNode {
                 case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
                     if let channel = renderedPeer.peer as? TelegramChannel, channel.flags.contains(.hasActiveVoiceChat) {
                         result.append(channel)
+                    } else if let group = renderedPeer.peer as? TelegramGroup, group.flags.contains(.hasActiveVoiceChat) {
+                        result.append(group)
                     }
                 default:
                     break
@@ -471,6 +474,8 @@ final class CallListControllerNode: ASDisplayNode {
             } else {
                 previousWasEmptyOrSingleHole = true
             }
+
+            var disableAnimations = false
             
             if previousWasEmptyOrSingleHole {
                 reason = .initial
@@ -479,7 +484,26 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             } else {
                 if previous?.originalView === update.view {
+                    let previousCalls = previous?.filteredEntries.compactMap { item -> PeerId? in
+                        switch item {
+                        case let .groupCall(peer, _, _):
+                            return peer.id
+                        default:
+                            return nil
+                        }
+                    }
+                    let updatedCalls = processedView.filteredEntries.compactMap { item -> PeerId? in
+                        switch item {
+                        case let .groupCall(peer, _, _):
+                            return peer.id
+                        default:
+                            return nil
+                        }
+                    }
                     reason = .interactiveChanges
+                    if previousCalls != updatedCalls {
+                        disableAnimations = true
+                    }
                 } else {
                     switch update.type {
                         case .Initial:
@@ -497,7 +521,7 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             }
             
-            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: false, account: context.account, scrollPosition: update.scrollPosition)
+            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: disableAnimations, account: context.account, scrollPosition: update.scrollPosition)
             |> map({ mappedCallListNodeViewListTransition(context: context, presentationData: state.presentationData, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
@@ -567,6 +591,12 @@ final class CallListControllerNode: ASDisplayNode {
             self.updateState {
                 return $0.withUpdatedPresentationData(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)
             }
+            
+            self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+                if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                    itemHeaderNode.updateTheme(theme: presentationData.theme)
+                }
+            })
         }
     }
     

@@ -257,21 +257,18 @@ private struct ChannelBannedMemberControllerState: Equatable {
     var updating: Bool = false
 }
 
-private func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
+func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
     var result = flags
     result.remove(.banReadMessages)
     if result.contains(.banSendGifs) {
         result.insert(.banSendStickers)
         result.insert(.banSendGifs)
         result.insert(.banSendGames)
+        result.insert(.banSendInline)
     } else {
         result.remove(.banSendStickers)
         result.remove(.banSendGifs)
         result.remove(.banSendGames)
-    }
-    if result.contains(.banEmbedLinks) {
-        result.insert(.banSendInline)
-    } else {
         result.remove(.banSendInline)
     }
     return result

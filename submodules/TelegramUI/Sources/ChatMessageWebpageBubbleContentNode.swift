@@ -279,6 +279,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             actionTitle = item.presentationData.strings.Conversation_ViewGroup
                         case "telegram_message":
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage
+                        case "telegram_voicechat":
+                            title = item.presentationData.strings.Conversation_VoiceChat
+                            if webpage.url.contains("voicechat=") {
+                                actionTitle = item.presentationData.strings.Conversation_JoinVoiceChatAsSpeaker
+                            } else {
+                                actionTitle = item.presentationData.strings.Conversation_JoinVoiceChatAsListener
+                            }
                         case "telegram_background":
                             title = item.presentationData.strings.Conversation_ChatBackground
                             subtitle = nil

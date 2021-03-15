@@ -176,7 +176,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
     func update(context: AccountContext, size: CGSize, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         if self.currentParams?.size != size || self.currentParams?.presentationData !== presentationData {
             self.currentParams = (size, presentationData)
-            
+                        
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             
             let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
@@ -368,6 +368,10 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         self.listNode.updateThemeAndStrings(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         self.emptyNode?.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
@@ -398,6 +402,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let controlsHistoryPreload: Bool
     private let filterBecameEmpty: (ChatListFilter?) -> Void
     private let filterEmptyAction: (ChatListFilter?) -> Void
+    
+    fileprivate var onFilterSwitch: (() -> Void)?
     
     private var presentationData: PresentationData
     
@@ -603,6 +609,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
+            self.onFilterSwitch?()
+            
             self.transitionFractionOffset = 0.0
             if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout, let itemNode = self.itemNodes[self.selectedId] {
                 for (id, itemNode) in self.itemNodes {
@@ -788,6 +796,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout else {
             return
         }
+        self.onFilterSwitch?()
         if id != self.selectedId, let index = self.availableFilters.firstIndex(where: { $0.id == id }) {
             if let itemNode = self.itemNodes[id] {
                 self.selectedId = id
@@ -1052,6 +1061,12 @@ final class ChatListControllerNode: ASDisplayNode {
                 return
             }
             strongSelf.emptyListAction?()
+        }
+        
+        self.containerNode.onFilterSwitch = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.controller?.dismissAllUndoControllers()
+            }
         }
     }
     

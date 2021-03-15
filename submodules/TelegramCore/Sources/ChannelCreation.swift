@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import SyncCore
 import TelegramApi
 import MtProtoKit
 
@@ -31,6 +32,8 @@ private func createChannel(account: Account, title: String, description: String?
             geoPoint = .inputGeoPoint(flags: 0, lat: location.latitude, long: location.longitude, accuracyRadius: nil)
             address = location.address
         }
+        
+        transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers)
         
         return account.network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address), automaticFloodWait: false)
         |> mapError { error -> CreateChannelError in

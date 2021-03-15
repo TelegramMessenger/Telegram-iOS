@@ -206,7 +206,7 @@
         _fadeView.alpha = 1.0f;
     } completion:^(BOOL finished)
     {
-        [UIView animateWithDuration:0.07f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
+        [UIView animateWithDuration:0.15f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
         {
             _fadeView.alpha = 0.0f;
         } completion:^(BOOL finished)

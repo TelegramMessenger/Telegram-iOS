@@ -26,6 +26,7 @@ private struct CreateChannelArguments {
     let updateEditingDescriptionText: (String) -> Void
     let done: () -> Void
     let changeProfilePhoto: () -> Void
+    let focusOnDescription: () -> Void
 }
 
 private enum CreateChannelSection: Int32 {
@@ -35,12 +36,19 @@ private enum CreateChannelSection: Int32 {
 
 private enum CreateChannelEntryTag: ItemListItemTag {
     case info
+    case description
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? CreateChannelEntryTag {
             switch self {
                 case .info:
                     if case .info = other {
+                        return true
+                    } else {
+                        return false
+                    }
+                case .description:
+                    if case .description = other {
                         return true
                     } else {
                         return false
@@ -139,21 +147,23 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! CreateChannelArguments
         switch self {
-            case let .channelInfo(theme, strings, dateTimeFormat, peer, state, avatar):
+            case let .channelInfo(_, _, dateTimeFormat, peer, state, avatar):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
+                }, editingNameCompleted: {
+                    arguments.focusOnDescription()
                 }, avatarTapped: {
                     arguments.changeProfilePhoto()
                 }, updatingImage: avatar, tag: CreateChannelEntryTag.info)
-            case let .setProfilePhoto(theme, text):
+            case let .setProfilePhoto(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
-            case let .descriptionSetup(theme, text, value):
+            case let .descriptionSetup(_, text, value):
                 return ItemListMultilineInputItem(presentationData: presentationData, text: value, placeholder: text, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
-                })
-            case let .descriptionInfo(theme, text):
+                }, tag: CreateChannelEntryTag.description)
+            case let .descriptionInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -209,6 +219,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var endEditingImpl: (() -> Void)?
+    var focusOnDescriptionImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -482,6 +493,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 }
             }
         })
+    }, focusOnDescription: {
+        focusOnDescriptionImpl?()
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
@@ -517,9 +530,18 @@ public func createChannelController(context: AccountContext) -> ViewController {
     controller.willDisappear = { _ in
         endEditingImpl?()
     }
-    endEditingImpl = {
-        [weak controller] in
+    endEditingImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    focusOnDescriptionImpl = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListMultilineInputItemNode, let itemTag = itemNode.tag, itemTag.isEqual(to: CreateChannelEntryTag.description) {
+                itemNode.focus()
+            }
+        }
     }
     return controller
 }
