@@ -1016,6 +1016,7 @@ public final class GroupCallParticipantsContext {
     private var activityRankResetTimer: SwiftSignalKit.Timer?
     
     private let updateDefaultMuteDisposable = MetaDisposable()
+    private let resetInviteLinksDisposable = MetaDisposable()
     private let updateShouldBeRecordingDisposable = MetaDisposable()
 
     public struct ServiceState {
@@ -1146,6 +1147,7 @@ public final class GroupCallParticipantsContext {
         self.updateDefaultMuteDisposable.dispose()
         self.updateShouldBeRecordingDisposable.dispose()
         self.activityRankResetTimer?.invalidate()
+        resetInviteLinksDisposable.dispose()
     }
     
     public func addUpdates(updates: [Update]) {
@@ -1609,6 +1611,16 @@ public final class GroupCallParticipantsContext {
         self.stateValue.state.defaultParticipantsAreMuted.isMuted = isMuted
         
         self.updateDefaultMuteDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallSettings(flags: 1 << 0, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), joinMuted: isMuted ? .boolTrue : .boolFalse))
+        |> deliverOnMainQueue).start(next: { [weak self] updates in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.account.stateManager.addUpdates(updates)
+        }))
+    }
+    
+    public func resetInviteLinks() {
+        self.resetInviteLinksDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallSettings(flags: 1 << 1, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), joinMuted: nil))
         |> deliverOnMainQueue).start(next: { [weak self] updates in
             guard let strongSelf = self else {
                 return
