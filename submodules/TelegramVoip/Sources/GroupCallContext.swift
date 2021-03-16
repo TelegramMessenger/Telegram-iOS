@@ -38,12 +38,23 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
     private let callId: Int64
     private let accessHash: Int64
     private var dataSource: AudioBroadcastDataSource?
+
+    #if DEBUG
+    private let debugDumpDirectory: TempBoxDirectory?
+    #endif
     
     init(queue: Queue, account: Account, callId: Int64, accessHash: Int64) {
         self.queue = queue
         self.account = account
         self.callId = callId
         self.accessHash = accessHash
+
+        #if DEBUG
+        self.debugDumpDirectory = nil
+        /*let debugDumpDirectory = TempBox.shared.tempDirectory()
+        self.debugDumpDirectory = debugDumpDirectory
+        print("Debug streaming dump path: \(debugDumpDirectory.path)")*/
+        #endif
     }
     
     func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
@@ -60,8 +71,7 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         } else {
             dataSource = getAudioBroadcastDataSource(account: self.account, callId: self.callId, accessHash: self.accessHash)
         }
-        
-        let account = self.account
+
         let callId = self.callId
         let accessHash = self.accessHash
         
@@ -79,6 +89,10 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             }
         }
         |> deliverOn(self.queue)
+
+        #if DEBUG
+        let debugDumpDirectory = self.debugDumpDirectory
+        #endif
             
         return signal.start(next: { result in
             guard let result = result else {
@@ -88,6 +102,12 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
+                #if DEBUG
+                if let debugDumpDirectory = debugDumpDirectory {
+                    let _ = try? dataValue.write(to: URL(fileURLWithPath: debugDumpDirectory.path + "/" + "\(timestampIdMilliseconds).ogg"))
+                }
+                #endif
+
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
