@@ -484,7 +484,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var previousPlaying: Bool?
     
     private func setupControlsTimer() {
-        return
         let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
             self?.updateControlsVisibility(false)
             self?.controlsTimer = nil
