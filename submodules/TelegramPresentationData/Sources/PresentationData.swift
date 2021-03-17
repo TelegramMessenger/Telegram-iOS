@@ -158,12 +158,14 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
     var dateSeparator = "/"
     var dateSuffix = ""
     if let dateString = DateFormatter.dateFormat(fromTemplate: "MdY", options: 0, locale: locale) {
-        for separator in [".", "/", "-", "/"] {
+        for separator in [". ", ".", "/", "-", "/"] {
             if dateString.contains(separator) {
                 if separator == ". " {
                     dateSuffix = "."
+                    dateSeparator = "."
+                } else {
+                    dateSeparator = separator
                 }
-                dateSeparator = separator
                 break
             }
         }
