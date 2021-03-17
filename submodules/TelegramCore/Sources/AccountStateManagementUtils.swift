@@ -2731,6 +2731,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 if count == 0 {
                     transaction.removeHole(peerId: peerId, namespace: namespace, space: .tag(.unseenPersonalMessage), range: 1 ... (Int32.max - 1))
                     let ids = transaction.getMessageIndicesWithTag(peerId: peerId, namespace: namespace, tag: .unseenPersonalMessage).map({ $0.id })
+                    Logger.shared.log("State", "will call markUnseenPersonalMessage for \(ids.count) messages")
                     for id in ids {
                         markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
                     }
