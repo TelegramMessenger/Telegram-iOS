@@ -1083,11 +1083,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }
                         }
                         let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, forcedTheme: defaultDarkColorPresentationTheme)
-                        shareController.actionCompleted = { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: "Media saved to phone"), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
-                            }
-                        }
                         shareController.completed = { [weak self] peerIds in
                             if let strongSelf = self {
                                 let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -1149,11 +1144,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         let shareAction: ([Message]) -> Void = { messages in
                             if let strongSelf = self {
                                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), preferredAction: preferredAction, forcedTheme: defaultDarkColorPresentationTheme)
-                                shareController.actionCompleted = { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: "Media saved to phone"), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
-                                    }
-                                }
                                 shareController.completed = { [weak self] peerIds in
                                     if let strongSelf = self {
                                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -1271,11 +1261,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 }
             }
             let shareController = ShareController(context: self.context, subject: subject, preferredAction: preferredAction, forcedTheme: defaultDarkColorPresentationTheme)
-            shareController.actionCompleted = { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: "Media saved to phone"), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
-                }
-            }
             shareController.completed = { [weak self] peerIds in
                 if let strongSelf = self {
                     let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
