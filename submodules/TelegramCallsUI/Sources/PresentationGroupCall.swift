@@ -538,7 +538,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private var missingSsrcs = Set<UInt32>()
-    private var processedMissingSsrcs = Set<UInt32>()
     private let missingSsrcsDisposable = MetaDisposable()
     private var isRequestingMissingSsrcs: Bool = false
 
@@ -1633,22 +1632,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private func maybeRequestParticipants(ssrcs: Set<UInt32>) {
-        var missingSsrcs = ssrcs
-        missingSsrcs.subtract(self.processedMissingSsrcs)
-        if missingSsrcs.isEmpty {
-            return
-        }
-        self.processedMissingSsrcs.formUnion(ssrcs)
-        
+        var addedMissingSsrcs = ssrcs
+
         var addedParticipants: [(UInt32, String?)] = []
         
         if let membersValue = self.membersValue {
             for participant in membersValue.participants {
                 let participantSsrcs = participant.allSsrcs
                 
-                if !missingSsrcs.intersection(participantSsrcs).isEmpty {
-                    missingSsrcs.subtract(participantSsrcs)
-                    self.processedMissingSsrcs.formUnion(participantSsrcs)
+                if !addedMissingSsrcs.intersection(participantSsrcs).isEmpty {
+                    addedMissingSsrcs.subtract(participantSsrcs)
                     
                     if let ssrc = participant.ssrc {
                         addedParticipants.append((ssrc, participant.jsonParams))
@@ -1661,8 +1654,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.callContext?.addParticipants(participants: addedParticipants)
         }
         
-        if !missingSsrcs.isEmpty {
-            self.missingSsrcs.formUnion(missingSsrcs)
+        if !addedMissingSsrcs.isEmpty {
+            self.missingSsrcs.formUnion(addedMissingSsrcs)
             self.maybeRequestMissingSsrcs()
         }
     }
@@ -2100,7 +2093,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.missingSsrcsDisposable.set(nil)
         self.missingSsrcs.removeAll()
-        self.processedMissingSsrcs.removeAll()
         
         self.internalState = .requesting
         self.internalStatePromise.set(.single(.requesting))
