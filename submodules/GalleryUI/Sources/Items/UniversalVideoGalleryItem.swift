@@ -484,7 +484,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var previousPlaying: Bool?
     
     private func setupControlsTimer() {
-        
+        return
+        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+            self?.updateControlsVisibility(false)
+            self?.controlsTimer = nil
+        }, queue: Queue.mainQueue())
+        timer.start()
+        self.controlsTimer = timer
     }
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
@@ -713,13 +719,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     if strongSelf.isCentral && playing && strongSelf.previousPlaying != true && !disablePlayerControls {
                         strongSelf.controlsTimer?.invalidate()
-                        
-                        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
-                            self?.updateControlsVisibility(false)
-                            self?.controlsTimer = nil
-                        }, queue: Queue.mainQueue())
-                        timer.start()
-                        strongSelf.controlsTimer = timer
+                        strongSelf.setupControlsTimer()
                     } else if !playing {
                         strongSelf.controlsTimer?.invalidate()
                         strongSelf.controlsTimer = nil

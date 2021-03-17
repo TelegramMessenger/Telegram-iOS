@@ -3139,7 +3139,7 @@ public final class VoiceChatController: ViewController {
                     muteState: memberMuteState,
                     canManageCall: self.callState?.canManageCall ?? false,
                     volume: member.volume,
-                    raisedHand: member.raiseHandRating != nil,
+                    raisedHand: member.hasRaiseHand,
                     displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id)
                 )))
                 index += 1
@@ -3416,6 +3416,12 @@ public final class VoiceChatController: ViewController {
             }
             return result
         }
+        
+        fileprivate func scrollToTop() {
+            if self.isExpanded {
+                self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            }
+        }
     }
     
     private let sharedContext: SharedAccountContext
@@ -3474,6 +3480,10 @@ public final class VoiceChatController: ViewController {
             return true
         }
         |> filter { $0 })
+        
+        self.scrollToTop = { [weak self] in
+            self?.controllerNode.scrollToTop()
+        }
     }
     
     required init(coder aDecoder: NSCoder) {

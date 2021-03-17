@@ -133,14 +133,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             var index: Int32 = 0
             
             var existingPeerIds: Set<PeerId> = Set()
-            
             entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), presence: nil, theme: theme, strings: strings))
+            existingPeerIds.insert(accountPeer.id)
             index += 1
             
             for peer in foundPeers.reversed() {
-                entries.append(SharePeerEntry(index: index, peer: peer, presence: nil, theme: theme, strings: strings))
-                existingPeerIds.insert(peer.peerId)
-                index += 1
+                if !existingPeerIds.contains(peer.peerId) {
+                    entries.append(SharePeerEntry(index: index, peer: peer, presence: nil, theme: theme, strings: strings))
+                    existingPeerIds.insert(peer.peerId)
+                    index += 1
+                }
             }
             
             for (peer, presence) in initialPeers {
