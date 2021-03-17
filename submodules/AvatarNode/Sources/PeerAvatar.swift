@@ -6,6 +6,8 @@ import Display
 import ImageIO
 import TelegramCore
 import SyncCore
+import ImageCompression
+import TinyThumbnail
 
 private let roundCorners = { () -> UIImage in
     let diameter: CGFloat = 60.0
@@ -101,13 +103,22 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                 }
                 let roundedImage = generateImage(displayDimensions, contextGenerator: { size, context -> Void in
                     if let data = data {
-                        if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                        if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), var dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                             context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
                             context.setBlendMode(.copy)
                             
                             if round && displayDimensions.width != 60.0 {
                                 context.addEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
                                 context.clip()
+                            }
+
+                            let mappedImage = UIImage(cgImage: dataImage)
+                            if let miniData = compressImageMiniThumbnail(mappedImage, type: .avatar) {
+                                if let decodedData = decodeTinyThumbnail(data: miniData) {
+                                    if let decodedImage = UIImage(data: decodedData) {
+                                        dataImage = decodedImage.cgImage!
+                                    }
+                                }
                             }
                             
                             context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))

@@ -58,6 +58,11 @@ public func compressImage(_ image: UIImage, quality: Float) -> Data? {
     return data as Data
 }
 
-public func compressImageMiniThumbnail(_ image: UIImage) -> Data? {
-    return compressMiniThumbnail(image)
+public enum MiniThumbnailType {
+    case image
+    case avatar
+}
+
+public func compressImageMiniThumbnail(_ image: UIImage, type: MiniThumbnailType = .image) -> Data? {
+    return compressMiniThumbnail(image, type == .avatar)
 }

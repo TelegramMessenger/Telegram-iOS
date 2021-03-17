@@ -143,7 +143,14 @@ private func requestActivity(postbox: Postbox, network: Network, accountPeerId: 
                 return .complete()
             }
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                return .complete()
+                if let activity = activity {
+                    switch activity {
+                    case .speakingInGroupCall:
+                        break
+                    default:
+                        return .complete()
+                    }
+                }
             }
             if let _ = peer as? TelegramUser {
                 if let presence = transaction.getPeerPresence(peerId: peerId) as? TelegramUserPresence {

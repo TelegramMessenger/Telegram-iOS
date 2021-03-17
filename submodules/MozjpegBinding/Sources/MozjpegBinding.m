@@ -146,8 +146,12 @@ NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage) {
     return result;
 }
 
-NSData * _Nullable compressMiniThumbnail(UIImage * _Nonnull image) {
+NSData * _Nullable compressMiniThumbnail(UIImage * _Nonnull image, bool smaller) {
     CGSize size = CGSizeMake(40.0f, 40.0f);
+    if (smaller) {
+        size.width = 8.0f;
+        size.height = 8.0f;
+    }
     CGSize fittedSize = image.size;
     if (fittedSize.width > size.width) {
         fittedSize = CGSizeMake(size.width, (int)((fittedSize.height * size.width / MAX(fittedSize.width, 1.0f))));
