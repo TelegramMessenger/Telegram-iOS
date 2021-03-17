@@ -199,6 +199,7 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyTextNode: ASTextNode
     
     private let call: (PeerId, Bool) -> Void
+    private let joinGroupCall: (PeerId, CachedChannelData.ActiveCall) -> Void
     private let openInfo: (PeerId, [Message]) -> Void
     private let emptyStateUpdated: (Bool) -> Void
     
@@ -207,12 +208,13 @@ final class CallListControllerNode: ASDisplayNode {
     
     private let openGroupCallDisposable = MetaDisposable()
     
-    init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+    init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId, Bool) -> Void, joinGroupCall: @escaping (PeerId, CachedChannelData.ActiveCall) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.controller = controller
         self.context = context
         self.mode = mode
         self.presentationData = presentationData
         self.call = call
+        self.joinGroupCall = joinGroupCall
         self.openInfo = openInfo
         self.emptyStateUpdated = emptyStateUpdated
         
@@ -330,7 +332,13 @@ final class CallListControllerNode: ASDisplayNode {
             
             let account = strongSelf.context.account
             var signal: Signal<CachedChannelData.ActiveCall?, NoError> = strongSelf.context.account.postbox.transaction { transaction -> CachedChannelData.ActiveCall? in
-                return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.activeCall
+                let cachedData = transaction.getPeerCachedData(peerId: peerId)
+                if let cachedData = cachedData as? CachedChannelData {
+                    return cachedData.activeCall
+                } else if let cachedData = cachedData as? CachedGroupData {
+                    return cachedData.activeCall
+                }
+                return nil
             }
             |> mapToSignal { activeCall -> Signal<CachedChannelData.ActiveCall?, NoError> in
                 if let activeCall = activeCall {

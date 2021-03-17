@@ -2773,16 +2773,16 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, ignoreGroupInCommon: ignoreGroupInCommon)
-            
-            var currentIsVideo = false
-            let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
-            if let item = item, case let .image(image) = item {
-                currentIsVideo = !image.2.isEmpty
-            }
-            
+                        
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in
                 guard let strongSelf = self, let peer = strongSelf.data?.peer else {
                     return
+                }
+                
+                var currentIsVideo = false
+                let item = strongSelf.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
+                if let item = item, case let .image(image) = item {
+                    currentIsVideo = !image.2.isEmpty
                 }
                 
                 let items: [ContextMenuItem] = [
