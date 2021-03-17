@@ -3188,7 +3188,7 @@ public final class VoiceChatController: ViewController {
                 if allEqual {
                     disableAnimation = true
                 }
-            } else if abs(previousEntries.count - entries.count) > 2 {
+            } else if abs(previousEntries.count - entries.count) > 10 {
                 disableAnimation = true
             }
             
