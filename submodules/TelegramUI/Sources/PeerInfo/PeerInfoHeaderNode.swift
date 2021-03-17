@@ -1374,7 +1374,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     }
         
     var removedPhotoResourceIds = Set<String>()
-    func update(peer: Peer?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool) {
+    func update(peer: Peer?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool, isSettings: Bool) {
         if let peer = peer {
             let previousItem = self.item
             var item = item
@@ -1434,7 +1434,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     }
                 }
                 
-                self.containerNode.isGestureEnabled = true
+                self.containerNode.isGestureEnabled = !isSettings
                 
                 if let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
@@ -1780,6 +1780,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
 }
 
 final class PeerInfoAvatarListNode: ASDisplayNode {
+    private let isSettings: Bool
     let avatarContainerNode: PeerInfoAvatarTransformContainerNode
     let listContainerTransformNode: ASDisplayNode
     let listContainerNode: PeerInfoAvatarListContainerNode
@@ -1791,7 +1792,9 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
     
-    init(context: AccountContext,  readyWhenGalleryLoads: Bool) {
+    init(context: AccountContext, readyWhenGalleryLoads: Bool, isSettings: Bool) {
+        self.isSettings = isSettings
+        
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
         self.listContainerTransformNode = ASDisplayNode()
         self.listContainerNode = PeerInfoAvatarListContainerNode(context: context)
@@ -1840,7 +1843,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
                 strongSelf.item = items.first
                 strongSelf.itemsUpdated?(items)
                 if let (peer, theme, avatarSize, isExpanded) = strongSelf.arguments {
-                    strongSelf.avatarContainerNode.update(peer: peer, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded)
+                    strongSelf.avatarContainerNode.update(peer: peer, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: strongSelf.isSettings)
                 }
             }
         }
@@ -1848,7 +1851,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
         self.arguments = (peer, theme, avatarSize, isExpanded)
-        self.avatarContainerNode.update(peer: peer, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded)
+        self.avatarContainerNode.update(peer: peer, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -2654,7 +2657,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.isSettings = isSettings
         self.videoCallsEnabled = VideoCallsConfiguration(appConfiguration: context.currentAppConfiguration.with { $0 }).areVideoCallsEnabled
         
-        self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded)
+        self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded, isSettings: isSettings)
         
         self.titleNodeContainer = ASDisplayNode()
         self.titleNodeRawContainer = ASDisplayNode()
