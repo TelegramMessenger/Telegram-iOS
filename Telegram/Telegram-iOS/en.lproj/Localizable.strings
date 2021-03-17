@@ -5777,8 +5777,8 @@ Sorry for the inconvenience.";
 
 "PUSH_CHAT_VOICECHAT_START" = "%2$@|%1$@ started a voice chat";
 "PUSH_CHAT_VOICECHAT_INVITE" = "%2$@|%1$@ invited %3$@ to the voice chat";
-"PUSH_CHAT_VOICECHAT_INVITE_YOU" = "%2$|@%1$@ invited you to the voice chat";
-"PUSH_CHAT_VOICECHAT_END" = "%2$|@%1$@ has ended the voice chat";
+"PUSH_CHAT_VOICECHAT_INVITE_YOU" = "%2$@|%1$@ invited you to the voice chat";
+"PUSH_CHAT_VOICECHAT_END" = "%2$@|%1$@ has ended the voice chat";
 
 "Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
 "Call.VoiceChatInProgressMessageCall" = "Leave voice chat in %1$@ and start a call with %2$@?";
