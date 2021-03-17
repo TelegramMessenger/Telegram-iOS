@@ -3188,6 +3188,8 @@ public final class VoiceChatController: ViewController {
                 if allEqual {
                     disableAnimation = true
                 }
+            } else if abs(previousEntries.count - entries.count) > 2 {
+                disableAnimation = true
             }
             
             let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
