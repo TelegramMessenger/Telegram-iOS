@@ -1377,7 +1377,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 var initialState = initialState
                 var serviceState: GroupCallParticipantsContext.ServiceState?
                 if let participantsContext = self.participantsContext, let immediateState = participantsContext.immediateState {
-                    initialState.mergeActivity(from: immediateState, myPeerId: myPeerId, previousMyPeerId: self.ignorePreviousJoinAsPeerId?.0)
+                    initialState.mergeActivity(from: immediateState, myPeerId: myPeerId, previousMyPeerId: self.ignorePreviousJoinAsPeerId?.0, mergeActivityTimestamps: true)
                     serviceState = participantsContext.serviceState
                 }
                 

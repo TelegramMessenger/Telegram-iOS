@@ -748,9 +748,11 @@ public final class GroupCallParticipantsContext {
             self.about = about
         }
         
-        public mutating func mergeActivity(from other: Participant) {
+        public mutating func mergeActivity(from other: Participant, mergeActivityTimestamp: Bool) {
             self.activityRank = other.activityRank
-            self.activityTimestamp = other.activityTimestamp
+            if mergeActivityTimestamp {
+                self.activityTimestamp = other.activityTimestamp
+            }
         }
         
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
@@ -850,7 +852,7 @@ public final class GroupCallParticipantsContext {
         public var totalCount: Int
         public var version: Int32
         
-        public mutating func mergeActivity(from other: State, myPeerId: PeerId, previousMyPeerId: PeerId?) {
+        public mutating func mergeActivity(from other: State, myPeerId: PeerId?, previousMyPeerId: PeerId?, mergeActivityTimestamps: Bool) {
             var indexMap: [PeerId: Int] = [:]
             for i in 0 ..< other.participants.count {
                 indexMap[other.participants[i].peer.id] = i
@@ -858,7 +860,7 @@ public final class GroupCallParticipantsContext {
             
             for i in 0 ..< self.participants.count {
                 if let index = indexMap[self.participants[i].peer.id] {
-                    self.participants[i].mergeActivity(from: other.participants[index])
+                    self.participants[i].mergeActivity(from: other.participants[index], mergeActivityTimestamp: mergeActivityTimestamps)
                     if self.participants[i].peer.id == myPeerId || self.participants[i].peer.id == previousMyPeerId {
                         self.participants[i].joinTimestamp = other.participants[index].joinTimestamp
                     }
@@ -1513,6 +1515,8 @@ public final class GroupCallParticipantsContext {
             }
             strongSelf.isLoadingMore = false
             strongSelf.shouldResetStateFromServer = false
+            var state = state
+            state.mergeActivity(from: strongSelf.stateValue.state, myPeerId: nil, previousMyPeerId: nil, mergeActivityTimestamps: false)
             strongSelf.stateValue.state = state
             strongSelf.endedProcessingUpdate()
         }))
