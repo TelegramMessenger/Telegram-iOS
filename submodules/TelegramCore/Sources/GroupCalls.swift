@@ -367,6 +367,7 @@ public enum JoinGroupCallError {
     case generic
     case anonymousNotAllowed
     case tooManyParticipants
+    case invalidJoinAsPeer
 }
 
 public struct JoinGroupCallResult {
@@ -408,6 +409,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 return .anonymousNotAllowed
             } else if error.errorDescription == "GROUPCALL_PARTICIPANTS_TOO_MUCH" {
                 return .tooManyParticipants
+            } else if error.errorDescription == "JOIN_AS_PEER_INVALID" {
+                return .invalidJoinAsPeer
             }
             return .generic
         }

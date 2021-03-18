@@ -6297,3 +6297,5 @@ Sorry for the inconvenience.";
 "VoiceChat.ForwardTooltip.Chat" = "Invite link forwarded to **%@**";
 "VoiceChat.ForwardTooltip.TwoChats" = "Invite link forwarded to **%@** and **%@**";
 "VoiceChat.ForwardTooltip.ManyChats" = "Invite link forwarded to **%@** and %@ others";
+
+"GroupRemoved.ViewChannelInfo" = "View Channel";

@@ -196,6 +196,10 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
+
+    override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
+        
+    }
     
     override func layout() {
         super.layout()

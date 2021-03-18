@@ -38,7 +38,7 @@ public func joinChannel(account: Account, peerId: PeerId, hash: String?) -> Sign
             |> mapToSignal { updates -> Signal<RenderedChannelParticipant?, JoinChannelError> in
                 account.stateManager.addUpdates(updates)
                 
-                return account.network.request(Api.functions.channels.getParticipant(channel: inputChannel, userId: .inputUserSelf))
+                return account.network.request(Api.functions.channels.getParticipant(channel: inputChannel, participant: .inputPeerSelf))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.channels.ChannelParticipant?, JoinChannelError> in
                     return .single(nil)
@@ -59,7 +59,7 @@ public func joinChannel(account: Account, peerId: PeerId, hash: String?) -> Sign
                         }
                         let updatedParticipant: ChannelParticipant
                         switch result {
-                            case let .channelParticipant(participant, _):
+                            case let .channelParticipant(participant, _, _):
                                 updatedParticipant = ChannelParticipant(apiParticipant: participant)
                         }
                         if case let .member(_, _, maybeAdminInfo, _, _) = updatedParticipant {

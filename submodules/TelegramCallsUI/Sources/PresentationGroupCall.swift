@@ -1174,6 +1174,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_ChatFullAlertText, actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                             ]), on: .root, blockInteraction: false, completion: {})
+                        } else if case .invalidJoinAsPeer = error {
+                            let peerId = strongSelf.peerId
+                            let _ = (strongSelf.accountContext.account.postbox.transaction { transaction -> Void in
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                    if let current = current as? CachedChannelData {
+                                        return current.withUpdatedCallJoinPeerId(nil)
+                                    } else if let current = current as? CachedGroupData {
+                                        return current.withUpdatedCallJoinPeerId(nil)
+                                    } else {
+                                        return current
+                                    }
+                                })
+                            }).start()
                         }
                         strongSelf.markAsCanBeRemoved()
                     }))
@@ -1678,16 +1691,23 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 strongSelf.isRequestingMissingSsrcs = false
                 strongSelf.missingSsrcs.subtract(requestedSsrcs)
                 
-                var addedParticipants: [(UInt32, String?)] = []
+                var addedParticipants: [(UInt32, Int32?, String?)] = []
                 
                 for participant in state.participants {
                     if let ssrc = participant.ssrc {
-                        addedParticipants.append((ssrc, participant.jsonParams))
+                        addedParticipants.append((ssrc, participant.volume, participant.jsonParams))
                     }
                 }
                 
                 if !addedParticipants.isEmpty {
-                    strongSelf.callContext?.addParticipants(participants: addedParticipants)
+                    for (ssrc, volume, _) in addedParticipants {
+                        if let volume = volume {
+                            strongSelf.callContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
+                        }
+                    }
+                    strongSelf.callContext?.addParticipants(participants: addedParticipants.map { ssrc, _, params in
+                        return (ssrc, params)
+                    })
                 }
                 
                 strongSelf.maybeRequestMissingSsrcs()

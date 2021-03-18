@@ -1,19 +1,24 @@
 public extension Api {
 public struct channels {
     public enum ChannelParticipants: TypeConstructorDescription {
-        case channelParticipants(count: Int32, participants: [Api.ChannelParticipant], users: [Api.User])
+        case channelParticipants(count: Int32, participants: [Api.ChannelParticipant], chats: [Api.Chat], users: [Api.User])
         case channelParticipantsNotModified
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .channelParticipants(let count, let participants, let users):
+                case .channelParticipants(let count, let participants, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-177282392)
+                        buffer.appendInt32(-1699676497)
                     }
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(participants.count))
                     for item in participants {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -33,8 +38,8 @@ public struct channels {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .channelParticipants(let count, let participants, let users):
-                return ("channelParticipants", [("count", count), ("participants", participants), ("users", users)])
+                case .channelParticipants(let count, let participants, let chats, let users):
+                return ("channelParticipants", [("count", count), ("participants", participants), ("chats", chats), ("users", users)])
                 case .channelParticipantsNotModified:
                 return ("channelParticipantsNotModified", [])
     }
@@ -47,15 +52,20 @@ public struct channels {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ChannelParticipant.self)
             }
-            var _3: [Api.User]?
+            var _3: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.channels.ChannelParticipants.channelParticipants(count: _1!, participants: _2!, users: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.channels.ChannelParticipants.channelParticipants(count: _1!, participants: _2!, chats: _3!, users: _4!)
             }
             else {
                 return nil
@@ -67,15 +77,20 @@ public struct channels {
     
     }
     public enum ChannelParticipant: TypeConstructorDescription {
-        case channelParticipant(participant: Api.ChannelParticipant, users: [Api.User])
+        case channelParticipant(participant: Api.ChannelParticipant, chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .channelParticipant(let participant, let users):
+                case .channelParticipant(let participant, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-791039645)
+                        buffer.appendInt32(-541588713)
                     }
                     participant.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -87,8 +102,8 @@ public struct channels {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .channelParticipant(let participant, let users):
-                return ("channelParticipant", [("participant", participant), ("users", users)])
+                case .channelParticipant(let participant, let chats, let users):
+                return ("channelParticipant", [("participant", participant), ("chats", chats), ("users", users)])
     }
     }
     
@@ -97,14 +112,19 @@ public struct channels {
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
             }
-            var _2: [Api.User]?
+            var _2: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.channels.ChannelParticipant.channelParticipant(participant: _1!, users: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.channels.ChannelParticipant.channelParticipant(participant: _1!, chats: _2!, users: _3!)
             }
             else {
                 return nil

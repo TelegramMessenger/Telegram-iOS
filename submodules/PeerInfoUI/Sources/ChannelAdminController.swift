@@ -1023,6 +1023,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         } else {
                                             updateFlags = []
                                         }
+                                    } else {
+                                        updateFlags = adminInfo?.rights.rights
                                     }
                                 }
                                 currentRank = rank
