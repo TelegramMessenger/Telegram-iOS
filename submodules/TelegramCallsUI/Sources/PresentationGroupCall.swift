@@ -1506,7 +1506,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                             let previousRaisedHand = strongSelf.stateValue.raisedHand
                             if !(strongSelf.stateValue.muteState?.canUnmute ?? false) {
-                                strongSelf.stateValue.raisedHand = participant.raiseHandRating != nil
+                                strongSelf.stateValue.raisedHand = participant.hasRaiseHand
                             }
                             
                             if let muteState = participant.muteState, muteState.canUnmute && previousRaisedHand { 
