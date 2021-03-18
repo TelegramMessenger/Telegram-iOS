@@ -49,6 +49,8 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
     if let author = message.author as? TelegramUser {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
             authorTitle = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+        } else if let forwardInfo = message.forwardInfo, forwardInfo.sourceMessageId?.peerId.namespace == Namespaces.Peer.CloudChannel {
+            authorTitle = forwardInfo.authorSignature
         }
     } else {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {

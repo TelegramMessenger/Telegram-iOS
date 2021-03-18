@@ -219,7 +219,14 @@ private final class ImportManager {
                 break
             }
             if self.pendingEntries.isEmpty {
-                Logger.shared.log("ChatImportScreen", "updateState no more pending entries, stop searching")
+                Logger.shared.log("ChatImportScreen", "updateState no more pending entries, stop searching (active entries: \(self.activeEntries.keys))")
+                
+                if self.activeEntries.isEmpty {
+                    Logger.shared.log("ChatImportScreen", "no active entries, completing")
+                    self.complete()
+                    return
+                }
+                
                 break
             }
             
@@ -251,7 +258,7 @@ private final class ImportManager {
                 if !pathExtension.isEmpty, let value = TGMimeTypeMap.mimeType(forExtension: pathExtension) {
                     mimeType = value
                 }
-                return ChatHistoryImport.uploadMedia(account: account, session: session, file: tempFile, fileName: entry.0.path, mimeType: mimeType, type: entry.2)
+                return ChatHistoryImport.uploadMedia(account: account, session: session, file: tempFile, disposeFileAfterDone: true, fileName: entry.0.path, mimeType: mimeType, type: entry.2)
                 |> mapError { error -> ImportError in
                     switch error {
                     case .chatAdminRequired:

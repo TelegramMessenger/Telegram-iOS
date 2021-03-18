@@ -584,8 +584,6 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 break
             case .hintIsValidated:
                 break
-            case .hintIsValidated:
-                break
         }
     }
     return result

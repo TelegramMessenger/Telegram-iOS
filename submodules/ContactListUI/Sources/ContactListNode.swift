@@ -805,10 +805,14 @@ public final class ContactListNode: ASDisplayNode {
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
         self.contextAction = contextAction
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.listNode = ListView()
         self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.indexNode = CollectionIndexNode()
         

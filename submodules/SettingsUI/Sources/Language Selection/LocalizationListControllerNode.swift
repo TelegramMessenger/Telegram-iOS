@@ -99,7 +99,8 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
     }
     
     init(context: AccountContext, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void, applyingCode: Signal<String?, NoError>) {
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.presentationDataPromise = Promise(self.presentationData)
         
@@ -107,6 +108,9 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         
@@ -308,6 +312,9 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
 
         self.listNode = ListView()
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         

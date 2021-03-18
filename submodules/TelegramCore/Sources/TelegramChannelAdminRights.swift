@@ -5,14 +5,20 @@ import TelegramApi
 import SyncCore
 
 extension TelegramChatAdminRights {
-    init(apiAdminRights: Api.ChatAdminRights) {
+    init?(apiAdminRights: Api.ChatAdminRights) {
         switch apiAdminRights {
             case let .chatAdminRights(flags):
-                self.init(flags: TelegramChatAdminRightsFlags(rawValue: flags))
+                if flags == 0 {
+                    return nil
+                }
+                let filteredFlags = flags & (~(1 << 12))
+                self.init(rights: TelegramChatAdminRightsFlags(rawValue: filteredFlags))
         }
     }
     
     var apiAdminRights: Api.ChatAdminRights {
-        return .chatAdminRights(flags: self.flags.rawValue)
+        var filteredFlags = self.rights.rawValue
+        filteredFlags |= 1 << 12
+        return .chatAdminRights(flags: filteredFlags)
     }
 }

@@ -166,8 +166,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
                     //                            self?.openPeer(peerId: peerId, navigation: navigation)
                 }, sendFile: nil,
-                   sendSticker: nil,
-                   present: { c, a in
+                sendSticker: nil,
+                requestMessageActionUrlAuth: nil,
+                present: { c, a in
                     present(c, a)
                 }, dismissInput: {
                     self?.dismissInput()
@@ -835,7 +836,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-//                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                                 let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
                                 
                                 strongSelf.updateState { state in
@@ -859,7 +859,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-//                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                                 let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
                                 
                                 strongSelf.updateState { state in

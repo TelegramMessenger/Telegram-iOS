@@ -128,7 +128,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
         
         let resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: asset.url.path, adjustments: resourceAdjustments)
-        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 5 * 1024 * 1024)
+        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
         |> mapError { _ -> Void in
             return Void()
         }
@@ -144,7 +144,12 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         let fileName = value["fileName"] as? String
         let mimeType = (value["mimeType"] as? String) ?? "application/octet-stream"
         
-        if let image = UIImage(data: data) {
+        var treatAsFile = false
+        if let boolValue = value["treatAsFile"] as? Bool, boolValue {
+            treatAsFile = true
+        }
+        
+        if !treatAsFile, let image = UIImage(data: data) {
             var isGif = false
             if data.count > 4 {
                 data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
@@ -187,7 +192,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                         mimeType = "animation/gif"
                         attributes = [.ImageSize(size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height))), .Animated, .FileName(fileName: fileName ?? "animation.gif")]
                     }
-                    return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 5 * 1024 * 1024)
+                    return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 10 * 1024 * 1024)
                     |> mapError { _ -> Void in return Void() }
                     |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                         switch event {
@@ -218,7 +223,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 thumbnailData = jpegData
             }
             
-            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 5 * 1024 * 1024)
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 10 * 1024 * 1024)
             |> mapError { _ -> Void in return Void() }
             |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                 switch event {
@@ -236,13 +241,14 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             let isVoice = ((value["isVoice"] as? NSNumber)?.boolValue ?? false)
             let title = value["title"] as? String
             let artist = value["artist"] as? String
+            let mimeType = value["mimeType"] as? String ?? "audio/ogg"
             
             var waveform: MemoryBuffer?
             if let waveformData = TGItemProviderSignals.audioWaveform(url) {
                 waveform = MemoryBuffer(data: waveformData)
             }
             
-            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: "audio/ogg", attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 5 * 1024 * 1024)
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
             |> mapError { _ -> Void in return Void() }
             |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                 switch event {
@@ -360,31 +366,36 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
 public func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShareItemContent]) -> Signal<Float, Void> {
     var messages: [EnqueueMessage] = []
     var groupingKey: Int64?
-    var mediaTypes: (photo: Bool, video: Bool, music: Bool, other: Bool) = (false, false, false, false)
+    var mediaTypes: (photo: Int, video: Int, music: Int, other: Int) = (0, 0, 0, 0)
     if items.count > 1 {
         for item in items {
             if case let .media(result) = item, case let .media(media) = result {
                 if media.media is TelegramMediaImage {
-                    mediaTypes.photo = true
+                    mediaTypes.photo += 1
                 } else if let media = media.media as? TelegramMediaFile {
                     if media.isVideo {
-                        mediaTypes.video = true
-                    } else if let fileName = media.fileName, fileName.hasPrefix("mp3") || fileName.hasPrefix("m4a") {
-                        mediaTypes.music = true
+                        mediaTypes.video += 1
+                    } else if media.isVoice || media.isAnimated || media.isSticker {
+                        mediaTypes = (0, 0, 0, 0)
+                        break
+                    } else if media.isMusic {
+                        mediaTypes.music += 1
+                    } else if let fileName = media.fileName?.lowercased(), fileName.hasPrefix(".mp3") || fileName.hasPrefix("m4a") {
+                        mediaTypes.music += 1
                     } else {
-                        mediaTypes.other = true
+                        mediaTypes.other += 1
                     }
                 } else {
-                    mediaTypes = (false, false, false, false)
+                    mediaTypes = (0, 0, 0, 0)
                     break
                 }
             }
         }
     }
     
-    if (mediaTypes.photo || mediaTypes.video) && !(mediaTypes.music || mediaTypes.other) {
+    if ((mediaTypes.photo + mediaTypes.video) > 1) && (mediaTypes.music == 0 && mediaTypes.other == 0) {
         groupingKey = arc4random64()
-    } else if !(mediaTypes.photo || mediaTypes.video) && (mediaTypes.music != mediaTypes.other) {
+    } else if ((mediaTypes.photo + mediaTypes.video) == 0) && ((mediaTypes.music > 1 && mediaTypes.other == 0) || (mediaTypes.music == 0 && mediaTypes.other > 1)) {
         groupingKey = arc4random64()
     }
     

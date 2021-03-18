@@ -41,6 +41,7 @@ public class ActionSheetButtonItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -57,7 +58,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
     private let accessibilityArea: AccessibilityAreaNode
     
     private var pointerInteraction: PointerInteraction?
-    
+        
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -148,24 +149,19 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
             accessibilityTraits.insert(.notEnabled)
         }
         self.accessibilityArea.accessibilityTraits = accessibilityTraits
-        
-        self.setNeedsLayout()
     }
     
-    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 57.0)
-    }
-    
-    public override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 57.0)
         
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
         let labelSize = self.label.updateLayout(CGSize(width: max(1.0, size.width - 10.0), height: size.height))
         self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
     
     @objc func buttonPressed() {

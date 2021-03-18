@@ -40,6 +40,13 @@
     self = [super init];
     if (self != nil)
     {
+        if (![url.absoluteString.lowercaseString hasSuffix:@".mp4"]) {
+            NSURL *pathUrl = [NSURL fileURLWithPath:[[[LegacyComponentsGlobals provider] dataStoragePath] stringByAppendingPathComponent:@"videos"]];
+            [[NSFileManager defaultManager] createDirectoryAtPath:pathUrl.path withIntermediateDirectories:true attributes:nil error:nil];
+            NSURL *updatedUrl = [pathUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", [TGStringUtils md5:url.absoluteString]]];
+            [[NSFileManager defaultManager] createSymbolicLinkAtPath:updatedUrl.path withDestinationPath:url.path error:nil];
+            url = updatedUrl;
+        }
         _cachedAVAsset = [[AVURLAsset alloc] initWithURL:url options:nil];
         _cachedSize = CGSizeZero;
         _cachedDuration = 0.0;

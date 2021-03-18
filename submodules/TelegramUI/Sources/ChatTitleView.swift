@@ -26,7 +26,7 @@ enum ChatTitleContent {
     
     case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
     case replyThread(type: ReplyThreadType, count: Int)
-    case custom(String, Bool)
+    case custom(String, String?, Bool)
 }
 
 private enum ChatTitleIcon {
@@ -191,7 +191,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                                 latestIndex = range.upperBound
                                 
-                                let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.upperBound)])
+                                let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: min(rawText.count, range.upperBound))])
                                 if index == 0 {
                                     segments.append(.number(count, NSAttributedString(string: part, font: textFont, textColor: textColor)))
                                 } else {
@@ -214,8 +214,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         }
                         
                         isEnabled = false
-                    case let .custom(text, enabled):
-                        segments = [.text(0, NSAttributedString(string: text, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                    case let .custom(text, _, enabled):
+                        let font = Font.with(size: 17.0, design: .regular, weight: .medium, traits: .monospacedNumbers)
+                        segments = [.text(0, NSAttributedString(string: text, font: font, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                         isEnabled = enabled
                 }
                 
@@ -239,13 +240,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 
                 if titleFakeIcon != self.titleFakeIcon {
                     self.titleFakeIcon = titleFakeIcon
-                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, type: .regular) : nil
+                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, strings: self.strings, type: .regular) : nil
                     updated = true
                 }
                 
                 if titleScamIcon != self.titleScamIcon {
                     self.titleScamIcon = titleScamIcon
-                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, type: .regular) : nil
+                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, strings: self.strings, type: .regular) : nil
                     updated = true
                 }
                 
@@ -472,6 +473,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     }
                                 }
                             }
+                        case let .custom(_, subtitle?, _):
+                            let string = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                            state = .info(string, .generic)
                         default:
                             break
                     }

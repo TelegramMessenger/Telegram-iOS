@@ -6,7 +6,7 @@ import SyncCore
 
 func telegramMediaWebpageAttributeFromApiWebpageAttribute(_ attribute: Api.WebPageAttribute) -> TelegramMediaWebpageAttribute? {
     switch attribute {
-        case let .webPageAttributeTheme(flags, documents, settings):
+        case let .webPageAttributeTheme(_, documents, settings):
             var files: [TelegramMediaFile] = []
             if let documents = documents {
                 files = documents.compactMap { telegramMediaFileFromApiDocument($0) }

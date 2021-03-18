@@ -35,6 +35,7 @@ public class ActionSheetCheckboxItem: ActionSheetItem {
         }
         
         node.setItem(self)
+        node.requestLayoutUpdate()
     }
 }
 
@@ -74,13 +75,14 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         self.checkNode = ASImageNode()
         self.checkNode.isUserInteractionEnabled = false
         self.checkNode.displaysAsynchronously = false
-        self.checkNode.image = generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
+        self.checkNode.image = generateImage(CGSize(width: 14.0, height: 12.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setStrokeColor(theme.controlAccentColor.cgColor)
-            context.setLineWidth(2.0)
-            context.move(to: CGPoint(x: 12.0, y: 1.0))
-            context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
-            context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
+            context.setLineWidth(2.0 - UIScreenPixel)
+            context.setLineCap(.round)
+            context.move(to: CGPoint(x: 13.0, y: 1.0))
+            context.addLine(to: CGPoint(x: 5.0, y: 11.0))
+            context.addLine(to: CGPoint(x: 1.0, y: 7.0))
             context.strokePath()
         })
         self.checkNode.isAccessibilityElement = false
@@ -131,23 +133,15 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
             accessibilityTraits.insert(.selected)
         }
         self.accessibilityArea.accessibilityTraits = accessibilityTraits
-        
-        self.setNeedsLayout()
     }
     
-    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 57.0)
-    }
-    
-    public override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
-        
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = CGSize(width: constrainedSize.width, height: 57.0)
+       
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
-        var titleOrigin: CGFloat = 44.0
-        var checkOrigin: CGFloat = 22.0
+        var titleOrigin: CGFloat = 50.0
+        var checkOrigin: CGFloat = 27.0
         if let item = self.item, item.style == .alignRight {
             titleOrigin = 24.0
             checkOrigin = size.width - 22.0
@@ -163,6 +157,9 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         }
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
     
     @objc func buttonPressed() {

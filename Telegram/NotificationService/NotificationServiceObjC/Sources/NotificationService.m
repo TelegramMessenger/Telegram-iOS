@@ -157,7 +157,7 @@ static void reportMemory() {
 
 - (void)didReceiveNotificationRequest:(UNNotificationRequest *)request withContentHandler:(void (^)(UNNotificationContent * _Nonnull))contentHandler {
     if (_rootPath == nil) {
-        _bestAttemptContent = request.content;
+        _bestAttemptContent = (UNMutableNotificationContent *)[request.content mutableCopy];
         [self completeWithBestAttemptContent];
         return;
     }
@@ -248,6 +248,7 @@ static void reportMemory() {
         
         int32_t fileDatacenterId = 0;
         Api1_InputFileLocation *inputFileLocation = nil;
+        int32_t progressiveFileLimit = -1;
         
         NSString *fetchResourceId = nil;
         bool isPng = false;
@@ -257,14 +258,27 @@ static void reportMemory() {
             if ([parsedAttachment isKindOfClass:[Api1_Photo_photo class]]) {
                 Api1_Photo_photo *photo = parsedAttachment;
                 isExpandableMedia = true;
-                for (id size in photo.sizes) {
-                    if ([size isKindOfClass:[Api1_PhotoSize_photoSize class]]) {
-                        Api1_PhotoSize_photoSize *sizeValue = size;
-                        if ([sizeValue.type isEqualToString:@"m"]) {
-                            inputFileLocation = [Api1_InputFileLocation inputPhotoFileLocationWithPid:photo.pid accessHash:photo.accessHash fileReference:photo.fileReference thumbSize:sizeValue.type];
-                            fileDatacenterId = [photo.dcId intValue];
-                            fetchResourceId = [NSString stringWithFormat:@"telegram-cloud-photo-size-%@-%@-%@", photo.dcId, photo.pid, sizeValue.type];
-                            break;
+                
+                /*for (id size in photo.sizes) {
+                    if ([size isKindOfClass:[Api1_PhotoSize_photoSizeProgressive class]]) {
+                        Api1_PhotoSize_photoSizeProgressive *sizeValue = size;
+                        inputFileLocation = [Api1_InputFileLocation inputPhotoFileLocationWithPid:photo.pid accessHash:photo.accessHash fileReference:photo.fileReference thumbSize:sizeValue.type];
+                        fileDatacenterId = [photo.dcId intValue];
+                        fetchResourceId = [NSString stringWithFormat:@"telegram-cloud-photo-size-%@-%@-%@", photo.dcId, photo.pid, sizeValue.type];
+                        break;
+                    }
+                }*/
+                
+                if (inputFileLocation == nil) {
+                    for (id size in photo.sizes) {
+                        if ([size isKindOfClass:[Api1_PhotoSize_photoSize class]]) {
+                            Api1_PhotoSize_photoSize *sizeValue = size;
+                            if ([sizeValue.type isEqualToString:@"m"]) {
+                                inputFileLocation = [Api1_InputFileLocation inputPhotoFileLocationWithPid:photo.pid accessHash:photo.accessHash fileReference:photo.fileReference thumbSize:sizeValue.type];
+                                fileDatacenterId = [photo.dcId intValue];
+                                fetchResourceId = [NSString stringWithFormat:@"telegram-cloud-photo-size-%@-%@-%@", photo.dcId, photo.pid, sizeValue.type];
+                                break;
+                            }
                         }
                     }
                 }

@@ -932,8 +932,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             var directionIsToRight: Bool?
             if abs(velocity.x) > 10.0 {
                 directionIsToRight = velocity.x < 0.0
-            } else if abs(transitionFraction) > 0.5 {
-                directionIsToRight = transitionFraction < 0.0
+            } else if abs(self.transitionFraction) > 0.5 {
+                directionIsToRight = self.transitionFraction < 0.0
             }
             var updatedIndex = self.currentIndex
             if let directionIsToRight = directionIsToRight {
@@ -1256,8 +1256,10 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
 
 final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     let context: AccountContext
-    let avatarNode: AvatarNode
     
+    private let containerNode: ContextControllerSourceNode
+    
+    let avatarNode: AvatarNode
     fileprivate var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
@@ -1272,6 +1274,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     }
     
     var tapped: (() -> Void)?
+    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     private var isFirstAvatarLoading = true
     var item: PeerInfoAvatarListItem?
@@ -1280,15 +1283,29 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     init(context: AccountContext) {
         self.context = context
+        self.containerNode = ContextControllerSourceNode()
+        
         let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
         self.avatarNode = AvatarNode(font: avatarFont)
         
         super.init()
         
-        self.addSubnode(self.avatarNode)
-        self.avatarNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
+        self.containerNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
+        self.avatarNode.frame = self.containerNode.bounds
         
-        self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.avatarNode.view.addGestureRecognizer(tapGestureRecognizer)
+       
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            tapGestureRecognizer.isEnabled = false
+            tapGestureRecognizer.isEnabled = true
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
     }
     
     deinit {
@@ -1338,7 +1355,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             self.isFirstAvatarLoading = false
             
-            self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
+            self.containerNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
+            self.avatarNode.frame = self.containerNode.bounds
             self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
 
             if let item = item {
@@ -1365,6 +1383,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                         id = Int64(peer.id.id)
                     }
                 }
+                
+                self.containerNode.isGestureEnabled = true
                 
                 if let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
@@ -1412,7 +1432,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                         shape.path = maskPath.cgPath
                         videoNode.layer.mask = shape
                                                             
-                        self.addSubnode(videoNode)
+                        self.containerNode.addSubnode(videoNode)
                     }
                 } else if let videoNode = self.videoNode {
                     self.videoContent = nil
@@ -1425,6 +1445,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 self.videoNode = nil
                 
                 videoNode.removeFromSupernode()
+                
+                self.containerNode.isGestureEnabled = false
             }
             
             if let videoNode = self.videoNode {
@@ -2260,6 +2282,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
             let textColor = presentationData.theme.list.itemPrimaryTextColor
             
             self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
+            self.textNode.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
+            self.textNode.tintColor = presentationData.theme.list.itemAccentColor
             
             self.textNode.clipsToBounds = true
             self.textNode.delegate = self
@@ -2567,6 +2591,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var cancelUpload: (() -> Void)?
     var requestUpdateLayout: (() -> Void)?
     
+    var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
@@ -2662,6 +2687,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.avatarContainerNode.tapped = { [weak self] in
             self?.initiateAvatarExpansion(gallery: false, first: false)
         }
+        self.avatarListNode.avatarContainerNode.contextAction = { [weak self] node, gesture in
+            self?.displayAvatarContextMenu?(node, gesture)
+        }
+        
         self.editingContentNode.avatarNode.tapped = { [weak self] confirm in
             self?.initiateAvatarExpansion(gallery: true, first: true)
         }
@@ -2782,9 +2811,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let peer = peer {
                 self.initializedCredibilityIcon = true
                 if peer.isFake {
-                    image = PresentationResourcesChatList.fakeIcon(presentationData.theme, type: .regular)
+                    image = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
                 } else if peer.isScam {
-                    image = PresentationResourcesChatList.scamIcon(presentationData.theme, type: .regular)
+                    image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
                 } else if peer.isVerified {
                     if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
                         image = generateImage(sourceImage.size, contextGenerator: { size, context in

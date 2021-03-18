@@ -166,12 +166,18 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                                 controller.displayNavigationActivity = false
                                 (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
                             }
-                        }, error: { _ in
+                        }, error: { error in
                             if let strongSelf = self, let controller = controller {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                
                                 controller.displayNavigationActivity = false
-                                controller.present(textAlertController(context: strongSelf.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        text = presentationData.strings.TwoStepAuth_FloodError
+                                    default:
+                                        text = presentationData.strings.Login_UnknownError
+                                }
+                                controller.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }))
                     }
@@ -224,7 +230,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 let controller = PermissionController(context: strongSelf.context, splashScreen: true)
-                controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Chat/Intro/ChannelIntro"), dark: nil), title: presentationData.strings.ChannelIntro_Title, subtitle: nil, text: presentationData.strings.ChannelIntro_Text, buttonTitle: presentationData.strings.ChannelIntro_CreateChannel, footerText: nil), animated: false)
+                controller.setState(.custom(icon: .animation("Channel"), title: presentationData.strings.ChannelIntro_Title, subtitle: nil, text: presentationData.strings.ChannelIntro_Text, buttonTitle: presentationData.strings.ChannelIntro_CreateChannel, secondaryButtonTitle: nil, footerText: nil), animated: false)
                 controller.proceed = { [weak self] result in
                     if let strongSelf = self {
                         (strongSelf.navigationController as? NavigationController)?.replaceTopController(createChannelController(context: strongSelf.context), animated: true)

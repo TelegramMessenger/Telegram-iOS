@@ -7,8 +7,6 @@ import SyncCore
 extension TelegramPeerNotificationSettings {
     convenience init(apiSettings: Api.PeerNotifySettings) {
         switch apiSettings {
-            case .peerNotifySettingsEmpty:
-                self.init(muteState: .unmuted, messageSound: .bundledModern(id: 0), displayPreviews: .default)
             case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
                 let muteState: PeerMuteState
                 if let muteUntil = muteUntil {

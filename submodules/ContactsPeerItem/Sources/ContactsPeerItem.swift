@@ -310,7 +310,15 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    private let extractedBackgroundImageNode: ASImageNode
+
     private let containerNode: ContextControllerSourceNode
+    private let contextSourceNode: ContextExtractedContentContainingNode
+    
+    private var extractedRect: CGRect?
+    private var nonExtractedRect: CGRect?
+    
+    private let offsetContainerNode: ASDisplayNode
     
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
@@ -356,7 +364,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.extractedBackgroundImageNode = ASImageNode()
+        self.extractedBackgroundImageNode.displaysAsynchronously = false
+        self.extractedBackgroundImageNode.alpha = 0.0
+        
+        self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
+        
+        self.offsetContainerNode = ASDisplayNode()
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
@@ -369,12 +384,20 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.isAccessibilityElement = true
         
         self.addSubnode(self.backgroundNode)
+        
         self.addSubnode(self.topSeparatorNode)
         self.addSubnode(self.separatorNode)
+        
+        self.containerNode.addSubnode(self.contextSourceNode)
+        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.avatarNode)
-        self.containerNode.addSubnode(self.titleNode)
-        self.containerNode.addSubnode(self.statusNode)
+        
+        self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.offsetContainerNode)
+        
+        self.offsetContainerNode.addSubnode(self.avatarNode)
+        self.offsetContainerNode.addSubnode(self.titleNode)
+        self.offsetContainerNode.addSubnode(self.statusNode)
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
@@ -389,6 +412,28 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 return
             }
             contextAction(strongSelf.containerNode, gesture)
+        }
+        
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            
+            if isExtracted {
+                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.list.plainBackgroundColor)
+            }
+            
+            if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
+                let rect = isExtracted ? extractedRect : nonExtractedRect
+                transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: rect)
+            }
+            
+            transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? 12.0 : 0.0, y: 0.0))
+            transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
+                if !isExtracted {
+                    self?.extractedBackgroundImageNode.image = nil
+                }
+            })
         }
     }
     
@@ -490,7 +535,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     selectionNode = current
                     updatedSelectionNode = selectionNode
                 } else {
-                    selectionNode = CheckNode(strokeColor: item.presentationData.theme.list.itemCheckColors.strokeColor, fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
+                    selectionNode = CheckNode(theme: CheckNodeTheme(theme: item.presentationData.theme, style: .plain))
                     selectionNode.isUserInteractionEnabled = false
                     updatedSelectionNode = selectionNode
                 }
@@ -741,7 +786,22 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.accessibilityValue = statusAttributedString?.string
                             
                             strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                            strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                            strongSelf.offsetContainerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                            strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                             strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
+                            
+                            let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: nodeLayout.contentSize.width - 16.0, height: nodeLayout.contentSize.height))
+                            let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
+                            strongSelf.extractedRect = extractedRect
+                            strongSelf.nonExtractedRect = nonExtractedRect
+                            
+                            if strongSelf.contextSourceNode.isExtractedToContextPreview {
+                                strongSelf.extractedBackgroundImageNode.frame = extractedRect
+                            } else {
+                                strongSelf.extractedBackgroundImageNode.frame = nonExtractedRect
+                            }
+                            strongSelf.contextSourceNode.contentRect = extractedRect
                             
                             switch item.peer {
                                 case let .peer(peer, _):
@@ -827,7 +887,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     verificationIconNode.displayWithoutProcessing = true
                                     verificationIconNode.displaysAsynchronously = false
                                     strongSelf.verificationIconNode = verificationIconNode
-                                    strongSelf.containerNode.addSubnode(verificationIconNode)
+                                    strongSelf.offsetContainerNode.addSubnode(verificationIconNode)
                                 }
                                 if let verificationIconNode = strongSelf.verificationIconNode {
                                     verificationIconNode.image = verificationIconImage
@@ -846,7 +906,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         let actionButtonNode = HighlightableButtonNode()
                                         actionButtonNode.isUserInteractionEnabled = action.action != nil
                                         actionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.actionButtonPressed(_:)), forControlEvents: .touchUpInside)
-                                        strongSelf.containerNode.addSubnode(actionButtonNode)
+                                        strongSelf.offsetContainerNode.addSubnode(actionButtonNode)
                                         
                                         actionButtonNodes.append(actionButtonNode)
                                     }
@@ -877,7 +937,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     let arrowButtonNode = HighlightableButtonNode()
                                     arrowButtonNode.addTarget(self, action: #selector(strongSelf.arrowButtonPressed), forControlEvents: .touchUpInside)
                                     strongSelf.arrowButtonNode = arrowButtonNode
-                                    strongSelf.containerNode.addSubnode(arrowButtonNode)
+                                    strongSelf.offsetContainerNode.addSubnode(arrowButtonNode)
                                 }
                                 if let arrowButtonNode = strongSelf.arrowButtonNode {
                                     arrowButtonNode.setImage(arrowButtonImage, for: .normal)
@@ -901,7 +961,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     badgeBackgroundNode.isLayerBacked = true
                                     badgeBackgroundNode.displaysAsynchronously = false
                                     badgeBackgroundNode.displayWithoutProcessing = true
-                                    strongSelf.containerNode.addSubnode(badgeBackgroundNode)
+                                    strongSelf.offsetContainerNode.addSubnode(badgeBackgroundNode)
                                     strongSelf.badgeBackgroundNode = badgeBackgroundNode
                                     badgeTransition = .immediate
                                 }
@@ -920,7 +980,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 let badgeTextNode = badgeTextApply()
                                 if badgeTextNode !== strongSelf.badgeTextNode {
                                     strongSelf.badgeTextNode?.removeFromSupernode()
-                                    strongSelf.containerNode.addSubnode(badgeTextNode)
+                                    strongSelf.offsetContainerNode.addSubnode(badgeTextNode)
                                     strongSelf.badgeTextNode = badgeTextNode
                                 }
                                 
@@ -944,9 +1004,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.selectionNode = updatedSelectionNode
                                     strongSelf.addSubnode(updatedSelectionNode)
                                 }
-                                updatedSelectionNode.setIsChecked(isSelected, animated: animated)
+                                updatedSelectionNode.setSelected(isSelected, animated: animated)
                                 
-                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 32.0 - 12.0, y: floor((nodeLayout.contentSize.height - 32.0) / 2.0)), size: CGSize(width: 32.0, height: 32.0))
+                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 22.0 - 17.0, y: floor((nodeLayout.contentSize.height - 22.0) / 2.0)), size: CGSize(width: 22.0, height: 22.0))
                             } else if let selectionNode = strongSelf.selectionNode {
                                 selectionNode.removeFromSupernode()
                                 strongSelf.selectionNode = nil

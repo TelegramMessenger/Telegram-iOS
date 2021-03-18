@@ -212,6 +212,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
         }
         
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         super.init()
         
         self.setViewBlock({
@@ -263,7 +267,25 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 var entries: [ChannelMembersSearchEntry] = []
                 
-                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                var canInviteByLink = false
+                if let peer = peerViewMainPeer(peerView) {
+                    if !(peer.addressName?.isEmpty ?? true) {
+                        canInviteByLink = true
+                    } else if let peer = peer as? TelegramChannel {
+                        if peer.flags.contains(.isCreator) || (peer.adminRights?.rights.contains(.canInviteUsers) == true) {
+                            canInviteByLink = true
+                        }
+                    } else if let peer = peer as? TelegramGroup {
+                        if case .creator = peer.role {
+                            canInviteByLink = true
+                        } else if case let .admin(rights, _) = peer.role, rights.rights.contains(.canInviteUsers) {
+                            canInviteByLink = true
+                        }
+                    }
+                }
+                
+                if case .inviteToCall = mode, canInviteByLink,
+                   !filters.contains(where: { filter in
                     if case .excludeNonMembers = filter {
                         return true
                     } else {
@@ -366,7 +388,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
                         case .member:
                             var peers: [PeerId: Peer] = [:]
                             peers[peer.id] = peer

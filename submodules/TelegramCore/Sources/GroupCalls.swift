@@ -103,11 +103,20 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                         } else if mutedByYou {
                             muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
+                        var jsonParams: String?
+                        /*if let params = params {
+                            switch params {
+                            case let .dataJSON(data):
+                                jsonParams = data
+                            }
+                        }*/
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
+                            jsonParams: jsonParams,
                             joinTimestamp: date,
                             activityTimestamp: activeDate.flatMap(Double.init),
+                            activityRank: nil,
                             muteState: muteState,
                             volume: volume
                         ))
@@ -243,17 +252,28 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                         } else if mutedByYou {
                             muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
+                        var jsonParams: String?
+                        /*if let params = params {
+                            switch params {
+                            case let .dataJSON(data):
+                                jsonParams = data
+                            }
+                        }*/
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
+                            jsonParams: jsonParams,
                             joinTimestamp: date,
                             activityTimestamp: activeDate.flatMap(Double.init),
+                            activityRank: nil,
                             muteState: muteState,
                             volume: volume
                         ))
                     }
                 }
             }
+            
+            parsedParticipants.sort()
             
             return GroupCallParticipantsContext.State(
                 participants: parsedParticipants,
@@ -295,7 +315,6 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
         return .generic
     }
     |> mapToSignal { updates -> Signal<JoinGroupCallResult, JoinGroupCallError> in
-        
         let admins: Signal<(Set<PeerId>, [Api.User]), JoinGroupCallError>
         if peerId.namespace == Namespaces.Peer.CloudChannel {
             admins = account.postbox.transaction { transaction -> Api.InputChannel? in
@@ -326,7 +345,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
                         case .creator:
                             adminIds.insert(parsedParticipant.peerId)
                         case let .member(_, _, adminInfo, _, _):
-                            if let adminInfo = adminInfo, adminInfo.rights.flags.contains(.canManageCalls) {
+                            if let adminInfo = adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
                                 adminIds.insert(parsedParticipant.peerId)
                             }
                         }
@@ -506,6 +525,15 @@ public func stopGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
                     return updated
                 })
             }
+            if var peer = transaction.getPeer(peerId) as? TelegramGroup {
+                var flags = peer.flags
+                flags.remove(.hasVoiceChat)
+                flags.remove(.hasActiveVoiceChat)
+                peer = peer.updateFlags(flags: flags, version: peer.version)
+                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                    return updated
+                })
+            }
             
             account.stateManager.addUpdates(result)
         }
@@ -564,23 +592,29 @@ public final class GroupCallParticipantsContext {
         
         public var peer: Peer
         public var ssrc: UInt32
+        public var jsonParams: String?
         public var joinTimestamp: Int32
         public var activityTimestamp: Double?
+        public var activityRank: Int?
         public var muteState: MuteState?
         public var volume: Int32?
         
         public init(
             peer: Peer,
             ssrc: UInt32,
+            jsonParams: String?,
             joinTimestamp: Int32,
             activityTimestamp: Double?,
+            activityRank: Int?,
             muteState: MuteState?,
             volume: Int32?
         ) {
             self.peer = peer
             self.ssrc = ssrc
+            self.jsonParams = jsonParams
             self.joinTimestamp = joinTimestamp
             self.activityTimestamp = activityTimestamp
+            self.activityRank = activityRank
             self.muteState = muteState
             self.volume = volume
         }
@@ -598,6 +632,9 @@ public final class GroupCallParticipantsContext {
             if lhs.activityTimestamp != rhs.activityTimestamp {
                 return false
             }
+            if lhs.activityRank != rhs.activityRank {
+                return false
+            }
             if lhs.muteState != rhs.muteState {
                 return false
             }
@@ -608,6 +645,16 @@ public final class GroupCallParticipantsContext {
         }
         
         public static func <(lhs: Participant, rhs: Participant) -> Bool {
+            if let lhsActivityRank = lhs.activityRank, let rhsActivityRank = rhs.activityRank {
+                if lhsActivityRank != rhsActivityRank {
+                    return lhsActivityRank < rhsActivityRank
+                }
+            } else if lhs.activityRank != nil {
+                return true
+            } else if rhs.activityRank != nil {
+                return false
+            }
+            
             if let lhsActivityTimestamp = lhs.activityTimestamp, let rhsActivityTimestamp = rhs.activityTimestamp {
                 if lhsActivityTimestamp != rhsActivityTimestamp {
                     return lhsActivityTimestamp > rhsActivityTimestamp
@@ -687,11 +734,32 @@ public final class GroupCallParticipantsContext {
                 
                 public var peerId: PeerId
                 public var ssrc: UInt32
+                public var jsonParams: String?
                 public var joinTimestamp: Int32
                 public var activityTimestamp: Double?
                 public var muteState: Participant.MuteState?
                 public var participationStatusChange: ParticipationStatusChange
                 public var volume: Int32?
+                
+                init(
+                    peerId: PeerId,
+                    ssrc: UInt32,
+                    jsonParams: String?,
+                    joinTimestamp: Int32,
+                    activityTimestamp: Double?,
+                    muteState: Participant.MuteState?,
+                    participationStatusChange: ParticipationStatusChange,
+                    volume: Int32?
+                ) {
+                    self.peerId = peerId
+                    self.ssrc = ssrc
+                    self.jsonParams = jsonParams
+                    self.joinTimestamp = joinTimestamp
+                    self.activityTimestamp = activityTimestamp
+                    self.muteState = muteState
+                    self.participationStatusChange = participationStatusChange
+                    self.volume = volume
+                }
             }
             
             public var participantUpdates: [ParticipantUpdate]
@@ -773,6 +841,9 @@ public final class GroupCallParticipantsContext {
     private var isLoadingMore: Bool = false
     private var shouldResetStateFromServer: Bool = false
     private var missingSsrcs = Set<UInt32>()
+    
+    private var nextActivityRank: Int = 0
+    private var activityRankResetTimer: SwiftSignalKit.Timer?
     
     private let updateDefaultMuteDisposable = MetaDisposable()
     
@@ -863,6 +934,36 @@ public final class GroupCallParticipantsContext {
                 }
             }
         })
+        
+        self.activityRankResetTimer = SwiftSignalKit.Timer(timeout: 10.0, repeat: true, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            var updated = false
+            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+            
+            for i in 0 ..< strongSelf.stateValue.state.participants.count {
+                if strongSelf.stateValue.state.participants[i].activityRank != nil {
+                    var clearRank = false
+                    if let activityTimestamp = strongSelf.stateValue.state.participants[i].activityTimestamp {
+                        if activityTimestamp < timestamp - 60.0 {
+                            clearRank = true
+                        }
+                    } else {
+                        clearRank = true
+                    }
+                    if clearRank {
+                        updated = true
+                        strongSelf.stateValue.state.participants[i].activityRank = nil
+                    }
+                }
+            }
+            if updated {
+                strongSelf.stateValue.state.participants.sort()
+            }
+        }, queue: .mainQueue())
+        self.activityRankResetTimer?.start()
     }
     
     deinit {
@@ -870,6 +971,7 @@ public final class GroupCallParticipantsContext {
         self.updatesDisposable.dispose()
         self.activitiesDisposable?.dispose()
         self.updateDefaultMuteDisposable.dispose()
+        self.activityRankResetTimer?.invalidate()
     }
     
     public func addUpdates(updates: [Update]) {
@@ -886,6 +988,12 @@ public final class GroupCallParticipantsContext {
             self.updateQueue.append(contentsOf: stateUpdates)
             self.beginProcessingUpdatesIfNeeded()
         }
+    }
+    
+    private func takeNextActivityRank() -> Int {
+        let value = self.nextActivityRank
+        self.nextActivityRank += 1
+        return value
     }
     
     public func reportSpeakingParticipants(ids: [PeerId: UInt32]) {
@@ -916,6 +1024,9 @@ public final class GroupCallParticipantsContext {
                 }
                 if updateTimestamp {
                     updatedParticipants[index].activityTimestamp = timestamp
+                    if updatedParticipants[index].activityRank == nil {
+                        updatedParticipants[index].activityRank = self.takeNextActivityRank()
+                    }
                     updated = true
                 }
             }
@@ -991,19 +1102,7 @@ public final class GroupCallParticipantsContext {
             
             var updatedState = strongSelf.stateValue.state
             
-            var existingParticipantIds = Set<PeerId>()
-            for participant in updatedState.participants {
-                existingParticipantIds.insert(participant.peer.id)
-            }
-            for participant in state.participants {
-                if existingParticipantIds.contains(participant.peer.id) {
-                    continue
-                }
-                existingParticipantIds.insert(participant.peer.id)
-                updatedState.participants.append(participant)
-            }
-            
-            updatedState.participants.sort()
+            updatedState.participants = mergeAndSortParticipants(current: updatedState.participants, with: state.participants)
             
             updatedState.totalCount = max(updatedState.totalCount, state.totalCount)
             updatedState.version = max(updatedState.version, updatedState.version)
@@ -1089,8 +1188,10 @@ public final class GroupCallParticipantsContext {
                         continue
                     }
                     var previousActivityTimestamp: Double?
+                    var previousActivityRank: Int?
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         previousActivityTimestamp = updatedParticipants[index].activityTimestamp
+                        previousActivityRank = updatedParticipants[index].activityRank
                         updatedParticipants.remove(at: index)
                     } else if case .joined = participantUpdate.participationStatusChange {
                         updatedTotalCount += 1
@@ -1107,8 +1208,10 @@ public final class GroupCallParticipantsContext {
                     let participant = Participant(
                         peer: peer,
                         ssrc: participantUpdate.ssrc,
+                        jsonParams: participantUpdate.jsonParams,
                         joinTimestamp: participantUpdate.joinTimestamp,
                         activityTimestamp: activityTimestamp,
+                        activityRank: previousActivityRank,
                         muteState: participantUpdate.muteState,
                         volume: participantUpdate.volume
                     )
@@ -1129,14 +1232,6 @@ public final class GroupCallParticipantsContext {
             let defaultParticipantsAreMuted = strongSelf.stateValue.state.defaultParticipantsAreMuted
             
             updatedParticipants.sort()
-            /*for i in 0 ..< updatedParticipants.count {
-                if updatedParticipants[i].peer.id == strongSelf.account.peerId {
-                    let member = updatedParticipants[i]
-                    updatedParticipants.remove(at: i)
-                    updatedParticipants.insert(member, at: 0)
-                    break
-                }
-            }*/
             
             strongSelf.stateValue = InternalState(
                 state: State(
@@ -1294,17 +1389,7 @@ public final class GroupCallParticipantsContext {
             
             var updatedState = strongSelf.stateValue.state
             
-            var existingParticipantIds = Set<PeerId>()
-            for participant in updatedState.participants {
-                existingParticipantIds.insert(participant.peer.id)
-            }
-            for participant in state.participants {
-                if existingParticipantIds.contains(participant.peer.id) {
-                    continue
-                }
-                existingParticipantIds.insert(participant.peer.id)
-                updatedState.participants.append(participant)
-            }
+            updatedState.participants = mergeAndSortParticipants(current: updatedState.participants, with: state.participants)
             
             updatedState.nextParticipantsFetchOffset = state.nextParticipantsFetchOffset
             updatedState.totalCount = max(updatedState.totalCount, state.totalCount)
@@ -1346,9 +1431,18 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 participationStatusChange = .none
             }
             
+            var jsonParams: String?
+            /*if let params = params {
+                switch params {
+                case let .dataJSON(data):
+                    jsonParams = data
+                }
+            }*/
+            
             self.init(
                 peerId: peerId,
                 ssrc: ssrc,
+                jsonParams: jsonParams,
                 joinTimestamp: date,
                 activityTimestamp: activeDate.flatMap(Double.init),
                 muteState: muteState,
@@ -1388,9 +1482,18 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     participationStatusChange = .none
                 }
                 
+                var jsonParams: String?
+                /*if let params = params {
+                    switch params {
+                    case let .dataJSON(data):
+                        jsonParams = data
+                    }
+                }*/
+                
                 participantUpdates.append(GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(
                     peerId: peerId,
                     ssrc: ssrc,
+                    jsonParams: jsonParams,
                     joinTimestamp: date,
                     activityTimestamp: activeDate.flatMap(Double.init),
                     muteState: muteState,
@@ -1444,4 +1547,24 @@ public func updatedCurrentPeerGroupCall(account: Account, peerId: PeerId) -> Sig
             return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.activeCall
         }
     }
+}
+
+private func mergeAndSortParticipants(current currentParticipants: [GroupCallParticipantsContext.Participant], with updatedParticipants: [GroupCallParticipantsContext.Participant]) -> [GroupCallParticipantsContext.Participant] {
+    var mergedParticipants = currentParticipants
+    
+    var existingParticipantIndices: [PeerId: Int] = [:]
+    for i in 0 ..< mergedParticipants.count {
+        existingParticipantIndices[mergedParticipants[i].peer.id] = i
+    }
+    for participant in updatedParticipants {
+        if let _ = existingParticipantIndices[participant.peer.id] {
+        } else {
+            existingParticipantIndices[participant.peer.id] = mergedParticipants.count
+            mergedParticipants.append(participant)
+        }
+    }
+    
+    mergedParticipants.sort()
+    
+    return mergedParticipants
 }

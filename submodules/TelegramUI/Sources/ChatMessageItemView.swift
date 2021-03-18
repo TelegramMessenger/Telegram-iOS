@@ -760,7 +760,7 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateAutomaticMediaDownloadSettings() {
     }
     
-    func updateStickerSettings() {
+    func updateStickerSettings(forceStopAnimations: Bool) {
     }
     
     func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
@@ -816,7 +816,7 @@ public class ChatMessageItemView: ListViewItemNode {
                 case .payment:
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
                 case let .urlAuth(url, buttonId):
-                    item.controllerInteraction.requestMessageActionUrlAuth(url, item.message.id, buttonId)
+                    item.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: item.message.id, buttonId: buttonId))
                 case .setupPoll:
                     break
             }

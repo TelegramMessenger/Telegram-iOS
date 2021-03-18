@@ -161,6 +161,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var reactionCountNode: TextNode?
     private var reactionButtonNode: HighlightTrackingButtonNode?
     private var repliesIcon: ASImageNode?
+    private var selfExpiringIcon: ASImageNode?
     private var replyCountNode: TextNode?
     
     private var type: ChatMessageDateAndStatusType?
@@ -202,7 +203,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int, _ isPinned: Bool) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int, _ isPinned: Bool, _ hasAutoremove: Bool) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -213,6 +214,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var currentBackgroundNode = self.backgroundNode
         var currentImpressionIcon = self.impressionIcon
         var currentRepliesIcon = self.repliesIcon
+        var currentSelfExpiringIcon = self.selfExpiringIcon
         
         let currentType = self.type
         let currentTheme = self.theme
@@ -222,7 +224,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         
         let previousLayoutSize = self.layoutSize
         
-        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replyCount, isPinned in
+        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replyCount, isPinned, hasAutoremove in
             let dateColor: UIColor
             var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
@@ -234,6 +236,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
             var repliesImage: UIImage?
+            var selfExpiringImage: UIImage?
             
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
@@ -259,6 +262,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     } else if isPinned {
                         repliesImage = graphics.incomingDateAndStatusPinnedIcon
                     }
+                    if hasAutoremove {
+                        //selfExpiringImage = graphics.incomingDateAndStatusSelfExpiringIcon
+                    }
                 case let .BubbleOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     outgoingStatus = status
@@ -275,6 +281,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     } else if isPinned {
                         repliesImage = graphics.outgoingDateAndStatusPinnedIcon
                     }
+                    if hasAutoremove {
+                        //selfExpiringImage = graphics.outgoingDateAndStatusSelfExpiringIcon
+                    }
                 case .ImageIncoming:
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
                     backgroundImage = graphics.dateAndStatusMediaBackground
@@ -290,6 +299,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.mediaRepliesIcon
                     } else if isPinned {
                         repliesImage = graphics.mediaPinnedIcon
+                    }
+                    if hasAutoremove {
+                        //selfExpiringImage = graphics.mediaSelfExpiringIcon
                     }
                 case let .ImageOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -308,6 +320,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     } else if isPinned {
                         repliesImage = graphics.mediaPinnedIcon
                     }
+                    if hasAutoremove {
+                        //selfExpiringImage = graphics.mediaSelfExpiringIcon
+                    }
                 case .FreeIncoming:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
@@ -324,6 +339,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.freeRepliesIcon
                     } else if isPinned {
                         repliesImage = graphics.freePinnedIcon
+                    }
+                    if hasAutoremove {
+                        //selfExpiringImage = graphics.freeSelfExpiringIcon
                     }
                 case let .FreeOutgoing(status):
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -342,6 +360,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         repliesImage = graphics.freeRepliesIcon
                     } else if isPinned {
                         repliesImage = graphics.freePinnedIcon
+                    }
+                    if hasAutoremove {
+                        //selfExpiringImage = graphics.freeSelfExpiringIcon
                     }
             }
             
@@ -393,6 +414,20 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 repliesIconSize = repliesImage.size
             } else {
                 currentRepliesIcon = nil
+            }
+            
+            var selfExpiringIconSize = CGSize()
+            if let selfExpiringImage = selfExpiringImage {
+                if currentSelfExpiringIcon == nil {
+                    let iconNode = ASImageNode()
+                    iconNode.isLayerBacked = true
+                    iconNode.displayWithoutProcessing = true
+                    iconNode.displaysAsynchronously = false
+                    currentSelfExpiringIcon = iconNode
+                }
+                selfExpiringIconSize = selfExpiringImage.size
+            } else {
+                currentSelfExpiringIcon = nil
             }
             
             if let outgoingStatus = outgoingStatus {
@@ -547,6 +582,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 replyCountLayoutAndApply = layoutAndApply
             } else if isPinned {
                 reactionInset += 12.0
+            }
+            
+            if !selfExpiringIconSize.width.isZero {
+                reactionInset += selfExpiringIconSize.width + 1.0
             }
             
             leftInset += reactionInset
@@ -795,6 +834,34 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                     }
                     
+                    if let currentSelfExpiringIcon = currentSelfExpiringIcon {
+                        currentSelfExpiringIcon.displaysAsynchronously = !presentationData.isPreview
+                        if currentSelfExpiringIcon.image !== selfExpiringImage {
+                            currentSelfExpiringIcon.image = selfExpiringImage
+                        }
+                        if currentSelfExpiringIcon.supernode == nil {
+                            strongSelf.selfExpiringIcon = currentSelfExpiringIcon
+                            strongSelf.addSubnode(currentSelfExpiringIcon)
+                            if animated {
+                                currentSelfExpiringIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                            }
+                        }
+                        currentSelfExpiringIcon.frame = CGRect(origin: CGPoint(x: reactionOffset - 2.0, y: backgroundInsets.top + offset + floor((date.size.height - selfExpiringIconSize.height) / 2.0)), size: selfExpiringIconSize)
+                        reactionOffset += 9.0
+                    } else if let selfExpiringIcon = strongSelf.selfExpiringIcon {
+                        strongSelf.selfExpiringIcon = nil
+                        if animated {
+                            if let previousLayoutSize = previousLayoutSize {
+                                selfExpiringIcon.frame = selfExpiringIcon.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
+                            }
+                            selfExpiringIcon.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak selfExpiringIcon] _ in
+                                selfExpiringIcon?.removeFromSupernode()
+                            })
+                        } else {
+                            selfExpiringIcon.removeFromSupernode()
+                        }
+                    }
+                    
                     if let (layout, apply) = replyCountLayoutAndApply {
                         let node = apply()
                         if strongSelf.replyCountNode !== node {
@@ -853,17 +920,17 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int, _ isPinned: Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
+    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int, _ isPinned: Bool, _ hasAutoremove: Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
         let currentLayout = node?.asyncLayout()
-        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned in
+        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned, hasAutoremove in
             let resultNode: ChatMessageDateAndStatusNode
             let resultSizeAndApply: (CGSize, (Bool) -> Void)
             if let node = node, let currentLayout = currentLayout {
                 resultNode = node
-                resultSizeAndApply = currentLayout(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned)
+                resultSizeAndApply = currentLayout(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned, hasAutoremove)
             } else {
                 resultNode = ChatMessageDateAndStatusNode()
-                resultSizeAndApply = resultNode.asyncLayout()(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned)
+                resultSizeAndApply = resultNode.asyncLayout()(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned, hasAutoremove)
             }
             
             return (resultSizeAndApply.0, { animated in

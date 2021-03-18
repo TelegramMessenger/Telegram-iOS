@@ -716,7 +716,10 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         self.stateValue = Atomic(value: NotificationExceptionState(mode: mode))
         self.listNode = ListView()
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
-        //self.listNode.keepBottomItemOverscrollBackground = presentationData.theme.chatList.backgroundColor
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
+        
         super.init()
         
         let stateValue = self.stateValue
@@ -1164,7 +1167,8 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
     }
     
     init(context: AccountContext, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -1172,6 +1176,9 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         super.init()
         

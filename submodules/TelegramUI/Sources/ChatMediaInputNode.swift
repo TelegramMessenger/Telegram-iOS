@@ -448,6 +448,8 @@ final class ChatMediaInputNode: ChatInputNode {
     private var currentView: ItemCollectionsView?
     private let dismissedPeerSpecificStickerPack = Promise<Bool>()
     
+    var requestDisableStickerAnimations: ((Bool) -> Void)?
+    
     private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState, DeviceMetrics, Bool)?
     private var paneArrangement: ChatMediaInputPaneArrangement
     private var initializedArrangement = false
@@ -493,10 +495,16 @@ final class ChatMediaInputNode: ChatInputNode {
         self.listView = ListView()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
         self.listView.scroller.panGestureRecognizer.cancelsTouchesInView = false
+        self.listView.accessibilityPageScrolledString = { row, count in
+            return strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.gifListView = ListView()
         self.gifListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
         self.gifListView.scroller.panGestureRecognizer.cancelsTouchesInView = false
+        self.gifListView.accessibilityPageScrolledString = { row, count in
+            return strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         var paneDidScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void)?
         var fixPaneScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void)?
@@ -1007,7 +1015,9 @@ final class ChatMediaInputNode: ChatInputNode {
             gallery.setHintWillBePresentedInPreviewingContext(true)
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: strongSelf.strings.MediaPicker_Send, icon: { _ in nil }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: strongSelf.strings.MediaPicker_Send, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
                 f(.default)
                 if isSaved {
                     let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect)
@@ -1016,7 +1026,9 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
             })))
             if isSaved || isGifSaved {
-                items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { _ in nil }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                }, action: { _, f in
                     f(.dismissWithoutContent)
                     
                     guard let strongSelf = self else {
@@ -1025,7 +1037,9 @@ final class ChatMediaInputNode: ChatInputNode {
                     let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.file.media.fileId).start()
                 })))
             } else if canSaveGif && !isGifSaved {
-                items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Preview_SaveGif, icon: { _ in nil }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Preview_SaveGif, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
                     f(.dismissWithoutContent)
                     
                     guard let strongSelf = self else {
@@ -1230,6 +1244,10 @@ final class ChatMediaInputNode: ChatInputNode {
                 let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
                     return sourceNode
                 })
+                controller.visibilityUpdated = { [weak self] visible in
+                    self?.requestDisableStickerAnimations?(visible)
+                    self?.simulateUpdateLayout(isVisible: !visible)
+                }
                 strongSelf.controllerInteraction.presentGlobalOverlayController(controller, nil)
                 return controller
             }

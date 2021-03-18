@@ -970,6 +970,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             if let inputMediaNode = inputNode as? ChatMediaInputNode, self.inputMediaNode == nil {
                 self.inputMediaNode = inputMediaNode
+                inputMediaNode.requestDisableStickerAnimations = { [weak self] disabled in
+                    self?.controller?.disableStickerAnimations = disabled
+                }
             }
             if self.inputNode != inputNode {
                 dismissedInputNode = self.inputNode
@@ -1163,6 +1166,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             previewing = false
         }
+        
+        var isSelectionEnabled = true
+        if previewing {
+            isSelectionEnabled = false
+        } else if case .pinnedMessages = self.chatPresentationInterfaceState.subject {
+            isSelectionEnabled = false
+        }
+        self.historyNode.isSelectionGestureEnabled = isSelectionEnabled
         
         var inputPanelSize: CGSize?
         var immediatelyLayoutInputPanelAndAnimateAppearance = false
@@ -2096,10 +2107,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.prefetchManager.updateAutoDownloadSettings(settings)
     }
     
-    func updateStickerSettings(_ settings: ChatInterfaceStickerSettings) {
+    func updateStickerSettings(_ settings: ChatInterfaceStickerSettings, forceStopAnimations: Bool) {
         self.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
-                itemNode.updateStickerSettings()
+                itemNode.updateStickerSettings(forceStopAnimations: forceStopAnimations)
             }
         }
     }
@@ -2180,6 +2191,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             })
             inputNode.interfaceInteraction = interfaceInteraction
+            inputNode.requestDisableStickerAnimations = { [weak self] disabled in
+                self?.controller?.disableStickerAnimations = disabled
+            }
             self.inputMediaNode = inputNode
             if let (validLayout, _) = self.validLayout {
                 let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, inputHeight: validLayout.inputHeight ?? 0.0, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: validLayout.deviceMetrics, isVisible: false)

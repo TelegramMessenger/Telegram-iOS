@@ -1,82 +1,292 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-
+import Display
 import LegacyComponents
+import TelegramPresentationData
 
-public enum CheckNodeStyle {
-    case plain
-    case overlay
-    case navigation
-    case compact
+public struct CheckNodeTheme {
+    public let backgroundColor: UIColor
+    public let strokeColor: UIColor
+    public let borderColor: UIColor
+    public let overlayBorder: Bool
+    public let hasInset: Bool
+    public let hasShadow: Bool
+    public let filledBorder: Bool
+    public let borderWidth: CGFloat?
+    
+    public init(backgroundColor: UIColor, strokeColor: UIColor, borderColor: UIColor, overlayBorder: Bool, hasInset: Bool, hasShadow: Bool, filledBorder: Bool = false, borderWidth: CGFloat? = nil) {
+        self.backgroundColor = backgroundColor
+        self.strokeColor = strokeColor
+        self.borderColor = borderColor
+        self.overlayBorder = overlayBorder
+        self.hasInset = hasInset
+        self.hasShadow = hasShadow
+        self.filledBorder = filledBorder
+        self.borderWidth = borderWidth
+    }
 }
 
-public final class CheckNode: ASDisplayNode {
-    private var strokeColor: UIColor
-    private var fillColor: UIColor
-    private var foregroundColor: UIColor
-    private let checkStyle: CheckNodeStyle
+public extension CheckNodeTheme {
+    enum Style {
+        case plain
+        case overlay
+    }
     
-    private var checkView: TGCheckButtonView?
+    init(theme: PresentationTheme, style: Style, hasInset: Bool = false) {
+        let borderColor: UIColor
+        var hasInset = hasInset
+        let overlayBorder: Bool
+        let hasShadow: Bool
+        switch style {
+            case .plain:
+                borderColor = theme.list.itemCheckColors.strokeColor
+                overlayBorder = false
+                hasShadow = false
+            case .overlay:
+                borderColor = UIColor(rgb: 0xffffff)
+                hasInset = true
+                overlayBorder = true
+                hasShadow = true
+        }
+
+        self.init(backgroundColor: theme.list.itemCheckColors.fillColor, strokeColor: theme.list.itemCheckColors.foregroundColor, borderColor: borderColor, overlayBorder: overlayBorder, hasInset: hasInset, hasShadow: hasShadow)
+    }
+}
+
+public enum CheckNodeContent {
+    case check
+    case counter(Int)
+}
+
+private final class CheckNodeParameters: NSObject {
+    let theme: CheckNodeTheme
+    let content: CheckNodeContent
+    let animationProgress: CGFloat
+    let selected: Bool
+    let animatingOut: Bool
+
+    init(theme: CheckNodeTheme, content: CheckNodeContent, animationProgress: CGFloat, selected: Bool, animatingOut: Bool) {
+        self.theme = theme
+        self.content = content
+        self.animationProgress = animationProgress
+        self.selected = selected
+        self.animatingOut = animatingOut
+    }
+}
+
+public class CheckNode: ASDisplayNode {
+    private var animatingOut = false
+    private var animationProgress: CGFloat = 0.0
+    public var theme: CheckNodeTheme {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
     
-    public private(set) var isChecked: Bool = false
+    public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
+        self.theme = theme
+        self.content = content
     
-    private weak var target: AnyObject?
-    private var action: Selector?
-    
-    public init(strokeColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, style: CheckNodeStyle) {
-        self.strokeColor = strokeColor
-        self.fillColor = fillColor
-        self.foregroundColor = foregroundColor
-        self.checkStyle = style
-        
         super.init()
-    }
-    
-    override public func didLoad() {
-        super.didLoad()
         
-        let style: TGCheckButtonStyle
-        let checkSize: CGSize
-        switch self.checkStyle {
-        case .plain:
-            style = TGCheckButtonStyleDefault
-            checkSize = CGSize(width: 32.0, height: 32.0)
-        case .overlay:
-            style = TGCheckButtonStyleMedia
-            checkSize = CGSize(width: 32.0, height: 32.0)
-        case .navigation:
-            style = TGCheckButtonStyleGallery
-            checkSize = CGSize(width: 39.0, height: 39.0)
-        case .compact:
-            style = TGCheckButtonStyleCompact
-            checkSize = CGSize(width: 30.0, height: 30.0)
+        self.isOpaque = false
+    }
+    
+    public var content: CheckNodeContent {
+        didSet {
+            self.setNeedsDisplay()
         }
-        let checkView = TGCheckButtonView(style: style, pallete: TGCheckButtonPallete(defaultBackgroundColor: self.fillColor, accentBackgroundColor: self.fillColor, defaultBorderColor: self.strokeColor, mediaBorderColor: self.strokeColor, chatBorderColor: self.strokeColor, check: self.foregroundColor, blueColor: self.fillColor, barBackgroundColor: self.fillColor))!
-        checkView.setSelected(true, animated: false)
-        checkView.layoutSubviews()
-        checkView.setSelected(self.isChecked, animated: false)
-        if let target = self.target, let action = self.action {
-            checkView.addTarget(target, action: action, for: .touchUpInside)
+    }
+    
+    public var selected = false
+    public func setSelected(_ selected: Bool, animated: Bool = false) {
+        guard self.selected != selected else {
+            return
         }
-        self.checkView = checkView
-        self.view.addSubview(checkView)
+        self.selected = selected
         
-        checkView.frame = CGRect(origin: CGPoint(), size: checkSize)
-    }
-    
-    public func setIsChecked(_ isChecked: Bool, animated: Bool) {
-        if isChecked != self.isChecked {
-            self.isChecked = isChecked
-            self.checkView?.setSelected(isChecked, animated: animated)
+        if animated {
+            self.animatingOut = !selected
+            
+            let animation = POPBasicAnimation()
+            animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
+                property?.readBlock = { node, values in
+                    values?.pointee = (node as! CheckNode).animationProgress
+                }
+                property?.writeBlock = { node, values in
+                    (node as! CheckNode).animationProgress = values!.pointee
+                    (node as! CheckNode).setNeedsDisplay()
+                }
+                property?.threshold = 0.01
+            }) as! POPAnimatableProperty)
+            animation.fromValue = (selected ? 0.0 : 1.0) as NSNumber
+            animation.toValue = (selected ? 1.0 : 0.0) as NSNumber
+            animation.timingFunction = CAMediaTimingFunction(name: selected ? CAMediaTimingFunctionName.easeOut : CAMediaTimingFunctionName.easeIn)
+            animation.duration = selected ? 0.21 : 0.15
+            self.pop_add(animation, forKey: "progress")
+        } else {
+            self.pop_removeAllAnimations()
+            self.animatingOut = false
+            self.animationProgress = selected ? 1.0 : 0.0
+            self.setNeedsDisplay()
         }
     }
     
-    public func addTarget(target: AnyObject?, action: Selector) {
-        self.target = target
-        self.action = action
-        if self.isNodeLoaded {
-            self.checkView?.addTarget(target, action: action, for: .touchUpInside)
+    public func setHighlighted(_ highlighted: Bool, animated: Bool = false) {
+    }
+
+    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+        return CheckNodeParameters(theme: self.theme, content: self.content, animationProgress: self.animationProgress, selected: self.selected, animatingOut: self.animatingOut)
+    }
+    
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+        let context = UIGraphicsGetCurrentContext()!
+        
+        if !isRasterizing {
+            context.setBlendMode(.copy)
+            context.setFillColor(UIColor.clear.cgColor)
+            context.fill(bounds)
         }
+        
+        if let parameters = parameters as? CheckNodeParameters {
+            let center = CGPoint(x: bounds.width / 2.0, y: bounds.width / 2.0)
+            
+            var borderWidth: CGFloat = 1.0 + UIScreenPixel
+            if parameters.theme.hasInset {
+                borderWidth = 1.5
+            }
+            if let customBorderWidth = parameters.theme.borderWidth {
+                borderWidth = customBorderWidth
+            }
+            
+            let checkWidth: CGFloat = 1.5
+            
+            let inset: CGFloat = parameters.theme.hasInset ? 2.0 - UIScreenPixel : 0.0
+          
+            let checkProgress = parameters.animatingOut ? 1.0 : parameters.animationProgress
+            let fillProgress = parameters.animatingOut ? 1.0 : min(1.0, parameters.animationProgress * 1.35)
+            
+            context.setStrokeColor(parameters.theme.borderColor.cgColor)
+            context.setLineWidth(borderWidth)
+            
+            let maybeScaleOut = {
+                if parameters.animatingOut {
+                    context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
+                    context.scaleBy(x: parameters.animationProgress, y: parameters.animationProgress)
+                    context.translateBy(x: -bounds.width / 2.0, y: -bounds.height / 2.0)
+                    
+                    context.setAlpha(parameters.animationProgress)
+                }
+            }
+                    
+            let borderInset = borderWidth / 2.0 + inset
+            let borderProgress: CGFloat = parameters.theme.filledBorder ? fillProgress : 1.0
+            let borderFrame = bounds.insetBy(dx: borderInset, dy: borderInset)
+            
+            if parameters.theme.filledBorder {
+                maybeScaleOut()
+            }
+            
+            context.saveGState()
+            if parameters.theme.hasShadow {
+                context.setShadow(offset: CGSize(), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
+            }
+            
+            context.strokeEllipse(in: borderFrame.insetBy(dx: borderFrame.width * (1.0 - borderProgress), dy: borderFrame.height * (1.0 - borderProgress)))
+            context.restoreGState()
+
+            if !parameters.theme.filledBorder {
+                maybeScaleOut()
+            }
+
+            context.setFillColor(parameters.theme.backgroundColor.cgColor)
+
+            let fillInset = parameters.theme.overlayBorder ? borderWidth + inset : inset
+            let fillFrame = bounds.insetBy(dx: fillInset, dy: fillInset)
+            context.fillEllipse(in: fillFrame.insetBy(dx: fillFrame.width * (1.0 - fillProgress), dy: fillFrame.height * (1.0 - fillProgress)))
+            
+            let scale = (bounds.width - inset) / 18.0
+
+            let firstSegment: CGFloat = max(0.0, min(1.0, checkProgress * 3.0))
+            let s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
+            let p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
+            let p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
+            
+            if !firstSegment.isZero {
+                if firstSegment < 1.0 {
+                    context.move(to: CGPoint(x: s.x + p1.x * firstSegment, y: s.y + p1.y * firstSegment))
+                    context.addLine(to: s)
+                } else {
+                    let secondSegment = (checkProgress - 0.33) * 1.5
+                    context.move(to: CGPoint(x: s.x + p1.x + p2.x * secondSegment, y: s.y + p1.y + p2.y * secondSegment))
+                    context.addLine(to: CGPoint(x: s.x + p1.x, y: s.y + p1.y))
+                    context.addLine(to: s)
+                }
+            }
+            
+            context.setStrokeColor(parameters.theme.strokeColor.cgColor)
+            if parameters.theme.strokeColor == .clear {
+                context.setBlendMode(.clear)
+            }
+            context.setLineWidth(checkWidth)
+            context.setLineCap(.round)
+            context.setLineJoin(.round)
+            context.setMiterLimit(10.0)
+            
+            context.strokePath()
+        }
+    }
+    
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+    }
+    
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+    }
+    
+    override public func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+    }
+}
+
+public class InteractiveCheckNode: CheckNode {
+    private let buttonNode: HighlightTrackingButtonNode
+    
+    public var valueChanged: ((Bool) -> Void)?
+    
+    override public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
+        self.buttonNode = HighlightTrackingButtonNode()
+        
+        super.init(theme: theme, content: content)
+        
+        self.addSubnode(self.buttonNode)
+        
+        self.buttonNode.addTarget(self, action: #selector(buttonPressed), forControlEvents: .touchUpInside)
+        
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            guard let strongSelf = self else {
+                return
+            }
+            if highlighted {
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
+                transition.updateTransformScale(node: strongSelf, scale: 0.85)
+            } else {
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
+                transition.updateTransformScale(node: strongSelf, scale: 1.0)
+            }
+        }
+    }
+    
+    @objc private func buttonPressed() {
+        self.setSelected(!self.selected, animated: true)
+        self.valueChanged?(self.selected)
+    }
+    
+    public override func layout() {
+        super.layout()
+        
+        self.buttonNode.frame = self.bounds
     }
 }

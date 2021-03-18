@@ -327,81 +327,81 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelInfoControllerArguments
         switch self {
-            case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
+            case let .info(_, _, dateTimeFormat, peer, cachedData, state, updatingAvatar):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
-            case let .about(theme, text, value):
+            case let .about(_, text, value):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: [.allUrl, .mention, .hashtag], multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayContextMenu(ChannelInfoEntryTag.about, value)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: ChannelInfoEntryTag.about)
-            case let .addressName(theme, text, value):
+            case let .addressName(_, text, value):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: text, text: "https://t.me/\(value)", textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.displayAddressNameContextMenu("https://t.me/\(value)")
                 }, longTapAction: {
                     arguments.displayContextMenu(ChannelInfoEntryTag.link, "https://t.me/\(value)")
                 }, tag: ChannelInfoEntryTag.link)
-            case let .channelPhotoSetup(theme, text):
+            case let .channelPhotoSetup(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.changeProfilePhoto()
                 })
-            case let .channelTypeSetup(theme, text, value):
+            case let .channelTypeSetup(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openChannelTypeSetup()
                 })
-            case let .discussionGroupSetup(theme, text, value):
+            case let .discussionGroupSetup(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openDiscussionGroupSetup()
                 })
-            case let .discussionGroupSetupInfo(theme, text):
+            case let .discussionGroupSetupInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .channelDescriptionSetup(theme, placeholder, value):
+            case let .channelDescriptionSetup(_, placeholder, value):
                 return ItemListMultilineInputItem(presentationData: presentationData, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .plain, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 })
-            case let .admins(theme, text, value):
+            case let .admins(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openAdmins()
                 })
-            case let .members(theme, text, value):
+            case let .members(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openMembers()
                 })
-            case let .banned(theme, text, value):
+            case let .banned(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openBanned()
                 })
-            case let .signMessages(theme, text, value):
+            case let .signMessages(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .plain, updated: { updated in
                     arguments.toggleSignatures(updated)
                 })
-            case let .signInfo(theme, text):
+            case let .signInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, style: .plain)
-            case let .sharedMedia(theme, text):
+            case let .sharedMedia(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .plain, action: {
                     arguments.openSharedMedia()
                 })
-            case let .stats(theme, text):
+            case let .stats(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .plain, action: {
                     arguments.openStats()
                 })
-            case let .notifications(theme, text, value):
+            case let .notifications(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.changeNotificationMuteSettings()
                 })
-            case let .report(theme, text):
+            case let .report(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.reportChannel()
                 })
-            case let .leave(theme, text):
+            case let .leave(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.leaveChannel()
                 })
-            case let .deleteChannel(theme, text):
+            case let .deleteChannel(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.deleteChannel()
                 })
@@ -529,7 +529,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                 }
             }
             
-            if let _ = state.editingState, let adminRights = peer.adminRights, !adminRights.isEmpty {
+            if let _ = state.editingState, let _ = peer.adminRights {
                 let discussionGroupTitle: String?
                 if let cachedData = view.cachedData as? CachedChannelData {
                     if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
@@ -856,11 +856,11 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, openBanned: {
         pushControllerImpl?(channelBlacklistController(context: context, peerId: peerId))
     }, reportChannel: {
-        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
+        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), passthrough: false, present: { c, a in
             presentControllerImpl?(c, a)
         }, push: { c in
             pushControllerImpl?(c)
-        }, completion: { _ in }), nil)
+        }, completion: { _, _ in }), nil)
     }, leaveChannel: {
         let _ = (context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)
@@ -934,23 +934,14 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                     globalNotificationSettings = settings
                 }
             }
-            
-            var canManageChannel = false
-            if let peer = peer as? TelegramChannel {
-                if peer.flags.contains(.isCreator) {
-                    canManageChannel = true
-                } else if let adminRights = peer.adminRights, !adminRights.isEmpty {
-                    canManageChannel = true
-                }
-            }
-            
+                        
             var canEditChannel = false
             var hasSomethingToEdit = false
             if let peer = view.peers[view.peerId] as? TelegramChannel {
                 canEditChannel = peer.hasPermission(.changeInfo)
                 if canEditChannel {
                     hasSomethingToEdit = true
-                } else if let adminRights = peer.adminRights, !adminRights.isEmpty {
+                } else if let _ = peer.adminRights {
                     if let cachedData = view.cachedData as? CachedChannelData, case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let _ = maybeLinkedDiscussionPeerId {
                         hasSomethingToEdit = true
                     }

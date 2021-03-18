@@ -1017,7 +1017,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                                     let _ = removePeerChat(account: context.account, peerId: peerId, reportChatSpam: reportSpam).start()
                                     popToRootImpl?()
                                 } else if reportSpam {
-                                    let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam).start()
+                                    let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam, message: "").start()
                                 }
                                 
                                 deleteSendMessageIntents(peerId: peerId)
@@ -1176,11 +1176,11 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 openChatImpl?()
             })
     }, report: {
-        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
+        presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), passthrough: false, present: { c, a in
             presentControllerImpl?(c, a)
         }, push: { c in
             pushControllerImpl?(c)
-        }, completion: { _ in }), nil)
+        }, completion: { _, _ in }), nil)
     })
         
     let deviceContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> = peerView.get()
@@ -1420,10 +1420,17 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         if let navigationController = (controller?.navigationController as? NavigationController) {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                         }
-                    }, error: { [weak controller] _ in
+                    }, error: { [weak controller] error in
                         if let controller = controller {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            let text: String
+                            switch error {
+                                case .limitExceeded:
+                                    text = presentationData.strings.TwoStepAuth_FloodError
+                                default:
+                                    text = presentationData.strings.Login_UnknownError
+                            }
+                            controller.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         }
                     }))
                 })]), in: .window(.root))
@@ -1438,6 +1445,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
             
         }, sendFile: nil,
         sendSticker: nil,
+        requestMessageActionUrlAuth: nil,
         present: { c, a in
             presentControllerImpl?(c, a)
         }, dismissInput: {

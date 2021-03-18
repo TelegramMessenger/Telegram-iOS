@@ -201,13 +201,13 @@ extension ChannelParticipant {
             case let .channelParticipant(userId, date):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: nil, rank: nil)
             case let .channelParticipantCreator(_, userId, adminRights, rank):
-                self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), canBeEditedByAccountPeer: true), rank: rank)
+                self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights) ?? TelegramChatAdminRights(rights: []), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), canBeEditedByAccountPeer: true), rank: rank)
             case let .channelParticipantBanned(flags, userId, restrictedBy, date, bannedRights):
                 let hasLeft = (flags & (1 << 0)) != 0
                 let banInfo = ChannelParticipantBannedInfo(rights: TelegramChatBannedRights(apiBannedRights: bannedRights), restrictedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: restrictedBy), timestamp: date, isMember: !hasLeft)
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: banInfo, rank: nil)
             case let .channelParticipantAdmin(flags, userId, _, promotedBy, date, adminRights, rank: rank):
-                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: promotedBy), canBeEditedByAccountPeer: (flags & (1 << 0)) != 0), banInfo: nil, rank: rank)
+                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights) ?? TelegramChatAdminRights(rights: []), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: promotedBy), canBeEditedByAccountPeer: (flags & (1 << 0)) != 0), banInfo: nil, rank: rank)
             case let .channelParticipantSelf(userId, _, date):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: nil, rank: nil)
             case let .channelParticipantLeft(userId):

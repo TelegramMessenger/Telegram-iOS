@@ -1,4 +1,4 @@
-import PostboxDataTypes
+/*import PostboxDataTypes
 
 struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {
     var rawValue: Int32
@@ -52,3 +52,4 @@ struct Namespaces {
         static let SecretChat: Int32 = 3
     }
 }
+*/

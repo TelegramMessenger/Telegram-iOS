@@ -232,6 +232,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     }
     
     var dismissImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -277,6 +278,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                 return state
             }
             if !currentAddressName.isEmpty {
+                dismissInputImpl?()
                 presentControllerImpl?(ShareController(context: context, subject: .url("https://t.me/\(currentAddressName)")), nil)
             }
         })
@@ -353,6 +355,9 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)

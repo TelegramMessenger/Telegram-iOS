@@ -50,7 +50,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     private let feedbackTap: () -> Void
     
     private(set) var gesture: UIGestureRecognizer?
-    private var currentHighlightedActionNode: ContextActionNode?
+    private var currentHighlightedActionNode: ContextActionNodeProtocol?
     
     var panSelectionGestureEnabled: Bool = true {
         didSet {
@@ -84,17 +84,27 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             switch items[i] {
             case let .action(action):
                 itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected)))
-                if i != items.count - 1, case .action = items[i + 1] {
-                    let separatorNode = ASDisplayNode()
-                    separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
-                    itemNodes.append(.itemSeparator(separatorNode))
+                if i != items.count - 1 {
+                    switch items[i + 1] {
+                    case .action, .custom:
+                        let separatorNode = ASDisplayNode()
+                        separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
+                        itemNodes.append(.itemSeparator(separatorNode))
+                    default:
+                        break
+                    }
                 }
             case let .custom(item, _):
                 itemNodes.append(.custom(item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)))
-                if i != items.count - 1, case .action = items[i + 1] {
-                    let separatorNode = ASDisplayNode()
-                    separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
-                    itemNodes.append(.itemSeparator(separatorNode))
+                if i != items.count - 1 {
+                    switch items[i + 1] {
+                    case .action, .custom:
+                        let separatorNode = ASDisplayNode()
+                        separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
+                        itemNodes.append(.itemSeparator(separatorNode))
+                    default:
+                        break
+                    }
                 }
             case .separator:
                 let separatorNode = ASDisplayNode()
@@ -169,7 +179,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             if self.effectView == nil {
                 let effectView: UIVisualEffectView
                 if #available(iOS 13.0, *) {
-                    if self.presentationData.theme.overallDarkAppearance {
+                    if self.presentationData.theme.rootController.keyboardColor == .dark {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
                     } else {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
@@ -281,12 +291,16 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.containerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
     }
     
-    func actionNode(at point: CGPoint) -> ContextActionNode? {
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol? {
         for itemNode in self.itemNodes {
             switch itemNode {
             case let .action(actionNode):
                 if actionNode.frame.contains(point) {
                     return actionNode
+                }
+            case let .custom(node):
+                if let node = node as? ContextActionNodeProtocol, node.frame.contains(point) {
+                    return node
                 }
             default:
                 break
@@ -526,7 +540,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.scrollNode.frame = CGRect(origin: CGPoint(), size: containerSize)
     }
     
-    func actionNode(at point: CGPoint) -> ContextActionNode? {
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol? {
         return self.actionsNode.actionNode(at: self.view.convert(point, to: self.actionsNode.view))
     }
     

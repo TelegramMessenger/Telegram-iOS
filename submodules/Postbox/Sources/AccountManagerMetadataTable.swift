@@ -79,6 +79,17 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
             return true
         }
     }
+    
+    public var lockId: String? {
+        switch self {
+        case .none:
+            return nil
+        case let .numericalPassword(value):
+            return "numericalPassword:\(value)"
+        case let .plaintextPassword(value):
+            return "plaintextPassword:\(value)"
+        }
+    }
 }
 
 public struct AuthAccountRecord: PostboxCoding, Codable {

@@ -74,6 +74,10 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
     if scope.isEmpty {
         return .single([])
     }
+    var query = query
+    if query == "\u{2764}" {
+        query = "\u{2764}\u{FE0F}"
+    }
     return account.postbox.transaction { transaction -> ([FoundStickerItem], CachedStickerQueryResult?) in
         var result: [FoundStickerItem] = []
         if scope.contains(.installed) {

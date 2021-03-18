@@ -14,6 +14,7 @@ import DeviceLocationManager
 import TelegramNotices
 
 enum ChatContextQueryError {
+    case generic
     case inlineBotLocationRequest(PeerId)
 }
 
@@ -296,7 +297,12 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         }
                     } ?? .single(nil), offset: "")
                     |> mapError { error -> ChatContextQueryError in
-                        return .inlineBotLocationRequest(user.id)
+                        switch error {
+                            case .generic:
+                                return .generic
+                            case .locationRequired:
+                                return .inlineBotLocationRequest(user.id)
+                        }
                     }
                     |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                         return { _ in

@@ -1198,6 +1198,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         }, sendFile: nil,
                         sendSticker: nil,
+                        requestMessageActionUrlAuth: nil,
                         present: { c, a in
                             self?.present(c, a)
                         }, dismissInput: {
@@ -1275,6 +1276,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             fromPlayingVideo = true
             entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: nil))
         } else {
+            fromPlayingVideo = true
             var medias: [InstantPageMedia] = mediasFromItems(items)
             medias = medias.filter {
                 return $0.media is TelegramMediaImage || $0.media is TelegramMediaFile

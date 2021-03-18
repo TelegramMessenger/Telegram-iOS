@@ -30,6 +30,9 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.context = context
         self.query = query
         self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return strings.VoiceOver_ScrollStatus(row, count).0
+        }
         
         self.toolbarBackgroundNode = ASDisplayNode()
         self.toolbarBackgroundNode.backgroundColor = theme.rootController.navigationBar.backgroundColor

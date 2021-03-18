@@ -22,8 +22,9 @@ public class StatsMessageItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: (() -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    init(context: AccountContext, presentationData: ItemListPresentationData, message: Message, views: Int32, forwards: Int32, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?) {
+    init(context: AccountContext, presentationData: ItemListPresentationData, message: Message, views: Int32, forwards: Int32, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -32,6 +33,7 @@ public class StatsMessageItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.action = action
+        self.contextAction = contextAction
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -88,6 +90,8 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
     let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     private let extractedBackgroundImageNode: ASImageNode
+    private let offsetContainerNode: ASDisplayNode
+    private let countersContainerNode: ASDisplayNode
     
     private var extractedRect: CGRect?
     private var nonExtractedRect: CGRect?
@@ -134,6 +138,9 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         self.contentImageNode = TransformImageNode()
         self.contentImageNode.isLayerBacked = true
         
+        self.offsetContainerNode = ASDisplayNode()
+        self.countersContainerNode = ASDisplayNode()
+        
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         
@@ -153,13 +160,56 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.contentImageNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.labelNode)
-        self.addSubnode(self.viewsNode)
-        self.addSubnode(self.forwardsNode)
+        self.containerNode.addSubnode(self.contextSourceNode)
+        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
+        self.addSubnode(self.containerNode)
+        
+        self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.offsetContainerNode)
+        self.contextSourceNode.contentNode.addSubnode(self.countersContainerNode)
+        
+        self.offsetContainerNode.addSubnode(self.contentImageNode)
+        self.offsetContainerNode.addSubnode(self.titleNode)
+        self.offsetContainerNode.addSubnode(self.labelNode)
+        self.countersContainerNode.addSubnode(self.viewsNode)
+        self.countersContainerNode.addSubnode(self.forwardsNode)
+        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         
         self.addSubnode(self.activateArea)
+        
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
+                gesture.cancel()
+                return
+            }
+            contextAction(strongSelf.contextSourceNode, gesture)
+        }
+        
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            
+            if isExtracted {
+                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.list.itemBlocksBackgroundColor)
+            }
+            
+            if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
+                let rect = isExtracted ? extractedRect : nonExtractedRect
+                transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: rect)
+            }
+                        
+            transition.updateAlpha(node: strongSelf.countersContainerNode, alpha: isExtracted ? 0.0 : 1.0)
+
+            transition.updateSublayerTransformOffset(layer: strongSelf.countersContainerNode.layer, offset: CGPoint(x: isExtracted ? -24.0 : 0.0, y: 0.0))
+            transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? 12.0 : 0.0, y: 0.0))
+                       
+            transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
+                if !isExtracted {
+                    self?.extractedBackgroundImageNode.image = nil
+                }
+            })
+        }
     }
     
     public func asyncLayout() -> (_ item: StatsMessageItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -270,6 +320,25 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width - 16.0, height: layout.contentSize.height))
+                    let extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
+                    strongSelf.extractedRect = extractedRect
+                    strongSelf.nonExtractedRect = nonExtractedRect
+                    
+                    if strongSelf.contextSourceNode.isExtractedToContextPreview {
+                        strongSelf.extractedBackgroundImageNode.frame = extractedRect
+                    } else {
+                        strongSelf.extractedBackgroundImageNode.frame = nonExtractedRect
+                    }
+                    strongSelf.contextSourceNode.contentRect = extractedRect
+                    
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    strongSelf.offsetContainerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    strongSelf.countersContainerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = text

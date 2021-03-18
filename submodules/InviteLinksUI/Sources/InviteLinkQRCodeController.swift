@@ -11,7 +11,7 @@ import AccountContext
 import SolidRoundedButtonNode
 import AnimatedStickerNode
 
-private func shareQrCode(context: AccountContext, link: String) {
+private func shareQrCode(context: AccountContext, link: String, view: UIView) {
     let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")))
     |> map { _, generator -> UIImage? in
         let imageSize = CGSize(width: 768.0, height: 768.0)
@@ -24,6 +24,10 @@ private func shareQrCode(context: AccountContext, link: String) {
         }
         
         let activityController = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        if let window = view.window {
+            activityController.popoverPresentationController?.sourceView = window
+            activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+        }
         context.sharedContext.applicationBindings.presentNativeController(activityController)
     })
 }
@@ -37,14 +41,21 @@ public final class InviteLinkQRCodeController: ViewController {
     
     private let context: AccountContext
     private let invite: ExportedInvitation
+    private let isGroup: Bool
 
     private var presentationDataDisposable: Disposable?
     
+    private var initialBrightness: CGFloat?
+    private var brightnessArguments: (Double, Double, CGFloat, CGFloat)?
+    
+    private var animator: ConstantDisplayLinkAnimator?
+    
     private let idleTimerExtensionDisposable = MetaDisposable()
     
-    public init(context: AccountContext, invite: ExportedInvitation) {
+    public init(context: AccountContext, invite: ExportedInvitation, isGroup: Bool) {
         self.context = context
         self.invite = invite
+        self.isGroup = isGroup
         
         super.init(navigationBarPresentationData: nil)
         
@@ -62,6 +73,11 @@ public final class InviteLinkQRCodeController: ViewController {
         self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+            self?.updateBrightness()
+        })
+        self.animator?.isPaused = true
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -71,10 +87,11 @@ public final class InviteLinkQRCodeController: ViewController {
     deinit {
         self.presentationDataDisposable?.dispose()
         self.idleTimerExtensionDisposable.dispose()
+        self.animator?.invalidate()
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, invite: self.invite)
+        self.displayNode = Node(context: self.context, invite: self.invite, isGroup: self.isGroup)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -83,20 +100,43 @@ public final class InviteLinkQRCodeController: ViewController {
         }
     }
     
-    override public func loadView() {
-        super.loadView()
-    }
-    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if !self.animatedIn {
             self.animatedIn = true
             self.controllerNode.animateIn()
+            
+            self.initialBrightness = UIScreen.main.brightness
+            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, 1.0)
+            self.updateBrightness()
+        }
+    }
+    
+    private func updateBrightness() {
+        if let (startTime, duration, initial, target) = self.brightnessArguments {
+            self.animator?.isPaused = false
+            
+            let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
+            let value = initial + (target - initial) * t
+            
+            UIScreen.main.brightness = value
+            
+            if t >= 1.0 {
+                self.brightnessArguments = nil
+                self.animator?.isPaused = true
+            }
+        } else {
+            self.animator?.isPaused = true
         }
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        if UIScreen.main.brightness > 0.99, let initialBrightness = self.initialBrightness {
+            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, initialBrightness)
+            self.updateBrightness()
+        }
+        
         self.controllerNode.animateOut(completion: completion)
     }
     
@@ -133,7 +173,7 @@ public final class InviteLinkQRCodeController: ViewController {
         var dismiss: (() -> Void)?
         var cancel: (() -> Void)?
         
-        init(context: AccountContext, invite: ExportedInvitation) {
+        init(context: AccountContext, invite: ExportedInvitation, isGroup: Bool) {
             self.context = context
             self.invite = invite
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -178,6 +218,8 @@ public final class InviteLinkQRCodeController: ViewController {
             
             self.qrButtonNode = HighlightTrackingButtonNode()
             self.qrImageNode = TransformImageNode()
+            self.qrImageNode.clipsToBounds = true
+            self.qrImageNode.cornerRadius = 16.0
             
             self.qrIconNode = AnimatedStickerNode()
             if let path = getAppBundle().path(forResource: "PlaneLogo", ofType: "tgs") {
@@ -211,13 +253,13 @@ public final class InviteLinkQRCodeController: ViewController {
             
             let textFont = Font.regular(13.0)
             
-            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_QRCode_Info, font: textFont, textColor: secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel, font: textFont, textColor: secondaryTextColor)
             self.buttonNode.title = self.presentationData.strings.InviteLink_QRCode_Share
             
             self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
             self.buttonNode.pressed = { [weak self] in
                 if let strongSelf = self{
-                    shareQrCode(context: strongSelf.context, link: strongSelf.invite.link)
+                    shareQrCode(context: strongSelf.context, link: strongSelf.invite.link, view: strongSelf.view)
                 }
             }
             
@@ -249,7 +291,7 @@ public final class InviteLinkQRCodeController: ViewController {
         }
         
         @objc private func qrPressed() {
-            shareQrCode(context: self.context, link: self.invite.link)
+            shareQrCode(context: self.context, link: self.invite.link, view: self.view)
         }
         
         func updatePresentationData(_ presentationData: PresentationData) {
@@ -342,7 +384,7 @@ public final class InviteLinkQRCodeController: ViewController {
             self.containerLayout = (layout, navigationBarHeight)
             
             var insets = layout.insets(options: [.statusBar, .input])
-            insets.top = max(10.0, insets.top)
+            insets.top = 32.0
             
             let makeImageLayout = self.qrImageNode.asyncLayout()
             let imageSide: CGFloat = 240.0
@@ -351,7 +393,9 @@ public final class InviteLinkQRCodeController: ViewController {
             
             let _ = imageApply()
             
-            let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: insets.top + 16.0), size: imageSize)
+            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+            
+            let imageFrame = CGRect(origin: CGPoint(x: floor((width - imageSize.width) / 2.0), y: insets.top + 16.0), size: imageSize)
             transition.updateFrame(node: self.qrImageNode, frame: imageFrame)
             transition.updateFrame(node: self.qrButtonNode, frame: imageFrame)
             
@@ -362,26 +406,32 @@ public final class InviteLinkQRCodeController: ViewController {
                 transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
             }
             
-            let inset: CGFloat = 22.0
-            let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-            let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
+            let inset: CGFloat = 32.0
+            var textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let textFrame = CGRect(origin: CGPoint(x: floor((width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
+            
+            var textSpacing: CGFloat = 111.0
+            if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
+                textSize = CGSize()
+                self.textNode.isHidden = true
+                textSpacing = 52.0
+            } else {
+                self.textNode.isHidden = false
+            }
             
             let buttonSideInset: CGFloat = 16.0
             let bottomInset = insets.bottom + 10.0
             let buttonWidth = layout.size.width - buttonSideInset * 2.0
             let buttonHeight: CGFloat = 50.0
             
-            let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
+            let buttonFrame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
             transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
             let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
             
-            
             let titleHeight: CGFloat = 54.0
-            let contentHeight = titleHeight + textSize.height + imageSize.height + bottomInset + 121.0
-            
-            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
-            
+            let contentHeight = titleHeight + textSize.height + imageSize.height + bottomInset + textSpacing
+                        
             let sideInset = floor((layout.size.width - width) / 2.0)
             let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
             let contentFrame = contentContainerFrame

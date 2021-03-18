@@ -291,7 +291,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 isReplyThread = true
             }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
             
             var contentSize = imageSize
             var dateAndStatusOverflow = false
@@ -494,12 +494,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let isSecretMedia = item.message.containsSecretMedia
         var secretBeginTimeAndTimeout: (Double, Double)?
         if isSecretMedia {
-            for attribute in item.message.attributes {
-                if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                    if let countdownBeginTime = attribute.countdownBeginTime {
-                        secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
-                    }
-                    break
+            if let attribute = item.message.autoclearAttribute {
+                if let countdownBeginTime = attribute.countdownBeginTime {
+                    secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                }
+            } else if let attribute = item.message.autoremoveAttribute {
+                if let countdownBeginTime = attribute.countdownBeginTime {
+                    secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                 }
             }
         }

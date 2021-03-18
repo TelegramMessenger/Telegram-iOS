@@ -13,6 +13,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

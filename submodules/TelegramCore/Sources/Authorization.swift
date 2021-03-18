@@ -32,7 +32,7 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
 }
 
 public func sendAuthorizationCode(accountManager: AccountManager, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
-    let sendCode = Api.functions.auth.sendCode(flags: 0, phoneNumber: phoneNumber, currentNumber: nil, apiId: apiId, apiHash: apiHash)
+    let sendCode = Api.functions.auth.sendCode(phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, settings: .codeSettings(flags: 0))
     
     let codeAndAccount = account.network.request(sendCode, automaticFloodWait: false)
     |> map { result in

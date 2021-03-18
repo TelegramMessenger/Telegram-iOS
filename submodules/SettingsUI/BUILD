@@ -89,6 +89,7 @@ swift_library(
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/AuthTransferUI:AuthTransferUI",
         "//submodules/WidgetSetupScreen:WidgetSetupScreen",
+        "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

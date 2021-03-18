@@ -141,3 +141,58 @@ public func clearCallHistory(account: Account, forEveryone: Bool) -> Signal<Neve
     |> ignoreValues
     |> castError(ClearCallHistoryError.self)
 }
+
+public enum SetChatMessageAutoremoveTimeoutError {
+    case generic
+}
+
+public func setChatMessageAutoremoveTimeoutInteractively(account: Account, peerId: PeerId, timeout: Int32?) -> Signal<Never, SetChatMessageAutoremoveTimeoutError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    }
+    |> castError(SetChatMessageAutoremoveTimeoutError.self)
+    |> mapToSignal { inputPeer -> Signal<Never, SetChatMessageAutoremoveTimeoutError> in
+        guard let inputPeer = inputPeer else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.messages.setHistoryTTL(peer: inputPeer, period: timeout ?? 0))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> castError(SetChatMessageAutoremoveTimeoutError.self)
+        |> mapToSignal { result -> Signal<Never, SetChatMessageAutoremoveTimeoutError> in
+            if let result = result {
+                account.stateManager.addUpdates(result)
+                
+                return account.postbox.transaction { transaction -> Void in
+                    transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
+                        let updatedTimeout: CachedPeerAutoremoveTimeout
+                        if let timeout = timeout {
+                            updatedTimeout = .known(CachedPeerAutoremoveTimeout.Value(peerValue: timeout))
+                        } else {
+                            updatedTimeout = .known(nil)
+                        }
+                        
+                        if let current = current as? CachedUserData {
+                            return current.withUpdatedAutoremoveTimeout(updatedTimeout)
+                        } else if let current = current as? CachedGroupData {
+                            return current.withUpdatedAutoremoveTimeout(updatedTimeout)
+                        } else if let current = current as? CachedChannelData {
+                            return current.withUpdatedAutoremoveTimeout(updatedTimeout)
+                        } else {
+                            return current
+                        }
+                    })
+                }
+                |> castError(SetChatMessageAutoremoveTimeoutError.self)
+                |> ignoreValues
+            } else {
+                return .fail(.generic)
+            }
+        }
+        |> `catch` { _ -> Signal<Never, SetChatMessageAutoremoveTimeoutError> in
+            return .complete()
+        }
+    }
+}

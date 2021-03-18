@@ -107,7 +107,7 @@ public enum ChatHistoryImport {
         case chatAdminRequired
     }
     
-    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
+    public static func uploadMedia(account: Account, session: Session, file: TempBoxFile, disposeFileAfterDone: Bool, fileName: String, mimeType: String, type: MediaType) -> Signal<Float, UploadMediaError> {
         var forceNoBigParts = true
         guard let size = fileSize(file.path), size != 0 else {
             return .single(1.0)
@@ -160,6 +160,11 @@ public enum ChatHistoryImport {
             |> mapToSignal { result -> Signal<Float, UploadMediaError> in
                 return .single(1.0)
             }
+            |> afterDisposed {
+                if disposeFileAfterDone {
+                    TempBox.shared.dispose(file)
+                }
+            }
         }
     }
     
@@ -181,42 +186,58 @@ public enum ChatHistoryImport {
         }
     }
     
-    public enum CheckPeerImportError {
-        case generic
-        case userIsNotMutualContact
+    public enum CheckPeerImportResult {
+        case allowed
+        case alert(String)
     }
     
-    public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<Never, CheckPeerImportError> {
+    public enum CheckPeerImportError {
+        case generic
+        case chatAdminRequired
+        case invalidChatType
+        case userBlocked
+        case limitExceeded
+        case notMutualContact
+    }
+    
+    public static func checkPeerImport(account: Account, peerId: PeerId) -> Signal<CheckPeerImportResult, CheckPeerImportError> {
         return account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)
         }
         |> castError(CheckPeerImportError.self)
-        |> mapToSignal { peer -> Signal<Never, CheckPeerImportError> in
+        |> mapToSignal { peer -> Signal<CheckPeerImportResult, CheckPeerImportError> in
             guard let peer = peer else {
                 return .fail(.generic)
             }
-            if let inputUser = apiInputUser(peer) {
-                return account.network.request(Api.functions.users.getUsers(id: [inputUser]))
-                |> mapError { _ -> CheckPeerImportError in
+            guard let inputPeer = apiInputPeer(peer) else {
+                return .fail(.generic)
+            }
+            
+            return account.network.request(Api.functions.messages.checkHistoryImportPeer(peer: inputPeer))
+            |> mapError { error -> CheckPeerImportError in
+                if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
+                    return .chatAdminRequired
+                } else if error.errorDescription == "IMPORT_PEER_TYPE_INVALID" {
+                    return .invalidChatType
+                } else if error.errorDescription == "USER_IS_BLOCKED" {
+                    return .userBlocked
+                } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
+                    return .notMutualContact
+                } else if error.errorDescription == "FLOOD_WAIT" {
+                    return .limitExceeded
+                } else {
                     return .generic
                 }
-                |> mapToSignal { result -> Signal<Never, CheckPeerImportError> in
-                    guard let apiUser = result.first else {
-                        return .fail(.generic)
-                    }
-                    switch apiUser {
-                    case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _):
-                        if (flags & (1 << 12)) == 0 {
-                            // not mutual contact
-                            return .fail(.userIsNotMutualContact)
-                        }
-                        return .complete()
-                    case.userEmpty:
-                        return .fail(.generic)
+            }
+            |> map { result -> CheckPeerImportResult in
+                switch result {
+                case let .checkedHistoryImportPeer(confirmText):
+                    if confirmText.isEmpty {
+                        return .allowed
+                    } else {
+                        return .alert(confirmText)
                     }
                 }
-            } else {
-                return .complete()
             }
         }
     }

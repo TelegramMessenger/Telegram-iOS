@@ -8,6 +8,10 @@ load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_framework",
 )
 
+load("@build_bazel_rules_apple//apple:resources.bzl",
+    "swift_intent_library",
+)
+
 load("@build_bazel_rules_apple//apple:watchos.bzl",
     "watchos_application",
     "watchos_extension",
@@ -26,6 +30,13 @@ load(
     "telegram_bundle_id",
     "telegram_aps_environment",
     "telegram_team_id",
+    "telegram_enable_icloud",
+    "telegram_enable_siri",
+    "telegram_enable_watch",
+)
+
+load("@build_bazel_rules_apple//apple:resources.bzl",
+    "swift_intent_library",
 )
 
 config_setting(
@@ -284,7 +295,7 @@ apple_pay_merchants_fragment = "" if apple_pay_merchants == [] else """
 <key>com.apple.developer.in-app-payments</key>
 <array>
 """ + "\n".join([
-"    <string>{}</string>".format(merchant_id) for merchant_id in apple_pay_merchants
+"    <string>{merchant_id}</string>".format(merchant_id=merchant_id) for merchant_id in apple_pay_merchants
 ]) + "\n" + """
 </array>
 """
@@ -301,44 +312,66 @@ official_carplay_fragment = """
 """
 carplay_fragment = official_carplay_fragment if telegram_bundle_id in official_bundle_ids else ""
 
-telegram_entitlements_template = """
-    <key>com.apple.developer.icloud-services</key>
-    <array>
-        <string>CloudKit</string>
-        <string>CloudDocuments</string>
-    </array>
-    <key>com.apple.developer.icloud-container-identifiers</key>
-    <array>
-        <string>iCloud.{telegram_bundle_id}</string>
-    </array>
-    <key>aps-environment</key>
-    <string>{telegram_aps_environment}</string>
-    <key>com.apple.developer.associated-domains</key>
-    <array>
-        <string>applinks:telegram.me</string>
-        <string>applinks:t.me</string>
-    </array>
-    <key>com.apple.developer.siri</key>
-    <true/>
+icloud_fragment = "" if not telegram_enable_icloud else """
+<key>com.apple.developer.icloud-services</key>
+<array>
+    <string>CloudKit</string>
+    <string>CloudDocuments</string>
+</array>
+<key>com.apple.developer.icloud-container-identifiers</key>
+<array>
+    <string>iCloud.{telegram_bundle_id}</string>
+</array>
+<key>com.apple.developer.icloud-container-environment</key>
+<string>{telegram_icloud_environment}</string>
+""".format(
+    telegram_bundle_id=telegram_bundle_id,
+    telegram_icloud_environment="Production" if telegram_aps_environment == "production" else "Development"
+)
+
+associated_domains_fragment = "" if telegram_bundle_id not in official_bundle_ids else """
+<key>com.apple.developer.associated-domains</key>
+<array>
+    <string>applinks:telegram.me</string>
+    <string>applinks:t.me</string>
+</array>
+"""
+
+siri_fragment = "" if not telegram_enable_siri else """
+<key>com.apple.developer.siri</key>
+<true/>
+"""
+
+aps_fragment = "" if telegram_aps_environment == "" else """
+<key>aps-environment</key>
+<string>{telegram_aps_environment}</string>
+""".format(telegram_aps_environment=telegram_aps_environment)
+
+app_groups_fragment = """
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.{telegram_bundle_id}</string>
     </array>
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
-    <key>com.apple.developer.icloud-container-environment</key>
-    <string>{telegram_icloud_environment}</string>
-""" + apple_pay_merchants_fragment + unrestricted_voip_fragment + carplay_fragment
+""".format(
+    telegram_team_id=telegram_team_id,
+    telegram_bundle_id=telegram_bundle_id
+)
 
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
-    template = telegram_entitlements_template.format(
-        telegram_bundle_id = telegram_bundle_id,
-        telegram_team_id = telegram_team_id,
-        telegram_aps_environment = telegram_aps_environment,
-        telegram_icloud_environment = "Production" if telegram_aps_environment == "production" else "Development",
-    )
+    template = "".join([
+        aps_fragment,
+        app_groups_fragment,
+        siri_fragment,
+        associated_domains_fragment,
+        icloud_fragment,
+        apple_pay_merchants_fragment,
+        unrestricted_voip_fragment,
+        carplay_fragment
+    ])
 )
 
 filegroup(
@@ -527,7 +560,6 @@ watchos_extension(
 
 watchos_application(
     name = "TelegramWatchApp",
-    #app_icons = ,
     bundle_id = "{telegram_bundle_id}.watchkitapp".format(
         telegram_bundle_id = telegram_bundle_id,
     ),
@@ -1098,6 +1130,16 @@ plist_fragment(
     )
 )
 
+objc_library(
+    name = "NotificationContentExtensionLink",
+    srcs = [
+        "NotificationContent/main.m",
+    ],
+    sdk_frameworks = [
+        "UserNotificationsUI",
+    ],
+)
+
 swift_library(
     name = "NotificationContentExtensionLib",
     module_name = "NotificationContentExtensionLib",
@@ -1105,8 +1147,28 @@ swift_library(
         "NotificationContent/**/*.swift",
     ]),
     deps = [
-        "//submodules/TelegramUI:TelegramUI"
+        "//submodules/TelegramUI:TelegramUI",
+        ":NotificationContentExtensionLink",
     ],
+)
+
+genrule(
+    name = "SetMinOsVersionNotificationContentExtension",
+    cmd_bash =
+"""
+    name=NotificationContentExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/10\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionNotificationContentExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionNotificationContentExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
 )
 
 ios_extension(
@@ -1124,7 +1186,8 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "10.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionNotificationContentExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:NotificationContent.mobileprovision",
@@ -1162,12 +1225,9 @@ plist_fragment(
     )
 )
 
-swift_library(
-    name = "GeneratedSources",
-    module_name = "GeneratedSources",
-    srcs = glob([
-        "Generated/**/*.swift",
-    ]),
+filegroup(
+    name = "WidgetAssets",
+    srcs = glob(["WidgetKitWidget/WidgetImages.xcassets/**"]),
     visibility = ["//visibility:public"],
 )
 
@@ -1178,7 +1238,7 @@ swift_library(
         "WidgetKitWidget/**/*.swift",
     ]),
     data = [
-        "SiriIntents/Intents.intentdefinition",
+        ":WidgetAssets",
     ],
     deps = [
         "//submodules/BuildConfig:BuildConfig",
@@ -1190,8 +1250,27 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SyncCore:SyncCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
-        ":GeneratedSources",
+        "//Telegram:GeneratedSources",
     ],
+)
+
+genrule(
+    name = "SetMinOsVersionWidgetExtension",
+    cmd_bash =
+"""
+    name=WidgetExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/14\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionWidgetExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionWidgetExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
 )
 
 ios_extension(
@@ -1209,13 +1288,16 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "14.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionWidgetExtension",
     provides_main = True,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
     }),
-    deps = [":WidgetExtensionLib"],
+    deps = [
+        ":WidgetExtensionLib",
+    ],
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
@@ -1253,6 +1335,7 @@ plist_fragment(
                 <string>INSetMessageAttributeIntent</string>
                 <string>INSearchCallHistoryIntent</string>
                 <string>SelectFriendsIntent</string>
+                <string>SelectAvatarFriendsIntent</string>
             </array>
         </dict>
         <key>NSExtensionPointIdentifier</key>
@@ -1265,14 +1348,29 @@ plist_fragment(
     )
 )
 
+swift_intent_library(
+    name = "GeneratedSources",
+    src = "SiriIntents/en.lproj/Intents.intentdefinition",
+    module_name = "GeneratedSources",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "IntentsAssets",
+    srcs = glob(["SiriIntents/IntentsImages.xcassets/**"]),
+    visibility = ["//visibility:public"],
+)
+
 swift_library(
     name = "IntentsExtensionLib",
     module_name = "IntentsExtensionLib",
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
-    data = [
-        "SiriIntents/Intents.intentdefinition",
+    data = glob([
+        "SiriIntents/*.lproj/Intents.intentdefinition"
+    ]) + [
+        ":IntentsAssets"
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -1283,8 +1381,28 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/AppLockState:AppLockState",
-        ":GeneratedSources",
+        "//Telegram:GeneratedSources",
+        "//submodules/WidgetItems:WidgetItems",
     ],
+)
+
+genrule(
+    name = "SetMinOsVersionIntentsExtension",
+    cmd_bash =
+"""
+    name=IntentsExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/10\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionIntentsExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionIntentsExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
 )
 
 ios_extension(
@@ -1302,7 +1420,8 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "10.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionIntentsExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Intents.mobileprovision",
@@ -1341,6 +1460,25 @@ plist_fragment(
     )
 )
 
+genrule(
+    name = "SetMinOsVersionNotificationServiceExtension",
+    cmd_bash =
+"""
+    name=NotificationServiceExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/10\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionNotificationServiceExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionNotificationServiceExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
 ios_extension(
     name = "NotificationServiceExtension",
     bundle_id = "{telegram_bundle_id}.NotificationService".format(
@@ -1356,7 +1494,8 @@ ios_extension(
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "10.0",
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionNotificationServiceExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:NotificationService.mobileprovision",
@@ -1583,13 +1722,13 @@ ios_application(
             ":NotificationContentExtension",
             ":NotificationServiceExtension",
             ":IntentsExtension",
-#            ":WidgetExtension",
+            ":WidgetExtension",
         ],
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
         "//conditions:default": ":TelegramWatchApp",
-    }),
+    }) if telegram_enable_watch else None,
     deps = [
         ":Main",
         ":Lib",

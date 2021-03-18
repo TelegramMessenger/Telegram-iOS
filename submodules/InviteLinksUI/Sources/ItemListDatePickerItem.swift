@@ -6,9 +6,11 @@ import SwiftSignalKit
 import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import DatePickerNode
 
 public class ItemListDatePickerItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
+    let dateTimeFormat: PresentationDateTimeFormat
     let date: Int32?
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
@@ -17,6 +19,7 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
     
     public init(
         presentationData: ItemListPresentationData,
+        dateTimeFormat: PresentationDateTimeFormat,
         date: Int32?,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
@@ -24,6 +27,7 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
         tag: ItemListItemTag? = nil
     ) {
         self.presentationData = presentationData
+        self.dateTimeFormat = dateTimeFormat
         self.date = date
         self.sectionId = sectionId
         self.style = style
@@ -73,7 +77,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private var datePicker: UIDatePicker?
+    private var datePickerNode: DatePickerNode?
     
     private var item: ItemListDatePickerItem?
     
@@ -91,6 +95,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -100,29 +105,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-    }
-    
-    public override func didLoad() {
-        super.didLoad()
-        
-        let datePicker = UIDatePicker()
-        datePicker.minimumDate = Date()
-        datePicker.datePickerMode = .dateAndTime
-        if #available(iOS 14.0, *) {
-            datePicker.preferredDatePickerStyle = .inline
-        }
-        
-        datePicker.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
-        
-        self.view.addSubview(datePicker)
-        self.datePicker = datePicker
-    }
-    
-    @objc private func datePickerUpdated() {
-        guard let datePicker = self.datePicker else {
-            return
-        }
-        self.item?.updated?(Int32(datePicker.date.timeIntervalSince1970))
+        self.allowsGroupOpacity = true
     }
     
     public func asyncLayout() -> (_ item: ItemListDatePickerItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -143,7 +126,9 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
             let leftInset = 16.0 + params.leftInset
             let rightInset = 16.0 + params.rightInset
             
-            let height: CGFloat = 360.0
+            let width = min(390.0, params.width - params.leftInset - params.rightInset)
+            let cellSize = floor((width - 12.0 * 2.0) / 7.0)
+            let height: CGFloat = 122.0 + cellSize * 6.0
             
             switch item.style {
             case .plain:
@@ -166,11 +151,10 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                        
+                        strongSelf.datePickerNode?.updateTheme(DatePickerTheme(theme: item.presentationData.theme))
                     }
-                
-                    strongSelf.datePicker?.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date()
-                    strongSelf.datePicker?.frame = CGRect(origin: CGPoint(x: 16.0, y: 3.0), size: CGSize(width: contentSize.width - 32.0, height: contentSize.height))
-                    
+                                        
                     switch item.style {
                     case .plain:
                         if strongSelf.backgroundNode.supernode != nil {
@@ -227,6 +211,25 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
+                    
+                    let datePickerNode: DatePickerNode
+                    if let current = strongSelf.datePickerNode {
+                        datePickerNode = current
+                    } else {
+                        datePickerNode = DatePickerNode(theme: DatePickerTheme(theme: item.presentationData.theme), strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat)
+                        strongSelf.insertSubnode(datePickerNode, belowSubnode: strongSelf.topStripeNode)
+                        strongSelf.datePickerNode = datePickerNode
+                    }
+                    datePickerNode.valueUpdated = { date in
+                        strongSelf.item?.updated?(Int32(date.timeIntervalSince1970))
+                    }
+                
+                    datePickerNode.minimumDate = Date()
+                    datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) }
+                   
+                    let datePickerSize = CGSize(width: width, height: contentSize.height)
+                    datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 0.0), size: datePickerSize)
+                    datePickerNode.updateLayout(size: datePickerSize, transition: .immediate)
                 }
             })
         }

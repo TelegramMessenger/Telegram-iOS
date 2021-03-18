@@ -83,7 +83,7 @@ private final class PeerInputActivityContext {
             }, queue: self.queue)
             let updateId = nextUpdateId
             nextUpdateId += 1
-            self.activities.insert(ActivityRecord(peerId: peerId, activity: activity, id: activityId, timer: timer, episodeId: episodeId, timestamp: timestamp, updateId: updateId), at: 0)
+            self.activities.append(ActivityRecord(peerId: peerId, activity: activity, id: activityId, timer: timer, episodeId: episodeId, timestamp: timestamp, updateId: updateId))
             timer.start()
         }
         
@@ -178,9 +178,9 @@ private final class PeerInputActivityContext {
 }
 
 private final class PeerGlobalInputActivityContext {
-    private let subscribers = Bag<([PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) -> Void>()
+    private let subscribers = Bag<([PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]]) -> Void>()
     
-    func addSubscriber(_ subscriber: @escaping ([PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) -> Void) -> Int {
+    func addSubscriber(_ subscriber: @escaping ([PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]]) -> Void) -> Int {
         return self.subscribers.add(subscriber)
     }
     
@@ -192,7 +192,7 @@ private final class PeerGlobalInputActivityContext {
         return self.subscribers.isEmpty
     }
     
-    func notify(_ activities: [PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) {
+    func notify(_ activities: [PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]]) {
         for subscriber in self.subscribers.copyItems() {
             subscriber(activities)
         }
@@ -256,21 +256,17 @@ final class PeerInputActivityManager {
         }
     }
     
-    private func collectActivities() -> [PeerActivitySpace: [PeerId: PeerInputActivityRecord]] {
+    private func collectActivities() -> [PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]] {
         assert(self.queue.isCurrent())
         
-        var dict: [PeerActivitySpace: [PeerId: PeerInputActivityRecord]] = [:]
+        var dict: [PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]] = [:]
         for (chatPeerId, context) in self.contexts {
-            var chatDict: [PeerId: PeerInputActivityRecord] = [:]
-            for (peerId, activity) in context.topActivities() {
-                chatDict[peerId] = activity
-            }
-            dict[chatPeerId] = chatDict
+            dict[chatPeerId] = context.topActivities()
         }
         return dict
     }
     
-    func allActivities() -> Signal<[PeerActivitySpace: [PeerId: PeerInputActivityRecord]], NoError> {
+    func allActivities() -> Signal<[PeerActivitySpace: [(PeerId, PeerInputActivityRecord)]], NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()

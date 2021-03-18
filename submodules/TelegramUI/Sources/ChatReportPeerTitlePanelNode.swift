@@ -87,7 +87,7 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
                 buttons.append(.shareMyPhoneNumber)
             }
         }
-    } else if let _ = state.renderedPeer?.chatMainPeer {
+    } else if let _ = state.renderedPeer?.chatMainPeer, case .peer = state.chatLocation {
         if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.suggestAddMembers) {
             buttons.append(.addMembers)
         } else if let contactStatus = state.contactStatus, contactStatus.canReportIrrelevantLocation, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {

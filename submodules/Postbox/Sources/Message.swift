@@ -493,6 +493,7 @@ public struct MessageForwardInfo: Equatable {
 public protocol MessageAttribute: class, PostboxCoding {
     var associatedPeerIds: [PeerId] { get }
     var associatedMessageIds: [MessageId] { get }
+    var automaticTimestampBasedAttribute: (UInt16, Int32)? { get }
 }
 
 public extension MessageAttribute {
@@ -502,6 +503,10 @@ public extension MessageAttribute {
     
     var associatedMessageIds: [MessageId] {
         return []
+    }
+    
+    var automaticTimestampBasedAttribute: (UInt16, Int32)? {
+        return nil
     }
 }
 

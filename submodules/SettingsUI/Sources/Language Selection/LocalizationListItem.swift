@@ -111,6 +111,8 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
     private var editableControlNode: ItemListEditableControlNode?
     private var reorderControlNode: ItemListEditableReorderControlNode?
     
+    private let activateArea: AccessibilityAreaNode
+    
     override var canBeSelected: Bool {
         if self.editableControlNode != nil {
             return false
@@ -153,12 +155,16 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.activityNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
+        
+        self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: LocalizationListItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -209,6 +215,10 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.layoutParams = (params, neighbors)
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = item.title
+                    strongSelf.activateArea.accessibilityValue = item.subtitle
                     
                     let revealOffset = strongSelf.revealOffset
                     
