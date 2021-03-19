@@ -64,5 +64,25 @@ public enum MiniThumbnailType {
 }
 
 public func compressImageMiniThumbnail(_ image: UIImage, type: MiniThumbnailType = .image) -> Data? {
-    return compressMiniThumbnail(image, type == .avatar)
+    switch type {
+    case .image:
+        return compressMiniThumbnail(image, CGSize(width: 40.0, height: 40.0))
+    case .avatar:
+        var size: CGFloat = 8.0
+        var data = compressMiniThumbnail(image, CGSize(width: size, height: size))
+        while true {
+            size += 1.0
+            if let candidateData = compressMiniThumbnail(image, CGSize(width: size, height: size)) {
+                if candidateData.count >= 32 {
+                    break
+                } else {
+                    data = candidateData
+                }
+            } else {
+                break
+            }
+        }
+
+        return data
+    }
 }

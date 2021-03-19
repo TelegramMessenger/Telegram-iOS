@@ -18,6 +18,7 @@ swift_library(
         "//submodules/Emoji:Emoji",
         "//submodules/ImageCompression:ImageCompression",
         "//submodules/TinyThumbnail:TinyThumbnail",
+        "//submodules/FastBlur:FastBlur",
     ],
     visibility = [
         "//visibility:public",
