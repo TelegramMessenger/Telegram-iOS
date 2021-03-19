@@ -219,11 +219,15 @@ public final class ManagedAudioSession {
         })
         
         NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance(), queue: nil, using: { [weak self] notification in
+            managedAudioSessionLog("Interruption received")
+
             guard let info = notification.userInfo,
                 let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
                 let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
                     return
             }
+
+            managedAudioSessionLog("Interruption type: \(type)")
             
             queue.async {
                 if let strongSelf = self {
@@ -232,6 +236,17 @@ public final class ManagedAudioSession {
                     }
                 }
             }
+        })
+
+        NotificationCenter.default.addObserver(forName: AVAudioSession.mediaServicesWereLostNotification, object: AVAudioSession.sharedInstance(), queue: nil, using: { [weak self] _ in
+            managedAudioSessionLog("Media Services were lost")
+            queue.after(1.0, {
+                if let strongSelf = self {
+                    if let (type, outputMode) = strongSelf.currentTypeAndOutputMode {
+                        strongSelf.setup(type: type, outputMode: outputMode, activateNow: true)
+                    }
+                }
+            })
         })
         
         queue.async {
