@@ -4322,7 +4322,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             //effectiveCachedDataReady = .single(true)
             effectiveCachedDataReady = self.cachedDataReady.get()
         }
-        self.ready.set(combineLatest(self.chatDisplayNode.historyNode.historyState.get(), self._chatLocationInfoReady.get(), effectiveCachedDataReady, initialData) |> map { _, chatLocationInfoReady, cachedDataReady, _ in
+        self.ready.set(combineLatest(queue: .mainQueue(),
+            self.chatDisplayNode.historyNode.historyState.get(),
+            self._chatLocationInfoReady.get(),
+            effectiveCachedDataReady,
+            initialData
+        )
+        |> map { _, chatLocationInfoReady, cachedDataReady, _ in
             return chatLocationInfoReady && cachedDataReady
         })
         
