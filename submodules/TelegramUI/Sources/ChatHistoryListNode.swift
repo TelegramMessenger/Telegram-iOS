@@ -512,6 +512,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     let canReadHistory = Promise<Bool>()
     private var canReadHistoryValue: Bool = false
     private var canReadHistoryDisposable: Disposable?
+
+    private var messageIdsScheduledForMarkAsSeen = Set<MessageId>()
     
     private var chatHistoryLocationValue: ChatHistoryLocationInput? {
         didSet {
@@ -669,12 +671,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
             if let strongSelf = self {
-                let _ = (strongSelf.canReadHistory.get()
-                |> take(1)).start(next: { [weak context] canReadHistory in
-                    if canReadHistory {
-                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
-                    }
-                })
+                if strongSelf.canReadHistoryValue {
+                    context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                } else {
+                    strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds)
+                }
             }
         }
         
@@ -1073,11 +1074,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.readHistoryDisposable.set(readHistory.start())
         
-        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).start(next: { [weak self, weak context] value in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue != value {
                     strongSelf.canReadHistoryValue = value
                     strongSelf.updateReadHistoryActions()
+
+                    if strongSelf.canReadHistoryValue && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
+                        let messageIds = strongSelf.messageIdsScheduledForMarkAsSeen
+                        strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
+                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                    }
                 }
             }
         })

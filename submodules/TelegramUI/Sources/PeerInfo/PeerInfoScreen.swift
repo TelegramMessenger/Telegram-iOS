@@ -2773,14 +2773,20 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, ignoreGroupInCommon: ignoreGroupInCommon)
-            
+                        
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in
                 guard let strongSelf = self, let peer = strongSelf.data?.peer else {
                     return
                 }
                 
+                var currentIsVideo = false
+                let item = strongSelf.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
+                if let item = item, case let .image(image) = item {
+                    currentIsVideo = !image.2.isEmpty
+                }
+                
                 let items: [ContextMenuItem] = [
-                    .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ReportProfilePhoto, icon: { theme in
+                    .action(ContextMenuActionItem(text: currentIsVideo ? strongSelf.presentationData.strings.PeerInfo_ReportProfileVideo : strongSelf.presentationData.strings.PeerInfo_ReportProfilePhoto, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.actionSheet.primaryTextColor)
                     }, action: { [weak self] c, f in                        
                         if let strongSelf = self, let parent = strongSelf.controller {
@@ -5434,12 +5440,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                         |> take(1)
                                 })
                                 strongSelf.activeActionDisposable.set((combineLatest(signals)
-                                |> deliverOnMainQueue).start(completed: {
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    strongSelf.controller?.present(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), in: .window(.root))
-                                }))
+                                |> deliverOnMainQueue).start())
                             }
                         })
                         if let peerSelectionController = peerSelectionController {

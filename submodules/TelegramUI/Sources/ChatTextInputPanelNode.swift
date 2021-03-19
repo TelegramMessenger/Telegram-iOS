@@ -1415,7 +1415,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 animatePosition(for: prevPreviewInputPanelNode.waveformScubberNode)
                 animatePosition(for: prevPreviewInputPanelNode.durationLabel)
                 animatePosition(for: prevPreviewInputPanelNode.playButton)
-                animatePosition(for: prevPreviewInputPanelNode.pauseButton)
             }
             
             func animateAlpha(for previewSubnode: ASDisplayNode) {
@@ -1430,7 +1429,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             animateAlpha(for: prevPreviewInputPanelNode.waveformScubberNode)
             animateAlpha(for: prevPreviewInputPanelNode.durationLabel)
             animateAlpha(for: prevPreviewInputPanelNode.playButton)
-            animateAlpha(for: prevPreviewInputPanelNode.pauseButton)
             
             let binNode = prevPreviewInputPanelNode.binNode
             self.animatingBinNode = binNode

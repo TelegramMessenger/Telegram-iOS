@@ -689,6 +689,27 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
+            case let .mediaSaved(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                
+                let animatedStickerNode = AnimatedStickerNode()
+                self.animatedStickerNode = animatedStickerNode
+                if let path = getAppBundle().path(forResource: "anim_savemedia", ofType: "tgs") {
+                    animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 80, height: 80, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                    animatedStickerNode.visibility = true
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -717,7 +738,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy:
+            case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved:
                 break
             case .dice:
                 self.panelWrapperNode.clipsToBounds = true

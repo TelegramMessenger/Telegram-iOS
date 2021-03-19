@@ -9,11 +9,12 @@ import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import LocationResources
+import ShimmerEffect
 
 public final class ItemListVenueItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let account: Account
-    let venue: TelegramMediaMap
+    let venue: TelegramMediaMap?
     let title: String?
     let subtitle: String?
     let style: ItemListStyle
@@ -23,7 +24,7 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, account: Account, venue: TelegramMediaMap, title: String? = nil, subtitle: String? = nil, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
+    public init(presentationData: ItemListPresentationData, account: Account, venue: TelegramMediaMap?, title: String? = nil, subtitle: String? = nil, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
         self.presentationData = presentationData
         self.account = account
         self.venue = venue
@@ -117,6 +118,9 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
     private let addressNode: TextNode
     private let infoButton: HighlightableButtonNode
     
+    private var placeholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
+    
     private var item: ItemListVenueItem?
     private var layoutParams: (ItemListVenueItem, ListViewItemLayoutParams, ItemListNeighbors, Bool, Bool)?
     
@@ -170,6 +174,15 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         self.infoButton.addTarget(self, action: #selector(self.infoPressed), forControlEvents: .touchUpInside)
     }
     
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
+    }
+    
     public func asyncLayout() -> (_ item: ItemListVenueItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors, _ firstWithHeader: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeAddressLayout = TextNode.asyncLayout(self.addressNode)
@@ -188,27 +201,27 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                 updatedTheme = item.presentationData.theme
             }
         
-            let venueType = item.venue.venue?.type ?? ""
-            if currentItem?.venue.venue?.type != venueType {
+            let venueType = item.venue?.venue?.type ?? ""
+            if currentItem?.venue?.venue?.type != venueType {
                 updatedVenueType = venueType
             }
         
             let title: String
-            if let venueTitle = item.venue.venue?.title {
+            if let venueTitle = item.venue?.venue?.title {
                 title = venueTitle
             } else if let customTitle = item.title {
                 title = customTitle
             } else {
-                title = ""
+                title = " "
             }
             
             let subtitle: String
-            if let address = item.venue.venue?.address {
+            if let address = item.venue?.venue?.address {
                 subtitle = address
             } else if let customSubtitle = item.subtitle {
                 subtitle = customSubtitle
             } else {
-                subtitle = ""
+                subtitle = " "
             }
             
             let titleAttributedString = NSAttributedString(string: title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
@@ -285,7 +298,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.topStripeNode.removeFromSupernode()
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
                             }
                             if strongSelf.maskNode.supernode != nil {
                                 strongSelf.maskNode.removeFromSupernode()
@@ -350,6 +363,45 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.infoButton.isHidden = item.infoAction == nil
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
+                    
+                    if item.venue == nil {
+                        let shimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.placeholderNode {
+                            shimmerNode = current
+                        } else {
+                            shimmerNode = ShimmerEffectNode()
+                            strongSelf.placeholderNode = shimmerNode
+                            if strongSelf.bottomStripeNode.supernode != nil {
+                                strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.bottomStripeNode)
+                            } else {
+                                strongSelf.addSubnode(shimmerNode)
+                            }
+                        }
+                        shimmerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            shimmerNode.updateAbsoluteRect(rect, within: size)
+                        }
+                        
+                        var shapes: [ShimmerEffectNode.Shape] = []
+                        
+                        let titleLineWidth: CGFloat = 180.0
+                        let subtitleLineWidth: CGFloat = 90.0
+                        let lineDiameter: CGFloat = 10.0
+                        
+                        let iconFrame = strongSelf.iconNode.frame
+                        shapes.append(.circle(iconFrame))
+                        
+                        let titleFrame = strongSelf.titleNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+                        
+                        let subtitleFrame = strongSelf.addressNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: subtitleFrame.minX, y: subtitleFrame.minY + floor((subtitleFrame.height - lineDiameter) / 2.0)), width: subtitleLineWidth, diameter: lineDiameter))
+                        
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
+                    } else if let shimmerNode = strongSelf.placeholderNode {
+                        strongSelf.placeholderNode = nil
+                        shimmerNode.removeFromSupernode()
+                    }
                 }
             })
         }

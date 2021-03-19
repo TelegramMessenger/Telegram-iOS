@@ -162,8 +162,10 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
             if dateString.contains(separator) {
                 if separator == ". " {
                     dateSuffix = "."
+                    dateSeparator = "."
+                } else {
+                    dateSeparator = separator
                 }
-                dateSeparator = separator
                 break
             }
         }

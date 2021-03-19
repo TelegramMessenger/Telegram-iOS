@@ -12,6 +12,7 @@ public struct GroupCallInfo: Equatable {
     public var streamDcId: Int32?
     public var title: String?
     public var recordingStartTimestamp: Int32?
+    public var sortAscending: Bool
     
     public init(
         id: Int64,
@@ -20,7 +21,8 @@ public struct GroupCallInfo: Equatable {
         clientParams: String?,
         streamDcId: Int32?,
         title: String?,
-        recordingStartTimestamp: Int32?
+        recordingStartTimestamp: Int32?,
+        sortAscending: Bool
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -29,6 +31,7 @@ public struct GroupCallInfo: Equatable {
         self.streamDcId = streamDcId
         self.title = title
         self.recordingStartTimestamp = recordingStartTimestamp
+        self.sortAscending = sortAscending
     }
 }
 
@@ -40,7 +43,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(_, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
+        case let .groupCall(flags, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, _):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -55,7 +58,8 @@ extension GroupCallInfo {
                 clientParams: clientParams,
                 streamDcId: streamDcId,
                 title: title,
-                recordingStartTimestamp: recordStartDate
+                recordingStartTimestamp: recordStartDate,
+                sortAscending: (flags & (1 << 6)) != 0
             )
         case .groupCallDiscarded:
             return nil
@@ -227,12 +231,31 @@ public enum GetGroupCallParticipantsError {
     case generic
 }
 
-public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
-    return account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), ids: [], sources: ssrcs.map { Int32(bitPattern: $0) }, offset: offset, limit: limit))
-    |> mapError { _ -> GetGroupCallParticipantsError in
-        return .generic
+public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
+    let sortAscendingValue: Signal<Bool, GetGroupCallParticipantsError>
+    if let sortAscending = sortAscending {
+        sortAscendingValue = .single(sortAscending)
+    } else {
+        sortAscendingValue = getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
+        |> mapError { _ -> GetGroupCallParticipantsError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Bool, GetGroupCallParticipantsError> in
+            guard let result = result else {
+                return .fail(.generic)
+            }
+            return .single(result.info.sortAscending)
+        }
     }
-    |> mapToSignal { result -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> in
+
+    return combineLatest(
+        account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), ids: [], sources: ssrcs.map { Int32(bitPattern: $0) }, offset: offset, limit: limit))
+        |> mapError { _ -> GetGroupCallParticipantsError in
+            return .generic
+        },
+        sortAscendingValue
+    )
+    |> mapToSignal { result, sortAscendingValue -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> in
         return account.postbox.transaction { transaction -> GroupCallParticipantsContext.State in
             var parsedParticipants: [GroupCallParticipantsContext.Participant] = []
             let totalCount: Int
@@ -320,8 +343,8 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                     }
                 }
             }
-            
-            parsedParticipants.sort()
+
+            parsedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: sortAscendingValue) })
             
             return GroupCallParticipantsContext.State(
                 participants: parsedParticipants,
@@ -329,6 +352,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 adminIds: Set(),
                 isCreator: false,
                 defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false),
+                sortAscending: sortAscendingValue,
                 recordingStartTimestamp: nil,
                 title: nil,
                 totalCount: totalCount,
@@ -343,6 +367,7 @@ public enum JoinGroupCallError {
     case generic
     case anonymousNotAllowed
     case tooManyParticipants
+    case invalidJoinAsPeer
 }
 
 public struct JoinGroupCallResult {
@@ -384,11 +409,13 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 return .anonymousNotAllowed
             } else if error.errorDescription == "GROUPCALL_PARTICIPANTS_TOO_MUCH" {
                 return .tooManyParticipants
+            } else if error.errorDescription == "JOIN_AS_PEER_INVALID" {
+                return .invalidJoinAsPeer
             }
             return .generic
         }
 
-        let getParticipantsRequest = getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", ssrcs: [], limit: 100)
+        let getParticipantsRequest = getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: true)
         |> mapError { _ -> JoinGroupCallError in
             return .generic
         }
@@ -451,6 +478,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 guard let parsedCall = maybeParsedCall else {
                     return .fail(.generic)
                 }
+
+                state.sortAscending = parsedCall.sortAscending
                 
                 let apiUsers: [Api.User] = []
                 
@@ -548,7 +577,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                         }
                     }
 
-                    state.participants.sort()
+                    state.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
 
                     updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                         return updated
@@ -670,7 +699,7 @@ private func binaryInsertionIndex(_ inputArr: [GroupCallParticipantsContext.Part
 }
 
 public final class GroupCallParticipantsContext {
-    public struct Participant: Equatable, Comparable {
+    public struct Participant: Equatable {
         public struct MuteState: Equatable {
             public var canUnmute: Bool
             public var mutedByYou: Bool
@@ -719,9 +748,11 @@ public final class GroupCallParticipantsContext {
             self.about = about
         }
         
-        public mutating func mergeActivity(from other: Participant) {
+        public mutating func mergeActivity(from other: Participant, mergeActivityTimestamp: Bool) {
             self.activityRank = other.activityRank
-            self.activityTimestamp = other.activityTimestamp
+            if mergeActivityTimestamp {
+                self.activityTimestamp = other.activityTimestamp
+            }
         }
         
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
@@ -761,7 +792,7 @@ public final class GroupCallParticipantsContext {
             return true
         }
         
-        public static func <(lhs: Participant, rhs: Participant) -> Bool {
+        public static func compare(lhs: Participant, rhs: Participant, sortAscending: Bool) -> Bool {
             if let lhsActivityRank = lhs.activityRank, let rhsActivityRank = rhs.activityRank {
                 if lhsActivityRank != rhsActivityRank {
                     return lhsActivityRank < rhsActivityRank
@@ -793,7 +824,11 @@ public final class GroupCallParticipantsContext {
             }
             
             if lhs.joinTimestamp != rhs.joinTimestamp {
-                return lhs.joinTimestamp > rhs.joinTimestamp
+                if sortAscending {
+                    return lhs.joinTimestamp < rhs.joinTimestamp
+                } else {
+                    return lhs.joinTimestamp > rhs.joinTimestamp
+                }
             }
             
             return lhs.peer.id < rhs.peer.id
@@ -811,12 +846,13 @@ public final class GroupCallParticipantsContext {
         public var adminIds: Set<PeerId>
         public var isCreator: Bool
         public var defaultParticipantsAreMuted: DefaultParticipantsAreMuted
+        public var sortAscending: Bool
         public var recordingStartTimestamp: Int32?
         public var title: String?
         public var totalCount: Int
         public var version: Int32
         
-        public mutating func mergeActivity(from other: State, myPeerId: PeerId, previousMyPeerId: PeerId?) {
+        public mutating func mergeActivity(from other: State, myPeerId: PeerId?, previousMyPeerId: PeerId?, mergeActivityTimestamps: Bool) {
             var indexMap: [PeerId: Int] = [:]
             for i in 0 ..< other.participants.count {
                 indexMap[other.participants[i].peer.id] = i
@@ -824,14 +860,14 @@ public final class GroupCallParticipantsContext {
             
             for i in 0 ..< self.participants.count {
                 if let index = indexMap[self.participants[i].peer.id] {
-                    self.participants[i].mergeActivity(from: other.participants[index])
+                    self.participants[i].mergeActivity(from: other.participants[index], mergeActivityTimestamp: mergeActivityTimestamps)
                     if self.participants[i].peer.id == myPeerId || self.participants[i].peer.id == previousMyPeerId {
                         self.participants[i].joinTimestamp = other.participants[index].joinTimestamp
                     }
                 }
             }
             
-            self.participants.sort()
+            self.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: self.sortAscending) })
         }
     }
     
@@ -974,7 +1010,7 @@ public final class GroupCallParticipantsContext {
                 }
             }
             if sortAgain {
-                publicState.participants.sort()
+                publicState.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: publicState.sortAscending) })
             }
             return publicState
         }
@@ -1016,6 +1052,7 @@ public final class GroupCallParticipantsContext {
     private var activityRankResetTimer: SwiftSignalKit.Timer?
     
     private let updateDefaultMuteDisposable = MetaDisposable()
+    private let resetInviteLinksDisposable = MetaDisposable()
     private let updateShouldBeRecordingDisposable = MetaDisposable()
 
     public struct ServiceState {
@@ -1088,7 +1125,7 @@ public final class GroupCallParticipantsContext {
                 }
                 
                 if updated {
-                    updatedParticipants.sort()
+                    updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
                     
                     strongSelf.stateValue = InternalState(
                         state: State(
@@ -1097,6 +1134,7 @@ public final class GroupCallParticipantsContext {
                             adminIds: strongSelf.stateValue.state.adminIds,
                             isCreator: strongSelf.stateValue.state.isCreator,
                             defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
+                            sortAscending: strongSelf.stateValue.state.sortAscending,
                             recordingStartTimestamp: strongSelf.stateValue.state.recordingStartTimestamp,
                             title: strongSelf.stateValue.state.title,
                             totalCount: strongSelf.stateValue.state.totalCount,
@@ -1133,7 +1171,7 @@ public final class GroupCallParticipantsContext {
                 }
             }
             if updated {
-                strongSelf.stateValue.state.participants.sort()
+                strongSelf.stateValue.state.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
             }
         }, queue: .mainQueue())
         self.activityRankResetTimer?.start()
@@ -1146,6 +1184,7 @@ public final class GroupCallParticipantsContext {
         self.updateDefaultMuteDisposable.dispose()
         self.updateShouldBeRecordingDisposable.dispose()
         self.activityRankResetTimer?.invalidate()
+        resetInviteLinksDisposable.dispose()
     }
     
     public func addUpdates(updates: [Update]) {
@@ -1218,7 +1257,7 @@ public final class GroupCallParticipantsContext {
         }
         
         if updated {
-            updatedParticipants.sort()
+            updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
             
             strongSelf.stateValue = InternalState(
                 state: State(
@@ -1227,6 +1266,7 @@ public final class GroupCallParticipantsContext {
                     adminIds: strongSelf.stateValue.state.adminIds,
                     isCreator: strongSelf.stateValue.state.isCreator,
                     defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
+                    sortAscending: strongSelf.stateValue.state.sortAscending,
                     recordingStartTimestamp: strongSelf.stateValue.state.recordingStartTimestamp,
                     title: strongSelf.stateValue.state.title,
                     totalCount: strongSelf.stateValue.state.totalCount,
@@ -1272,7 +1312,7 @@ public final class GroupCallParticipantsContext {
         
         let ssrcs = self.missingSsrcs
         
-        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", ssrcs: Array(ssrcs), limit: 100)
+        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", ssrcs: Array(ssrcs), limit: 100, sortAscending: true)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             guard let strongSelf = self else {
                 return
@@ -1283,7 +1323,7 @@ public final class GroupCallParticipantsContext {
             
             var updatedState = strongSelf.stateValue.state
             
-            updatedState.participants = mergeAndSortParticipants(current: updatedState.participants, with: state.participants)
+            updatedState.participants = mergeAndSortParticipants(current: updatedState.participants, with: state.participants, sortAscending: updatedState.sortAscending)
             
             updatedState.totalCount = max(updatedState.totalCount, state.totalCount)
             updatedState.version = max(updatedState.version, updatedState.version)
@@ -1436,7 +1476,7 @@ public final class GroupCallParticipantsContext {
             let recordingStartTimestamp = strongSelf.stateValue.state.recordingStartTimestamp
             let title = strongSelf.stateValue.state.title
             
-            updatedParticipants.sort()
+            updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
             
             strongSelf.stateValue = InternalState(
                 state: State(
@@ -1445,6 +1485,7 @@ public final class GroupCallParticipantsContext {
                     adminIds: adminIds,
                     isCreator: isCreator,
                     defaultParticipantsAreMuted: defaultParticipantsAreMuted,
+                    sortAscending: strongSelf.stateValue.state.sortAscending,
                     recordingStartTimestamp: recordingStartTimestamp,
                     title: title,
                     totalCount: updatedTotalCount,
@@ -1467,13 +1508,15 @@ public final class GroupCallParticipantsContext {
         
         self.updateQueue.removeAll()
         
-        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", ssrcs: [], limit: 100)
+        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: self.stateValue.state.sortAscending)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.isLoadingMore = false
             strongSelf.shouldResetStateFromServer = false
+            var state = state
+            state.mergeActivity(from: strongSelf.stateValue.state, myPeerId: nil, previousMyPeerId: nil, mergeActivityTimestamps: false)
             strongSelf.stateValue.state = state
             strongSelf.endedProcessingUpdate()
         }))
@@ -1617,6 +1660,16 @@ public final class GroupCallParticipantsContext {
         }))
     }
     
+    public func resetInviteLinks() {
+        self.resetInviteLinksDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallSettings(flags: 1 << 1, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), joinMuted: nil))
+        |> deliverOnMainQueue).start(next: { [weak self] updates in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.account.stateManager.addUpdates(updates)
+        }))
+    }
+    
     public func loadMore(token: String) {
         if token != self.stateValue.state.nextParticipantsFetchOffset {
             Logger.shared.log("GroupCallParticipantsContext", "loadMore called with an invalid token \(token) (the valid one is \(String(describing: self.stateValue.state.nextParticipantsFetchOffset)))")
@@ -1627,7 +1680,7 @@ public final class GroupCallParticipantsContext {
         }
         self.isLoadingMore = true
         
-        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: token, ssrcs: [], limit: 100)
+        self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: token, ssrcs: [], limit: 100, sortAscending: self.stateValue.state.sortAscending)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             guard let strongSelf = self else {
                 return
@@ -1636,7 +1689,7 @@ public final class GroupCallParticipantsContext {
             
             var updatedState = strongSelf.stateValue.state
             
-            updatedState.participants = mergeAndSortParticipants(current: updatedState.participants, with: state.participants)
+            updatedState.participants = mergeAndSortParticipants(current: updatedState.participants, with: state.participants, sortAscending: updatedState.sortAscending)
             
             updatedState.nextParticipantsFetchOffset = state.nextParticipantsFetchOffset
             updatedState.totalCount = max(updatedState.totalCount, state.totalCount)
@@ -1987,7 +2040,7 @@ public func updatedCurrentPeerGroupCall(account: Account, peerId: PeerId) -> Sig
     }
 }
 
-private func mergeAndSortParticipants(current currentParticipants: [GroupCallParticipantsContext.Participant], with updatedParticipants: [GroupCallParticipantsContext.Participant]) -> [GroupCallParticipantsContext.Participant] {
+private func mergeAndSortParticipants(current currentParticipants: [GroupCallParticipantsContext.Participant], with updatedParticipants: [GroupCallParticipantsContext.Participant], sortAscending: Bool) -> [GroupCallParticipantsContext.Participant] {
     var mergedParticipants = currentParticipants
     
     var existingParticipantIndices: [PeerId: Int] = [:]
@@ -2001,8 +2054,8 @@ private func mergeAndSortParticipants(current currentParticipants: [GroupCallPar
             mergedParticipants.append(participant)
         }
     }
-    
-    mergedParticipants.sort()
+
+    mergedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: sortAscending) })
     
     return mergedParticipants
 }

@@ -14,6 +14,7 @@ import AlertUI
 import AppBundle
 import LocalizedPeerData
 import ContextUI
+import TelegramBaseController
 
 public enum CallListControllerMode {
     case tab
@@ -65,7 +66,7 @@ private final class DeleteAllButtonNode: ASDisplayNode {
     }
 }
 
-public final class CallListController: ViewController {
+public final class CallListController: TelegramBaseController {
     private var controllerNode: CallListControllerNode {
         return self.displayNode as! CallListControllerNode
     }
@@ -98,7 +99,7 @@ public final class CallListController: ViewController {
         
         self.segmentedTitleView = ItemListControllerSegmentedTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed], selectedIndex: 0)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .none, locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -198,6 +199,10 @@ public final class CallListController: ViewController {
         self.displayNode = CallListControllerNode(controller: self, context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId, isVideo in
             if let strongSelf = self {
                 strongSelf.call(peerId, isVideo: isVideo)
+            }
+        }, joinGroupCall: { [weak self] peerId, activeCall in
+            if let strongSelf = self {
+                strongSelf.joinGroupCall(peerId: peerId, invite: nil, activeCall: activeCall)
             }
         }, openInfo: { [weak self] peerId, messages in
             if let strongSelf = self {

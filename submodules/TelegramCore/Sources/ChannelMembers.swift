@@ -83,7 +83,7 @@ public func channelMembers(postbox: Postbox, network: Network, accountPeerId: Pe
                     return postbox.transaction { transaction -> [RenderedChannelParticipant]? in
                         var items: [RenderedChannelParticipant] = []
                         switch result {
-                            case let .channelParticipants(_, participants, users):
+                            case let .channelParticipants(_, participants, chats, users):
                                 var peers: [PeerId: Peer] = [:]
                                 var presences: [PeerId: PeerPresence] = [:]
                                 for user in users {
@@ -91,6 +91,11 @@ public func channelMembers(postbox: Postbox, network: Network, accountPeerId: Pe
                                     peers[peer.id] = peer
                                     if let presence = TelegramUserPresence(apiUser: user) {
                                         presences[peer.id] = presence
+                                    }
+                                }
+                                for chat in chats {
+                                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                        peers[groupOrChannel.id] = groupOrChannel
                                     }
                                 }
                                 updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in

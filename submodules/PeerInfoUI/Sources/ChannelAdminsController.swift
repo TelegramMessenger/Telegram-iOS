@@ -389,8 +389,16 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                             if id == accountPeerId {
                                 canEdit = false
                             } else if let adminInfo = adminInfo {
-                                if peer.flags.contains(.isCreator) || adminInfo.promotedBy == accountPeerId {
+                                if peer.flags.contains(.isCreator) {
                                     canEdit = true
+                                    canOpen = true
+                                } else if adminInfo.promotedBy == accountPeerId {
+                                    canEdit = true
+                                    if let adminRights = peer.adminRights {
+                                        if adminRights.rights.isEmpty {
+                                            canOpen = false
+                                        }
+                                    }
                                 } else {
                                     canEdit = false
                                 }

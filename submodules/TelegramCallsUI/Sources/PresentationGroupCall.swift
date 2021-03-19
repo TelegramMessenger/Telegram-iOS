@@ -77,7 +77,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 clientParams: nil,
                 streamDcId: nil,
                 title: call.title,
-                recordingStartTimestamp: nil
+                recordingStartTimestamp: nil,
+                sortAscending: true
             ),
             topParticipants: [],
             participantCount: 0,
@@ -85,7 +86,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
             groupCall: nil
         )))
         
-        self.disposable = (getGroupCallParticipants(account: account, callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100)
+        self.disposable = (getGroupCallParticipants(account: account, callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
         |> map(Optional.init)
         |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
             return .single(nil)
@@ -119,7 +120,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 }
                 return GroupCallPanelData(
                     peerId: peerId,
-                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, recordingStartTimestamp: nil),
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, recordingStartTimestamp: nil, sortAscending: state.sortAscending),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
                     activeSpeakers: activeSpeakers,
@@ -538,7 +539,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private var missingSsrcs = Set<UInt32>()
-    private var processedMissingSsrcs = Set<UInt32>()
     private let missingSsrcsDisposable = MetaDisposable()
     private var isRequestingMissingSsrcs: Bool = false
 
@@ -901,7 +901,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             volume: nil,
                             about: about
                         ))
-                        participants.sort()
+                        participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                     }
                 }
 
@@ -959,31 +959,28 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                 var participants: [GroupCallParticipantsContext.Participant] = []
 
-                if !participants.contains(where: { $0.peer.id == myPeerId }) {
-                    if let (myPeer, cachedData) = myPeerAndCachedData {
-                        let about: String?
-                        if let cachedData = cachedData as? CachedUserData {
-                            about = cachedData.about
-                        } else if let cachedData = cachedData as? CachedUserData {
-                            about = cachedData.about
-                        } else {
-                            about = nil
-                        }
-                        participants.append(GroupCallParticipantsContext.Participant(
-                            peer: myPeer,
-                            ssrc: nil,
-                            jsonParams: nil,
-                            joinTimestamp: strongSelf.temporaryJoinTimestamp,
-                            raiseHandRating: strongSelf.temporaryRaiseHandRating,
-                            hasRaiseHand: strongSelf.temporaryHasRaiseHand,
-                            activityTimestamp: strongSelf.temporaryActivityTimestamp,
-                            activityRank: strongSelf.temporaryActivityRank,
-                            muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
-                            volume: nil,
-                            about: about
-                        ))
-                        participants.sort()
+                if let (myPeer, cachedData) = myPeerAndCachedData {
+                    let about: String?
+                    if let cachedData = cachedData as? CachedUserData {
+                        about = cachedData.about
+                    } else if let cachedData = cachedData as? CachedUserData {
+                        about = cachedData.about
+                    } else {
+                        about = nil
                     }
+                    participants.append(GroupCallParticipantsContext.Participant(
+                        peer: myPeer,
+                        ssrc: nil,
+                        jsonParams: nil,
+                        joinTimestamp: strongSelf.temporaryJoinTimestamp,
+                        raiseHandRating: strongSelf.temporaryRaiseHandRating,
+                        hasRaiseHand: strongSelf.temporaryHasRaiseHand,
+                        activityTimestamp: strongSelf.temporaryActivityTimestamp,
+                        activityRank: strongSelf.temporaryActivityRank,
+                        muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                        volume: nil,
+                        about: about
+                    ))
                 }
 
                 for participant in participants {
@@ -1177,6 +1174,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_ChatFullAlertText, actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                             ]), on: .root, blockInteraction: false, completion: {})
+                        } else if case .invalidJoinAsPeer = error {
+                            let peerId = strongSelf.peerId
+                            let _ = (strongSelf.accountContext.account.postbox.transaction { transaction -> Void in
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                    if let current = current as? CachedChannelData {
+                                        return current.withUpdatedCallJoinPeerId(nil)
+                                    } else if let current = current as? CachedGroupData {
+                                        return current.withUpdatedCallJoinPeerId(nil)
+                                    } else {
+                                        return current
+                                    }
+                                })
+                            }).start()
                         }
                         strongSelf.markAsCanBeRemoved()
                     }))
@@ -1367,7 +1377,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 var initialState = initialState
                 var serviceState: GroupCallParticipantsContext.ServiceState?
                 if let participantsContext = self.participantsContext, let immediateState = participantsContext.immediateState {
-                    initialState.mergeActivity(from: immediateState, myPeerId: myPeerId, previousMyPeerId: self.ignorePreviousJoinAsPeerId?.0)
+                    initialState.mergeActivity(from: immediateState, myPeerId: myPeerId, previousMyPeerId: self.ignorePreviousJoinAsPeerId?.0, mergeActivityTimestamps: true)
                     serviceState = participantsContext.serviceState
                 }
                 
@@ -1472,7 +1482,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 volume: nil,
                                 about: about
                             ))
-                            participants.sort()
+                            participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                         }
                     }
                     
@@ -1496,7 +1506,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                             let previousRaisedHand = strongSelf.stateValue.raisedHand
                             if !(strongSelf.stateValue.muteState?.canUnmute ?? false) {
-                                strongSelf.stateValue.raisedHand = participant.raiseHandRating != nil
+                                strongSelf.stateValue.raisedHand = participant.hasRaiseHand
                             }
                             
                             if let muteState = participant.muteState, muteState.canUnmute && previousRaisedHand { 
@@ -1589,7 +1599,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         clientParams: nil,
                         streamDcId: nil,
                         title: state.title,
-                        recordingStartTimestamp: state.recordingStartTimestamp
+                        recordingStartTimestamp: state.recordingStartTimestamp,
+                        sortAscending: state.sortAscending
                     ))))
                     
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -1633,22 +1644,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private func maybeRequestParticipants(ssrcs: Set<UInt32>) {
-        var missingSsrcs = ssrcs
-        missingSsrcs.subtract(self.processedMissingSsrcs)
-        if missingSsrcs.isEmpty {
-            return
-        }
-        self.processedMissingSsrcs.formUnion(ssrcs)
-        
+        var addedMissingSsrcs = ssrcs
+
         var addedParticipants: [(UInt32, String?)] = []
         
         if let membersValue = self.membersValue {
             for participant in membersValue.participants {
                 let participantSsrcs = participant.allSsrcs
                 
-                if !missingSsrcs.intersection(participantSsrcs).isEmpty {
-                    missingSsrcs.subtract(participantSsrcs)
-                    self.processedMissingSsrcs.formUnion(participantSsrcs)
+                if !addedMissingSsrcs.intersection(participantSsrcs).isEmpty {
+                    addedMissingSsrcs.subtract(participantSsrcs)
                     
                     if let ssrc = participant.ssrc {
                         addedParticipants.append((ssrc, participant.jsonParams))
@@ -1661,8 +1666,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.callContext?.addParticipants(participants: addedParticipants)
         }
         
-        if !missingSsrcs.isEmpty {
-            self.missingSsrcs.formUnion(missingSsrcs)
+        if !addedMissingSsrcs.isEmpty {
+            self.missingSsrcs.formUnion(addedMissingSsrcs)
             self.maybeRequestMissingSsrcs()
         }
     }
@@ -1678,7 +1683,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.isRequestingMissingSsrcs = true
             
             let requestedSsrcs = self.missingSsrcs
-            self.missingSsrcsDisposable.set((getGroupCallParticipants(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, offset: "", ssrcs: Array(requestedSsrcs), limit: 100)
+            self.missingSsrcsDisposable.set((getGroupCallParticipants(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, offset: "", ssrcs: Array(requestedSsrcs), limit: 100, sortAscending: callInfo.sortAscending)
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 guard let strongSelf = self else {
                     return
@@ -1686,16 +1691,23 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 strongSelf.isRequestingMissingSsrcs = false
                 strongSelf.missingSsrcs.subtract(requestedSsrcs)
                 
-                var addedParticipants: [(UInt32, String?)] = []
+                var addedParticipants: [(UInt32, Int32?, String?)] = []
                 
                 for participant in state.participants {
                     if let ssrc = participant.ssrc {
-                        addedParticipants.append((ssrc, participant.jsonParams))
+                        addedParticipants.append((ssrc, participant.volume, participant.jsonParams))
                     }
                 }
                 
                 if !addedParticipants.isEmpty {
-                    strongSelf.callContext?.addParticipants(participants: addedParticipants)
+                    for (ssrc, volume, _) in addedParticipants {
+                        if let volume = volume {
+                            strongSelf.callContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
+                        }
+                    }
+                    strongSelf.callContext?.addParticipants(participants: addedParticipants.map { ssrc, _, params in
+                        return (ssrc, params)
+                    })
                 }
                 
                 strongSelf.maybeRequestMissingSsrcs()
@@ -2100,7 +2112,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.missingSsrcsDisposable.set(nil)
         self.missingSsrcs.removeAll()
-        self.processedMissingSsrcs.removeAll()
         
         self.internalState = .requesting
         self.internalStatePromise.set(.single(.requesting))

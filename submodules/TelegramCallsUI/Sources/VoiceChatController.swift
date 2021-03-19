@@ -1285,7 +1285,7 @@ public final class VoiceChatController: ViewController {
                             f(.default)
                         })))
                     
-                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id) && peer.id.namespace != Namespaces.Peer.CloudChannel) {
+                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id)) {
                             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
                             }, action: { [weak self] c, _ in
@@ -3139,7 +3139,7 @@ public final class VoiceChatController: ViewController {
                     muteState: memberMuteState,
                     canManageCall: self.callState?.canManageCall ?? false,
                     volume: member.volume,
-                    raisedHand: member.raiseHandRating != nil,
+                    raisedHand: member.hasRaiseHand,
                     displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id)
                 )))
                 index += 1
@@ -3188,6 +3188,8 @@ public final class VoiceChatController: ViewController {
                 if allEqual {
                     disableAnimation = true
                 }
+            } else if abs(previousEntries.count - entries.count) > 10 {
+                disableAnimation = true
             }
             
             let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
@@ -3416,6 +3418,12 @@ public final class VoiceChatController: ViewController {
             }
             return result
         }
+        
+        fileprivate func scrollToTop() {
+            if self.isExpanded {
+                self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            }
+        }
     }
     
     private let sharedContext: SharedAccountContext
@@ -3474,6 +3482,10 @@ public final class VoiceChatController: ViewController {
             return true
         }
         |> filter { $0 })
+        
+        self.scrollToTop = { [weak self] in
+            self?.controllerNode.scrollToTop()
+        }
     }
     
     required init(coder aDecoder: NSCoder) {

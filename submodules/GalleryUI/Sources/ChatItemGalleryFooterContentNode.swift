@@ -20,6 +20,7 @@ import LocalizedPeerData
 import TextSelectionNode
 import UrlEscaping
 import UndoUI
+import ManagedAnimationNode
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -27,8 +28,6 @@ private let editImage = generateTintedImage(image: UIImage(bundleImageName: "Med
 
 private let backwardImage = generateTintedImage(image:  UIImage(bundleImageName: "Media Gallery/BackwardButton"), color: .white)
 private let forwardImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/ForwardButton"), color: .white)
-private let pauseImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PauseButton"), color: .white)
-private let playImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PlayButton"), color: .white)
 
 private let cloudFetchIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: UIColor.white)
 
@@ -130,6 +129,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let backwardButton: HighlightableButtonNode
     private let forwardButton: HighlightableButtonNode
     private let playbackControlButton: HighlightableButtonNode
+    private let playPauseIconNode: PlayPauseIconNode
     
     private let statusButtonNode: HighlightTrackingButtonNode
     private let statusNode: RadialStatusNode
@@ -179,7 +179,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.forwardButton.isHidden = !seekable
                         if status == .Local {
                             self.playbackControlButton.isHidden = false
-                            self.playbackControlButton.setImage(playImage, for: [])
+                            self.playPauseIconNode.enqueueState(.play, animated: true)
                         } else {
                             self.playbackControlButton.isHidden = true
                         }
@@ -207,7 +207,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.backwardButton.isHidden = !seekable
                         self.forwardButton.isHidden = !seekable
                         self.playbackControlButton.isHidden = false
-                        self.playbackControlButton.setImage(paused ? playImage : pauseImage, for: [])
+                        self.playPauseIconNode.enqueueState(paused && !self.wasPlaying ? .play : .pause, animated: true)
                         self.statusButtonNode.isHidden = true
                         self.statusNode.isHidden = true
                 }
@@ -314,6 +314,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
         
+        self.playPauseIconNode = PlayPauseIconNode()
+        
         self.statusButtonNode = HighlightTrackingButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         self.statusNode.isUserInteractionEnabled = false
@@ -361,6 +363,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.contentNode.addSubnode(self.backwardButton)
         self.contentNode.addSubnode(self.forwardButton)
         self.contentNode.addSubnode(self.playbackControlButton)
+        self.playbackControlButton.addSubnode(self.playPauseIconNode)
         
         self.contentNode.addSubnode(self.statusNode)
         self.contentNode.addSubnode(self.statusButtonNode)
@@ -767,6 +770,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        self.playPauseIconNode.frame = self.playbackControlButton.bounds.offsetBy(dx: 2.0, dy: 2.0)
         
         let statusSize = CGSize(width: 28.0, height: 28.0)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor((width - statusSize.width) / 2.0), y: panelHeight - bottomInset - statusSize.height - 8.0), size: statusSize))
@@ -1378,6 +1382,56 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             videoFramePreviewNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak videoFramePreviewNode] _ in
                 videoFramePreviewNode?.removeFromSupernode()
             })
+        }
+    }
+}
+
+private enum PlayPauseIconNodeState: Equatable {
+    case play
+    case pause
+}
+
+private final class PlayPauseIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.4
+    private var iconState: PlayPauseIconNodeState = .pause
+    
+    init() {
+        super.init(size: CGSize(width: 40.0, height: 40.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: PlayPauseIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .pause:
+                switch state {
+                    case .play:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 83), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .pause:
+                        break
+                }
+            case .play:
+                switch state {
+                    case .pause:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 41), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+                        }
+                    case .play:
+                        break
+                }
         }
     }
 }

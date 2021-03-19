@@ -109,16 +109,25 @@ private func peerIdsRequiringLocalChatStateFromUpdateGroups(_ groups: [UpdateGro
     
     for group in groups {
         peerIds.formUnion(peerIdsRequiringLocalChatStateFromUpdates(group.updates))
-        
-        /*for chat in group.chats {
-            if let channel = parseTelegramGroupOrChannel(chat: chat) as? TelegramChannel {
+
+        var channelUpdates = Set<PeerId>()
+        for update in group.updates {
+            switch update {
+            case let .updateChannel(channelId):
+                channelUpdates.insert(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
+            default:
+                break
+            }
+        }
+        for chat in group.chats {
+            if let channel = parseTelegramGroupOrChannel(chat: chat) as? TelegramChannel, channelUpdates.contains(channel.id) {
                 if let accessHash = channel.accessHash, case .personal = accessHash {
                     if case .member = channel.participationStatus {
                         peerIds.insert(channel.id)
                     }
                 }
             }
-        }*/
+        }
         
         switch group {
         case let .ensurePeerHasLocalState(peerId):
@@ -2722,6 +2731,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 if count == 0 {
                     transaction.removeHole(peerId: peerId, namespace: namespace, space: .tag(.unseenPersonalMessage), range: 1 ... (Int32.max - 1))
                     let ids = transaction.getMessageIndicesWithTag(peerId: peerId, namespace: namespace, tag: .unseenPersonalMessage).map({ $0.id })
+                    Logger.shared.log("State", "will call markUnseenPersonalMessage for \(ids.count) messages")
                     for id in ids {
                         markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
                     }
