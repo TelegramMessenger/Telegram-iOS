@@ -2136,12 +2136,12 @@ public func getAudioBroadcastPart(dataSource: AudioBroadcastDataSource, callId: 
                 status: .rejoinNeeded,
                 responseTimestamp: responseTimestamp
             ))
-        } else if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+        } else if error.errorDescription.hasPrefix("FLOOD_WAIT") || error.errorDescription == "TIME_TOO_BIG" {
             return .single(GetAudioBroadcastPartResult(
                 status: .notReady,
                 responseTimestamp: responseTimestamp
             ))
-        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" || error.errorDescription == "TIME_TOO_BIG" {
+        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" {
             return .single(GetAudioBroadcastPartResult(
                 status: .resyncNeeded,
                 responseTimestamp: responseTimestamp
