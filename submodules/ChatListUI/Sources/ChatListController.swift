@@ -157,6 +157,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let tabContainerNode: ChatListFilterTabContainerNode
     private var tabContainerData: ([ChatListFilterTabEntry], Bool)?
     
+    private var didSetupTabs = false
+    
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
             self.chatListDisplayNode.containerNode.updateSelectedChatLocation(data: data as? ChatLocation, progress: progress, transition: transition)
@@ -618,7 +620,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] greetingSticker in
                         if let strongSelf = self {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput, scrollToEndIfExists: scrollToEndIfExists, greetingData: greetingSticker.flatMap({ ChatGreetingData(sticker: $0) }), animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, greetingData: greetingSticker.flatMap({ ChatGreetingData(sticker: $0) }), animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
                                 self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                                 if let promoInfo = promoInfo {
                                     switch promoInfo {
@@ -1357,17 +1359,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    override public func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        
-        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
-        
+    func dismissAllUndoControllers() {
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
             return true
         })
+    }
+    
+    override public func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
+        
+        self.dismissAllUndoControllers()
         
         self.featuredFiltersDisposable.set(nil)
     }
@@ -1604,17 +1610,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             let isEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
             
+            let animated = strongSelf.didSetupTabs
+            strongSelf.didSetupTabs = true
+
             if wasEmpty != isEmpty, strongSelf.displayNavigationBar {
-                strongSelf.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
+                strongSelf.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode, animated: false)
                 if let parentController = strongSelf.parent as? TabBarController {
-                    parentController.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
+                    parentController.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode, animated: animated)
                 }
             }
             
             if let layout = strongSelf.validLayout {
                 if wasEmpty != isEmpty {
-                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
-                    (strongSelf.parent as? TabBarController)?.updateLayout()
+                    let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+                    strongSelf.containerLayoutUpdated(layout, transition: transition)
+                    (strongSelf.parent as? TabBarController)?.updateLayout(transition: transition)
                 } else {
                     strongSelf.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: resolvedItems, selectedFilter: selectedEntryId, isReordering: strongSelf.chatListDisplayNode.isReorderingFilters || (strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing && !strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: false, transitionFraction: strongSelf.chatListDisplayNode.containerNode.transitionFraction, presentationData: strongSelf.presentationData, transition: .animated(duration: 0.4, curve: .spring))
                     strongSelf.chatListDisplayNode.inlineTabContainerNode.update(size: CGSize(width: layout.size.width, height: 40.0), sideInset: layout.safeInsets.left, filters: resolvedItems, selectedFilter: selectedEntryId, isReordering: strongSelf.chatListDisplayNode.isReorderingFilters || (strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing && !strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: false, transitionFraction: strongSelf.chatListDisplayNode.containerNode.transitionFraction, presentationData: strongSelf.presentationData, transition: .animated(duration: 0.4, curve: .spring))

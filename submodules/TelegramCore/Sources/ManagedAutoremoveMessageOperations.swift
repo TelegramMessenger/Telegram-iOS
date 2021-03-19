@@ -43,7 +43,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
     return Signal { _ in
         let helper = Atomic(value: ManagedAutoremoveMessageOperationsHelper())
         
-        let timeOffsetOnce = Signal<Double, NoError> { subscriber in
+        /*let timeOffsetOnce = Signal<Double, NoError> { subscriber in
             subscriber.putNext(network.globalTimeDifference)
             return EmptyDisposable
         }
@@ -59,7 +59,9 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
         |> map { value -> Double in
             round(value)
         }
-        |> distinctUntilChanged
+        |> distinctUntilChanged*/
+
+        let timeOffset: Signal<Double, NoError> = .single(0.0)
         
         let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: isRemove ? 0 : 1)).start(next: { timeOffset, view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)]) in
@@ -72,8 +74,10 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
             
             for (entry, disposable) in beginOperations {
                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + timeOffset
+                let delay = max(0.0, Double(entry.timestamp) - timestamp)
+                Logger.shared.log("Autoremove", "Scheduling autoremove for \(entry.messageId) at \(entry.timestamp) (in \(delay) seconds)")
                 let signal = Signal<Void, NoError>.complete()
-                |> suspendAwareDelay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
+                |> suspendAwareDelay(delay, queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {

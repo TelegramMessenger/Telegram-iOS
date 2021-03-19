@@ -18,6 +18,7 @@ import ContactsPeerItem
 import SearchUI
 import TelegramPermissionsUI
 import AppBundle
+import StickerResources
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
@@ -82,10 +83,14 @@ public class ContactsController: ViewController {
     private var presentationDataDisposable: Disposable?
     private var authorizationDisposable: Disposable?
     private let sortOrderPromise = Promise<ContactsSortOrder>()
+    private let isInVoiceOver = ValuePromise<Bool>(false)
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
     public var switchToChatsController: (() -> Void)?
+    
+    private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
+    private let preloadStickerDisposable = MetaDisposable()
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
@@ -117,6 +122,7 @@ public class ContactsController: ViewController {
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
+        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_VoiceOver_AddContact
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -199,11 +205,20 @@ public class ContactsController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         if self.navigationItem.rightBarButtonItem != nil {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
+            self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_VoiceOver_AddContact
         }
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContactsControllerNode(context: self.context, sortOrder: sortOrderPromise.get() |> distinctUntilChanged, present: { [weak self] c, a in
+        let sortOrderSignal: Signal<ContactsSortOrder, NoError> = combineLatest(self.sortOrderPromise.get(), self.isInVoiceOver.get())
+        |> map { sortOrder, isInVoiceOver in
+            if isInVoiceOver {
+                return .natural
+            } else {
+                return sortOrder
+            }
+        }
+        self.displayNode = ContactsControllerNode(context: self.context, sortOrder: sortOrderSignal |> distinctUntilChanged, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, controller: self)
         self._ready.set(self.contactsNode.contactListNode.ready)
@@ -215,22 +230,29 @@ public class ContactsController: ViewController {
                 switch peer {
                     case let .peer(peer, _, _):
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            
                             var scrollToEndIfExists = false
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
                             
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
-                                if fromSearch {
-                                    self?.deactivateSearch(animated: false)
-                                    self?.switchToChatsController?()
-                                }
-                                }, scrollToEndIfExists: scrollToEndIfExists, options: [.removeOnMasterDetails], completion: { [weak self] _ in
+                            let _ = (strongSelf.preloadedSticker.get()
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak self] greetingSticker in
                                 if let strongSelf = self {
-                                    strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                                        if fromSearch {
+                                            self?.deactivateSearch(animated: false)
+                                            self?.switchToChatsController?()
+                                        }
+                                        }, scrollToEndIfExists: scrollToEndIfExists, greetingData: greetingSticker.flatMap({ ChatGreetingData(sticker: $0) }), options: [.removeOnMasterDetails], completion: { [weak self] _ in
+                                        if let strongSelf = self {
+                                            strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                                        }
+                                    }))
+                                    
+                                    strongSelf.prepareRandomGreetingSticker()
                                 }
-                            }))
+                            })
                         }
                     case let .deviceContact(id, _):
                         let _ = ((strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
@@ -401,8 +423,18 @@ public class ContactsController: ViewController {
         self.contactsNode.contactListNode.enableUpdates = false
     }
     
+    public override func displayNodeDidLoad() {
+        super.displayNodeDidLoad()
+        
+        Queue.mainQueue().after(1.0) {
+            self.prepareRandomGreetingSticker()
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.isInVoiceOver.set(layout.inVoiceOver)
         
         self.validLayout = layout
         
@@ -492,5 +524,28 @@ public class ContactsController: ViewController {
                     })]), in: .window(.root))
             }
         })
+    }
+    
+    
+    private func prepareRandomGreetingSticker() {
+        let context = self.context
+        self.preloadedSticker.set(.single(nil)
+        |> then(randomGreetingSticker(account: context.account)
+        |> map { item in
+            return item?.file
+        }))
+        
+        self.preloadStickerDisposable.set((self.preloadedSticker.get()
+        |> mapToSignal { sticker -> Signal<Void, NoError> in
+            if let sticker = sticker {
+                let _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: sticker)).start()
+                return chatMessageAnimationData(postbox: context.account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+            } else {
+                return .complete()
+            }
+        }).start())
     }
 }

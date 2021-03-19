@@ -34,19 +34,22 @@ final class PeerInfoState {
     let updatingAvatar: PeerInfoUpdatingAvatar?
     let updatingBio: String?
     let avatarUploadProgress: CGFloat?
+    let highlightedButton: PeerInfoHeaderButtonKey?
     
     init(
         isEditing: Bool,
         selectedMessageIds: Set<MessageId>?,
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
-        avatarUploadProgress: CGFloat?
+        avatarUploadProgress: CGFloat?,
+        highlightedButton: PeerInfoHeaderButtonKey?
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
         self.updatingAvatar = updatingAvatar
         self.updatingBio = updatingBio
         self.avatarUploadProgress = avatarUploadProgress
+        self.highlightedButton = highlightedButton
     }
     
     func withIsEditing(_ isEditing: Bool) -> PeerInfoState {
@@ -55,7 +58,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -65,7 +69,8 @@ final class PeerInfoState {
             selectedMessageIds: selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -75,7 +80,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -85,7 +91,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -95,7 +102,19 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: avatarUploadProgress
+            avatarUploadProgress: avatarUploadProgress,
+            highlightedButton: self.highlightedButton
+        )
+    }
+    
+    func withHighlightedButton(_ highlightedButton: PeerInfoHeaderButtonKey?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: highlightedButton
         )
     }
 }
@@ -1008,8 +1027,16 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var canViewStats = false
         var hasDiscussion = false
         var hasVoiceChat = false
+        var displayMore = true
+        var canStartVoiceChat = false
         if let cachedChannelData = cachedData as? CachedChannelData {
             canViewStats = cachedChannelData.flags.contains(.canViewStats)
+        }
+        if channel.flags.contains(.hasVoiceChat) {
+            hasVoiceChat = true
+        }
+        if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+            displayMore = true
         }
         switch channel.info {
         case let .broadcast(info):
@@ -1027,6 +1054,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             if channel.flags.contains(.hasVoiceChat) {
                 hasVoiceChat = true
             }
+        }
+        if !hasVoiceChat && (channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls)) {
+            canStartVoiceChat = true
         }
         switch channel.participationStatus {
         case .member:
@@ -1048,7 +1078,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if displayLeave {
             result.append(.leave)
         }
-        var displayMore = true
         if displayLeave && !channel.flags.contains(.isCreator) {
             if let _ = channel.adminRights {
                 displayMore = false
@@ -1058,7 +1087,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
             canReport = false
         }
-        if !canReport && !canViewStats {
+        if !canReport && !canViewStats && !canStartVoiceChat {
             displayMore = false
         }
         if displayMore {

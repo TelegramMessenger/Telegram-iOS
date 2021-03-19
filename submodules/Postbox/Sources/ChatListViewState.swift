@@ -865,7 +865,7 @@ private final class ChatListViewSpaceState {
                 
                 let loadedEntries = postbox.chatListTable.entries(groupId: .root, from: (allEntries[0].index.predecessor, true), to: (allEntries[allEntries.count - 1].index.successor, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1000, predicate: nil).map(mapEntry)
                 
-                assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
+                //assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
             }
         }
         #endif

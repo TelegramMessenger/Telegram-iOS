@@ -121,12 +121,13 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
         let arguments = arguments as! FeaturedStickerPacksControllerArguments
         switch self {
             case let .pack(_, theme, strings, info, unread, topItem, count, playAnimatedStickers, installed):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
                     arguments.addPack(info)
                 }, removePack: {
+                }, toggleSelected: {
                 })
         }
     }

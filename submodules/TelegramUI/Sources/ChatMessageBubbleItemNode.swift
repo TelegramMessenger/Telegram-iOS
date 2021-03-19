@@ -521,9 +521,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             guard let strongSelf = self, let accessibilityData = strongSelf.accessibilityData else {
                 return false
             }
+            
+            for node in strongSelf.contentNodes {
+                if node.accessibilityActivate() {
+                    return true
+                }
+            }
+            
             if let singleUrl = accessibilityData.singleUrl {
                 strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false, strongSelf.item?.content.firstMessage)
+                return true
             }
+            
             return false
         }
         

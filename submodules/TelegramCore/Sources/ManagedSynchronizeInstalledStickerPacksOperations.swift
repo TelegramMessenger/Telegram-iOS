@@ -243,33 +243,49 @@ private func installRemoteStickerPacks(network: Network, infos: [StickerPackColl
 }
 
 private func removeRemoteStickerPacks(network: Network, infos: [StickerPackCollectionInfo]) -> Signal<Void, NoError> {
-    var signals: [Signal<Void, NoError>] = []
-    for info in infos {
-        let remove = network.request(Api.functions.messages.uninstallStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
-        |> mapToSignal { _ -> Signal<Void, MTRpcError> in
-            return .complete()
+    if infos.count > 0 {
+        if infos.count > 1 {
+            return network.request(Api.functions.messages.toggleStickerSets(flags: 1 << 0, stickersets: infos.map { .inputStickerSetID(id: $0.id.id, accessHash: $0.accessHash) }))
+            |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                return .single(Void())
+            }
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .single(Void())
+            }
+        } else if let info = infos.first {
+            return network.request(Api.functions.messages.uninstallStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
+            |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                return .single(Void())
+            }
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .single(Void())
+            }
         }
-        |> `catch` { _ -> Signal<Void, NoError> in
-            return .complete()
-        }
-        signals.append(remove)
     }
-    return combineLatest(signals) |> map { _ in return Void() }
+    return .single(Void())
 }
 
 private func archiveRemoteStickerPacks(network: Network, infos: [StickerPackCollectionInfo]) -> Signal<Void, NoError> {
-    var signals: [Signal<Void, NoError>] = []
-    for info in infos {
-        let archive = network.request(Api.functions.messages.installStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash), archived: .boolTrue))
-        |> mapToSignal { _ -> Signal<Void, MTRpcError> in
-            return .complete()
+    if infos.count > 0 {
+        if infos.count > 1 {
+            return network.request(Api.functions.messages.toggleStickerSets(flags: 1 << 1, stickersets: infos.map { .inputStickerSetID(id: $0.id.id, accessHash: $0.accessHash) }))
+            |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                return .single(Void())
+            }
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .single(Void())
+            }
+        } else if let info = infos.first {
+            return network.request(Api.functions.messages.installStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash), archived: .boolTrue))
+            |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                return .single(Void())
+            }
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .single(Void())
+            }
         }
-        |> `catch` { _ -> Signal<Void, NoError> in
-            return .complete()
-        }
-        signals.append(archive)
     }
-    return combineLatest(signals) |> map { _ in return Void() }
+    return .single(Void())
 }
 
 private func reorderRemoteStickerPacks(network: Network, namespace: SynchronizeInstalledStickerPacksOperationNamespace, ids: [ItemCollectionId]) -> Signal<Void, NoError> {

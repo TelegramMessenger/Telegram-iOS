@@ -36,7 +36,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     }
     
     var selectedContext: ChatTitlePanelContext?
-    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty && !inhibitTitlePanelDisplay {
+    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty {
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
             switch context {
                 case .pinnedMessage:
@@ -48,6 +48,15 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                     selectedContext = context
                     break loop
             }
+        }
+    }
+
+    if inhibitTitlePanelDisplay, let selectedContextValue = selectedContext {
+        switch selectedContextValue {
+        case .pinnedMessage:
+            break
+        default:
+            selectedContext = nil
         }
     }
     

@@ -101,7 +101,7 @@ private final class ImportManager {
         
         var totalMediaBytes = 0
         for entry in self.entries {
-            self.entryProgress[entry.0.path] = (Int(entry.0.uncompressedSize), 0)
+            self.entryProgress[entry.1] = (Int(entry.0.uncompressedSize), 0)
             totalMediaBytes += Int(entry.0.uncompressedSize)
         }
         self.totalBytes = self.mainFileSize + totalMediaBytes
@@ -277,8 +277,8 @@ private final class ImportManager {
                 guard let strongSelf = self else {
                     return
                 }
-                if let (size, _) = strongSelf.entryProgress[entry.0.path] {
-                    strongSelf.entryProgress[entry.0.path] = (size, Int(progress * Float(entry.0.uncompressedSize)))
+                if let (size, _) = strongSelf.entryProgress[entry.1] {
+                    strongSelf.entryProgress[entry.1] = (size, Int(progress * Float(entry.0.uncompressedSize)))
                     strongSelf.updateProgress()
                 }
             }, error: { [weak self] error in
@@ -290,8 +290,9 @@ private final class ImportManager {
                 guard let strongSelf = self else {
                     return
                 }
-                Logger.shared.log("ChatImportScreen", "updateState entry \(entry.1) has completed upload")
-                strongSelf.activeEntries.removeValue(forKey: entry.0.path)
+                Logger.shared.log("ChatImportScreen", "updateState entry \(entry.1) has completed upload, previous active entries: \(strongSelf.activeEntries.keys)")
+                strongSelf.activeEntries.removeValue(forKey: entry.1)
+                Logger.shared.log("ChatImportScreen", "removed active entry \(entry.1), current active entries: \(strongSelf.activeEntries.keys)")
                 strongSelf.updateState()
             }))
         }

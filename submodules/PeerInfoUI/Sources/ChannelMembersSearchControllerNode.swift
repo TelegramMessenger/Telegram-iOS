@@ -243,8 +243,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         let additionalDisposable = MetaDisposable()
         
         if peerId.namespace == Namespaces.Peer.CloudGroup {
-            let disposable = (context.account.postbox.peerView(id: peerId)
-            |> deliverOnMainQueue).start(next: { [weak self] peerView in
+            let disposable = combineLatest(queue: Queue.mainQueue(), context.account.postbox.peerView(id: peerId), context.account.postbox.contactPeersView(accountPeerId: context.account.peerId, includePresences: true)).start(next: { [weak self] peerView, contactsView in
                 guard let strongSelf = self else {
                     return
                 }
@@ -398,6 +397,20 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     entries.append(.peer(index, renderedParticipant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
                     index += 1
                 }
+                
+                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                    if case .excludeNonMembers = filter {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    for peer in contactsView.peers {
+                        entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.peerPresences[peer.id] as? TelegramUserPresence))
+                        index += 1
+                    }
+                }
+                
                 let previous = previousEntries.swap(entries)
                 
                 strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, context: context, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))

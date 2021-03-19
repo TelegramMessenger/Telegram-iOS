@@ -174,6 +174,10 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
         legacyOpenUrl(url)
     }
     
+    public func makeViewDisableInteractiveKeyboardGestureRecognizer(_ view: UIView!) {
+        view.disablesInteractiveKeyboardGestureRecognizer = true
+    }
+    
     public func disableUserInteraction(for timeInterval: TimeInterval) {
     }
     

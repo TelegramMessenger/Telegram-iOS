@@ -17,6 +17,7 @@ import WallpaperResources
 import ShareController
 import AccountContext
 import ContextUI
+import UndoUI
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -722,8 +723,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 }
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_ShareTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                     c.dismiss(completion: {
-                        let controller = ShareController(context: context, subject: .url("https://t.me/addtheme/\(theme.theme.slug)"), preferredAction: .default)
-                        presentControllerImpl?(controller, nil)
+                        let shareController = ShareController(context: context, subject: .url("https://t.me/addtheme/\(theme.theme.slug)"), preferredAction: .default)
+                        shareController.actionCompleted = {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                        }
+                        presentControllerImpl?(shareController, nil)
                     })
                 })))
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_RemoveTheme, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
@@ -944,8 +949,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     }
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_ShareTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                         c.dismiss(completion: {
-                            let controller = ShareController(context: context, subject: .url("https://t.me/addtheme/\(cloudTheme.theme.slug)"), preferredAction: .default)
-                            presentControllerImpl?(controller, nil)
+                            let shareController = ShareController(context: context, subject: .url("https://t.me/addtheme/\(cloudTheme.theme.slug)"), preferredAction: .default)
+                            shareController.actionCompleted = {
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            }
+                            presentControllerImpl?(shareController, nil)
                         })
                     })))
                     if cloudThemeExists {

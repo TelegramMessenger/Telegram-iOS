@@ -39,7 +39,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let copyAction: (() -> Void)?
     let shareAction: (() -> Void)?
-    let contextAction: ((ASDisplayNode) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let viewAction: (() -> Void)?
     public let tag: ItemListItemTag?
     
@@ -56,7 +56,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         style: ItemListStyle,
         copyAction: (() -> Void)?,
         shareAction: (() -> Void)?,
-        contextAction: ((ASDisplayNode) -> Void)?,
+        contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?,
         viewAction: (() -> Void)?,
         tag: ItemListItemTag? = nil
     ) {
@@ -122,7 +122,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private let fieldNode: ASImageNode
     private let addressNode: TextNode
     private let fieldButtonNode: HighlightTrackingButtonNode
-    private let extractedContainerNode: ContextExtractedContentContainingNode
+    private let referenceContainerNode: ContextReferenceContentNode
     private let containerNode: ContextControllerSourceNode
     private let addressButtonNode: HighlightTrackingButtonNode
     private let addressButtonIconNode: ASImageNode
@@ -171,10 +171,11 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         
         self.fieldButtonNode = HighlightTrackingButtonNode()
     
-        self.addressButtonNode = HighlightTrackingButtonNode()
-        self.extractedContainerNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
-        self.containerNode.isGestureEnabled = false
+        self.containerNode.animateScale = false
+        self.referenceContainerNode = ContextReferenceContentNode()
+        
+        self.addressButtonNode = HighlightTrackingButtonNode()
         self.addressButtonIconNode = ASImageNode()
         self.addressButtonIconNode.contentMode = .center
         self.addressButtonIconNode.displaysAsynchronously = false
@@ -196,13 +197,18 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         self.addSubnode(self.invitedPeersNode)
         self.addSubnode(self.avatarsButtonNode)
         
-        self.containerNode.addSubnode(self.extractedContainerNode)
-        self.extractedContainerNode.contentNode.addSubnode(self.addressButtonIconNode)
-        self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
-        self.addressButtonNode.addSubnode(self.containerNode)
-        self.addSubnode(self.addressButtonNode)
+        self.containerNode.addSubnode(self.referenceContainerNode)
+        self.referenceContainerNode.addSubnode(self.addressButtonIconNode)
+        self.referenceContainerNode.addSubnode(self.addressButtonNode)
+        self.addSubnode(self.containerNode)
         
         self.addSubnode(self.activateArea)
+        
+        self.containerNode.activated = { [weak self] gesture, _ in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.contextAction?(strongSelf.referenceContainerNode, gesture)
+            }
+        }
         
         self.fieldButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -260,7 +266,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     
     @objc private func addressButtonPressed() {
         if let item = self.item {
-            item.contextAction?(self.extractedContainerNode)
+            item.contextAction?(self.referenceContainerNode, nil)
         }
     }
     
@@ -431,10 +437,10 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     strongSelf.addressNode.frame = CGRect(origin: CGPoint(x: fieldFrame.minX + (alignCentrally ? floorToScreenPixels((fieldFrame.width - addressLayout.size.width) / 2.0) : 14.0), y: fieldFrame.minY + floorToScreenPixels((fieldFrame.height - addressLayout.size.height) / 2.0) + 1.0), size: addressLayout.size)
                     
-                    strongSelf.addressButtonNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0 - 14.0, y: verticalInset), size: CGSize(width: 52.0, height: 52.0))
-                    strongSelf.extractedContainerNode.frame = strongSelf.addressButtonNode.bounds
-                    strongSelf.extractedContainerNode.contentRect = strongSelf.addressButtonNode.bounds
-                    strongSelf.addressButtonIconNode.frame = strongSelf.addressButtonNode.bounds
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - 38.0 - 14.0, y: verticalInset), size: CGSize(width: 52.0, height: 52.0))
+                    strongSelf.addressButtonNode.frame = strongSelf.containerNode.bounds
+                    strongSelf.referenceContainerNode.frame =  strongSelf.containerNode.bounds
+                    strongSelf.addressButtonIconNode.frame = strongSelf.containerNode.bounds
                                         
                     let shareButtonNode: SolidRoundedButtonNode
                     if let currentShareButtonNode = strongSelf.shareButtonNode {

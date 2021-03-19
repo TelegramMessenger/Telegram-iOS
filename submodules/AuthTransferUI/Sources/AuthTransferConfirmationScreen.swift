@@ -14,65 +14,8 @@ import TelegramCore
 import Markdown
 import DeviceAccess
 
-private let colorKeyRegex = try? NSRegularExpression(pattern: "\"k\":\\[[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\]")
-
 private func transformedWithTheme(data: Data, theme: PresentationTheme) -> Data {
-    if var string = String(data: data, encoding: .utf8) {
-        var colors: [UIColor] = [0x333333, 0xFFFFFF, 0x50A7EA, 0x212121].map { UIColor(rgb: $0) }
-        let replacementColors: [UIColor] = [theme.list.itemPrimaryTextColor.mixedWith(.white, alpha: 0.2), theme.list.plainBackgroundColor, theme.list.itemAccentColor, theme.list.plainBackgroundColor]
-        
-        func colorToString(_ color: UIColor) -> String {
-            var r: CGFloat = 0.0
-            var g: CGFloat = 0.0
-            var b: CGFloat = 0.0
-            if color.getRed(&r, green: &g, blue: &b, alpha: nil) {
-                return "\"k\":[\(r),\(g),\(b),1]"
-            }
-            return ""
-        }
-        
-        func match(_ a: Double, _ b: Double, eps: Double) -> Bool {
-            return abs(a - b) < eps
-        }
-        
-        var replacements: [(NSTextCheckingResult, String)] = []
-        
-        if let colorKeyRegex = colorKeyRegex {
-            let results = colorKeyRegex.matches(in: string, range: NSRange(string.startIndex..., in: string))
-            for result in results.reversed()  {
-                if let range = Range(result.range, in: string) {
-                    let substring = String(string[range])
-                    let color = substring[substring.index(string.startIndex, offsetBy: "\"k\":[".count) ..< substring.index(before: substring.endIndex)]
-                    let components = color.split(separator: ",")
-                    if components.count == 4, let r = Double(components[0]), let g = Double(components[1]), let b = Double(components[2]), let a = Double(components[3]) {
-                        if match(a, 1.0, eps: 0.01) {
-                            for i in 0 ..< colors.count {
-                                let color = colors[i]
-                                var cr: CGFloat = 0.0
-                                var cg: CGFloat = 0.0
-                                var cb: CGFloat = 0.0
-                                if color.getRed(&cr, green: &cg, blue: &cb, alpha: nil) {
-                                    if match(r, Double(cr), eps: 0.01) && match(g, Double(cg), eps: 0.01) && match(b, Double(cb), eps: 0.01) {
-                                        replacements.append((result, colorToString(replacementColors[i])))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        for (result, text) in replacements {
-            if let range = Range(result.range, in: string) {
-                string = string.replacingCharacters(in: range, with: text)
-            }
-        }
-        
-        return string.data(using: .utf8) ?? data
-    } else {
-        return data
-    }
+    return transformedWithColors(data: data, colors: [(UIColor(rgb: 0x333333), theme.list.itemPrimaryTextColor.mixedWith(.white, alpha: 0.2)), (UIColor(rgb: 0xFFFFFF), theme.list.plainBackgroundColor), (UIColor(rgb: 0x50A7EA), theme.list.itemAccentColor), (UIColor(rgb: 0x212121), theme.list.plainBackgroundColor)])
 }
 
 public final class AuthDataTransferSplashScreen: ViewController {

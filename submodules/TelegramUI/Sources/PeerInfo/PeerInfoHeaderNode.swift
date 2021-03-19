@@ -49,19 +49,23 @@ enum PeerInfoHeaderButtonIcon {
 
 final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     let key: PeerInfoHeaderButtonKey
-    private let action: (PeerInfoHeaderButtonNode) -> Void
-    let containerNode: ASDisplayNode
+    private let action: (PeerInfoHeaderButtonNode, ContextGesture?) -> Void
+    let referenceNode: ContextReferenceContentNode
+    let containerNode: ContextControllerSourceNode
     private let backgroundNode: ASImageNode
     private let textNode: ImmediateTextNode
     
     private var theme: PresentationTheme?
     private var icon: PeerInfoHeaderButtonIcon?
+    private var isActive: Bool?
     
-    init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode) -> Void) {
+    init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode, ContextGesture?) -> Void) {
         self.key = key
         self.action = action
         
-        self.containerNode = ASDisplayNode()
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -74,9 +78,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         self.accessibilityTraits = .button
         
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.addSubnode(self.backgroundNode)
         self.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.backgroundNode)
-        self.containerNode.addSubnode(self.textNode)
+        self.addSubnode(self.textNode)
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -90,20 +95,55 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             }
         }
         
+        self.containerNode.activated = { [weak self] gesture, _ in
+            if let strongSelf = self {
+                strongSelf.action(strongSelf, gesture)
+            }
+        }
+        
         self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
     @objc private func buttonPressed() {
-        self.action(self)
+        self.action(self, nil)
     }
     
-    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
-        if self.theme != presentationData.theme || self.icon != icon {
+    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+        if self.theme != presentationData.theme || self.icon != icon || self.isActive != isActive {
             self.theme = presentationData.theme
             self.icon = icon
+            
+            let isActiveUpdated = self.isActive != isActive
+            self.isActive = isActive
+            
+            var isGestureEnabled = false
+            if [.mute, .voiceChat, .more].contains(icon) {
+                isGestureEnabled = true
+            }
+            self.containerNode.isGestureEnabled = isGestureEnabled
+            
+            if isActiveUpdated, !self.containerNode.alpha.isZero {
+                if let snapshotView = self.backgroundNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.backgroundNode.view.frame
+                    self.view.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+                if !isExpanded, let snapshotView = self.textNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.textNode.view.frame
+                    self.view.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
+            
             self.backgroundNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)
+                context.setFillColor(isActive ? presentationData.theme.list.itemAccentColor.cgColor : presentationData.theme.list.itemDisabledTextColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.normal)
                 context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
@@ -138,7 +178,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             })
         }
         
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: isActive ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemDisabledTextColor)
         self.accessibilityLabel = text
         let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
         
@@ -146,6 +186,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height + 6.0), size: titleSize))
         transition.updateAlpha(node: self.textNode, alpha: isExpanded ? 0.0 : 1.0)
+        
+        self.referenceNode.frame = self.containerNode.bounds
     }
 }
 
@@ -1333,7 +1375,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     }
         
     var removedPhotoResourceIds = Set<String>()
-    func update(peer: Peer?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool) {
+    func update(peer: Peer?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool, isSettings: Bool) {
         if let peer = peer {
             let previousItem = self.item
             var item = item
@@ -1352,6 +1394,15 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 overrideImage = AvatarNodeImageOverride.none
                 item = nil
             }
+            
+            if let _ = overrideImage {
+                self.containerNode.isGestureEnabled = false
+            } else if peer.profileImageRepresentations.isEmpty {
+                self.containerNode.isGestureEnabled = false
+            } else {
+                self.containerNode.isGestureEnabled = false
+            }
+            
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             self.isFirstAvatarLoading = false
             
@@ -1384,7 +1435,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     }
                 }
                 
-                self.containerNode.isGestureEnabled = true
+                self.containerNode.isGestureEnabled = !isSettings
                 
                 if let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
@@ -1730,6 +1781,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
 }
 
 final class PeerInfoAvatarListNode: ASDisplayNode {
+    private let isSettings: Bool
     let avatarContainerNode: PeerInfoAvatarTransformContainerNode
     let listContainerTransformNode: ASDisplayNode
     let listContainerNode: PeerInfoAvatarListContainerNode
@@ -1741,7 +1793,9 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
     
-    init(context: AccountContext,  readyWhenGalleryLoads: Bool) {
+    init(context: AccountContext, readyWhenGalleryLoads: Bool, isSettings: Bool) {
+        self.isSettings = isSettings
+        
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
         self.listContainerTransformNode = ASDisplayNode()
         self.listContainerNode = PeerInfoAvatarListContainerNode(context: context)
@@ -1790,7 +1844,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
                 strongSelf.item = items.first
                 strongSelf.itemsUpdated?(items)
                 if let (peer, theme, avatarSize, isExpanded) = strongSelf.arguments {
-                    strongSelf.avatarContainerNode.update(peer: peer, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded)
+                    strongSelf.avatarContainerNode.update(peer: peer, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: strongSelf.isSettings)
                 }
             }
         }
@@ -1798,7 +1852,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
         self.arguments = (peer, theme, avatarSize, isExpanded)
-        self.avatarContainerNode.update(peer: peer, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded)
+        self.avatarContainerNode.update(peer: peer, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -2438,6 +2492,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
                 self.addSubnode(self.avatarButtonNode)
             }
             self.avatarTextNode.attributedText = NSAttributedString(string: presentationData.strings.Settings_SetNewProfilePhotoOrVideo, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
+            self.avatarButtonNode.accessibilityLabel = self.avatarTextNode.attributedText?.string
             
             let avatarTextSize = self.avatarTextNode.updateLayout(CGSize(width: width, height: 32.0))
             transition.updateFrame(node: self.avatarTextNode, frame: CGRect(origin: CGPoint(), size: avatarTextSize))
@@ -2575,7 +2630,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let usernameNodeContainer: ASDisplayNode
     let usernameNodeRawContainer: ASDisplayNode
     let usernameNode: MultiScaleTextNode
-    private var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
+    var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
     private let backgroundNode: ASDisplayNode
     private let expandedBackgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
@@ -2585,7 +2640,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let navigationSeparatorNode: ASDisplayNode
     let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
     
-    var performButtonAction: ((PeerInfoHeaderButtonKey) -> Void)?
+    var performButtonAction: ((PeerInfoHeaderButtonKey, ContextGesture?) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
     var cancelUpload: (() -> Void)?
@@ -2603,7 +2658,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.isSettings = isSettings
         self.videoCallsEnabled = VideoCallsConfiguration(appConfiguration: context.currentAppConfiguration.with { $0 }).areVideoCallsEnabled
         
-        self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded)
+        self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded, isSettings: isSettings)
         
         self.titleNodeContainer = ASDisplayNode()
         self.titleNodeRawContainer = ASDisplayNode()
@@ -3299,8 +3354,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 buttonNode = current
             } else {
                 wasAdded = true
-                buttonNode = PeerInfoHeaderButtonNode(key: buttonKey, action: { [weak self] buttonNode in
-                    self?.buttonPressed(buttonNode)
+                buttonNode = PeerInfoHeaderButtonNode(key: buttonKey, action: { [weak self] buttonNode, gesture in
+                    self?.buttonPressed(buttonNode, gesture: gesture)
                 })
                 self.buttonNodes[buttonKey] = buttonNode
                 self.regularContentNode.addSubnode(buttonNode)
@@ -3354,7 +3409,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 buttonText = presentationData.strings.PeerInfo_ButtonLeave
                 buttonIcon = .leave
             }
-            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isExpanded: self.isAvatarExpanded, presentationData: presentationData, transition: buttonTransition)
+            
+            var isActive = true
+            if let highlightedButton = state.highlightedButton {
+                isActive = buttonKey == highlightedButton
+            }
+            
+            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isActive: isActive, isExpanded: self.isAvatarExpanded, presentationData: presentationData, transition: buttonTransition)
             transition.updateSublayerTransformScaleAdditive(node: buttonNode, scale: buttonsScale)
             
             if wasAdded {
@@ -3407,7 +3468,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if !buttonKeys.contains(key) {
                 if let buttonNode = self.buttonNodes[key] {
                     self.buttonNodes.removeValue(forKey: key)
-                    buttonNode.removeFromSupernode()
+                    transition.updateAlpha(node: buttonNode, alpha: 0.0) { [weak buttonNode] _ in
+                        buttonNode?.removeFromSupernode()
+                    }
                 }
             }
         }
@@ -3448,8 +3511,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         return resolvedHeight
     }
     
-    private func buttonPressed(_ buttonNode: PeerInfoHeaderButtonNode) {
-        self.performButtonAction?(buttonNode.key)
+    private func buttonPressed(_ buttonNode: PeerInfoHeaderButtonNode, gesture: ContextGesture?) {
+        self.performButtonAction?(buttonNode.key, gesture)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

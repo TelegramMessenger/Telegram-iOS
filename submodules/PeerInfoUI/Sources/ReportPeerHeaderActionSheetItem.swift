@@ -42,7 +42,7 @@ private final class ReportPeerHeaderActionSheetItemNode: ActionSheetItemNode {
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "Cop", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .count(2), mode: .direct(cachePathPrefix: nil))
             self.animationNode.visibility = true
         }
         

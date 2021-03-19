@@ -43,6 +43,13 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.pinNode)
     }
     
+    override func accessibilityActivate() -> Bool {
+        if let item = self.item {
+            let _ = item.controllerInteraction.openMessage(item.message, .default)
+        }
+        return true
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }

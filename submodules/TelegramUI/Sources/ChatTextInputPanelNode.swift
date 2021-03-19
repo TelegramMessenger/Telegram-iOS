@@ -19,36 +19,36 @@ import Speak
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
 
-private final class AccessoryItemIconButton: HighlightTrackingButton {
+private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     private let item: ChatTextInputAccessoryItem
     private var width: CGFloat
-    private let imageNode: ASImageNode
+    private var imageEdgeInsets = UIEdgeInsets()
     
     init(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) {
-        self.imageNode = ASImageNode()
-        self.imageNode.isLayerBacked = true
-        self.imageNode.displaysAsynchronously = false
-        self.imageNode.displayWithoutProcessing = true
-        
         self.item = item
         
-        let (image, text, alpha, insets) = AccessoryItemIconButton.imageAndInsets(item: item, theme: theme, strings: strings)
+        let (image, text, accessibilityLabel, alpha, insets) = AccessoryItemIconButtonNode.imageAndInsets(item: item, theme: theme, strings: strings)
         
-        self.width = AccessoryItemIconButton.calculateWidth(item: item, image: image, text: text, strings: strings)
+        self.width = AccessoryItemIconButtonNode.calculateWidth(item: item, image: image, text: text, strings: strings)
         
-        super.init(frame: CGRect())
+        super.init()
+        
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = [.button]
         
         self.addSubnode(self.imageNode)
         
         if let text = text {
-            self.titleLabel?.font = accessoryButtonFont
-            self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
-            self.setTitle(text, for: [])
+            self.setAttributedTitle(NSAttributedString(string: text, font: accessoryButtonFont, textColor: theme.chat.inputPanel.inputControlColor), for: .normal)
+        } else {
+            self.setAttributedTitle(NSAttributedString(), for: .normal)
         }
         
         self.imageNode.image = image
         self.imageNode.alpha = alpha
         self.imageEdgeInsets = insets
+        
+        self.accessibilityLabel = accessibilityLabel
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -64,51 +64,51 @@ private final class AccessoryItemIconButton: HighlightTrackingButton {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        let (image, text, alpha, insets) = AccessoryItemIconButton.imageAndInsets(item: item, theme: theme, strings: strings)
+        let (image, text, accessibilityLabel, alpha, insets) = AccessoryItemIconButtonNode.imageAndInsets(item: item, theme: theme, strings: strings)
         
-        self.width = AccessoryItemIconButton.calculateWidth(item: item, image: image, text: text, strings: strings)
+        self.width = AccessoryItemIconButtonNode.calculateWidth(item: item, image: image, text: text, strings: strings)
         
         if let text = text {
-            self.titleLabel?.font = accessoryButtonFont
-            self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
-            self.setTitle(text, for: [])
+            self.setAttributedTitle(NSAttributedString(string: text, font: accessoryButtonFont, textColor: theme.chat.inputPanel.inputControlColor), for: .normal)
         } else {
-            self.setTitle("", for: [])
+            self.setAttributedTitle(NSAttributedString(), for: .normal)
         }
         
         self.imageNode.image = image
         self.imageEdgeInsets = insets
         self.imageNode.alpha = alpha
+        
+        self.accessibilityLabel = accessibilityLabel
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, CGFloat, UIEdgeInsets) {
+    static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, String, CGFloat, UIEdgeInsets) {
         switch item {
             case .keyboard:
-                return (PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), nil, 1.0, UIEdgeInsets())
+                return (PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), nil, strings.VoiceOver_Keyboard, 1.0, UIEdgeInsets())
             case let .stickers(enabled):
-                return (PresentationResourcesChat.chatInputTextFieldStickersImage(theme), nil, enabled ? 1.0 : 0.4, UIEdgeInsets())
+                return (PresentationResourcesChat.chatInputTextFieldStickersImage(theme), nil, strings.VoiceOver_Stickers, enabled ? 1.0 : 0.4, UIEdgeInsets())
             case .inputButtons:
-                return (PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), nil, 1.0, UIEdgeInsets())
+                return (PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), nil, strings.VoiceOver_BotKeyboard, 1.0, UIEdgeInsets())
             case .commands:
-                return (PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), nil, 1.0, UIEdgeInsets())
+                return (PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), nil, strings.VoiceOver_BotCommands, 1.0, UIEdgeInsets())
             case let .silentPost(value):
                 if value {
-                    return (PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), nil, 1.0, UIEdgeInsets())
+                    return (PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), nil, strings.VoiceOver_SilentPostOn, 1.0, UIEdgeInsets())
                 } else {
-                    return (PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), nil, 1.0, UIEdgeInsets())
+                    return (PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), nil, strings.VoiceOver_SilentPostOff, 1.0, UIEdgeInsets())
                 }
             case let .messageAutoremoveTimeout(timeout):
                 if let timeout = timeout {
-                    return (nil, shortTimeIntervalString(strings: strings, value: timeout), 1.0, UIEdgeInsets())
+                    return (nil, shortTimeIntervalString(strings: strings, value: timeout), strings.VoiceOver_SelfDestructTimerOn(timeIntervalString(strings: strings, value: timeout)).0, 1.0, UIEdgeInsets())
                 } else {
-                    return (PresentationResourcesChat.chatInputTextFieldTimerImage(theme), nil, 1.0, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0))
+                    return (PresentationResourcesChat.chatInputTextFieldTimerImage(theme), nil, strings.VoiceOver_SelfDestructTimerOff, 1.0, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0))
                 }
             case .scheduledMessages:
-                return (PresentationResourcesChat.chatInputTextFieldScheduleImage(theme), nil, 1.0, UIEdgeInsets())
+                return (PresentationResourcesChat.chatInputTextFieldScheduleImage(theme), nil, strings.VoiceOver_ScheduledMessages, 1.0, UIEdgeInsets())
         }
     }
     
@@ -223,7 +223,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator?
     var animatingBinNode: AnimationNode?
     
-    private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
+    private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)] = []
     
     private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     
@@ -319,9 +319,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             
             if updateAccessoryButtons {
-                var updatedButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
+                var updatedButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)] = []
                 for item in accessoryItems {
-                    var itemAndButton: (ChatTextInputAccessoryItem, AccessoryItemIconButton)?
+                    var itemAndButton: (ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)?
                     for i in 0 ..< self.accessoryItemButtons.count {
                         if self.accessoryItemButtons[i].0 == item {
                             itemAndButton = self.accessoryItemButtons[i]
@@ -330,14 +330,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         }
                     }
                     if itemAndButton == nil {
-                        let button = AccessoryItemIconButton(item: item, theme: currentState.theme, strings: currentState.strings)
-                        button.addTarget(self, action: #selector(self.accessoryItemButtonPressed(_:)), for: [.touchUpInside])
+                        let button = AccessoryItemIconButtonNode(item: item, theme: currentState.theme, strings: currentState.strings)
+                        button.addTarget(self, action: #selector(self.accessoryItemButtonPressed(_:)), forControlEvents: .touchUpInside)
                         itemAndButton = (item, button)
                     }
                     updatedButtons.append(itemAndButton!)
                 }
                 for (_, button) in self.accessoryItemButtons {
-                    button.removeFromSuperview()
+                    button.removeFromSupernode()
                 }
                 self.accessoryItemButtons = updatedButtons
             }
@@ -404,6 +404,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textPlaceholderNode.isUserInteractionEnabled = false
         self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle)
         self.attachmentButton.accessibilityLabel = presentationInterfaceState.strings.VoiceOver_AttachMedia
+        self.attachmentButton.accessibilityTraits = [.button]
         self.attachmentButton.isAccessibilityElement = true
         self.attachmentButtonDisabledNode = HighlightableButtonNode()
         self.searchLayoutClearButton = HighlightableButton()
@@ -725,6 +726,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.4)
         self.attachmentButton.isEnabled = isMediaEnabled
+        self.attachmentButton.accessibilityTraits = (!isSlowmodeActive || isMediaEnabled) ? [.button] : [.button, .notEnabled]
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
         if self.presentationInterfaceState != interfaceState {
@@ -911,11 +913,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             updateAccessoryButtons = true
         }
         
-        var removeAccessoryButtons: [AccessoryItemIconButton]?
+        var removeAccessoryButtons: [AccessoryItemIconButtonNode]?
         if updateAccessoryButtons {
-            var updatedButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
+            var updatedButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)] = []
             for item in interfaceState.inputTextPanelState.accessoryItems {
-                var itemAndButton: (ChatTextInputAccessoryItem, AccessoryItemIconButton)?
+                var itemAndButton: (ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)?
                 for i in 0 ..< self.accessoryItemButtons.count {
                     if self.accessoryItemButtons[i].0 == item {
                         itemAndButton = self.accessoryItemButtons[i]
@@ -924,8 +926,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 }
                 if itemAndButton == nil {
-                    let button = AccessoryItemIconButton(item: item, theme: interfaceState.theme, strings: interfaceState.strings)
-                    button.addTarget(self, action: #selector(self.accessoryItemButtonPressed(_:)), for: [.touchUpInside])
+                    let button = AccessoryItemIconButtonNode(item: item, theme: interfaceState.theme, strings: interfaceState.strings)
+                    button.addTarget(self, action: #selector(self.accessoryItemButtonPressed(_:)), forControlEvents: .touchUpInside)
                     itemAndButton = (item, button)
                 }
                 updatedButtons.append(itemAndButton!)
@@ -937,7 +939,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                     removeAccessoryButtons!.append(button)
                 } else {
-                    button.removeFromSuperview()
+                    button.removeFromSupernode()
                 }
             }
             self.accessoryItemButtons = updatedButtons
@@ -1091,7 +1093,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             var animateDotAppearing = false
             let audioRecordingDotNode: AnimationNode
-            if let currentAudioRecordingDotNode = self.audioRecordingDotNode, !currentAudioRecordingDotNode.played {
+            if let currentAudioRecordingDotNode = self.audioRecordingDotNode, !currentAudioRecordingDotNode.didPlay {
                 audioRecordingDotNode = currentAudioRecordingDotNode
             } else {
                 self.audioRecordingDotNode?.removeFromSupernode()
@@ -1350,8 +1352,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
             button.updateLayout(size: buttonSize)
             let buttonFrame = CGRect(origin: CGPoint(x: nextButtonTopRight.x - buttonSize.width, y: nextButtonTopRight.y + floor((minimalInputHeight - buttonSize.height) / 2.0)), size: buttonSize)
-            if button.superview == nil {
-                self.view.addSubview(button)
+            if button.supernode == nil {
+                self.addSubnode(button)
                 button.frame = buttonFrame.offsetBy(dx: -additionalOffset, dy: 0.0)
                 transition.updateFrame(layer: button.layer, frame: buttonFrame)
                 if animatedTransition {
@@ -1371,7 +1373,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 transition.updateFrame(layer: button.layer, frame: buttonFrame)
                 button.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
                 button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak button] _ in
-                    button?.removeFromSuperview()
+                    button?.removeFromSupernode()
                 })
             }
         }
@@ -1422,7 +1424,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 animatePosition(for: prevPreviewInputPanelNode.waveformScubberNode)
                 animatePosition(for: prevPreviewInputPanelNode.durationLabel)
                 animatePosition(for: prevPreviewInputPanelNode.playButton)
-                animatePosition(for: prevPreviewInputPanelNode.pauseButton)
             }
             
             func animateAlpha(for previewSubnode: ASDisplayNode) {
@@ -1437,7 +1438,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             animateAlpha(for: prevPreviewInputPanelNode.waveformScubberNode)
             animateAlpha(for: prevPreviewInputPanelNode.durationLabel)
             animateAlpha(for: prevPreviewInputPanelNode.playButton)
-            animateAlpha(for: prevPreviewInputPanelNode.pauseButton)
             
             let binNode = prevPreviewInputPanelNode.binNode
             self.animatingBinNode = binNode

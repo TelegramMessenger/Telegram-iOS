@@ -30,6 +30,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode"
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

@@ -87,7 +87,15 @@ extension TelegramUser {
                 if !isMin {
                     return TelegramUser(user: rhs)
                 } else {
-                    let telegramPhoto = photo.flatMap(parsedTelegramProfilePhoto) ?? []
+                    let telegramPhoto: [TelegramMediaImageRepresentation]
+                    if let photo = photo {
+                        telegramPhoto = parsedTelegramProfilePhoto(photo)
+                    } else if let currentPhoto = lhs?.photo {
+                        telegramPhoto = currentPhoto
+                    } else {
+                        telegramPhoto = []
+                    }
+
                     if let lhs = lhs {
                         var userFlags: UserInfoFlags = []
                         if (flags & (1 << 17)) != 0 {
@@ -149,7 +157,7 @@ extension TelegramUser {
         guard let lhs = lhs else {
             return rhs
         }
-        if case .personal? = rhs.accessHash {
+        if let rhsAccessHash = rhs.accessHash, case .personal = rhsAccessHash {
             return rhs
         } else {
             var userFlags: UserInfoFlags = []

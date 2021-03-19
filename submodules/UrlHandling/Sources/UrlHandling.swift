@@ -17,6 +17,7 @@ public enum ParsedInternalPeerUrlParameter {
     case groupBotStart(String)
     case channelMessage(Int32)
     case replyThread(Int32, Int32)
+    case voiceChat(String?)
 }
 
 public enum ParsedInternalUrl {
@@ -135,7 +136,11 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     return .peerName(peerName, .groupBotStart(value))
                                 } else if queryItem.name == "game" {
                                     return nil
+                                } else if queryItem.name == "voicechat" {
+                                    return .peerName(peerName, .voiceChat(value))
                                 }
+                            } else if queryItem.name == "voicechat" {
+                                return .peerName(peerName, .voiceChat(nil))
                             }
                         }
                     }
@@ -334,6 +339,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                     }
                                     return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
+                            case let .voiceChat(invite):
+                                return .single(.joinVoiceChat(peer.id, invite))
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
@@ -508,15 +515,17 @@ private struct UrlHandlingConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> UrlHandlingConfiguration {
-        if let data = appConfiguration.data, let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
-            return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: [])
-        } else {
-            return .defaultValue
+        if let data = appConfiguration.data {
+            let urlAuthDomains = data["url_auth_domains"] as? [String] ?? []
+            if let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
+                return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: urlAuthDomains)
+            }
         }
+        return .defaultValue
     }
 }
 
-public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+public func resolveUrlImpl(account: Account, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
     
     return account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
@@ -536,7 +545,7 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
                 queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
                 components.queryItems = queryItems
                 url = components.url?.absoluteString ?? url
-            } else if urlHandlingConfiguration.urlAuthDomains.contains(host) {
+            } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
                 return .single(.urlAuth(url))
             }
         }

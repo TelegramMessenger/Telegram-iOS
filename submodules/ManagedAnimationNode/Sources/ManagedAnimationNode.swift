@@ -137,6 +137,14 @@ open class ManagedAnimationNode: ASDisplayNode {
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
     
+    public var customColor: UIColor? {
+        didSet {
+            if let customColor = self.customColor, oldValue?.rgb != customColor.rgb {
+                self.imageNode.image = generateTintedImage(image: self.imageNode.image, color: customColor)
+            }
+        }
+    }
+    
     public init(size: CGSize) {
         self.intrinsicSize = size
         
@@ -242,7 +250,11 @@ open class ManagedAnimationNode: ASDisplayNode {
         if state.frameIndex != frameIndex {
             state.frameIndex = frameIndex
             if let image = state.draw() {
-                self.imageNode.image = image
+                if let customColor = self.customColor {
+                    self.imageNode.image = generateTintedImage(image: image, color: customColor)
+                } else {
+                    self.imageNode.image = image
+                }
             }
             
             for (callbackFrame, callback) in state.item.callbacks {

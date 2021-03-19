@@ -22,6 +22,7 @@ import LanguageLinkPreviewUI
 import PeerInfoUI
 import InviteLinksUI
 import UndoUI
+import TelegramCallsUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -39,7 +40,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var presentationData: PresentationData
     
     private let pushController: (ViewController) -> Void
-    private let presentController: (ViewController, Any?) -> Void
+    private let presentController: (ViewController, PresentationContextType,  Any?) -> Void
     private let getNavigationController: () -> NavigationController?
     
     private let interaction: ChatRecentActionsInteraction
@@ -86,7 +87,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var adminsState: ChannelMemberListState?
     private let banDisposables = DisposableDict<PeerId>()
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, PresentationContextType, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
@@ -153,7 +154,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         switch entry.entry.event.action {
                             case let .changeStickerPack(_, new):
                                 if let new = new {
-                                    strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), nil)
+                                    strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                                     return true
                                 }
                             case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite):
@@ -178,7 +179,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                                 actionSheet?.dismissAnimated()
                                             })
                                         ])])
-                                        strongSelf.presentController(actionSheet, nil)
+                                        strongSelf.presentController(actionSheet, .window(.root), nil)
                                     } else {
                                         let controller = inviteLinkEditController(context: strongSelf.context, peerId: peer.id, invite: invite, completion: { [weak self] _ in
                                             self?.eventLogContext.reload()
@@ -204,7 +205,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
-                    self?.presentController(c, a)
+                    self?.presentController(c, .window(.root), a)
                 }, transitionNode: { messageId, media in
                     var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if let strongSelf = self {
@@ -270,7 +271,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self{
                 openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
-                    self?.presentController(c, a)
+                    self?.presentController(c, .window(.root), a)
                 })
             }
         }, openTheme: { _ in      
@@ -318,13 +319,18 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         let mailtoString = "mailto:"
                         let telString = "tel:"
                         var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        
+                        var isEmail = false
+                        var isPhoneNumber = false
                         if cleanUrl.hasPrefix(mailtoString) {
                             canAddToReadingList = false
                             cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
+                            isEmail = true
                         } else if cleanUrl.hasPrefix(telString) {
                             canAddToReadingList = false
                             cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
                             openText = strongSelf.presentationData.strings.Conversation_Call
+                            isPhoneNumber = true
                         } else if canOpenIn {
                             openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         }
@@ -338,9 +344,21 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 strongSelf.openUrl(url)
                             }
                         }))
-                        items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet, weak self] in
                             actionSheet?.dismissAnimated()
                             UIPasteboard.general.string = cleanUrl
+                            
+                            let content: UndoOverlayContent
+                            if isPhoneNumber {
+                                content = .copy(text: presentationData.strings.Conversation_PhoneCopied)
+                            } else if isEmail {
+                                content = .copy(text: presentationData.strings.Conversation_EmailCopied)
+                            } else if canAddToReadingList {
+                                content = .linkCopied(text: presentationData.strings.Conversation_LinkCopied)
+                            } else {
+                                content = .copy(text: presentationData.strings.Conversation_TextCopied)
+                            }
+                            self?.presentController(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                         }))
                         if canAddToReadingList {
                             items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
@@ -355,7 +373,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
-                        strongSelf.presentController(actionSheet, nil)
+                        strongSelf.presentController(actionSheet, .window(.root), nil)
                     case let .peerMention(peerId, mention):
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         var items: [ActionSheetItem] = []
@@ -369,9 +387,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             }
                         }))
                         if !mention.isEmpty {
-                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_UsernameCopied)
+                                self?.presentController(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
@@ -379,7 +400,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
-                        strongSelf.presentController(actionSheet, nil)
+                        strongSelf.presentController(actionSheet, .window(.root), nil)
                     case let .mention(mention):
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -390,30 +411,36 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     strongSelf.openPeerMention(mention)
                                 }
                             }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                self?.presentController(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                             })
                             ]), ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
-                        strongSelf.presentController(actionSheet, nil)
+                        strongSelf.presentController(actionSheet, .window(.root), nil)
                     case let .command(command):
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: command),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = command
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                self?.presentController(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                             })
                             ]), ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
-                        strongSelf.presentController(actionSheet, nil)
+                        strongSelf.presentController(actionSheet, .window(.root), nil)
                     case let .hashtag(hashtag):
                         let actionSheet = ActionSheetController(presentationData:  strongSelf.presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -425,16 +452,19 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     strongSelf.pushController(searchController)
                                 }
                             }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = hashtag
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_HashtagCopied)
+                                self?.presentController(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                             })
                             ]), ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
-                        strongSelf.presentController(actionSheet, nil)
+                        strongSelf.presentController(actionSheet, .window(.root), nil)
                     case let .timecode(timecode, text):
                         guard let message = message else {
                             return
@@ -448,16 +478,19 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     strongSelf.controllerInteraction?.seekToTimecode(message, timecode, true)
                                 }
                             }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = text
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                self?.presentController(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                             })
                             ]), ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
-                        strongSelf.presentController(actionSheet, nil)
+                        strongSelf.presentController(actionSheet, .window(.root), nil)
                     case .bankCard:
                         break
                 }
@@ -502,6 +535,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openMessageStats: { _ in
         }, editMessageMedia: { _, _ in  
         }, copyText: { _ in
+        }, displayUndo: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -773,9 +807,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect) {
         var actions: [ContextMenuAction] = []
-            if !message.text.isEmpty {
-                actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+        if !message.text.isEmpty {
+            actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = message.text
+                
+                let content: UndoOverlayContent = .copy(text: self.presentationData.strings.Conversation_TextCopied)
+                self.presentController(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
             }))
         }
         
@@ -801,7 +838,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         strongSelf.banDisposables.set((fetchChannelParticipant(account: strongSelf.context.account, peerId: strongSelf.peer.id, participantId: author.id)
                         |> deliverOnMainQueue).start(next: { participant in
                             if let strongSelf = self {
-                                strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             }
                         }), forKey: author.id)
                     }
@@ -824,7 +861,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }
             
-            self.presentController(contextMenuController, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak node] in
+            self.presentController(contextMenuController, .window(.root), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak node] in
                 if let strongSelf = self, let node = node {
                     return (node, frame, strongSelf, strongSelf.bounds)
                 } else {
@@ -843,7 +880,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openUrl(_ url: String) {
-        self.navigationActionDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.navigationActionDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url, skipUrlAuth: true) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
                     case let .externalUrl(url):
@@ -874,7 +911,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)
-                        strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.getNavigationController()), nil)
+                        strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):
@@ -882,9 +919,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             if let strongSelf = self {
                                 strongSelf.openPeer(peerId: peerId, peer: nil, peekData: peekData)
                             }
-                        }, parentNavigationController: strongSelf.getNavigationController()), nil)
+                        }, parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                     case let .localization(identifier):
-                        strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), nil)
+                        strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), .window(.root), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:
                         strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
                             if let strongSelf = self {
@@ -893,8 +930,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }, sendFile: nil,
                         sendSticker: nil,
                         requestMessageActionUrlAuth: nil,
+                        joinVoiceChat: nil,
                         present: { c, a in
-                            self?.presentController(c, a)
+                            self?.presentController(c, .window(.root), a)
                         }, dismissInput: {
                             self?.view.endEditing(true)
                         }, contentContext: nil)
@@ -908,6 +946,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     #endif
                     case .settings:
                         break
+                    case let .joinVoiceChat(peerId, invite):
+                        strongSelf.presentController(VoiceChatJoinScreen(context: strongSelf.context, peerId: peerId, invite: invite, join: { call in
+                            
+                        }), .window(.root), nil)
                 }
             }
         }))
@@ -931,7 +973,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
                 }
                 if let text = text {
-                    strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), nil)
+                    strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), .current, nil)
                 }
             }
         })

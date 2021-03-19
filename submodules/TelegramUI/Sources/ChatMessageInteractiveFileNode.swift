@@ -917,19 +917,23 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
 
         if state != .none && self.statusNode == nil {
             var image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>? = nil
+                        
             if file.isMusic {
-                var title: String?
-                var performer: String?
-                
-                for attribute in file.attributes {
-                    if case let .Audio(_, _, titleValue, performerValue, _) = attribute {
-                        title = titleValue
-                        performer = performerValue
-                        break
+                if file.fileName?.lowercased().hasSuffix(".ogg") == true {
+                } else {
+                    var title: String?
+                    var performer: String?
+                    
+                    for attribute in file.attributes {
+                        if case let .Audio(_, _, titleValue, performerValue, _) = attribute {
+                            title = titleValue
+                            performer = performerValue
+                            break
+                        }
                     }
+                    
+                    image = playerAlbumArt(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
                 }
-                
-                image = playerAlbumArt(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
             }
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
             self.statusNode = statusNode

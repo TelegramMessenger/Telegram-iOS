@@ -627,6 +627,11 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, Chat
             if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                 thumbnailImage = image
             }
+            
+            if quality == .blurred && fullSizeImage != nil {
+                thumbnailImage = fullSizeImage
+                fullSizeImage = nil
+            }
                         
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {

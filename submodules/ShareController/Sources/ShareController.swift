@@ -39,6 +39,20 @@ public enum ShareControllerExternalStatus {
     case done
 }
 
+public struct ShareControllerSegmentedValue {
+    let title: String
+    let subject: ShareControllerSubject
+    let actionTitle: String
+    let formatSendTitle: (Int) -> String
+    
+    public init(title: String, subject: ShareControllerSubject, actionTitle: String, formatSendTitle: @escaping (Int) -> String) {
+        self.title = title
+        self.subject = subject
+        self.actionTitle = actionTitle
+        self.formatSendTitle = formatSendTitle
+    }
+}
+
 public enum ShareControllerSubject {
     case url(String)
     case text(String)
@@ -293,8 +307,7 @@ public final class ShareController: ViewController {
     private let presetText: String?
     private let switchableAccounts: [AccountWithInfo]
     private let immediatePeerId: PeerId?
-    private let openStats: (() -> Void)?
-    private let shares: Int?
+    private let segmentedValues: [ShareControllerSegmentedValue]?
     private let fromForeignApp: Bool
     
     private let peers = Promise<([(RenderedPeer, PeerPresence?)], Peer)>()
@@ -314,11 +327,11 @@ public final class ShareController: ViewController {
         }
     }
     
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, fromForeignApp: Bool = false, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
-        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, openStats: openStats, fromForeignApp: fromForeignApp, shares: shares, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forcedTheme: forcedTheme, forcedActionTitle: forcedActionTitle)
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
+        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, fromForeignApp: fromForeignApp, segmentedValues: segmentedValues, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forcedTheme: forcedTheme, forcedActionTitle: forcedActionTitle)
     }
     
-    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, openStats: (() -> Void)? = nil, fromForeignApp: Bool = false, shares: Int? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
+    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
         self.sharedContext = sharedContext
         self.currentContext = currentContext
         self.currentAccount = currentContext.account
@@ -328,9 +341,8 @@ public final class ShareController: ViewController {
         self.immediateExternalShare = immediateExternalShare
         self.switchableAccounts = switchableAccounts
         self.immediatePeerId = immediatePeerId
-        self.openStats = openStats
         self.fromForeignApp = fromForeignApp
-        self.shares = shares
+        self.segmentedValues = segmentedValues
         self.forcedTheme = forcedTheme
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
@@ -345,7 +357,14 @@ public final class ShareController: ViewController {
         switch subject {
             case let .url(text):
                 self.defaultAction = ShareControllerAction(title: forcedActionTitle ?? self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
-                    UIPasteboard.general.string = text
+                    if let strongSelf = self, let segmentedValues = segmentedValues {
+                        let selectedValue = segmentedValues[strongSelf.controllerNode.selectedSegmentedIndex]
+                        if case let .url(text) = selectedValue.subject {
+                            UIPasteboard.general.string = text
+                        }
+                    } else {
+                        UIPasteboard.general.string = text
+                    }
                     self?.controllerNode.cancel?()
                     
                     self?.actionCompleted?()
@@ -468,7 +487,7 @@ public final class ShareController: ViewController {
                 return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, shares: self.shares, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme)
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme, segmentedValues: self.segmentedValues)
         self.controllerNode.completed = self.completed
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -487,7 +506,13 @@ public final class ShareController: ViewController {
             }
                         
             var shareSignals: [Signal<[MessageId?], NoError>] = []
-            switch strongSelf.subject {
+            var subject = strongSelf.subject
+            if let segmentedValues = strongSelf.segmentedValues {
+                let selectedValue = segmentedValues[strongSelf.controllerNode.selectedSegmentedIndex]
+                subject = selectedValue.subject
+            }
+            
+            switch subject {
             case let .url(url):
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
@@ -623,7 +648,12 @@ public final class ShareController: ViewController {
         self.controllerNode.shareExternal = { [weak self] in
             if let strongSelf = self {
                 var collectableItems: [CollectableExternalShareItem] = []
-                switch strongSelf.subject {
+                var subject = strongSelf.subject
+                if let segmentedValues = strongSelf.segmentedValues {
+                    let selectedValue = segmentedValues[strongSelf.controllerNode.selectedSegmentedIndex]
+                    subject = selectedValue.subject
+                }
+                switch subject {
                     case let .url(text):
                         collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", author: nil, timestamp: nil, mediaReference: nil))
                     case let .text(string):
@@ -769,11 +799,6 @@ public final class ShareController: ViewController {
             ])
             strongSelf.view.endEditing(true)
             strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        }
-        if case .messages = self.subject, let openStats = self.openStats {
-            self.controllerNode.openStats = {
-                openStats()
-            }
         }
         self.displayNodeDidLoad()
         

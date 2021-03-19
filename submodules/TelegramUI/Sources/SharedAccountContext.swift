@@ -101,7 +101,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private let callState = Promise<PresentationCallState?>(nil)
     
     private var groupCallController: VoiceChatController?
-    private let hasGroupCallOnScreen = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var currentGroupCallController: ViewController? {
+        return self.groupCallController
+    }
+    private let hasGroupCallOnScreenPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var hasGroupCallOnScreen: Signal<Bool, NoError> {
+        return self.hasGroupCallOnScreenPromise.get()
+    }
     
     private var immediateHasOngoingCallValue = Atomic<Bool>(value: false)
     public var immediateHasOngoingCall: Bool {
@@ -638,16 +644,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         
                         if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
                             mainWindow.hostView.containerView.endEditing(true)
-                            strongSelf.hasGroupCallOnScreen.set(true)
+                            strongSelf.hasGroupCallOnScreenPromise.set(true)
                             let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
                             groupCallController.onViewDidAppear = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreen.set(true)
+                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
                                 }
                             }
                             groupCallController.onViewDidDisappear = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreen.set(false)
+                                    strongSelf.hasGroupCallOnScreenPromise.set(false)
                                 }
                             }
                             groupCallController.navigationPresentation = .flatModal
@@ -674,7 +680,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.callStateDisposable = combineLatest(queue: .mainQueue(),
                 callSignal,
                 groupCallSignal,
-                self.hasGroupCallOnScreen.get()
+                self.hasGroupCallOnScreenPromise.get()
             ).start(next: { [weak self] call, groupCall, hasGroupCallOnScreen in
                 if let strongSelf = self {
                     let statusBarContent: CallStatusBarNodeImpl.Content?
@@ -1139,12 +1145,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
-    public func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
-        return resolveUrlImpl(account: account, url: url)
+    public func resolveUrl(account: Account, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
+        return resolveUrlImpl(account: account, url: url, skipUrlAuth: skipUrlAuth)
     }
     
-    public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {
-        openResolvedUrlImpl(resolvedUrl, context: context, urlContext: urlContext, navigationController: navigationController, openPeer: openPeer, sendFile: sendFile, sendSticker: sendSticker, requestMessageActionUrlAuth: requestMessageActionUrlAuth, present: present, dismissInput: dismissInput, contentContext: contentContext)
+    public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {
+        openResolvedUrlImpl(resolvedUrl, context: context, urlContext: urlContext, navigationController: navigationController, openPeer: openPeer, sendFile: sendFile, sendSticker: sendSticker, requestMessageActionUrlAuth: requestMessageActionUrlAuth, joinVoiceChat: joinVoiceChat, present: present, dismissInput: dismissInput, contentContext: contentContext)
     }
     
     public func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController {
@@ -1264,6 +1270,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, openMessageStats: { _ in
             }, editMessageMedia: { _, _ in
             }, copyText: { _ in
+            }, displayUndo: { _ in
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

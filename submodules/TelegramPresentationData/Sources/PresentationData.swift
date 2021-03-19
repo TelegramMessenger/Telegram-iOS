@@ -15,13 +15,24 @@ public struct PresentationDateTimeFormat: Equatable {
     public let timeFormat: PresentationTimeFormat
     public let dateFormat: PresentationDateFormat
     public let dateSeparator: String
+    public let dateSuffix: String
     public let decimalSeparator: String
     public let groupingSeparator: String
     
-    public init(timeFormat: PresentationTimeFormat, dateFormat: PresentationDateFormat, dateSeparator: String, decimalSeparator: String, groupingSeparator: String) {
+    public init() {
+        self.timeFormat = .regular
+        self.dateFormat = .monthFirst
+        self.dateSeparator = "."
+        self.dateSuffix = ""
+        self.decimalSeparator = "."
+        self.groupingSeparator = "."
+    }
+    
+    public init(timeFormat: PresentationTimeFormat, dateFormat: PresentationDateFormat, dateSeparator: String, dateSuffix: String, decimalSeparator: String, groupingSeparator: String) {
         self.timeFormat = timeFormat
         self.dateFormat = dateFormat
         self.dateSeparator = dateSeparator
+        self.dateSuffix = dateSuffix
         self.decimalSeparator = decimalSeparator
         self.groupingSeparator = groupingSeparator
     }
@@ -145,9 +156,13 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
     
     let dateFormat: PresentationDateFormat
     var dateSeparator = "/"
+    var dateSuffix = ""
     if let dateString = DateFormatter.dateFormat(fromTemplate: "MdY", options: 0, locale: locale) {
         for separator in [".", "/", "-", "/"] {
             if dateString.contains(separator) {
+                if separator == ". " {
+                    dateSuffix = "."
+                }
                 dateSeparator = separator
                 break
             }
@@ -163,7 +178,7 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
 
     let decimalSeparator = locale.decimalSeparator ?? "."
     let groupingSeparator = locale.groupingSeparator ?? ""
-    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, decimalSeparator: decimalSeparator, groupingSeparator: groupingSeparator)
+    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, dateSuffix: dateSuffix, decimalSeparator: decimalSeparator, groupingSeparator: groupingSeparator)
 }
 
 private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {

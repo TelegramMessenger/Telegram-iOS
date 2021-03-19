@@ -15,6 +15,7 @@ import SaveToCameraRoll
 import GalleryUI
 import OpenInExternalAppUI
 import LocationUI
+import UndoUI
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -137,6 +138,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar.share = { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                 let shareController = ShareController(context: context, subject: .url(content.url))
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
+                }
                 strongSelf.present(shareController, nil)
             }
         }
@@ -1140,7 +1147,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadProgress.set(0.02)
     
         self.loadWebpageDisposable.set(nil)
-        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url.url)
+        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url.url, skipUrlAuth: true)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.loadProgress.set(0.07)
@@ -1199,6 +1206,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }, sendFile: nil,
                         sendSticker: nil,
                         requestMessageActionUrlAuth: nil,
+                        joinVoiceChat: nil,
                         present: { c, a in
                             self?.present(c, a)
                         }, dismissInput: {

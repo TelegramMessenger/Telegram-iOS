@@ -1,6 +1,9 @@
 import Foundation
 import AsyncDisplayKit
 
+public final class ContextReferenceContentNode: ASDisplayNode {
+}
+
 public final class ContextExtractedContentContainingNode: ASDisplayNode {
     public let contentNode: ContextExtractedContentNode
     public var contentRect: CGRect = CGRect()
@@ -58,6 +61,7 @@ public final class ContextControllerContentNode: ASDisplayNode {
 }
 
 public enum ContextContentNode {
+    case reference(node: ContextReferenceContentNode)
     case extracted(node: ContextExtractedContentContainingNode, keepInPlace: Bool)
     case controller(ContextControllerContentNode)
 }

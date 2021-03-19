@@ -413,13 +413,25 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         }
         
         self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { accountStateAndType in
-            if let (account, stateOrLoading, type) = accountStateAndType, type == .music, case let .state(state) = stateOrLoading, state.status.duration >= 60.0 * 20.0, case .playing = state.status.status {
-                if let item = state.item as? MessageMediaPlaylistItem {
-                    var storedState: MediaPlaybackStoredState?
-                    if state.status.timestamp > 5.0 && state.status.timestamp < state.status.duration - 5.0 {
-                        storedState = MediaPlaybackStoredState(timestamp: state.status.timestamp, playbackRate: state.status.baseRate > 1.0 ? .x2 : .x1)
+            let minimumStoreDuration: Double?
+            if let (account, stateOrLoading, type) = accountStateAndType {
+                switch type {
+                    case .music:
+                        minimumStoreDuration = 15.0 * 60.0
+                    case .voice:
+                        minimumStoreDuration = 5.0 * 60.0
+                    case .file:
+                        minimumStoreDuration = nil
+                }
+            
+                if let minimumStoreDuration = minimumStoreDuration, case let .state(state) = stateOrLoading, state.status.duration >= minimumStoreDuration, case .playing = state.status.status {
+                    if let item = state.item as? MessageMediaPlaylistItem {
+                        var storedState: MediaPlaybackStoredState?
+                        if state.status.timestamp > 5.0 && state.status.timestamp < state.status.duration - 5.0 {
+                            storedState = MediaPlaybackStoredState(timestamp: state.status.timestamp, playbackRate: state.status.baseRate > 1.0 ? .x2 : .x1)
+                        }
+                        let _ = updateMediaPlaybackStoredStateInteractively(postbox: account.postbox, messageId: item.message.id, state: storedState).start()
                     }
-                    let _ = updateMediaPlaybackStoredStateInteractively(postbox: account.postbox, messageId: item.message.id, state: storedState).start()
                 }
             }
         }))
@@ -492,7 +504,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     case .voice:
                         strongSelf.musicMediaPlayer?.control(.playback(.pause))
                         strongSelf.voiceMediaPlayer?.stop()
-                        if let (account, playlist, settings, _) = inputData {
+                        if let (account, playlist, settings, storedState) = inputData {
                             let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true, type: type)
                             strongSelf.voiceMediaPlayer = voiceMediaPlayer
                             voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
@@ -506,6 +518,11 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                                     voiceMediaPlayer.stop()
                                     strongSelf.voiceMediaPlayer = nil
                                 }
+                            }
+                            
+                            var control = control
+                            if let timestamp = storedState?.timestamp {
+                                control = .seek(timestamp)
                             }
                             voiceMediaPlayer.control(control)
                         } else {

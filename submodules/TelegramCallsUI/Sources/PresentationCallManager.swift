@@ -624,9 +624,15 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
-            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall).start()
+            if let requestJoinAsPeerId = requestJoinAsPeerId {
+                requestJoinAsPeerId({ joinAsPeerId in
+                    let _ = self?.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: joinAsPeerId, initialCall: initialCall).start()
+                })
+            } else {
+                let _ = self?.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: nil, initialCall: initialCall).start()
+            }
         }
         
         if let currentGroupCall = self.currentGroupCallValue {
@@ -660,6 +666,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private func startGroupCall(
         accountContext: AccountContext,
         peerId: PeerId,
+        invite: String?,
+        joinAsPeerId: PeerId?,
         initialCall: CachedChannelData.ActiveCall,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
@@ -710,7 +718,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 initialCall: initialCall,
                 internalId: internalId,
                 peerId: peerId,
-                peer: nil
+                invite: invite,
+                joinAsPeerId: joinAsPeerId
             )
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))

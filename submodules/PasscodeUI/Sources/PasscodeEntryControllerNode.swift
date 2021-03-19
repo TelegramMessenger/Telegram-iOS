@@ -128,6 +128,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
+        self.view.disablesInteractiveKeyboardGestureRecognizer = true
+        
         self.view.insertSubview(self.effectView, at: 0)
         
         if self.arguments.cancel != nil {

@@ -2,6 +2,10 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import Postbox
+import AccountContext
+import TelegramPresentationData
+import AvatarNode
 
 func optionsBackgroundImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
@@ -37,59 +41,50 @@ func closeButtonImage(dark: Bool) -> UIImage? {
         context.setLineCap(.round)
         context.setStrokeColor(UIColor.white.cgColor)
         
-        context.move(to: CGPoint(x: 9.0, y: 9.0))
-        context.addLine(to: CGPoint(x: 19.0, y: 19.0))
-        context.strokePath()
-        
-        context.move(to: CGPoint(x: 19.0, y: 9.0))
-        context.addLine(to: CGPoint(x: 9.0, y: 19.0))
+        context.move(to: CGPoint(x: 7.0 + UIScreenPixel, y: 16.0 + UIScreenPixel))
+        context.addLine(to: CGPoint(x: 14.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 21.0 - UIScreenPixel, y: 16.0 + UIScreenPixel))
         context.strokePath()
     })
 }
 
 final class VoiceChatHeaderButton: HighlightableButtonNode {
-    let extractedContainerNode: ContextExtractedContentContainingNode
+    enum Content {
+        case image(UIImage?)
+        case avatar(Peer)
+    }
+    
+    private let context: AccountContext
+    private var theme: PresentationTheme
+    
+    let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
+    private let avatarNode: AvatarNode
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    var textNode: ImmediateTextNode?
-    var dotNode: ASImageNode?
-    
-    init(rec: Bool = false) {
-        self.extractedContainerNode = ContextExtractedContentContainingNode()
+    init(context: AccountContext) {
+        self.context = context
+        self.theme = context.sharedContext.currentPresentationData.with { $0 }.theme
+        
+        self.referenceNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
-        self.containerNode.isGestureEnabled = false
+        self.containerNode.animateScale = false
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.contentMode = .scaleToFill
         
-        if rec {
-            self.textNode = ImmediateTextNode()
-            self.textNode?.attributedText = NSAttributedString(string: "REC", font: Font.regular(12.0), textColor: .white)
-            if let textNode = self.textNode {
-                let textSize = textNode.updateLayout(CGSize(width: 58.0, height: 28.0))
-                textNode.frame = CGRect(origin: CGPoint(), size: textSize)
-            }
-            self.dotNode = ASImageNode()
-            self.dotNode?.displaysAsynchronously = false
-            self.dotNode?.displayWithoutProcessing = true
-            self.dotNode?.image = generateFilledCircleImage(diameter: 8.0, color: UIColor(rgb: 0xff3b30))
-        }
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 17.0))
+        self.avatarNode.isHidden = true
         
         super.init()
         
-        self.containerNode.addSubnode(self.extractedContainerNode)
-        self.extractedContainerNode.contentNode.addSubnode(self.iconNode)
-        self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.addSubnode(self.iconNode)
+        self.referenceNode.addSubnode(self.avatarNode)
         self.addSubnode(self.containerNode)
-        
-        if rec, let textNode = self.textNode, let dotNode = self.dotNode {
-            self.extractedContainerNode.contentNode.addSubnode(textNode)
-            self.extractedContainerNode.contentNode.addSubnode(dotNode)
-        }
         
         self.containerNode.shouldBegin = { [weak self] location in
             guard let strongSelf = self, let _ = strongSelf.contextAction else {
@@ -106,52 +101,58 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
         
         self.iconNode.image = optionsButtonImage(dark: false)
         
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: rec ? 58.0 : 28.0, height: 28.0))
-        self.extractedContainerNode.frame = self.containerNode.bounds
-        self.extractedContainerNode.contentRect = self.containerNode.bounds
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 28.0, height: 28.0))
+        self.referenceNode.frame = self.containerNode.bounds
         self.iconNode.frame = self.containerNode.bounds
+        self.avatarNode.frame = self.containerNode.bounds
     }
     
-    func setImage(_ image: UIImage?, animated: Bool = false) {
-        if animated, let snapshotView = self.iconNode.view.snapshotContentTree() {
-            snapshotView.frame = self.iconNode.frame
-            self.view.addSubview(snapshotView)
-            
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                snapshotView?.removeFromSuperview()
-            })
+    private var content: Content?
+    func setContent(_ content: Content, animated: Bool = false) {
+        if animated {
+            switch content {
+                case let .image(image):
+                    if let snapshotView = self.referenceNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.referenceNode.frame
+                        self.view.addSubview(snapshotView)
+                        
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.avatarNode.isHidden = true
+                case let .avatar(peer):
+                    self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: peer)
+                    self.iconNode.isHidden = true
+                    self.avatarNode.isHidden = false
+                    
+            }
+        } else {
+            self.content = content
+            switch content {
+                case let .image(image):
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.avatarNode.isHidden = true
+                case let .avatar(peer):
+                    self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: peer)
+                    self.iconNode.isHidden = true
+                    self.avatarNode.isHidden = false
+            }
         }
-        self.iconNode.image = image
     }
-    
+        
     override func didLoad() {
         super.didLoad()
         self.view.isOpaque = false
-        
-        if let dotNode = self.dotNode {
-            let animation = CAKeyframeAnimation(keyPath: "opacity")
-            animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
-            animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-            animation.duration = 0.5
-            animation.autoreverses = true
-            animation.repeatCount = Float.infinity
-            dotNode.layer.add(animation, forKey: "recording")
-        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: self.dotNode != nil ? 58.0 : 28.0, height: 28.0)
+        return CGSize(width: 28.0, height: 28.0)
     }
-    
-    override func layout() {
-        super.layout()
         
-        if let dotNode = self.dotNode, let textNode = self.textNode {
-            dotNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: CGSize(width: 8.0, height: 8.0))
-            textNode.frame = CGRect(origin: CGPoint(x: 22.0, y: 7.0), size: textNode.frame.size)
-        }
-    }
-    
     func onLayout() {
     }
 }

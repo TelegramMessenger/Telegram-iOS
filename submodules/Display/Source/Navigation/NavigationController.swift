@@ -563,7 +563,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
             }
         }
-        
+                
         var previousOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.overlayContainers.count).reversed() {
             let overlayContainer = self.overlayContainers[i]
@@ -1020,13 +1020,37 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.statusBarHost?.setStatusBarHidden(statusBarHidden, animated: animateStatusBarStyleTransition)
         }
         
+        var topHasOpaque = false
         var foundControllerInFocus = false
+        
+        for container in self.globalOverlayContainers.reversed() {
+            let controller = container.controller
+            if topHasOpaque {
+                controller.displayNode.accessibilityElementsHidden = true
+            } else {
+                if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                    topHasOpaque = true
+                }
+                controller.displayNode.accessibilityElementsHidden = false
+            }
+        }
+        
         for container in self.overlayContainers.reversed() {
             if foundControllerInFocus {
                 container.controller.isInFocus = false
             } else if container.controller.acceptsFocusWhenInOverlay {
                 foundControllerInFocus = true
                 container.controller.isInFocus = true
+            }
+            
+            let controller = container.controller
+            if topHasOpaque {
+                controller.displayNode.accessibilityElementsHidden = true
+            } else {
+                if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                    topHasOpaque = true
+                }
+                controller.displayNode.accessibilityElementsHidden = false
             }
         }
         
@@ -1036,6 +1060,17 @@ open class NavigationController: UINavigationController, ContainableController, 
             } else {
                 foundControllerInFocus = true
                 container.container.isInFocus = true
+            }
+            
+            if let controller = container.container.controllers.last {
+                if topHasOpaque {
+                    controller.displayNode.accessibilityElementsHidden = true
+                } else {
+                    if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                        topHasOpaque = true
+                    }
+                    controller.displayNode.accessibilityElementsHidden = false
+                }
             }
         }
         
@@ -1048,12 +1083,44 @@ open class NavigationController: UINavigationController, ContainableController, 
                     foundControllerInFocus = true
                     container.isInFocus = true
                 }
+                
+                if let controller = container.controllers.last {
+                    if topHasOpaque {
+                        controller.displayNode.accessibilityElementsHidden = true
+                    } else {
+                        if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                            topHasOpaque = true
+                        }
+                        controller.displayNode.accessibilityElementsHidden = false
+                    }
+                }
             case let .split(split):
                 if foundControllerInFocus {
                     split.isInFocus = false
                 } else {
                     foundControllerInFocus = true
                     split.isInFocus = true
+                }
+                
+                if let controller = split.masterControllers.last {
+                    if topHasOpaque {
+                        controller.displayNode.accessibilityElementsHidden = true
+                    } else {
+                        if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                            topHasOpaque = true
+                        }
+                        controller.displayNode.accessibilityElementsHidden = false
+                    }
+                }
+                if let controller = split.detailControllers.last {
+                    if topHasOpaque {
+                        controller.displayNode.accessibilityElementsHidden = true
+                    } else {
+                        if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                            topHasOpaque = true
+                        }
+                        controller.displayNode.accessibilityElementsHidden = false
+                    }
                 }
             }
         }
@@ -1132,6 +1199,14 @@ open class NavigationController: UINavigationController, ContainableController, 
         let globalOverlayContainerParent = GlobalOverlayContainerParent()
         self.displayNode.addSubnode(globalOverlayContainerParent)
         self.globalOverlayContainerParent = globalOverlayContainerParent
+        
+        if let inCallStatusBar = self.inCallStatusBar, inCallStatusBar.supernode == nil {
+            if let globalScrollToTopNode = self.globalScrollToTopNode {
+                self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalScrollToTopNode)
+            } else {
+                self.displayNode.addSubnode(inCallStatusBar)
+            }
+        }
     }
     
     public func pushViewController(_ controller: ViewController) {
@@ -1437,12 +1512,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
                 
-                if let bottomOverlayContainer = bottomOverlayContainer {
-                    self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: bottomOverlayContainer)
-                } else if let globalScrollToTopNode = self.globalScrollToTopNode {
-                    self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalScrollToTopNode)
-                } else {
-                    self.displayNode.addSubnode(inCallStatusBar)
+                if self._displayNode != nil {
+                    if let bottomOverlayContainer = bottomOverlayContainer {
+                        self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: bottomOverlayContainer)
+                    } else if let globalScrollToTopNode = self.globalScrollToTopNode {
+                        self.displayNode.insertSubnode(inCallStatusBar, belowSubnode: globalScrollToTopNode)
+                    } else {
+                        self.displayNode.addSubnode(inCallStatusBar)
+                    }
                 }
                 if case let .animated(duration, _) = transition {
                     inCallStatusBar.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: duration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, additive: true)

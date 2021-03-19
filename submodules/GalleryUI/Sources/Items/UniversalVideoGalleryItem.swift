@@ -360,28 +360,34 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 strongSelf.videoNode?.togglePlayPause()
             }
         }
-        self.footerContentNode.seekBackward = { [weak self] in
+        self.footerContentNode.seekBackward = { [weak self] delta in
             if let strongSelf = self, let videoNode = strongSelf.videoNode {
                 let _ = (videoNode.status |> take(1)).start(next: { [weak videoNode] status in
                     if let strongVideoNode = videoNode, let timestamp = status?.timestamp {
-                        strongVideoNode.seek(max(0.0, timestamp - 15.0))
+                        strongVideoNode.seek(max(0.0, timestamp - delta))
                     }
                 })
             }
         }
-        self.footerContentNode.seekForward = { [weak self] in
+        self.footerContentNode.seekForward = { [weak self] delta in
             if let strongSelf = self, let videoNode = strongSelf.videoNode {
                 let _ = (videoNode.status |> take(1)).start(next: { [weak videoNode] status in
                     if let strongVideoNode = videoNode, let timestamp = status?.timestamp, let duration = status?.duration {
-                        let nextTimestamp = timestamp + 15.0
+                        let nextTimestamp = timestamp + delta
                         if nextTimestamp > duration {
                             strongVideoNode.seek(0.0)
                             strongVideoNode.pause()
                         } else {
-                            strongVideoNode.seek(min(duration, timestamp + 15.0))
+                            strongVideoNode.seek(min(duration, timestamp + delta))
                         }
                     }
                 })
+            }
+        }
+        
+        self.footerContentNode.setPlayRate = { [weak self] rate in
+            if let strongSelf = self, let videoNode = strongSelf.videoNode {
+                videoNode.setBaseRate(rate)
             }
         }
         
@@ -478,7 +484,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var previousPlaying: Bool?
     
     private func setupControlsTimer() {
-        
+        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+            self?.updateControlsVisibility(false)
+            self?.controlsTimer = nil
+        }, queue: Queue.mainQueue())
+        timer.start()
+        self.controlsTimer = timer
     }
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
@@ -707,13 +718,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     if strongSelf.isCentral && playing && strongSelf.previousPlaying != true && !disablePlayerControls {
                         strongSelf.controlsTimer?.invalidate()
-                        
-                        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
-                            self?.updateControlsVisibility(false)
-                            self?.controlsTimer = nil
-                        }, queue: Queue.mainQueue())
-                        timer.start()
-                        strongSelf.controlsTimer = timer
+                        strongSelf.setupControlsTimer()
                     } else if !playing {
                         strongSelf.controlsTimer?.invalidate()
                         strongSelf.controlsTimer = nil
@@ -952,6 +957,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         switch action {
             case let .timecode(timecode):
+                self.scrubberView.animateTo(timecode)
                 videoNode.seek(timecode)
         }
     }
