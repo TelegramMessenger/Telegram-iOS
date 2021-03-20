@@ -367,6 +367,7 @@ public enum JoinGroupCallError {
     case generic
     case anonymousNotAllowed
     case tooManyParticipants
+    case invalidJoinAsPeer
 }
 
 public struct JoinGroupCallResult {
@@ -408,6 +409,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 return .anonymousNotAllowed
             } else if error.errorDescription == "GROUPCALL_PARTICIPANTS_TOO_MUCH" {
                 return .tooManyParticipants
+            } else if error.errorDescription == "JOIN_AS_PEER_INVALID" {
+                return .invalidJoinAsPeer
             }
             return .generic
         }
@@ -745,9 +748,11 @@ public final class GroupCallParticipantsContext {
             self.about = about
         }
         
-        public mutating func mergeActivity(from other: Participant) {
+        public mutating func mergeActivity(from other: Participant, mergeActivityTimestamp: Bool) {
             self.activityRank = other.activityRank
-            self.activityTimestamp = other.activityTimestamp
+            if mergeActivityTimestamp {
+                self.activityTimestamp = other.activityTimestamp
+            }
         }
         
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
@@ -847,7 +852,7 @@ public final class GroupCallParticipantsContext {
         public var totalCount: Int
         public var version: Int32
         
-        public mutating func mergeActivity(from other: State, myPeerId: PeerId, previousMyPeerId: PeerId?) {
+        public mutating func mergeActivity(from other: State, myPeerId: PeerId?, previousMyPeerId: PeerId?, mergeActivityTimestamps: Bool) {
             var indexMap: [PeerId: Int] = [:]
             for i in 0 ..< other.participants.count {
                 indexMap[other.participants[i].peer.id] = i
@@ -855,7 +860,7 @@ public final class GroupCallParticipantsContext {
             
             for i in 0 ..< self.participants.count {
                 if let index = indexMap[self.participants[i].peer.id] {
-                    self.participants[i].mergeActivity(from: other.participants[index])
+                    self.participants[i].mergeActivity(from: other.participants[index], mergeActivityTimestamp: mergeActivityTimestamps)
                     if self.participants[i].peer.id == myPeerId || self.participants[i].peer.id == previousMyPeerId {
                         self.participants[i].joinTimestamp = other.participants[index].joinTimestamp
                     }
@@ -1510,6 +1515,8 @@ public final class GroupCallParticipantsContext {
             }
             strongSelf.isLoadingMore = false
             strongSelf.shouldResetStateFromServer = false
+            var state = state
+            state.mergeActivity(from: strongSelf.stateValue.state, myPeerId: nil, previousMyPeerId: nil, mergeActivityTimestamps: false)
             strongSelf.stateValue.state = state
             strongSelf.endedProcessingUpdate()
         }))
@@ -2129,12 +2136,12 @@ public func getAudioBroadcastPart(dataSource: AudioBroadcastDataSource, callId: 
                 status: .rejoinNeeded,
                 responseTimestamp: responseTimestamp
             ))
-        } else if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+        } else if error.errorDescription.hasPrefix("FLOOD_WAIT") || error.errorDescription == "TIME_TOO_BIG" {
             return .single(GetAudioBroadcastPartResult(
                 status: .notReady,
                 responseTimestamp: responseTimestamp
             ))
-        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" || error.errorDescription == "TIME_TOO_BIG" {
+        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" {
             return .single(GetAudioBroadcastPartResult(
                 status: .resyncNeeded,
                 responseTimestamp: responseTimestamp

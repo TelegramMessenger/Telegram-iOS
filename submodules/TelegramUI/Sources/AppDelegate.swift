@@ -32,6 +32,7 @@ import TelegramIntents
 import AccountUtils
 import CoreSpotlight
 import LightweightAccountData
+import TelegramAudio
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -438,6 +439,11 @@ final class SharedApplicationContext {
         let logsPath = rootPath + "/logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: logsPath))
+
+        setManagedAudioSessionLogger({ s in
+            Logger.shared.log("ManagedAudioSession", s)
+            Logger.shared.shortLog("ManagedAudioSession", s)
+        })
         
         if let contents = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath + "/accounts-metadata"), includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants]) {
             for url in contents {

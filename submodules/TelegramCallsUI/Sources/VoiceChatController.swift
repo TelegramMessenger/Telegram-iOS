@@ -1285,7 +1285,7 @@ public final class VoiceChatController: ViewController {
                             f(.dismissWithoutContent)
                         })))
                     
-                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id) && peer.id.namespace != Namespaces.Peer.CloudChannel) {
+                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id)) {
                             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
                             }, action: { [weak self] c, _ in
@@ -3187,7 +3187,7 @@ public final class VoiceChatController: ViewController {
                 if allEqual {
                     disableAnimation = true
                 }
-            } else if abs(previousEntries.count - entries.count) > 2 {
+            } else if abs(previousEntries.count - entries.count) > 10 {
                 disableAnimation = true
             }
             

@@ -338,7 +338,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                     }
                     return .single(nil)
                 }
-                let participantSignal = network.request(Api.functions.channels.getParticipant(channel: inputChannel, userId: .inputUserSelf))
+                let participantSignal = network.request(Api.functions.channels.getParticipant(channel: inputChannel, participant: .inputPeerSelf))
                 |> map(Optional.init)
                 |> `catch` { error -> Signal<Api.channels.ChannelParticipant?, NoError> in
                     return .single(nil)
@@ -442,13 +442,18 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             
                                             if let participantResult = participantResult {
                                                 switch participantResult {
-                                                case let .channelParticipant(_, users):
+                                                case let .channelParticipant(_, chats, users):
                                                     for user in users {
                                                         if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                                             peers.append(telegramUser)
                                                             if let presence = TelegramUserPresence(apiUser: user) {
                                                                 peerPresences[telegramUser.id] = presence
                                                             }
+                                                        }
+                                                    }
+                                                    for chat in chats {
+                                                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                                            peers.append(groupOrChannel)
                                                         }
                                                     }
                                                 }
@@ -482,7 +487,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             var invitedBy: PeerId?
                                             if let participantResult = participantResult {
                                                 switch participantResult {
-                                                case let.channelParticipant(participant, _):
+                                                case let.channelParticipant(participant, _, _):
                                                     switch participant {
                                                     case let .channelParticipantSelf(_, inviterId, _):
                                                         invitedBy = PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId)
