@@ -41,8 +41,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         return self._ready
     }
     
-    private let _result = Promise<(ContactListPeer, ContactListAction)?>()
-    var result: Signal<(ContactListPeer, ContactListAction)?, NoError> {
+    private let _result = Promise<([ContactListPeer], ContactListAction)?>()
+    var result: Signal<([ContactListPeer], ContactListAction)?, NoError> {
         return self._result.get()
     }
     
@@ -118,6 +118,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             self?.activateSearch()
         })
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        
+        if params.multipleSelection {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.beginSelection))
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -127,6 +131,11 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     deinit {
         self.createActionDisposable.dispose()
         self.presentationDataDisposable?.dispose()
+    }
+    
+    @objc private func beginSelection() {
+        self.navigationItem.rightBarButtonItem = nil
+        self.contactsNode.beginSelection()
     }
     
     private func updateThemeAndStrings() {
@@ -165,7 +174,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.contactsNode.contactListNode.openPeer = { [weak self] peer, action in
             self?.openPeer(peer: peer, action: action)
         }
-        
+                
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
                 strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
@@ -189,6 +198,16 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
                 return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
             } else {
                 return false
+            }
+        }
+
+        self.contactsNode.requestMultipleAction = { [weak self] in
+            if let strongSelf = self {
+                let selectedPeers = strongSelf.contactsNode.contactListNode.selectedPeers
+                strongSelf._result.set(.single((selectedPeers, .generic)))
+                if strongSelf.autoDismiss {
+                    strongSelf.dismiss()
+                }
             }
         }
         
@@ -263,7 +282,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    strongSelf._result.set(.single((peer, action)))
+                    strongSelf._result.set(.single(([peer], action)))
                     if strongSelf.autoDismiss {
                         strongSelf.dismiss()
                     }

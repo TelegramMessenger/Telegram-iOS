@@ -157,8 +157,8 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                 let controller = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, autoDismiss: false, title: { $0.Compose_NewEncryptedChatTitle }))
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak controller] peer in
-                    if let strongSelf = self, let (contactPeer, _) = peer, case let .peer(peer, _, _) = contactPeer {
+                    |> deliverOnMainQueue).start(next: { [weak controller] result in
+                    if let strongSelf = self, let (contactPeers, _) = result, case let .peer(peer, _, _) = contactPeers.first {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
                         strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.context.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in

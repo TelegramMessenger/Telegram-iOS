@@ -308,7 +308,7 @@ private enum PlayPauseIconNodeState: Equatable {
 }
 
 private final class PlayPauseIconNode: ManagedAnimationNode {
-    private let duration: Double = 0.4
+    private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
     init() {

@@ -662,6 +662,10 @@ final class SharedApplicationContext {
             } else {
                 completion(false)
             }
+        }, forceOrientation: { orientation in
+            let value = orientation.rawValue
+            UIDevice.current.setValue(value, forKey: "orientation")
+            UINavigationController.attemptRotationToDeviceOrientation()
         })
         
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in

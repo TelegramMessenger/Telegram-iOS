@@ -1282,7 +1282,7 @@ public final class VoiceChatController: ViewController {
                                 }
                             })
                         
-                            f(.default)
+                            f(.dismissWithoutContent)
                         })))
                     
                         if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id) && peer.id.namespace != Namespaces.Peer.CloudChannel) {
@@ -2117,6 +2117,11 @@ public final class VoiceChatController: ViewController {
                 var items: [ActionSheetItem] = []
                 
                 items.append(ActionSheetTextItem(title: self.presentationData.strings.VoiceChat_LeaveConfirmation))
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                     action()
+                }))
                 items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveVoiceChat, color: .accent, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
@@ -2130,12 +2135,6 @@ public final class VoiceChatController: ViewController {
                     }))
                 }))
                 
-                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    
-                     action()
-                }))
-
                 actionSheet.setItemGroups([
                     ActionSheetItemGroup(items: items),
                     ActionSheetItemGroup(items: [

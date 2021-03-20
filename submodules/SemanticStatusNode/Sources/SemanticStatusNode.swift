@@ -3,6 +3,9 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import RLottieBinding
+import GZip
+import AppBundle
 
 public enum SemanticStatusNodeState: Equatable {
     public struct ProgressAppearance: Equatable {
@@ -88,9 +91,21 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
         let transitionFraction: CGFloat
         let icon: SemanticStatusNodeIcon
         
+        private let instance: LottieInstance?
+        private let renderContext: DrawingContext?
+        
         init(transitionFraction: CGFloat, icon: SemanticStatusNodeIcon) {
             self.transitionFraction = transitionFraction
             self.icon = icon
+            
+            let displaySize = CGSize(width: 44.0, height: 44.0)
+            if let path = getAppBundle().path(forResource: "anim_playpause", ofType: "tgs"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024), let instance = LottieInstance(data: unpackedData, cacheKey: "anim_playpause") {
+                self.instance = instance
+                self.renderContext = DrawingContext(size: displaySize, scale: UIScreenScale, premultiplied: true, clear: true)
+            } else {
+                self.instance = nil
+                self.renderContext = nil
+            }
             
             super.init()
         }

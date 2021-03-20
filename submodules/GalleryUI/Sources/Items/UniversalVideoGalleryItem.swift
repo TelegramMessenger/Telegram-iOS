@@ -164,68 +164,61 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
     }
 }
 
-private let soundOnImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/SoundOn"), color: .white)
-private let soundOffImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/SoundOff"), color: .white)
-private var roundButtonBackgroundImage = {
-    return generateImage(CGSize(width: 42.0, height: 42), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
-        context.fillEllipse(in: bounds)
-    })
-}()
+private let fullscreenImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Fullscreen"), color: .white)
+private let minimizeImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Minimize"), color: .white)
 
 private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentNode {
-    private let soundButtonNode: HighlightableButtonNode
+    private let wrapperNode: ASDisplayNode
+    private let fullscreenNode: HighlightableButtonNode
     private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat)?
     
+    var action: ((Bool) -> Void)?
+    
     override init() {
-        self.soundButtonNode = HighlightableButtonNode()
-        self.soundButtonNode.alpha = 0.0
-        self.soundButtonNode.setBackgroundImage(roundButtonBackgroundImage, for: .normal)
-        self.soundButtonNode.setImage(soundOffImage, for: .normal)
-        self.soundButtonNode.setImage(soundOnImage, for: .selected)
-        self.soundButtonNode.setImage(soundOnImage, for: [.selected, .highlighted])
+        self.wrapperNode = ASDisplayNode()
+        self.wrapperNode.alpha = 0.0
         
+        self.fullscreenNode = HighlightableButtonNode()
+        self.fullscreenNode.setImage(fullscreenImage, for: .normal)
+        self.fullscreenNode.setImage(minimizeImage, for: .selected)
+        self.fullscreenNode.setImage(minimizeImage, for: [.selected, .highlighted])
+    
         super.init()
         
-        self.soundButtonNode.addTarget(self, action: #selector(self.soundButtonPressed), forControlEvents: .touchUpInside)
-        self.addSubnode(self.soundButtonNode)
-    }
-    
-    func hide() {
-        self.soundButtonNode.isHidden = true
+        self.addSubnode(self.wrapperNode)
+        self.wrapperNode.addSubnode(self.fullscreenNode)
+        
+        self.fullscreenNode.addTarget(self, action: #selector(self.soundButtonPressed), forControlEvents: .touchUpInside)
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, metrics, leftInset, rightInset, bottomInset)
         
-        let soundButtonDiameter: CGFloat = 42.0
-        let inset: CGFloat = 12.0
-        let effectiveBottomInset = self.visibilityAlpha < 1.0 ? 0.0 : bottomInset
-        let soundButtonFrame = CGRect(origin: CGPoint(x: size.width - soundButtonDiameter - inset - rightInset, y: size.height - soundButtonDiameter - inset - effectiveBottomInset), size: CGSize(width: soundButtonDiameter, height: soundButtonDiameter))
-        transition.updateFrame(node: self.soundButtonNode, frame: soundButtonFrame)
+        let isLandscape = size.width > size.height
+        self.fullscreenNode.isSelected = isLandscape
+        
+        let iconSize: CGFloat = 42.0
+        let inset: CGFloat = 4.0
+        let buttonFrame = CGRect(origin: CGPoint(x: size.width - iconSize - inset - rightInset, y: size.height - iconSize - inset - bottomInset), size: CGSize(width: iconSize, height: iconSize))
+        transition.updateFrame(node: self.wrapperNode, frame: buttonFrame)
+        transition.updateFrame(node: self.fullscreenNode, frame: CGRect(origin: CGPoint(), size: buttonFrame.size))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.soundButtonNode, alpha: 1.0)
+        transition.updateAlpha(node: self.wrapperNode, alpha: 1.0)
     }
     
     override func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        transition.updateAlpha(node: self.soundButtonNode, alpha: 0.0)
+        transition.updateAlpha(node: self.wrapperNode, alpha: 0.0)
     }
     
     override func setVisibilityAlpha(_ alpha: CGFloat) {
         super.setVisibilityAlpha(alpha)
-        self.updateSoundButtonVisibility()
+        self.updateFullscreenButtonVisibility()
     }
     
-    func updateSoundButtonVisibility() {
-        if self.soundButtonNode.isSelected {
-            self.soundButtonNode.alpha = self.visibilityAlpha
-        } else {
-            self.soundButtonNode.alpha = 1.0
-        }
+    func updateFullscreenButtonVisibility() {
+        self.wrapperNode.alpha = self.visibilityAlpha
         
         if let validLayout = self.validLayout {
             self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -233,12 +226,18 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     }
     
     @objc func soundButtonPressed() {
-        self.soundButtonNode.isSelected = !self.soundButtonNode.isSelected
-        self.updateSoundButtonVisibility()
+        var toLandscape = false
+        if let (size, _, _, _ ,_) = self.validLayout, size.width < size.height {
+            toLandscape = true
+        }
+        if toLandscape {
+            self.wrapperNode.alpha = 0.0
+        }
+        self.action?(toLandscape)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if !self.soundButtonNode.frame.contains(point) {
+        if !self.wrapperNode.frame.contains(point) {
             return nil
         }
         return super.hitTest(point, with: event)
@@ -323,6 +322,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self._title.set(.single(""))
         
         super.init()
+        
+        self.overlayContentNode.action = { [weak self] toLandscape in
+            self?.updateControlsVisibility(!toLandscape)
+            context.sharedContext.applicationBindings.forceOrientation(toLandscape ? .landscapeRight : .portrait)
+        }
         
         self.scrubberView.seek = { [weak self] timecode in
             self?.videoNode?.seek(timecode)
@@ -484,6 +488,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var previousPlaying: Bool?
     
     private func setupControlsTimer() {
+        return
         let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
             self?.updateControlsVisibility(false)
             self?.controlsTimer = nil
@@ -498,6 +503,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if item.hideControls {
                 self.statusButtonNode.isHidden = true
+            }
+            
+            let dimensions = item.content.dimensions
+            if dimensions.height > 0.0 {
+                if dimensions.width / dimensions.height >= 1.33 {
+                    self.overlayContentNode.isHidden = true
+                }
             }
             
             self.dismissOnOrientationChange = item.landscape
@@ -576,7 +588,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
             if item.fromPlayingVideo {
                 videoNode.canAttachContent = false
-                self.overlayContentNode.hide()
             } else {
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
@@ -1630,6 +1641,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
-        return .single((self.footerContentNode, nil))
+        return .single((self.footerContentNode, self.overlayContentNode))
     }
 }

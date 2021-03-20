@@ -54,12 +54,14 @@ public final class GalleryFooterNode: ASDisplayNode {
             }
         }
         
+        var animateOverlayIn = false
         var dismissedCurrentOverlayContentNode: GalleryOverlayContentNode?
         if self.currentOverlayContentNode !== overlayContentNode {
             if let currentOverlayContentNode = self.currentOverlayContentNode {
                 dismissedCurrentOverlayContentNode = currentOverlayContentNode
             }
             self.currentOverlayContentNode = overlayContentNode
+            animateOverlayIn = true
             if let overlayContentNode = overlayContentNode {
                 overlayContentNode.setVisibilityAlpha(self.visibilityAlpha)
                 self.addSubnode(overlayContentNode)
@@ -96,7 +98,9 @@ public final class GalleryFooterNode: ASDisplayNode {
             overlayContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: backgroundHeight, transition: transition)
             transition.updateFrame(node: overlayContentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             
-            overlayContentNode.animateIn(previousContentNode: dismissedCurrentOverlayContentNode, transition: contentTransition)
+            if animateOverlayIn {
+                overlayContentNode.animateIn(previousContentNode: dismissedCurrentOverlayContentNode, transition: contentTransition)
+            }
             if let dismissedCurrentOverlayContentNode = dismissedCurrentOverlayContentNode {
                 dismissedCurrentOverlayContentNode.animateOut(nextContentNode: overlayContentNode, transition: contentTransition, completion: { [weak self, weak dismissedCurrentOverlayContentNode] in
                     if let strongSelf = self, let dismissedCurrentOverlayContentNode = dismissedCurrentOverlayContentNode, dismissedCurrentOverlayContentNode !== strongSelf.currentOverlayContentNode {

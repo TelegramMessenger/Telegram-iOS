@@ -6969,8 +6969,8 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
         parentController?.push(contactsController)
         if let contactsController = contactsController as? ContactSelectionController {
             selectAddMemberDisposable.set((contactsController.result
-            |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
-                guard let (memberPeer, _) = memberPeer else {
+            |> deliverOnMainQueue).start(next: { [weak contactsController] result in
+                guard let (peers, _) = result, let memberPeer = peers.first else {
                     return
                 }
                 
