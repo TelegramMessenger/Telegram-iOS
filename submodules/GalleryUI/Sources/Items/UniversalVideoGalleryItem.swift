@@ -507,7 +507,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             let dimensions = item.content.dimensions
             if dimensions.height > 0.0 {
-                if dimensions.width / dimensions.height >= 1.33 {
+                if dimensions.width / dimensions.height < 1.33 {
                     self.overlayContentNode.isHidden = true
                 }
             }
