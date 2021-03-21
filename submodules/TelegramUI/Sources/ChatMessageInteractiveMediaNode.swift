@@ -1096,10 +1096,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         if wideLayout {
                             if let size = file.size {
                                  let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
-                                if file.isAnimated {
-                                    badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: "\(gifTitle)", size: nil, muted: false, active: false)
-                                }
-                                else if let duration = file.duration, !message.flags.contains(.Unsent) {
+                                if let duration = file.duration, !message.flags.contains(.Unsent) {
                                     let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     if isMediaStreamable(message: message, media: file) {
                                         badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
@@ -1207,7 +1204,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 case .Remote:
                     state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
                     if let file = self.media as? TelegramMediaFile {
-                        if file.isAnimated && (!automaticDownload || !automaticPlayback) {
+                        if false, file.isAnimated && (!automaticDownload || !automaticPlayback) {
                             let string = "\(gifTitle) " + dataSizeString(file.size ?? 0, formatting: formatting)
                             badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: string, size: nil, muted: false, active: false)
                         } else {

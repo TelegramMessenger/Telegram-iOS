@@ -188,7 +188,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             transition.updateAlpha(node: statusNode, alpha: active ? 1.0 : 0.0)
                         }
                         
-                        let durationFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 6.0 : 3.0, width: durationSize.width, height: durationSize.height)
+                        let durationFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 6.0 : 2.0 + UIScreenPixel, width: durationSize.width, height: durationSize.height)
                         self.durationNode.bounds = CGRect(origin: CGPoint(), size: durationFrame.size)
                         textTransition.updatePosition(node: self.durationNode, position: durationFrame.center)
                         
