@@ -420,7 +420,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                     descriptionString = "\(stringForDuration(Int32(duration))) • \(performer)"
                                 }
                             } else if let size = file.size {
-                                descriptionString = dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                                descriptionString = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
                             } else {
                                 descriptionString = ""
                             }
@@ -512,9 +512,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         var descriptionString: String = ""
                         if let size = file.size {
                             if item.isGlobalSearchResult {
-                                descriptionString = (dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator))
+                                descriptionString = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
                             } else {
-                                descriptionString = "\(dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)) • \(dateString)"
+                                descriptionString = "\(dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) • \(dateString)"
                             }
                         } else {
                             if !item.isGlobalSearchResult {
@@ -990,7 +990,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     switch fetchStatus {
                         case let .Fetching(_, progress):
                             if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
-                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator))"
+                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) / \(dataSizeString(size, forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData)))"
                             }
                             descriptionOffset = 14.0
                         case .Remote:
@@ -1074,7 +1074,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
             alphaTransition.updateAlpha(node: self.descriptionProgressNode, alpha: 0.0)
             alphaTransition.updateAlpha(node: self.descriptionNode, alpha: 1.0)
         }
-        let descriptionFont = Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
+        
+        let descriptionFont = Font.with(size: floor(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
         self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
         let descriptionSize = self.descriptionProgressNode.updateLayout(CGSize(width: size.width - 14.0, height: size.height))
         transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: self.descriptionNode.frame.origin, size: descriptionSize))

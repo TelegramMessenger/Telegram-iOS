@@ -534,7 +534,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
             
-            self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(effectiveProgress * CGFloat(self.totalBytes)))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes))))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(effectiveProgress * CGFloat(self.totalBytes)), formatting: DataSizeStringFormatting(presentationData: self.presentationData))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes)), formatting: DataSizeStringFormatting(presentationData: self.presentationData)))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let progressTextSize = self.progressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
             
             switch self.state {

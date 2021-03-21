@@ -71,7 +71,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     case maximumSizeInfo(PresentationTheme, String)
     
     case storageHeader(PresentationTheme, String)
-    case storageUsage(PresentationTheme, PresentationDateTimeFormat, [StorageUsageCategory])
+    case storageUsage(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, [StorageUsageCategory])
     case collecting(PresentationTheme, String)
     case clearAll(PresentationTheme, String, Bool)
     
@@ -164,8 +164,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .storageUsage(lhsTheme, lhsDateTimeFormat, lhsCategories):
-                if case let .storageUsage(rhsTheme, rhsDateTimeFormat, rhsCategories) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsCategories == rhsCategories {
+            case let .storageUsage(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsCategories):
+                if case let .storageUsage(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsCategories) = rhs, lhsTheme === rhsTheme, lhsStrings == rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsCategories == rhsCategories {
                     return true
                 } else {
                     return false
@@ -249,8 +249,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .storageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .storageUsage(theme, dateTimeFormat, categories):
-                return StorageUsageItem(theme: theme, dateTimeFormat: dateTimeFormat, categories: categories, sectionId: self.section)
+            case let .storageUsage(theme, strings, dateTimeFormat, categories):
+                return StorageUsageItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, categories: categories, sectionId: self.section)
             case let .collecting(theme, text):
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
             case let .clearAll(_, text, enabled):
@@ -262,7 +262,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
             case let .peersHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .peer(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, chatPeer, value, revealed):
-                var options: [ItemListPeerItemRevealOption] = [ItemListPeerItemRevealOption(type: .destructive, title: strings.ClearCache_Clear, action: {
+                let options: [ItemListPeerItemRevealOption] = [ItemListPeerItemRevealOption(type: .destructive, title: strings.ClearCache_Clear, action: {
                     arguments.clearPeerMedia(peer.id)
                 })]
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
@@ -340,7 +340,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
         categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageOtherApps, size: otherAppsSpace, fraction: CGFloat(otherAppsSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color2))
         categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageFree, size: freeSpace, fraction: CGFloat(freeSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color3))
         
-        entries.append(.storageUsage(presentationData.theme, presentationData.dateTimeFormat, categories))
+        entries.append(.storageUsage(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, categories))
         
         entries.append(.clearAll(presentationData.theme, presentationData.strings.ClearCache_ClearCache, telegramCacheSize > 0))
         
@@ -358,7 +358,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
                         chatPeer = mainPeer
                         mainPeer = associatedPeer
                     }
-                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, mainPeer, chatPeer, dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), state.peerIdWithRevealedOptions == peer.id))
+                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, mainPeer, chatPeer, dataSizeString(size, formatting: DataSizeStringFormatting(presentationData: presentationData)), state.peerIdWithRevealedOptions == peer.id))
                     index += 1
                 }
             }
@@ -490,7 +490,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                         if filteredSize == 0 {
                             title = presentationData.strings.Cache_ClearNone
                         } else {
-                            title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
+                            title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0
                         }
                         
                         if let item = item as? ActionSheetButtonItem {
@@ -527,7 +527,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                         let categorySize: Int64 = size
                         totalSize += categorySize
                         let index = itemIndex
-                        items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
+                        items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, formatting: DataSizeStringFormatting(presentationData: presentationData)), value: true, action: { value in
                             toggleCheck(categoryId, index)
                         }))
                         itemIndex += 1
@@ -537,7 +537,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 if otherSize.1 != 0 {
                     totalSize += otherSize.1
                     let index = itemIndex
-                    items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(otherSize.1, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
+                    items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(otherSize.1, formatting: DataSizeStringFormatting(presentationData: presentationData)), value: true, action: { value in
                         toggleCheck(nil, index)
                     }))
                     itemIndex += 1
@@ -545,7 +545,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 selectedSize = totalSize
                 
                 if !items.isEmpty {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0, action: {
                         if let statsPromise = statsPromise {
                             let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                             
@@ -637,7 +637,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             clearDisposable.set((signal
                             |> deliverOnMainQueue).start(completed: {
                                 statsPromise.set(.single(.result(resultStats)))
-                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), .current, nil)
                             }))
                         }
                         
@@ -692,7 +692,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             if filteredSize == 0 {
                                 title = presentationData.strings.Cache_ClearNone
                             } else {
-                                title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
+                                title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0
                             }
                             
                             if let item = item as? ActionSheetButtonItem {
@@ -732,7 +732,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             totalSize += categorySize
                             if categorySize > 1024 {
                                 let index = itemIndex
-                                items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
+                                items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, formatting: DataSizeStringFormatting(presentationData: presentationData)), value: true, action: { value in
                                     toggleCheck(categoryId, index)
                                 }))
                                 itemIndex += 1
@@ -742,7 +742,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     selectedSize = totalSize
                     
                     if !items.isEmpty {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0, action: {
                             if let statsPromise = statsPromise {
                                 let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 var clearMediaIds = Set<MediaId>()
@@ -818,7 +818,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                 clearDisposable.set((signal
                                 |> deliverOnMainQueue).start(completed: {
                                     statsPromise.set(.single(.result(resultStats)))
-                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), .current, nil)
                                 }))
                             }
                             
@@ -945,7 +945,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                         clearDisposable.set((signal
                         |> deliverOnMainQueue).start(completed: {
                             statsPromise.set(.single(.result(resultStats)))
-                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), .current, nil)
                         }))
                     }
                 }

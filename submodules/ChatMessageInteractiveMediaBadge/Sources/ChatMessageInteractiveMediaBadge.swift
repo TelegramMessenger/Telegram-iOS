@@ -7,8 +7,8 @@ import TextFormat
 import RadialStatusNode
 import AppBundle
 
-private let font = Font.regular(11.0)
-private let boldFont = Font.semibold(11.0)
+private let font = Font.with(size: 11.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
+private let boldFont = Font.with(size: 11.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
 
 public enum ChatMessageInteractiveMediaDownloadState: Equatable {
     case remote

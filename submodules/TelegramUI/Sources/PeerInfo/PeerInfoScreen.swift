@@ -3147,7 +3147,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func openUrl(url: String, concealed: Bool, external: Bool) {
-        openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, present: { [weak self] c in
+        openUserGeneratedUrl(context: self.context, peerId: self.peerId, url: url, concealed: concealed, present: { [weak self] c in
             self?.controller?.present(c, in: .window(.root))
         }, openResolved: { [weak self] tempResolved in
             guard let strongSelf = self else {
@@ -3544,6 +3544,46 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             if let strongSelf = self, let peer = strongSelf.data?.peer as? TelegramUser, let phone = peer.phone {
                                 let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
                                 let shareController = ShareController(context: strongSelf.context, subject: .media(.standalone(media: contact)))
+                                shareController.completed = { [weak self] peerIds in
+                                    if let strongSelf = self {
+                                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                                            var peers: [Peer] = []
+                                            for peerId in peerIds {
+                                                if let peer = transaction.getPeer(peerId) {
+                                                    peers.append(peer)
+                                                }
+                                            }
+                                            return peers
+                                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                            if let strongSelf = self {
+                                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                                
+                                                let text: String
+                                                var savedMessages = false
+                                                if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                                    text = presentationData.strings.UserInfo_ContactForwardTooltip_SavedMessages_One
+                                                    savedMessages = true
+                                                } else {
+                                                    if peers.count == 1, let peer = peers.first {
+                                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        text = presentationData.strings.UserInfo_ContactForwardTooltip_Chat_One(peerName).0
+                                                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        text = presentationData.strings.UserInfo_ContactForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0
+                                                    } else if let peer = peers.first {
+                                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        text = presentationData.strings.UserInfo_ContactForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0
+                                                    } else {
+                                                        text = ""
+                                                    }
+                                                }
+                                                
+                                                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                                            }
+                                        })
+                                    }
+                                }
                                 strongSelf.controller?.present(shareController, in: .window(.root))
                             }
                         })))
@@ -3866,6 +3906,46 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openUsername(value: String) {
         let shareController = ShareController(context: self.context, subject: .url("https://t.me/\(value)"))
+        shareController.completed = { [weak self] peerIds in
+            if let strongSelf = self {
+                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                    var peers: [Peer] = []
+                    for peerId in peerIds {
+                        if let peer = transaction.getPeer(peerId) {
+                            peers.append(peer)
+                        }
+                    }
+                    return peers
+                } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    if let strongSelf = self {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        
+                        let text: String
+                        var savedMessages = false
+                        if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                            text = presentationData.strings.UserInfo_LinkForwardTooltip_SavedMessages_One
+                            savedMessages = true
+                        } else {
+                            if peers.count == 1, let peer = peers.first {
+                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peerName).0
+                            } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.UserInfo_LinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0
+                            } else if let peer = peers.first {
+                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.UserInfo_LinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0
+                            } else {
+                                text = ""
+                            }
+                        }
+                        
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                    }
+                })
+            }
+        }
         shareController.actionCompleted = { [weak self] in
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -4392,6 +4472,46 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             if let peer = peer as? TelegramUser, let username = peer.username {
                 let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/\(username)"))
+                shareController.completed = { [weak self] peerIds in
+                    if let strongSelf = self {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                            var peers: [Peer] = []
+                            for peerId in peerIds {
+                                if let peer = transaction.getPeer(peerId) {
+                                    peers.append(peer)
+                                }
+                            }
+                            return peers
+                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                            if let strongSelf = self {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                
+                                let text: String
+                                var savedMessages = false
+                                if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                    text = presentationData.strings.UserInfo_LinkForwardTooltip_SavedMessages_One
+                                    savedMessages = true
+                                } else {
+                                    if peers.count == 1, let peer = peers.first {
+                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peerName).0
+                                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.UserInfo_LinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0
+                                    } else if let peer = peers.first {
+                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.UserInfo_LinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0
+                                    } else {
+                                        text = ""
+                                    }
+                                }
+                                
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                            }
+                        })
+                    }
+                }
                 shareController.actionCompleted = { [weak self] in
                     if let strongSelf = self {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -6439,6 +6559,26 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                 self.controllerNode.resetHeaderExpansion()
             }
         }
+    }
+    
+    private func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
+    }
+    
+    override public func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        self.dismissAllTooltips()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

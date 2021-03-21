@@ -24,7 +24,7 @@ private func stringForCacheSize(strings: PresentationStrings, size: Int32) -> St
     if size > 100 {
         return strings.Cache_NoLimit
     } else {
-        return dataSizeString(Int64(size) * 1024 * 1024 * 1024)
+        return dataSizeString(Int64(size) * 1024 * 1024 * 1024, formatting: DataSizeStringFormatting(strings: strings, decimalSeparator: "."))
     }
 }
 

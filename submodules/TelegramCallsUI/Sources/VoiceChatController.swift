@@ -140,7 +140,7 @@ private final class VoiceChatControllerTitleNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: UIColor(rgb: 0xffffff))
         self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.5))
         
-        let constrainedSize = CGSize(width: size.width - 120.0, height: size.height)
+        let constrainedSize = CGSize(width: size.width - 140.0, height: size.height)
         let titleSize = self.titleNode.measure(constrainedSize)
         let infoSize = self.infoNode.measure(constrainedSize)
         let titleInfoSpacing: CGFloat = 0.0

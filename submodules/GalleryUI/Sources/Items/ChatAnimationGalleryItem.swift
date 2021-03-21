@@ -171,7 +171,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
             self.setupStatus(resource: fileReference.media.resource)
             
             
-            self._title.set(.single("\(fileReference.media.fileName ?? "") - \(dataSizeString(fileReference.media.size ?? 0, forceDecimal: false, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))"))
+            self._title.set(.single("\(fileReference.media.fileName ?? "") - \(dataSizeString(fileReference.media.size ?? 0, forceDecimal: false, formatting: DataSizeStringFormatting(presentationData: self.presentationData)))"))
             
             let speedItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/SlowDown"), style: .plain, target: self, action: #selector(self.toggleSpeedButtonPressed))
             let backgroundItem = UIBarButtonItem(image: backgroundButtonIcon, style: .plain, target: self, action: #selector(self.toggleBackgroundButtonPressed))

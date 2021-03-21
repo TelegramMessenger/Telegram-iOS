@@ -71,7 +71,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     case peerChannels(PresentationTheme, String, Bool)
     
     case sizeHeader(PresentationTheme, String)
-    case sizeItem(PresentationTheme, String, String, Int32)
+    case sizeItem(PresentationTheme, PresentationStrings, String, String, Int32)
     case sizePreload(PresentationTheme, String, Bool, Bool)
     case sizePreloadInfo(PresentationTheme, String)
     
@@ -145,8 +145,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .sizeItem(lhsTheme, lhsDecimalSeparator, lhsText, lhsValue):
-                if case let .sizeItem(rhsTheme, rhsDecimalSeparator, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsDecimalSeparator == rhsDecimalSeparator, lhsText == rhsText, lhsValue == rhsValue {
+            case let .sizeItem(lhsTheme, lhsStrings, lhsDecimalSeparator, lhsText, lhsValue):
+                if case let .sizeItem(rhsTheme, rhsStrings, rhsDecimalSeparator, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDecimalSeparator == rhsDecimalSeparator, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -173,35 +173,35 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! AutodownloadMediaCategoryControllerArguments
         switch self {
-            case let .peerHeader(theme, text):
+            case let .peerHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .peerContacts(theme, text, value):
+            case let .peerContacts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.togglePeer(.contact)
                 })
-            case let .peerOtherPrivate(theme, text, value):
+            case let .peerOtherPrivate(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.togglePeer(.otherPrivate)
                 })
-            case let .peerGroups(theme, text, value):
+            case let .peerGroups(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.togglePeer(.group)
                 })
-            case let .peerChannels(theme, text, value):
+            case let .peerChannels(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.togglePeer(.channel)
                 })
-            case let .sizeHeader(theme, text):
+            case let .sizeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .sizeItem(theme, decimalSeparator, text, value):
-                return AutodownloadSizeLimitItem(theme: theme, decimalSeparator: decimalSeparator, text: text, value: value, sectionId: self.section, updated: { value in
+            case let .sizeItem(theme, strings, decimalSeparator, text, value):
+                return AutodownloadSizeLimitItem(theme: theme, strings: strings, decimalSeparator: decimalSeparator, text: text, value: value, sectionId: self.section, updated: { value in
                     arguments.adjustSize(value)
                 })
-            case let .sizePreload(theme, text, value, enabled):
+            case let .sizePreload(_, text, value, enabled):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value && enabled, enableInteractiveChanges: true, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleVideoPreload()
                 })
-            case let .sizePreloadInfo(theme, text):
+            case let .sizePreloadInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -277,7 +277,7 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
                 sizeText = autodownloadDataSizeString(Int64(size), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             }
             let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).0
-            entries.append(.sizeItem(presentationData.theme, presentationData.dateTimeFormat.decimalSeparator, text, size))
+            entries.append(.sizeItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat.decimalSeparator, text, size))
             if #available(iOSApplicationExtension 10.3, *), category == .video {
                 entries.append(.sizePreload(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideo, predownload, size > 2 * 1024 * 1024))
                 entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).0))

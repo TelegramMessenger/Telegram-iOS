@@ -8080,7 +8080,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if filteredSize == 0 {
                                     title = presentationData.strings.Cache_ClearNone
                                 } else {
-                                    title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
+                                    title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0
                                 }
                                 
                                 if let item = item as? ActionSheetButtonItem {
@@ -8133,7 +8133,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 totalSize += categorySize
                                 if categorySize > 1024 {
                                     let index = itemIndex
-                                    items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
+                                    items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, formatting: DataSizeStringFormatting(presentationData: presentationData)), value: true, action: { value in
                                         toggleCheck(categoryId, index)
                                     }))
                                     itemIndex += 1
@@ -8145,7 +8145,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if items.isEmpty {
                             strongSelf.presentClearCacheSuggestion()
                         } else {
-                            items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0, action: {
                                 let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 var clearMediaIds = Set<MediaId>()
                                 
@@ -8203,7 +8203,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let _ = strongSelf.validLayout {
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     }
                                 }))
 
@@ -11273,7 +11273,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, present: { [weak self] c in
+            openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(resolved)

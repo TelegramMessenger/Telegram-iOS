@@ -222,7 +222,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         return { context, presentationData, message, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 let titleFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 16.0 / 17.0))
-                let descriptionFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
+                let descriptionFont = Font.with(size: floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
                 let durationFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
                 
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
@@ -384,7 +384,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if let performer = performer {
                                 descriptionText = performer
                             } else if let size = file.size {
-                                descriptionText = dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+                                descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: presentationData))
                             } else {
                                 descriptionText = ""
                             }
@@ -408,7 +408,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 } else if !isVoice {
                     let descriptionText: String
                     if let size = file.size {
-                        descriptionText = dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+                        descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: presentationData))
                     } else {
                         descriptionText = ""
                     }
@@ -818,9 +818,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 switch fetchStatus {
                     case let .Fetching(_, progress):
                         if let size = file.size {
-                            let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
-                            let descriptionFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
-                            downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", compactString, descriptionFont)
+                            let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: presentationData))
+                            let descriptionFont = Font.with(size: floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
+                            downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: presentationData)))", compactString, descriptionFont)
                         }
                     default:
                         break
