@@ -699,7 +699,7 @@ private func binaryInsertionIndex(_ inputArr: [GroupCallParticipantsContext.Part
 }
 
 public final class GroupCallParticipantsContext {
-    public struct Participant: Equatable {
+    public struct Participant: Equatable, CustomStringConvertible {
         public struct MuteState: Equatable {
             public var canUnmute: Bool
             public var mutedByYou: Bool
@@ -746,6 +746,10 @@ public final class GroupCallParticipantsContext {
             self.muteState = muteState
             self.volume = volume
             self.about = about
+        }
+
+        public var description: String {
+            return "Participant(peer: \(peer.id): \(peer.debugDisplayTitle), ssrc: \(String(describing: self.ssrc))"
         }
         
         public mutating func mergeActivity(from other: Participant, mergeActivityTimestamp: Bool) {
@@ -1311,6 +1315,8 @@ public final class GroupCallParticipantsContext {
         self.isLoadingMore = true
         
         let ssrcs = self.missingSsrcs
+
+        Logger.shared.log("GroupCallParticipantsContext", "will request ssrcs=\(ssrcs)")
         
         self.disposable.set((getGroupCallParticipants(account: self.account, callId: self.id, accessHash: self.accessHash, offset: "", ssrcs: Array(ssrcs), limit: 100, sortAscending: true)
         |> deliverOnMainQueue).start(next: { [weak self] state in
@@ -1320,6 +1326,8 @@ public final class GroupCallParticipantsContext {
             strongSelf.isLoadingMore = false
             
             strongSelf.missingSsrcs.subtract(ssrcs)
+
+            Logger.shared.log("GroupCallParticipantsContext", "did receive response for ssrcs=\(ssrcs), \(state.participants)")
             
             var updatedState = strongSelf.stateValue.state
             
