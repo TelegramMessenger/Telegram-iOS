@@ -17,6 +17,7 @@ struct NetworkStatusTitle: Equatable {
 final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
     private let titleNode: ImmediateTextNode
     private let lockView: ChatListTitleLockView
+    private weak var lockSnapshotView: UIView?
     private let activityIndicator: ActivityIndicator
     private let buttonView: HighlightTrackingButton
     private let proxyNode: ChatTitleProxyNode
@@ -76,6 +77,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
             } else {
                 if !self.lockView.isHidden && animated {
                     if let snapshotView = self.lockView.snapshotContentTree() {
+                        self.lockSnapshotView = snapshotView
                         snapshotView.frame = self.lockView.frame
                         self.lockView.superview?.insertSubview(snapshotView, aboveSubview: self.lockView)
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -239,6 +241,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         
         let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 9.0 - self.proxyNode.bounds.width, y: floor((size.height - self.proxyNode.bounds.height) / 2.0)), size: self.proxyNode.bounds.size)
         self.proxyNode.frame = proxyFrame
+        
         self.proxyButton.frame = proxyFrame.insetBy(dx: -2.0, dy: -2.0)
         
         let buttonX = max(0.0, titleFrame.minX - 10.0)
@@ -246,6 +249,9 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         
         let lockFrame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 2.0, width: 2.0, height: 2.0)
         transition.updateFrame(view: self.lockView, frame: lockFrame)
+        if let lockSnapshotView = self.lockSnapshotView {
+            transition.updateFrame(view: lockSnapshotView, frame: lockFrame)
+        }
         
         let activityIndicatorFrame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize)
         transition.updateFrame(node: self.activityIndicator, frame: activityIndicatorFrame)

@@ -231,12 +231,12 @@ public final class CallListController: TelegramBaseController {
                         switch strongSelf.mode {
                             case .tab:
                                 if strongSelf.editingMode {
-                                    strongSelf.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: true)
                                     var pressedImpl: (() -> Void)?
                                     let buttonNode = DeleteAllButtonNode(presentationData: strongSelf.presentationData, pressed: {
                                         pressedImpl?()
                                     })
-                                    strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: buttonNode)
+                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
                                     strongSelf.navigationItem.rightBarButtonItem?.setCustomAction({
                                         pressedImpl?()
                                     })
@@ -249,14 +249,14 @@ public final class CallListController: TelegramBaseController {
                                     
                                     //strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: strongSelf, action: #selector(strongSelf.deleteAllPressed))
                                 } else {
-                                    strongSelf.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
-                                    strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.callPressed))
+                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: true)
+                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.callPressed)), animated: true)
                                 }
                             case .navigation:
                                 if strongSelf.editingMode {
-                                    strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: true)
                                 } else {
-                                    strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: true)
                                 }
                         }
                     }
@@ -394,12 +394,12 @@ public final class CallListController: TelegramBaseController {
         
         switch self.mode {
             case .tab:
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+                self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed)), animated: true)
                 var pressedImpl: (() -> Void)?
                 let buttonNode = DeleteAllButtonNode(presentationData: self.presentationData, pressed: {
                     pressedImpl?()
                 })
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: buttonNode)
+                self.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
                 self.navigationItem.rightBarButtonItem?.setCustomAction({
                     pressedImpl?()
                 })
@@ -411,7 +411,7 @@ public final class CallListController: TelegramBaseController {
                 }
                 //self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: self, action: #selector(self.deleteAllPressed))
             case .navigation:
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+                self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed)), animated: true)
         }
         
         self.controllerNode.updateState { state in
@@ -423,10 +423,10 @@ public final class CallListController: TelegramBaseController {
         self.editingMode = false
         switch self.mode {
             case .tab:
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
+                self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
+                self.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed)), animated: true)
             case .navigation:
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
         }
         
         self.controllerNode.updateState { state in
