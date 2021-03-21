@@ -24,30 +24,70 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     
     private var validLayout: (CGSize, CGRect)?
     
-    var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false) {
-        didSet {
-            if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                self.buttonView.accessibilityLabel = self.title.text
-                self.activityIndicator.isHidden = !self.title.activity
-                if self.title.connectsViaProxy {
-                    self.proxyNode.status = self.title.activity ? .connecting : .connected
-                } else {
-                    self.proxyNode.status = .available
-                }
-                self.proxyNode.isHidden = !self.title.hasProxy
-                self.proxyButton.isHidden = !self.title.hasProxy
-                
-                self.buttonView.isHidden = !self.title.isPasscodeSet
-                if self.title.isPasscodeSet && !self.title.activity {
-                    self.lockView.isHidden = false
-                } else {
-                    self.lockView.isHidden = true
-                }
-                self.lockView.updateTheme(self.theme)
-                
-                self.setNeedsLayout()
+    private var _title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
+    var title: NetworkStatusTitle {
+        get {
+            return self._title
+        }
+        set {
+            self.setTitle(newValue, animated: false)
+        }
+    }
+    
+    func setTitle(_ title: NetworkStatusTitle, animated: Bool) {
+        let oldValue = self._title
+        self._title = title
+        
+        if self._title != oldValue {
+            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+            self.buttonView.accessibilityLabel = self.title.text
+            self.activityIndicator.isHidden = !self.title.activity
+           
+            self.proxyButton.isHidden = !self.title.hasProxy
+            if self.title.connectsViaProxy {
+                self.proxyNode.status = self.title.activity ? .connecting : .connected
+            } else {
+                self.proxyNode.status = .available
             }
+            
+            let proxyIsHidden = !self.title.hasProxy
+            let previousProxyIsHidden = self.proxyNode.isHidden
+            if proxyIsHidden != previousProxyIsHidden {
+                if proxyIsHidden {
+                    if let snapshotView = self.proxyNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.proxyNode.frame
+                        self.proxyNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.proxyNode.view)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                } else {
+                    self.proxyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+            }
+            self.proxyNode.isHidden = !self.title.hasProxy
+            
+            self.buttonView.isHidden = !self.title.isPasscodeSet
+            if self.title.isPasscodeSet && !self.title.activity {
+                if self.lockView.isHidden && animated {
+                    self.lockView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+                self.lockView.isHidden = false
+            } else {
+                if !self.lockView.isHidden && animated {
+                    if let snapshotView = self.lockView.snapshotContentTree() {
+                        snapshotView.frame = self.lockView.frame
+                        self.lockView.superview?.insertSubview(snapshotView, aboveSubview: self.lockView)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                }
+                self.lockView.isHidden = true
+            }
+            self.lockView.updateTheme(self.theme)
+            
+            self.setNeedsLayout()
         }
     }
     
@@ -178,11 +218,9 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
             indicatorPadding = indicatorSize.width + 6.0
         }
         var maxTitleWidth = clearBounds.size.width - indicatorPadding
-        var alignedTitleWidth = size.width - indicatorPadding
         var proxyPadding: CGFloat = 0.0
         if !self.proxyNode.isHidden {
             maxTitleWidth -= 25.0
-            alignedTitleWidth -= 20.0
             proxyPadding += 39.0
         }
         if !self.lockView.isHidden {
@@ -197,18 +235,20 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         titleContentRect.origin.x = min(titleContentRect.origin.x, clearBounds.maxX - proxyPadding - titleContentRect.width)
         
         let titleFrame = titleContentRect
-        self.titleNode.frame = titleFrame
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 9.0 - self.proxyNode.bounds.width, y: floor((size.height - proxyNode.bounds.height) / 2.0)), size: proxyNode.bounds.size)
+        let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 9.0 - self.proxyNode.bounds.width, y: floor((size.height - self.proxyNode.bounds.height) / 2.0)), size: self.proxyNode.bounds.size)
         self.proxyNode.frame = proxyFrame
         self.proxyButton.frame = proxyFrame.insetBy(dx: -2.0, dy: -2.0)
         
         let buttonX = max(0.0, titleFrame.minX - 10.0)
         self.buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: 0.0), size: CGSize(width: min(titleFrame.maxX + 28.0, size.width) - buttonX, height: size.height))
         
-        self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 2.0, width: 2.0, height: 2.0)
+        let lockFrame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 2.0, width: 2.0, height: 2.0)
+        transition.updateFrame(view: self.lockView, frame: lockFrame)
         
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize)
+        let activityIndicatorFrame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize)
+        transition.updateFrame(node: self.activityIndicator, frame: activityIndicatorFrame)
     }
     
     @objc private func buttonPressed() {

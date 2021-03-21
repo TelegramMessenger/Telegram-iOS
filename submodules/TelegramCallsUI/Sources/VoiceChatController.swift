@@ -1278,7 +1278,24 @@ public final class VoiceChatController: ViewController {
                             let context = strongSelf.context
                             strongSelf.controller?.dismiss(completion: {
                                 Queue.mainQueue().justDispatch {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                    if peer.id.namespace == Namespaces.Peer.CloudUser {
+                                        let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
+                                        |> take(1)
+                                        |> deliverOnMainQueue).start(next: { peer in
+                                            var expandAvatar = true
+                                            if peer.smallProfileImage == nil {
+                                                expandAvatar = false
+                                            }
+                                            if let (validLayout, _) = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
+                                                expandAvatar = false
+                                            }
+                                            if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: false) {
+                                                navigationController.pushViewController(controller)
+                                            }
+                                        })
+                                    } else {
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                    }
                                 }
                             })
                         
@@ -2105,22 +2122,29 @@ public final class VoiceChatController: ViewController {
                         return
                     }
 
-                    let _ = (strongSelf.call.leave(terminateIfPossible: true)
-                    |> filter { $0 }
-                    |> take(1)
+                    strongSelf.leaveDisposable.set((strongSelf.call.leave(terminateIfPossible: true)
                     |> deliverOnMainQueue).start(completed: {
                         self?.controller?.dismiss()
-                    })
+                    }))
                 }
                 
                 let actionSheet = ActionSheetController(presentationData: self.presentationData.withUpdated(theme: self.darkTheme))
                 var items: [ActionSheetItem] = []
                 
                 items.append(ActionSheetTextItem(title: self.presentationData.strings.VoiceChat_LeaveConfirmation))
-                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak actionSheet] in
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
-                     action()
+                    if let strongSelf = self {
+                        if let (members, _) = strongSelf.currentCallMembers, members.count >= 10 || true {
+                            let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
+                                action()
+                            })])
+                            strongSelf.controller?.present(alertController, in: .window(.root))
+                        } else {
+                            action()
+                        }
+                    }
                 }))
                 items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveVoiceChat, color: .accent, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()

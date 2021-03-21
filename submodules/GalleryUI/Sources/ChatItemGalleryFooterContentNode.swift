@@ -1491,7 +1491,8 @@ private final class PlaybackButtonNode: HighlightTrackingButtonNode {
                     strongSelf.textNode.alpha = 0.4
                     
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.18, curve: .linear)
-                    transition.updateTransformRotation(node: strongSelf.backgroundIconNode, angle: strongSelf.forward ? CGFloat.pi / 4.0 : -CGFloat.pi / 4.0)
+                    let angle = CGFloat.pi / 4.0 + 0.226
+                    transition.updateTransformRotation(node: strongSelf.backgroundIconNode, angle: strongSelf.forward ? angle : -angle)
                 } else if !strongSelf.isPressing {
                     strongSelf.backgroundIconNode.alpha = 1.0
                     strongSelf.backgroundIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
