@@ -1920,7 +1920,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         for participant in membersValue.participants {
             if participant.peer.id == self.joinAsPeerId {
-                if participant.raiseHandRating != nil {
+                if participant.hasRaiseHand {
                     return
                 }
                 break
@@ -1936,7 +1936,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         for participant in membersValue.participants {
             if participant.peer.id == self.joinAsPeerId {
-                if participant.raiseHandRating == nil {
+                if !participant.hasRaiseHand {
                     return
                 }
                 break

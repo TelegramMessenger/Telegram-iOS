@@ -6038,7 +6038,6 @@ Sorry for the inconvenience.";
 "Conversation.ForwardTooltip.TwoChats.Many" = "Messages forwarded to **%@** and **%@**";
 "Conversation.ForwardTooltip.ManyChats.One" = "Message forwarded to **%@** and %@ others";
 "Conversation.ForwardTooltip.ManyChats.Many" = "Messages forwarded to **%@** and %@ others";
-
 "Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
 "Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";
 
@@ -6299,3 +6298,13 @@ Sorry for the inconvenience.";
 "VoiceChat.ForwardTooltip.ManyChats" = "Invite link forwarded to **%@** and %@ others";
 
 "GroupRemoved.ViewChannelInfo" = "View Channel";
+
+"UserInfo.ContactForwardTooltip.Chat.One" = "Contact forwarded to **%@**";
+"UserInfo.ContactForwardTooltip.TwoChats.One" = "Contact forwarded to **%@** and **%@**";
+"UserInfo.ContactForwardTooltip.ManyChats.One" = "Contact forwarded to **%@** and %@ others";
+"UserInfo.ContactForwardTooltip.SavedMessages.One" = "Contact forwarded to **Saved Messages**";
+
+"UserInfo.LinkForwardTooltip.Chat.One" = "Link forwarded to **%@**";
+"UserInfo.LinkForwardTooltip.TwoChats.One" = "Link forwarded to **%@** and **%@**";
+"UserInfo.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
+"UserInfo.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";

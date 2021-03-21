@@ -198,6 +198,7 @@ public class ShareRootControllerImpl {
                 return nil
             }, requestSetAlternateIconName: { _, f in
                 f(false)
+            }, forceOrientation: { _ in
             })
             
             let internalContext: InternalContext

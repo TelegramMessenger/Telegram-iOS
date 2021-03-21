@@ -226,6 +226,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     }
     
     func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, decimalSeparator: String, fileSize: Int?) {
+        let formatting = DataSizeStringFormatting(strings: strings, decimalSeparator: decimalSeparator)
         if let fileSize = fileSize {
             if let fetchStatus = fetchStatus {
                 self.fetchStatusDisposable.set((fetchStatus
@@ -234,9 +235,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         var text: String
                         switch status {
                             case .Remote:
-                                text = dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)
+                                text = dataSizeString(fileSize, forceDecimal: true, formatting: formatting)
                             case let .Fetching(_, progress):
-                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, decimalSeparator: decimalSeparator), dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)).0
+                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, formatting: formatting), dataSizeString(fileSize, forceDecimal: true, formatting: formatting)).0
                             default:
                                 text = ""
                         }
@@ -248,7 +249,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                     }
                 }))
             } else {
-                self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator), font: textFont, textColor: .white)
+                self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, formatting: formatting), font: textFont, textColor: .white)
             }
         } else {
             self.infoNode.attributedText = nil

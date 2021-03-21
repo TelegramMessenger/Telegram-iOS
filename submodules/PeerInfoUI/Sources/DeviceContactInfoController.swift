@@ -1322,8 +1322,8 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
     contactsController.navigationPresentation = .modal
     (parentController.navigationController as? NavigationController)?.pushViewController(contactsController)
     let _ = (contactsController.result
-    |> deliverOnMainQueue).start(next: { peer in
-        if let (peer, _) = peer {
+    |> deliverOnMainQueue).start(next: { result in
+        if let (peers, _) = result, let peer = peers.first {
             let dataSignal: Signal<(Peer?, DeviceContactStableId?), NoError>
             switch peer {
                 case let .peer(contact, _, _):

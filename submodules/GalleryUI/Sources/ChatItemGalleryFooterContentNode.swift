@@ -107,6 +107,8 @@ class CaptionScrollWrapperNode: ASDisplayNode {
     }
 }
 
+
+
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -126,8 +128,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let textNode: ImmediateTextNode
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
-    private let backwardButton: HighlightableButtonNode
-    private let forwardButton: HighlightableButtonNode
+    private let backwardButton: PlaybackButtonNode
+    private let forwardButton: PlaybackButtonNode
     private let playbackControlButton: HighlightableButtonNode
     private let playPauseIconNode: PlayPauseIconNode
     
@@ -188,7 +190,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         
                         var statusState: RadialStatusNodeState = .none
                         switch status {
-                            case let .Fetching(isActive, progress):
+                            case let .Fetching(_, progress):
                                 let adjustedProgress = max(progress, 0.027)
                                 statusState = .cloudProgress(color: UIColor.white, strokeBackgroundColor: UIColor.white.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
                             case .Local:
@@ -207,7 +209,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.backwardButton.isHidden = !seekable
                         self.forwardButton.isHidden = !seekable
                         self.playbackControlButton.isHidden = false
-                        self.playPauseIconNode.enqueueState(paused && !self.wasPlaying ? .play : .pause, animated: true)
+                        
+                        let icon: PlayPauseIconNodeState
+                        if let wasPlaying = self.wasPlaying {
+                            icon = wasPlaying ? .pause : .play
+                        } else {
+                            icon = paused ? .play : .pause
+                        }
+                        self.playPauseIconNode.enqueueState(icon, animated: true)
                         self.statusButtonNode.isHidden = true
                         self.statusNode.isHidden = true
                 }
@@ -303,13 +312,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
         
-        self.backwardButton = HighlightableButtonNode()
+        self.backwardButton = PlaybackButtonNode()
         self.backwardButton.isHidden = true
-        self.backwardButton.setImage(backwardImage, for: [])
+        self.backwardButton.backgroundIconNode.image = backwardImage
         
-        self.forwardButton = HighlightableButtonNode()
+        self.forwardButton = PlaybackButtonNode()
         self.forwardButton.isHidden = true
-        self.forwardButton.setImage(forwardImage, for: [])
+        self.forwardButton.forward = true
+        self.forwardButton.backgroundIconNode.image = forwardImage
         
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
@@ -408,12 +418,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.forwardButton.view.addGestureRecognizer(forwardLongPressGestureRecognizer)
     }
     
-    private var wasPlaying = false
+    private var wasPlaying: Bool?
     @objc private func seekBackwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         switch gestureRecognizer.state {
             case .began:
+                self.backwardButton.isPressing = true
                 self.wasPlaying = !self.currentIsPaused
-                if self.wasPlaying {
+                if self.wasPlaying == true {
                     self.playbackControl?()
                 }
                 
@@ -434,12 +445,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 self.seekTimer = seekTimer
                 seekTimer.start()
             case .ended, .cancelled:
+                self.backwardButton.isPressing = false
                 self.seekTimer?.invalidate()
                 self.seekTimer = nil
-                if self.wasPlaying {
+                if self.wasPlaying == true {
                     self.playbackControl?()
-                    self.wasPlaying = false
                 }
+                self.wasPlaying = nil
             default:
                 break
         }
@@ -448,8 +460,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     @objc private func seekForwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         switch gestureRecognizer.state {
             case .began:
+                self.forwardButton.isPressing = true
                 self.wasPlaying = !self.currentIsPaused
-                if !self.wasPlaying {
+                if self.wasPlaying == false {
                     self.playbackControl?()
                 }
                 
@@ -470,13 +483,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 self.seekTimer = seekTimer
                 seekTimer.start()
             case .ended, .cancelled:
+                self.forwardButton.isPressing = false
                 self.setPlayRate?(1.0)
                 self.seekTimer?.invalidate()
                 self.seekTimer = nil
                 
-                if !self.wasPlaying {
+                if self.wasPlaying == false {
                     self.playbackControl?()
                 }
+                self.wasPlaying = nil
             default:
                 break
         }
@@ -762,10 +777,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.deleteButton.frame = deleteFrame
         self.editButton.frame = editFrame
 
-        if let image = self.backwardButton.image(for: .normal) {
+        if let image = self.backwardButton.backgroundIconNode.image {
             self.backwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) - 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
         }
-        if let image = self.forwardButton.image(for: .normal) {
+        if let image = self.forwardButton.backgroundIconNode.image {
             self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
         }
         
@@ -1392,7 +1407,7 @@ private enum PlayPauseIconNodeState: Equatable {
 }
 
 private final class PlayPauseIconNode: ManagedAnimationNode {
-    private let duration: Double = 0.4
+    private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
     init() {
@@ -1433,5 +1448,71 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
                         break
                 }
         }
+    }
+}
+
+private let circleDiameter: CGFloat = 80.0
+
+private final class PlaybackButtonNode: HighlightTrackingButtonNode {
+    let backgroundIconNode: ASImageNode
+    let textNode: ImmediateTextNode
+    
+    var forward: Bool = false
+
+    var isPressing = false {
+        didSet {
+            if self.isPressing != oldValue && !self.isPressing {
+                self.highligthedChanged(false)
+            }
+        }
+    }
+    
+    init() {
+        self.backgroundIconNode = ASImageNode()
+        self.backgroundIconNode.isLayerBacked = true
+        self.backgroundIconNode.displaysAsynchronously = false
+        self.backgroundIconNode.displayWithoutProcessing = true
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.attributedText = NSAttributedString(string: "15", font: Font.with(size: 11.0, design: .round, weight: .semibold, traits: []), textColor: .white)
+        
+        super.init(pointerStyle: .circle)
+        
+        self.addSubnode(self.backgroundIconNode)
+        self.addSubnode(self.textNode)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.backgroundIconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.backgroundIconNode.alpha = 0.4
+                    
+                    strongSelf.textNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.textNode.alpha = 0.4
+                    
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.18, curve: .linear)
+                    let angle = CGFloat.pi / 4.0 + 0.226
+                    transition.updateTransformRotation(node: strongSelf.backgroundIconNode, angle: strongSelf.forward ? angle : -angle)
+                } else if !strongSelf.isPressing {
+                    strongSelf.backgroundIconNode.alpha = 1.0
+                    strongSelf.backgroundIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    strongSelf.textNode.alpha = 1.0
+                    strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .linear)
+                    transition.updateTransformRotation(node: strongSelf.backgroundIconNode, angle: 0.0)
+                }
+            }
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        self.backgroundIconNode.frame = self.bounds
+        
+        let size = self.bounds.size
+        let textSize = self.textNode.updateLayout(size)
+        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0) + UIScreenPixel), size: textSize)
     }
 }

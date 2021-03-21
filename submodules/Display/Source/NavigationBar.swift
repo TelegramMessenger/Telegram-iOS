@@ -518,15 +518,13 @@ open class NavigationBar: ASDisplayNode {
                     self.leftButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 }
             } else {
-                if animated {
-                    if self.leftButtonNode.view.superview != nil {
-                        if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
-                            snapshotView.frame = self.leftButtonNode.frame
-                            self.leftButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.leftButtonNode.view)
-                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                                snapshotView?.removeFromSuperview()
-                            })
-                        }
+                if animated, self.leftButtonNode.view.superview != nil {
+                    if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.leftButtonNode.frame
+                        self.leftButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.leftButtonNode.view)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
                     }
                 }
                 self.leftButtonNode.removeFromSupernode()
@@ -606,9 +604,27 @@ open class NavigationBar: ASDisplayNode {
                     self.rightButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                 }
             } else {
+                if animated, self.rightButtonNode.view.superview != nil {
+                    if let snapshotView = self.rightButtonNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.rightButtonNode.frame
+                        self.rightButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.rightButtonNode.view)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                }
                 self.rightButtonNode.removeFromSupernode()
             }
         } else {
+            if animated, self.rightButtonNode.view.superview != nil {
+                if let snapshotView = self.rightButtonNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.rightButtonNode.frame
+                    self.rightButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.rightButtonNode.view)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
             self.rightButtonNode.removeFromSupernode()
         }
         

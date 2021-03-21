@@ -1524,6 +1524,11 @@ public final class GroupCallParticipantsContext {
             strongSelf.isLoadingMore = false
             strongSelf.shouldResetStateFromServer = false
             var state = state
+            state.adminIds = strongSelf.stateValue.state.adminIds
+            state.isCreator = strongSelf.stateValue.state.isCreator
+            state.defaultParticipantsAreMuted = strongSelf.stateValue.state.defaultParticipantsAreMuted
+            state.title = strongSelf.stateValue.state.title
+            state.recordingStartTimestamp = strongSelf.stateValue.state.recordingStartTimestamp
             state.mergeActivity(from: strongSelf.stateValue.state, myPeerId: nil, previousMyPeerId: nil, mergeActivityTimestamps: false)
             strongSelf.stateValue.state = state
             strongSelf.endedProcessingUpdate()

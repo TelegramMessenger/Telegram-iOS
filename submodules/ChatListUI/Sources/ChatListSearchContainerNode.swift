@@ -160,11 +160,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
             }
         }, openUrl: { [weak self] url in
-            openUserGeneratedUrl(context: context, url: url, concealed: false, present: { c in
+            openUserGeneratedUrl(context: context, peerId: nil, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
                 context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
-                    //                            self?.openPeer(peerId: peerId, navigation: navigation)
+                    
                 }, sendFile: nil,
                 sendSticker: nil,
                 requestMessageActionUrlAuth: nil,

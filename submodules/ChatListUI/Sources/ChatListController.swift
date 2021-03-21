@@ -283,6 +283,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return (data.isLockable, false)
         }
         
+        let previousEditingAndNetworkStateValue = Atomic<(Bool, AccountNetworkState)?>(value: nil)
         if !self.hideNetworkActivityStatus {
             self.titleDisposable = combineLatest(queue: .mainQueue(),
                 context.account.networkState,
@@ -298,13 +299,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     } else {
                         defaultTitle = strongSelf.presentationData.strings.ChatList_ArchivedChatsTitle
                     }
+                    let previousEditingAndNetworkState = previousEditingAndNetworkStateValue.swap((stateAndFilterId.state.editing, networkState))
                     if stateAndFilterId.state.editing {
                         if strongSelf.groupId == .root {
                             strongSelf.navigationItem.rightBarButtonItem = nil
                         }
-                        
                         let title = !stateAndFilterId.state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(stateAndFilterId.state.selectedPeerIds.count)) : defaultTitle
-                        strongSelf.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
+                        
+                        var animated = false
+                        if let (previousEditing, previousNetworkState) = previousEditingAndNetworkState {
+                            if previousEditing != stateAndFilterId.state.editing, previousNetworkState == networkState, case .online = networkState {
+                                animated = true
+                            }
+                        }
+                        strongSelf.titleView.setTitle(NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false), animated: animated)
                     } else if isReorderingTabs {
                         if strongSelf.groupId == .root {
                             strongSelf.navigationItem.rightBarButtonItem = nil
@@ -374,7 +382,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             case .updating:
                                 strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
                             case .online:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
+                                strongSelf.titleView.setTitle(NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked), animated: (previousEditingAndNetworkState?.0 ?? false) != stateAndFilterId.state.editing)
                         }
                         if groupId == .root && filter == nil && checkProxy {
                             if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil && strongSelf.navigationController?.topViewController === self {
@@ -1413,10 +1421,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         if case .root = self.groupId, self.filter == nil {
-            self.navigationItem.leftBarButtonItem = editItem
+            self.navigationItem.setLeftBarButton(editItem, animated: true)
             (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.details, transition: .animated(duration: 0.5, curve: .spring))
         } else {
-            self.navigationItem.rightBarButtonItem = editItem
+            self.navigationItem.setRightBarButton(editItem, animated: true)
             (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.master, transition: .animated(duration: 0.5, curve: .spring))
         }
         self.searchContentNode?.setIsEnabled(false, animated: true)
@@ -1440,9 +1448,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
         if case .root = self.groupId, self.filter == nil {
-            self.navigationItem.leftBarButtonItem = editItem
+            self.navigationItem.setLeftBarButton(editItem, animated: true)
         } else {
-            self.navigationItem.rightBarButtonItem = editItem
+            self.navigationItem.setRightBarButton(editItem, animated: true)
         }
         (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(nil, transition: .animated(duration: 0.4, curve: .spring))
         self.searchContentNode?.setIsEnabled(true, animated: true)

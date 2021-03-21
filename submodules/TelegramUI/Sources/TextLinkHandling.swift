@@ -51,7 +51,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     }
     
     let openLinkImpl: (String) -> Void = { [weak controller] url in
-        navigateDisposable.set((context.sharedContext.resolveUrl(account: context.account, url: url, skipUrlAuth: true) |> deliverOnMainQueue).start(next: { result in
+        navigateDisposable.set((context.sharedContext.resolveUrl(context: context, peerId: peerId, url: url, skipUrlAuth: true) |> deliverOnMainQueue).start(next: { result in
             if let controller = controller {
                 switch result {
                     case let .externalUrl(url):
