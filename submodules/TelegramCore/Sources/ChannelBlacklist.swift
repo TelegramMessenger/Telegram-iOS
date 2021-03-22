@@ -160,17 +160,9 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
 
                 let apiRights: Api.ChatBannedRights
                 if let rights = rights, !rights.flags.isEmpty {
-                    if memberId.namespace == Namespaces.Peer.CloudChannel {
-                        apiRights = .chatBannedRightsChannel(flags: 1 << 0)
-                    } else {
-                        apiRights = rights.apiBannedRights
-                    }
+                    apiRights = rights.apiBannedRights
                 } else {
-                    if memberId.namespace == Namespaces.Peer.CloudChannel {
-                        apiRights = .chatBannedRightsChannel(flags: 0)
-                    } else {
-                        apiRights = .chatBannedRights(flags: 0, untilDate: 0)
-                    }
+                    apiRights = .chatBannedRights(flags: 0, untilDate: 0)
                 }
                 
                 return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, participant: inputPeer, bannedRights: apiRights))
