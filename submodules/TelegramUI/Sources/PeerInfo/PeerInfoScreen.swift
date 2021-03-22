@@ -1284,7 +1284,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             }
                         } else {
                             if cachedData.flags.contains(.canChangeUsername) {
-                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupTypeIcon"), action: {
+                                items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(isPublic ? presentationData.strings.Group_Setup_TypePublic : presentationData.strings.Group_Setup_TypePrivate), text: presentationData.strings.GroupInfo_GroupType, icon: UIImage(bundleImageName: "Chat/Info/GroupTypeIcon"), action: {
                                     interaction.editingOpenPublicLinkSetup()
                                 }))
                             }
@@ -4365,7 +4365,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 
                 var isGroup = false
                 for peer in peers {
-                    if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
+                    if peer.peer is TelegramGroup {
+                        isGroup = true
+                        break
+                    } else if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
                         isGroup = true
                         break
                     }

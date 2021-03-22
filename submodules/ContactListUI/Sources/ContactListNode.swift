@@ -874,7 +874,7 @@ public final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)? = nil, isSearch: Bool = false) {
+    public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
@@ -951,7 +951,7 @@ public final class ContactListNode: ASDisplayNode {
             self?.suppressPermissionWarning?()
         }, openPeer: { [weak self] peer, action in
             if let strongSelf = self {
-                if let _ = strongSelf.selectionStateValue {
+                if multipleSelection {
                     strongSelf.updateSelectionState({ state in
                         if let state = state {
                             var selectedPeerMap = state.selectedPeerMap
