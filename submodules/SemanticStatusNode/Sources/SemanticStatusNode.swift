@@ -90,10 +90,7 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
     final class DrawingState: NSObject, SemanticStatusNodeStateDrawingState {
         let transitionFraction: CGFloat
         let icon: SemanticStatusNodeIcon
-        
-        private let instance: LottieInstance?
-        private let renderContext: DrawingContext?
-        
+                
         init(transitionFraction: CGFloat, icon: SemanticStatusNodeIcon) {
             self.transitionFraction = transitionFraction
             self.icon = icon
