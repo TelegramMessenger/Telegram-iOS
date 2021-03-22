@@ -1299,7 +1299,7 @@ public final class VoiceChatController: ViewController {
                                 }
                             })
                         
-                            f(.default)
+                            f(.dismissWithoutContent)
                         })))
                     
                         if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id)) {

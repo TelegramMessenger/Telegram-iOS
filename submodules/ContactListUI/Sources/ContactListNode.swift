@@ -163,7 +163,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 if case .presence = sortOrder {
                     text = strings.Contacts_SortedByPresence
                 }
-                return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, header: nil, action: {
+                return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, accessible: false, header: nil, action: {
                     interaction.openSortMenu()
             })
             case let .permissionInfo(_, title, text, suppressed):
