@@ -109,6 +109,7 @@ public final class AccountContextImpl: AccountContext {
         return self.sharedContextImpl
     }
     public let account: Account
+    public let engine: TelegramEngine
     
     public let fetchManager: FetchManager
     private let prefetchManager: PrefetchManager?
@@ -160,6 +161,7 @@ public final class AccountContextImpl: AccountContext {
     {
         self.sharedContextImpl = sharedContext
         self.account = account
+        self.engine = TelegramEngine(account: account)
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -180,7 +182,7 @@ public final class AccountContextImpl: AccountContext {
         }
         
         if let locationManager = self.sharedContextImpl.locationManager, sharedContext.applicationBindings.isMainApp && !temp {
-            self.peersNearbyManager = PeersNearbyManagerImpl(account: account, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
+            self.peersNearbyManager = PeersNearbyManagerImpl(account: account, engine: self.engine, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.peersNearbyManager = nil
         }

@@ -25,7 +25,7 @@ public enum PeerNearbyVisibilityUpdate {
     case invisible
 }
 
-public func updatePeersNearbyVisibility(account: Account, update: PeerNearbyVisibilityUpdate, background: Bool) -> Signal<Void, NoError> {
+func _internal_updatePeersNearbyVisibility(account: Account, update: PeerNearbyVisibilityUpdate, background: Bool) -> Signal<Void, NoError> {
     var flags: Int32 = 0
     var geoPoint: Api.InputGeoPoint
     var selfExpires: Int32?
@@ -138,7 +138,6 @@ public final class PeersNearbyContext {
         }
         |> restartIfError
         |> `catch` { _ -> Signal<[PeerNearby], NoError> in
-            return .single([])
         }
         
         self.disposable.set((combined

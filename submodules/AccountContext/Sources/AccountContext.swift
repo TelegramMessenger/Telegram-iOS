@@ -713,6 +713,7 @@ public protocol AccountGroupCallContextCache: class {
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
+    var engine: TelegramEngine { get }
     
     var liveLocationManager: LiveLocationManager? { get }
     var peersNearbyManager: PeersNearbyManager? { get }
