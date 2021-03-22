@@ -1219,6 +1219,8 @@ public final class VoiceChatController: ViewController {
                                         
                                         let _ = strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
                                         f(.default)
+                                        
+                                        strongSelf.presentUndoOverlay(content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_UserCanNowSpeak(entry.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return true })
                                     })))
                                 } else {
                                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
