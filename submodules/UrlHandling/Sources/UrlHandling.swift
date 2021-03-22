@@ -549,13 +549,21 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                     url = "http://\(url)"
                 }
             }
+            
+            Logger.shared.log("UrlHandling", "Resolving url: \(url)")
             if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
+                Logger.shared.log("UrlHandling", "created URL object")
+                Logger.shared.log("UrlHandling", "known domains are: \n\(urlHandlingConfiguration.domains.joined(separator: "\n"))")
                 if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
                     components.scheme = "https"
                     var queryItems = components.queryItems ?? []
                     queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
                     components.queryItems = queryItems
                     url = components.url?.absoluteString ?? url
+                    
+                    Logger.shared.log("UrlHandling", "host is in known domains")
+                    Logger.shared.log("UrlHandling", "token is \(urlHandlingConfiguration.token ?? "nil")")
+                    Logger.shared.log("UrlHandling", "url with token is \(url)")
                 } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
                     return .single(.urlAuth(url))
                 }

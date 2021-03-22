@@ -1219,6 +1219,8 @@ public final class VoiceChatController: ViewController {
                                         
                                         let _ = strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
                                         f(.default)
+                                        
+                                        strongSelf.presentUndoOverlay(content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_UserCanNowSpeak(entry.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return true })
                                     })))
                                 } else {
                                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
@@ -1265,8 +1267,8 @@ public final class VoiceChatController: ViewController {
                             openTitle = strongSelf.presentationData.strings.VoiceChat_OpenChannel
                             openIcon = UIImage(bundleImageName: "Chat/Context Menu/Channels")
                         } else {
-                            openTitle = strongSelf.presentationData.strings.VoiceChat_OpenChat
-                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/Message")
+                            openTitle = strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile
+                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/Info")
                         }
                         items.append(.action(ContextMenuActionItem(text: openTitle, icon: { theme in
                             return generateTintedImage(image: openIcon, color: theme.actionSheet.primaryTextColor)
@@ -1277,7 +1279,7 @@ public final class VoiceChatController: ViewController {
                         
                             let context = strongSelf.context
                             strongSelf.controller?.dismiss(completion: {
-                                Queue.mainQueue().justDispatch {
+                                Queue.mainQueue().after(0.3) {
                                     if peer.id.namespace == Namespaces.Peer.CloudUser {
                                         let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
                                         |> take(1)
@@ -1959,7 +1961,10 @@ public final class VoiceChatController: ViewController {
                 
                 var isGroup = false
                 for peer in peers {
-                    if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
+                    if peer.peer is TelegramGroup {
+                        isGroup = true
+                        break
+                    } else if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
                         isGroup = true
                         break
                     }

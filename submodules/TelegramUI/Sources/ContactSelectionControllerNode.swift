@@ -47,13 +47,13 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     private var selectionState: ContactListNodeGroupSelectionState?
     
-    init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool) {
+    init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons)
+        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, multipleSelection: multipleSelection)
         
         self.dimNode = ASDisplayNode()
         

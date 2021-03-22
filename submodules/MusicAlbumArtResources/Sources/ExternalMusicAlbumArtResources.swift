@@ -104,6 +104,9 @@ public func fetchExternalMusicAlbumArtResource(account: Account, resource: Exter
             
             let metaUrl = "https://itunes.apple.com/search?term=\(urlEncodedStringFromString("\(performer) \(resource.title)"))&entity=song&limit=4"
             
+            let title = resource.title.lowercased()
+            let isMix = title.contains("remix") || title.contains("mixed")
+            
             let fetchDisposable = MetaDisposable()
             
             let disposable = fetchHttpResource(url: metaUrl).start(next: { result in
@@ -120,7 +123,23 @@ public func fetchExternalMusicAlbumArtResource(account: Account, resource: Exter
                         return
                     }
                     
-                    guard let result = results.first as? [String: Any] else {
+                    var matchingResult: Any?
+                    for result in results {
+                        if let result = result as? [String: Any] {
+                            let title = ((result["trackCensoredName"] as? String) ?? (result["trackName"] as? String))?.lowercased() ?? ""
+                            let resultIsMix = title.contains("remix") || title.contains("mixed")
+                            if isMix == resultIsMix {
+                                matchingResult = result
+                                break
+                            }
+                        }
+                    }
+                    
+                    if matchingResult == nil {
+                        matchingResult = results.first
+                    }
+                    
+                    guard let result = matchingResult as? [String: Any] else {
                         subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
                         subscriber.putCompletion()
                         return

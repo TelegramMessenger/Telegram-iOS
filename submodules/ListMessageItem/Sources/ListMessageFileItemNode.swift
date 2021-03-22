@@ -185,7 +185,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private let playbackStatusDisposable = MetaDisposable()
     private let playbackStatus = Promise<MediaPlayerStatus>()
     
-    private var downloadStatusIconNode: DownloadIconNode
+    private var downloadStatusIconNode: ASImageNode
     private var linearProgressNode: LinearProgressNode?
     
     private var context: AccountContext?
@@ -247,7 +247,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.iconStatusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white)
         self.iconStatusNode.isUserInteractionEnabled = false
         
-        self.downloadStatusIconNode = DownloadIconNode()
+        self.downloadStatusIconNode = ASImageNode()
+        self.downloadStatusIconNode.isLayerBacked = true
+        self.downloadStatusIconNode.displaysAsynchronously = false
+        self.downloadStatusIconNode.displayWithoutProcessing = true
         
         self.restrictionNode = ASDisplayNode()
         self.restrictionNode.isHidden = true
@@ -736,8 +739,6 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         strongSelf.linearProgressNode?.updateTheme(theme: item.presentationData.theme.theme)
                         
                         strongSelf.restrictionNode.backgroundColor = item.presentationData.theme.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
-                        
-                        strongSelf.downloadStatusIconNode.customColor = item.presentationData.theme.theme.list.itemAccentColor
                     }
                     
                     if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
@@ -849,7 +850,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }))
                     }
                     
-                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 3.0, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 18.0) / 2.0)), size: CGSize(width: 18.0, height: 18.0)))
+                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 12.0) / 2.0)), size: CGSize(width: 12.0, height: 12.0)))
                     
                     if let updatedFetchControls = updatedFetchControls {
                         let _ = strongSelf.fetchControls.swap(updatedFetchControls)
@@ -873,7 +874,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     }
     
     private func updateStatus(transition: ContainedViewLayoutTransition) {
-        guard let item = self.item, let media = self.currentMedia, let fetchStatus = self.fetchStatus, let status = self.resourceStatus, let layoutParams = self.layoutParams, let contentSize = self.contentSizeValue else {
+        guard let item = self.item, let media = self.currentMedia, let _ = self.fetchStatus, let status = self.resourceStatus, let layoutParams = self.layoutParams, let contentSize = self.contentSizeValue else {
             return
         }
         
@@ -1015,12 +1016,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     transition.updateFrame(node: linearProgressNode, frame: progressFrame)
                     linearProgressNode.updateProgress(value: CGFloat(progress), completion: {})
                     
-                    var animated = true
                     if self.downloadStatusIconNode.supernode == nil {
-                        animated = false
                         self.offsetContainerNode.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.enqueueState(.pause, animated: animated)
+                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadPauseIcon(item.presentationData.theme.theme)
                 case .Local:
                     if let linearProgressNode = self.linearProgressNode {
                         self.linearProgressNode = nil
@@ -1033,6 +1032,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     if self.downloadStatusIconNode.supernode != nil {
                         self.downloadStatusIconNode.removeFromSupernode()
                     }
+                    self.downloadStatusIconNode.image = nil
                 case .Remote:
                     if let linearProgressNode = self.linearProgressNode {
                         self.linearProgressNode = nil
@@ -1040,12 +1040,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             linearProgressNode?.removeFromSupernode()
                         })
                     }
-                    var animated = true
                     if self.downloadStatusIconNode.supernode == nil {
-                        animated = false
                         self.offsetContainerNode.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.enqueueState(.download, animated: animated)
+                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadStartIcon(item.presentationData.theme.theme)
                 }
         } else {
             if let linearProgressNode = self.linearProgressNode {

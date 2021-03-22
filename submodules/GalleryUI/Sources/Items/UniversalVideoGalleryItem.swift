@@ -478,7 +478,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 pictureInPictureNode.updateLayout(placeholderSize, transition: transition)
             }
         }
-        
+                
         if dismiss {
             self.dismiss()
         }
@@ -488,7 +488,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var previousPlaying: Bool?
     
     private func setupControlsTimer() {
-        return
         let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
             self?.updateControlsVisibility(false)
             self?.controlsTimer = nil
@@ -504,14 +503,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if item.hideControls {
                 self.statusButtonNode.isHidden = true
             }
-            
-            let dimensions = item.content.dimensions
-            if dimensions.height > 0.0 {
-                if dimensions.width / dimensions.height < 1.33 {
-                    self.overlayContentNode.isHidden = true
-                }
-            }
-            
+                        
             self.dismissOnOrientationChange = item.landscape
             
             var hasLinkedStickers = false
@@ -544,6 +536,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else if let _ = item.content as? PlatformVideoContent {
                 disablePlayerControls = true
                 forceEnablePiP = true
+            }
+            
+            let dimensions = item.content.dimensions
+            if dimensions.height > 0.0 {
+                if dimensions.width / dimensions.height < 1.33 || isAnimated {
+                    self.overlayContentNode.isHidden = true
+                }
             }
             
             if let videoNode = self.videoNode {

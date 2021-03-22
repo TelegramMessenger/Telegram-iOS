@@ -6255,6 +6255,7 @@ Sorry for the inconvenience.";
 
 "VoiceChat.YouCanNowSpeak" = "You can now speak";
 "VoiceChat.YouCanNowSpeakIn" = "You can now speak in **%@**";
+"VoiceChat.UserCanNowSpeak" = "**%@** can now speak";
 
 "VoiceChat.MutedByAdmin" = "Muted by Admin";
 "VoiceChat.MutedByAdminHelp" = "Tap if you want to speak";
