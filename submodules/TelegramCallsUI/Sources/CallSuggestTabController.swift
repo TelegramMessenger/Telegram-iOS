@@ -11,16 +11,13 @@ import TelegramUIPreferences
 import AccountContext
 import AppBundle
 
-private func generateIconImage(theme: AlertControllerTheme) -> UIImage? {
-    return UIImage(bundleImageName: "Call List/AlertIcon")
-}
-
 private final class CallSuggestTabAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
     private let iconNode: ASImageNode
+    private let accentIconNode: ASImageNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -42,6 +39,12 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
         self.textNode.maximumNumberOfLines = 0
         
         self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+       
+        self.accentIconNode = ASImageNode()
+        self.accentIconNode.displaysAsynchronously = false
+        self.accentIconNode.displayWithoutProcessing = true
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -65,6 +68,7 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.accentIconNode)
         
         self.addSubnode(self.actionNodesSeparator)
         
@@ -82,7 +86,8 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
     override func updateTheme(_ theme: AlertControllerTheme) {
         self.titleNode.attributedText = NSAttributedString(string: strings.Calls_CallTabTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         self.textNode.attributedText = NSAttributedString(string: strings.Calls_CallTabDescription, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.iconNode.image = generateIconImage(theme: theme)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call List/AlertIcon"), color: theme.controlBorderColor)
+        self.accentIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call List/AlertAccentIcon"), color: theme.accentColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -112,7 +117,9 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
         var iconSize = CGSize()
         if let icon = self.iconNode.image {
             iconSize = icon.size
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: origin.y), size: iconSize))
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: origin.y), size: iconSize)
+            transition.updateFrame(node: self.iconNode, frame: iconFrame)
+            transition.updateFrame(node: self.accentIconNode, frame: iconFrame)
             origin.y += iconSize.height + 16.0
         }
         
