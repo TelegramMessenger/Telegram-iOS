@@ -7363,7 +7363,7 @@ public extension Api {
         case channelParticipantCreator(flags: Int32, userId: Int32, adminRights: Api.ChatAdminRights, rank: String?)
         case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32?, promotedBy: Int32, date: Int32, adminRights: Api.ChatAdminRights, rank: String?)
         case channelParticipantBanned(flags: Int32, peer: Api.Peer, kickedBy: Int32, date: Int32, bannedRights: Api.ChatBannedRights)
-        case channelParticipantLeft(userId: Int32)
+        case channelParticipantLeft(peer: Api.Peer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -7413,11 +7413,11 @@ public extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     bannedRights.serialize(buffer, true)
                     break
-                case .channelParticipantLeft(let userId):
+                case .channelParticipantLeft(let peer):
                     if boxed {
-                        buffer.appendInt32(-1010402965)
+                        buffer.appendInt32(453242886)
                     }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     break
     }
     }
@@ -7434,8 +7434,8 @@ public extension Api {
                 return ("channelParticipantAdmin", [("flags", flags), ("userId", userId), ("inviterId", inviterId), ("promotedBy", promotedBy), ("date", date), ("adminRights", adminRights), ("rank", rank)])
                 case .channelParticipantBanned(let flags, let peer, let kickedBy, let date, let bannedRights):
                 return ("channelParticipantBanned", [("flags", flags), ("peer", peer), ("kickedBy", kickedBy), ("date", date), ("bannedRights", bannedRights)])
-                case .channelParticipantLeft(let userId):
-                return ("channelParticipantLeft", [("userId", userId)])
+                case .channelParticipantLeft(let peer):
+                return ("channelParticipantLeft", [("peer", peer)])
     }
     }
     
@@ -7551,11 +7551,13 @@ public extension Api {
             }
         }
         public static func parse_channelParticipantLeft(_ reader: BufferReader) -> ChannelParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
             let _c1 = _1 != nil
             if _c1 {
-                return Api.ChannelParticipant.channelParticipantLeft(userId: _1!)
+                return Api.ChannelParticipant.channelParticipantLeft(peer: _1!)
             }
             else {
                 return nil
@@ -12069,7 +12071,6 @@ public extension Api {
     }
     public enum ChatBannedRights: TypeConstructorDescription {
         case chatBannedRights(flags: Int32, untilDate: Int32)
-        case chatBannedRightsChannel(flags: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -12080,12 +12081,6 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
                     break
-                case .chatBannedRightsChannel(let flags):
-                    if boxed {
-                        buffer.appendInt32(423690591)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    break
     }
     }
     
@@ -12093,8 +12088,6 @@ public extension Api {
         switch self {
                 case .chatBannedRights(let flags, let untilDate):
                 return ("chatBannedRights", [("flags", flags), ("untilDate", untilDate)])
-                case .chatBannedRightsChannel(let flags):
-                return ("chatBannedRightsChannel", [("flags", flags)])
     }
     }
     
@@ -12107,17 +12100,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChatBannedRights.chatBannedRights(flags: _1!, untilDate: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_chatBannedRightsChannel(_ reader: BufferReader) -> ChatBannedRights? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChatBannedRights.chatBannedRightsChannel(flags: _1!)
             }
             else {
                 return nil

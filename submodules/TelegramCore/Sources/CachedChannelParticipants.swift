@@ -211,7 +211,7 @@ extension ChannelParticipant {
             case let .channelParticipantSelf(userId, _, date):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: nil, rank: nil)
             case let .channelParticipantLeft(userId):
-                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil)
+                self = .member(id: userId.peerId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil)
         }
     }
 }
