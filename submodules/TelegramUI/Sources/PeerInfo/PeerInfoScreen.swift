@@ -5336,7 +5336,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.controller?.push(watchSettingsController(context: self.context))
             case .support:
                 let supportPeer = Promise<PeerId?>()
-                supportPeer.set(supportPeerId(account: context.account))
+                supportPeer.set(context.engine.peerNames.supportPeerId())
                 
                 self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Settings_FAQ_Intro, actions: [
                 TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: { [weak self] in

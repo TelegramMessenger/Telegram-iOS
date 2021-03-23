@@ -49,5 +49,13 @@ public extension TelegramEngine {
                 )
             }
         }
+
+        public func findChannelById(channelId: Int32) -> Signal<Peer?, NoError> {
+            return _internal_findChannelById(postbox: self.account.postbox, network: self.account.network, channelId: channelId)
+        }
+
+        public func supportPeerId() -> Signal<PeerId?, NoError> {
+            return _internal_supportPeerId(account: self.account)
+        }
     }
 }

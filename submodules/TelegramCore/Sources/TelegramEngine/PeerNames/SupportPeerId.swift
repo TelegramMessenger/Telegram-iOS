@@ -5,7 +5,7 @@ import MtProtoKit
 
 import SyncCore
 
-public func supportPeerId(account:Account) -> Signal<PeerId?, NoError> {
+func _internal_supportPeerId(account: Account) -> Signal<PeerId?, NoError> {
     return account.network.request(Api.functions.help.getSupport())
     |> map(Optional.init)
     |> `catch` { _ in

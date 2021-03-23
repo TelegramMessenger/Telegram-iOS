@@ -374,7 +374,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {
-                    foundPeer = findChannelById(postbox: account.postbox, network: account.network, channelId: messageId.peerId.id)
+                    foundPeer = TelegramEngine(account: account).peerNames.findChannelById(channelId: messageId.peerId.id)
                 }
                 return foundPeer
                 |> mapToSignal { foundPeer -> Signal<ResolvedUrl?, NoError> in
