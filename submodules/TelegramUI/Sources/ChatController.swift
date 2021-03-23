@@ -3722,13 +3722,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var isScrolled: Bool
             }
             
-            let messageRangeEdge: Signal<Bool, NoError> = self.context.sharedContext.accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.experimentalUISettings]))
-            |> map { sharedData -> Bool in
-                let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
-                return experimentalSettings.snapPinListToTop
-            }
-            |> distinctUntilChanged
-            
             let referenceMessage: Signal<ReferenceMessage?, NoError>
             if latest {
                 referenceMessage = .single(nil)
@@ -3736,16 +3729,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 referenceMessage = combineLatest(
                     queue: Queue.mainQueue(),
                     self.scrolledToMessageId.get(),
-                    self.chatDisplayNode.historyNode.topVisibleMessageRange.get(),
-                    messageRangeEdge
+                    self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
                 )
-                |> map { scrolledToMessageId, topVisibleMessageRange, messageRangeEdge -> ReferenceMessage? in
+                |> map { scrolledToMessageId, topVisibleMessageRange -> ReferenceMessage? in
                     let topVisibleMessage: MessageId?
-                    if messageRangeEdge {
-                        topVisibleMessage = topVisibleMessageRange?.lowerBound
-                    } else {
-                        topVisibleMessage = topVisibleMessageRange?.upperBound
-                    }
+                    topVisibleMessage = topVisibleMessageRange?.upperBound
                     
                     if let scrolledToMessageId = scrolledToMessageId {
                         if let topVisibleMessage = topVisibleMessage {
