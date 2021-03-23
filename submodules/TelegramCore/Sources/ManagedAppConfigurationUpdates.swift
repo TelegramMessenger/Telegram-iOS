@@ -30,7 +30,9 @@ func updateAppConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Vo
 
 func managedAppConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
-        return updateAppConfigurationOnce(postbox: postbox, network: network).start()
+        return updateAppConfigurationOnce(postbox: postbox, network: network).start(completed: {
+            subscriber.putCompletion()
+        })
     }
     return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }

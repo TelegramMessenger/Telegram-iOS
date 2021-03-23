@@ -14,7 +14,9 @@ func managedAutodownloadSettingsUpdates(accountManager: AccountManager, network:
             return updateAutodownloadSettingsInteractively(accountManager: accountManager, { _ -> AutodownloadSettings in
                 return AutodownloadSettings(apiAutodownloadSettings: result)
             })
-        }).start()
+        }).start(completed: {
+            subscriber.putCompletion()
+        })
     }
     return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
