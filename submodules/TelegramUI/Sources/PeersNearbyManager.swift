@@ -7,23 +7,27 @@ import TelegramApi
 import DeviceLocationManager
 import CoreLocation
 import AccountContext
+import DeviceAccess
 
 private let locationUpdateTimePeriod: Double = 1.0 * 60.0 * 60.0
 private let locationDistanceUpdateThreshold: Double = 1000
 
 final class PeersNearbyManagerImpl: PeersNearbyManager {
     private let account: Account
+    private let engine: TelegramEngine
     private let locationManager: DeviceLocationManager
     private let inForeground: Signal<Bool, NoError>
     
     private var preferencesDisposable: Disposable?
     private var locationDisposable = MetaDisposable()
     private var updateDisposable = MetaDisposable()
+    private var accessDisposable: Disposable?
     
     private var previousLocation: CLLocation?
     
-    init(account: Account, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>)  {
+    init(account: Account, engine: TelegramEngine, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>)  {
         self.account = account
+        self.engine = engine
         self.locationManager = locationManager
         self.inForeground = inForeground
         
@@ -32,9 +36,25 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
             let state = view.values[PreferencesKeys.peersNearby] as? PeersNearbyState ?? .default
             return state.visibilityExpires
         }
+        |> deliverOnMainQueue
         |> distinctUntilChanged).start(next: { [weak self] visibility in
             if let strongSelf = self {
                 strongSelf.visibilityUpdated(visible: visibility != nil)
+            }
+        })
+
+        self.accessDisposable = (DeviceAccess.authorizationStatus(applicationInForeground: nil, siriAuthorization: nil, subject: .location(.live))
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let strongSelf = self else {
+                return
+            }
+            switch status {
+            case .denied:
+                let _ = strongSelf.engine.peersNearby.updatePeersNearbyVisibility(update: .invisible, background: false).start()
+                strongSelf.locationDisposable.set(nil)
+                strongSelf.updateDisposable.set(nil)
+            default:
+                break
             }
         })
     }
@@ -43,6 +63,7 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
         self.preferencesDisposable?.dispose()
         self.locationDisposable.dispose()
         self.updateDisposable.dispose()
+        self.accessDisposable?.dispose()
     }
     
     private func visibilityUpdated(visible: Bool) {
@@ -77,9 +98,9 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
     }
     
     private func updateLocation(_ location: CLLocation) {
-        self.updateDisposable.set(updatePeersNearbyVisibility(account: self.account, update: .location(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), background: true).start(error: { [weak self] _ in
+        self.updateDisposable.set(self.engine.peersNearby.updatePeersNearbyVisibility(update: .location(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), background: true).start(error: { [weak self] _ in
             if let strongSelf = self {
-                let _ = updatePeersNearbyVisibility(account: strongSelf.account, update: .invisible, background: false).start()
+                let _ = strongSelf.engine.peersNearby.updatePeersNearbyVisibility(update: .invisible, background: false).start()
                 strongSelf.locationDisposable.set(nil)
                 strongSelf.updateDisposable.set(nil)
             }

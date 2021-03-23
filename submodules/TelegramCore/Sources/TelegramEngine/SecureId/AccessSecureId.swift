@@ -153,7 +153,7 @@ public enum SecureIdAccessError {
     case secretPasswordMismatch
 }
 
-public func accessSecureId(network: Network, password: String) -> Signal<(context: SecureIdAccessContext, settings: TwoStepVerificationSettings), SecureIdAccessError> {
+func _internal_accessSecureId(network: Network, password: String) -> Signal<(context: SecureIdAccessContext, settings: TwoStepVerificationSettings), SecureIdAccessError> {
     return requestTwoStepVerifiationSettings(network: network, password: password)
     |> mapError { error -> SecureIdAccessError in
         return .passwordError(error)
