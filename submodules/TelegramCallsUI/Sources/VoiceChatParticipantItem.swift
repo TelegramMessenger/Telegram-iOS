@@ -179,6 +179,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (VoiceChatParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
+    private var isExtracted = false
     private var wavesColor: UIColor?
     
     private var videoNode: GroupVideoNode?
@@ -278,6 +279,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             guard let strongSelf = self, let item = strongSelf.layoutParams?.0 else {
                 return
             }
+            
+            strongSelf.isExtracted = isExtracted
             
             if isExtracted {
                 strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.list.itemBlocksBackgroundColor)
@@ -521,7 +524,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.extractedRect = extractedRect
                     strongSelf.nonExtractedRect = nonExtractedRect
                     
-                    if strongSelf.contextSourceNode.isExtractedToContextPreview {
+                    if strongSelf.isExtracted {
                         strongSelf.extractedBackgroundImageNode.frame = extractedRect
                     } else {
                         strongSelf.extractedBackgroundImageNode.frame = nonExtractedRect

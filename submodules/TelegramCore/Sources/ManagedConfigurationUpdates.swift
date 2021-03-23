@@ -90,7 +90,9 @@ func managedConfigurationUpdates(accountManager: AccountManager, postbox: Postbo
                 }
             }
             |> switchToLatest
-        }).start()
+        }).start(completed: {
+            subscriber.putCompletion()
+        })
     }
     
     return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart

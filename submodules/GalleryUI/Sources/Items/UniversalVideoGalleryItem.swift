@@ -205,7 +205,9 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.wrapperNode, alpha: 1.0)
+        if !self.visibilityAlpha.isZero {
+            transition.updateAlpha(node: self.wrapperNode, alpha: 1.0)
+        }
     }
     
     override func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -271,12 +273,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     private var statusNodeShouldBeHidden = true
     
-    private var isCentral = false
+    private var isCentral: Bool?
     private var _isVisible: Bool?
     private var initiallyActivated = false
     private var hideStatusNodeUntilCentrality = false
     private var playOnContentOwnership = false
     private var skipInitialPause = false
+    private var ignorePauseStatus = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -298,6 +301,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var scrubbingFrame = Promise<FramePreviewResult?>(nil)
     private var scrubbingFrames = false
     private var scrubbingFrameDisposable: Disposable?
+    
+    private let isPlayingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
+    private var hideControlsDisposable: Disposable?
     
     var playbackCompleted: (() -> Void)?
     
@@ -322,6 +330,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self._title.set(.single(""))
         
         super.init()
+        
+        self.footerContentNode.interacting = { [weak self] value in
+            self?.isInteractingPromise.set(value)
+        }
         
         self.overlayContentNode.action = { [weak self] toLandscape in
             self?.updateControlsVisibility(!toLandscape)
@@ -436,12 +448,30 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.titleContentView = GalleryTitleView(frame: CGRect())
         self._titleView.set(.single(self.titleContentView))
+        
+        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get())
+        |> mapToSignal { isPlaying, isIntracting, controlsVisible -> Signal<Void, NoError> in
+            if isPlaying && !isIntracting && controlsVisible {
+                return .single(Void())
+                |> delay(4.0, queue: Queue.mainQueue())
+            } else {
+                return .complete()
+            }
+        }
+
+        self.hideControlsDisposable = (shouldHideControlsSignal
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.updateControlsVisibility(false)
+            }
+        })
     }
     
     deinit {
         self.statusDisposable.dispose()
         self.mediaPlaybackStateDisposable.dispose()
         self.scrubbingFrameDisposable?.dispose()
+        self.hideControlsDisposable?.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -484,21 +514,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    private var controlsTimer: SwiftSignalKit.Timer?
-    private var previousPlaying: Bool?
-    
-    private func setupControlsTimer() {
-        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
-            self?.updateControlsVisibility(false)
-            self?.controlsTimer = nil
-        }, queue: Queue.mainQueue())
-        timer.start()
-        self.controlsTimer = timer
-    }
-    
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
-            self.previousPlaying = nil
+            self.isPlayingPromise.set(false)
             
             if item.hideControls {
                 self.statusButtonNode.isHidden = true
@@ -665,7 +683,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
                     var initialBuffering = false
-                    var playing = false
+                    var isPlaying = false
                     var isPaused = true
                     var seekable = hintSeekable
                     var hasStarted = false
@@ -683,7 +701,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         switch value.status {
                             case .playing:
                                 isPaused = false
-                                playing = true
+                                isPlaying = true
+                                strongSelf.ignorePauseStatus = false
                             case let .buffering(_, whilePlaying, _, display):
                                 displayProgress = display
                                 initialBuffering = !whilePlaying
@@ -716,9 +735,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                         isPaused = false
                                     }
                                 } else if strongSelf.actionAtEnd == .stop {
-                                    strongSelf.updateControlsVisibility(true)
-                                    strongSelf.controlsTimer?.invalidate()
-                                    strongSelf.controlsTimer = nil
+                                    strongSelf.isPlayingPromise.set(false)
+                                    if strongSelf.isCentral == true {
+                                        strongSelf.updateControlsVisibility(true)
+                                    }
                                 }
                         }
                         if !value.duration.isZero {
@@ -726,14 +746,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                     
-                    if strongSelf.isCentral && playing && strongSelf.previousPlaying != true && !disablePlayerControls {
-                        strongSelf.controlsTimer?.invalidate()
-                        strongSelf.setupControlsTimer()
-                    } else if !playing {
-                        strongSelf.controlsTimer?.invalidate()
-                        strongSelf.controlsTimer = nil
+                    if !disablePlayerControls && strongSelf.isCentral == true && isPlaying {
+                        strongSelf.isPlayingPromise.set(true)
+                    } else if !isPlaying {
+                        strongSelf.isPlayingPromise.set(false)
                     }
-                    strongSelf.previousPlaying = playing
                     
                     var fetching = false
                     if initialBuffering {
@@ -751,7 +768,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     case .Remote:
                                         state = .download(.white)
                                     case let .Fetching(_, progress):
-                                        if !playing {
+                                        if !isPlaying {
                                             fetching = true
                                             isPaused = true
                                         }
@@ -768,13 +785,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     strongSelf.fetchStatus = fetchStatus
                     
                     if !item.hideControls {
-                        strongSelf.statusNodeShouldBeHidden = (!initialBuffering && (strongSelf.didPause || !isPaused) && !fetching)
+                        strongSelf.statusNodeShouldBeHidden = strongSelf.ignorePauseStatus || (!initialBuffering && (strongSelf.didPause || !isPaused) && !fetching)
                         strongSelf.statusButtonNode.isHidden = strongSelf.hideStatusNodeUntilCentrality || strongSelf.statusNodeShouldBeHidden
                     }
                     
                     if isAnimated || disablePlayerControls {
                         strongSelf.footerContentNode.content = .info
-                    } else if isPaused {
+                    } else if isPaused && !strongSelf.ignorePauseStatus {
                         if hasStarted || strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {
@@ -808,10 +825,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let strongSelf = self, !isAnimated {
                         videoNode?.seek(0.0)
                         
-                        if strongSelf.actionAtEnd == .stop && strongSelf.isCentral {
+                        if strongSelf.actionAtEnd == .stop && strongSelf.isCentral == true {
+                            strongSelf.isPlayingPromise.set(false)
                             strongSelf.updateControlsVisibility(true)
-                            strongSelf.controlsTimer?.invalidate()
-                            strongSelf.controlsTimer = nil
                         }
                     }
                 }
@@ -834,8 +850,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func controlsVisibilityUpdated(isVisible: Bool) {
-        self.controlsTimer?.invalidate()
-        self.controlsTimer = nil
+        self.controlsVisiblePromise.set(isVisible)
         
         self.videoNode?.isUserInteractionEnabled = isVisible ? self.videoNodeUserInteractionEnabled : false
         self.videoNode?.notifyPlaybackControlsHidden(!isVisible)
@@ -915,8 +930,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                 } else {
-                    self.controlsTimer?.invalidate()
-                    self.controlsTimer = nil
+                    self.isPlayingPromise.set(false)
                     
                     self.dismissOnOrientationChange = false
                     if videoNode.ownsContentNode {
@@ -941,6 +955,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if self.skipInitialPause {
                             self.skipInitialPause = false
                         } else {
+                            self.ignorePauseStatus = true
                             videoNode.pause()
                             videoNode.seek(0.0)
                         }
@@ -973,7 +988,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func activateAsInitial() {
-        if let videoNode = self.videoNode, self.isCentral {
+        if let videoNode = self.videoNode, self.isCentral == true {
             self.initiallyActivated = true
 
             var isAnimated = false
@@ -1614,6 +1629,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             |> delay(0.15, queue: Queue.mainQueue())
             let progressDisposable = progressSignal.start()
             
+            self.isInteractingPromise.set(true)
+            
             let signal = stickerPacksAttachedToMedia(account: self.context.account, media: media)
             |> afterDisposed {
                 Queue.mainQueue().async {
@@ -1627,7 +1644,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 let baseNavigationController = strongSelf.baseNavigationController()
                 baseNavigationController?.view.endEditing(true)
-                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil)
+                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, dismissed: { [weak self] in
+                    self?.isInteractingPromise.set(false)
+                })
                 (baseNavigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
             })
         }

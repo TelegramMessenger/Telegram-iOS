@@ -797,6 +797,12 @@ public final class GroupCallParticipantsContext {
         }
         
         public static func compare(lhs: Participant, rhs: Participant, sortAscending: Bool) -> Bool {
+            let lhsCanUnmute = lhs.muteState?.canUnmute ?? true
+            let rhsCanUnmute = rhs.muteState?.canUnmute ?? true
+            if lhsCanUnmute != rhsCanUnmute {
+                return lhsCanUnmute
+            }
+
             if let lhsActivityRank = lhs.activityRank, let rhsActivityRank = rhs.activityRank {
                 if lhsActivityRank != rhsActivityRank {
                     return lhsActivityRank < rhsActivityRank
@@ -1438,6 +1444,11 @@ public final class GroupCallParticipantsContext {
                         activityTimestamp = max(updatedActivityTimestamp, previousActivityTimestamp)
                     } else {
                         activityTimestamp = participantUpdate.activityTimestamp ?? previousActivityTimestamp
+                    }
+
+                    if let muteState = participantUpdate.muteState, !muteState.canUnmute {
+                        previousActivityRank = nil
+                        activityTimestamp = nil
                     }
 
                     var volume = participantUpdate.volume

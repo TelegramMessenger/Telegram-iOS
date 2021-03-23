@@ -1364,6 +1364,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .replyThread:
                             postAsReply = true
                     }
+                    
+                    if let messageId = messageId, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                        if let author = message.author as? TelegramUser, author.botInfo != nil {
+                        } else {
+                            postAsReply = false
+                        }
+                    }
                 }
                 
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
@@ -2423,7 +2430,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     var items: [ContextMenuItem] = [
                         .action(ContextMenuActionItem(text: isChannel ? strongSelf.presentationData.strings.Conversation_ContextMenuOpenChannelProfile : strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
                             self?.openPeer(peerId: peer.id, navigation: .info, fromMessage: nil)
@@ -7254,19 +7261,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
         })
-    }
-    
-    override public func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
-        guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
-            return
-        }
-        let hasOverlayNodes = self.context.sharedContext.mediaManager.overlayMediaManager.controller?.hasNodes ?? false
-        if self.validLayout != nil && orientation.isLandscape && !hasOverlayNodes && self.traceVisibility() && isTopmostChatController(self) {
-            var completed = false
-            self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
-                if !completed, let itemNode = itemNode as? ChatMessageItemView, let message = itemNode.item?.message,  let (_, soundEnabled, _, _, _) = itemNode.playMediaWithSound(), soundEnabled {
-                    let _ = self.controllerInteraction?.openMessage(message, .landscape)
-                    completed = true
+        
+        if case .compact = layout.metrics.widthClass {
+            let hasOverlayNodes = self.context.sharedContext.mediaManager.overlayMediaManager.controller?.hasNodes ?? false
+            if self.validLayout != nil && layout.size.width > layout.size.height && !hasOverlayNodes && self.traceVisibility() && isTopmostChatController(self) {
+                var completed = false
+                self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                    if !completed, let itemNode = itemNode as? ChatMessageItemView, let message = itemNode.item?.message, let (_, soundEnabled, _, _, _) = itemNode.playMediaWithSound(), soundEnabled {
+                        let _ = self.controllerInteraction?.openMessage(message, .landscape)
+                        completed = true
+                    }
                 }
             }
         }

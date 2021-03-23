@@ -25,7 +25,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let sharedContext: SharedAccountContext
     private var context: AccountContext?
     private var presentationData: PresentationData
-    private let forcedTheme: PresentationTheme?
+    private let forceTheme: PresentationTheme?
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private var immediatePeerId: PeerId?
@@ -80,10 +80,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forcedTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
-        self.forcedTheme = forcedTheme
+        self.forceTheme = forceTheme
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
@@ -96,8 +96,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.defaultAction = defaultAction
         self.requestLayout = requestLayout
         
-        if let forcedTheme = self.forcedTheme {
-            self.presentationData = self.presentationData.withUpdated(theme: forcedTheme)
+        if let forceTheme = self.forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
         }
         
         let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
@@ -272,8 +272,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             return
         }
         self.presentationData = presentationData
-        if let forcedTheme = self.forcedTheme {
-            self.presentationData = self.presentationData.withUpdated(theme: forcedTheme)
+        if let forceTheme = self.forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
         }
         
         let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)

@@ -25,7 +25,9 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     }
     
     private var animatedIn = false
-    private var dismissed = false
+    private var isDismissed = false
+        
+    public var dismissed: (() -> Void)?
     
     private let context: AccountContext
     private let mode: StickerPackPreviewControllerMode
@@ -150,6 +152,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
             }))
         }, actionPerformed: self.actionPerformed)
         self.controllerNode.dismiss = { [weak self] in
+            self?.dismissed?()
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         self.controllerNode.cancel = { [weak self] in
@@ -264,8 +267,8 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
-        if !self.dismissed {
-            self.dismissed = true
+        if !self.isDismissed {
+            self.isDismissed = true
         } else {
             return
         }
