@@ -345,12 +345,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             } else {
                                 let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
                                 rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
-                                strongSelf.navigationItem.setRightBarButton(rightBarButtonItem, animated: true)
+                                if strongSelf.navigationItem.rightBarButtonItem?.accessibilityLabel != rightBarButtonItem.accessibilityLabel {
+                                    strongSelf.navigationItem.setRightBarButton(rightBarButtonItem, animated: true)
+                                }
                             }
                             
                             if isReorderingTabs {
                                 let leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
-                                strongSelf.navigationItem.setLeftBarButton(leftBarButtonItem, animated: true)
+                                leftBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Done
+                                if strongSelf.navigationItem.leftBarButtonItem?.accessibilityLabel != leftBarButtonItem.accessibilityLabel {
+                                    strongSelf.navigationItem.setLeftBarButton(leftBarButtonItem, animated: true)
+                                }
                             } else {
                                 let editItem: UIBarButtonItem
                                 if stateAndFilterId.state.editing {
@@ -360,7 +365,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(strongSelf.editPressed))
                                     editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
                                 }
-                                strongSelf.navigationItem.setLeftBarButton(editItem, animated: true)
+                                if strongSelf.navigationItem.leftBarButtonItem?.accessibilityLabel != editItem.accessibilityLabel {
+                                    strongSelf.navigationItem.setLeftBarButton(editItem, animated: true)
+                                }
                             }
                         }
                         
@@ -904,6 +911,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
+        let previousToolbarValue = Atomic<Toolbar?>(value: nil)
         self.stateDisposable.set(combineLatest(queue: .mainQueue(),
             self.presentationDataValue.get(),
             peerIdsAndOptions
@@ -954,7 +962,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: middleAction)
                 }
             }
-            strongSelf.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
+            var transition: ContainedViewLayoutTransition = .immediate
+            let previousToolbar = previousToolbarValue.swap(toolbar)
+            if (previousToolbar == nil) != (toolbar == nil) {
+                transition = .animated(duration: 0.3, curve: .easeInOut)
+            }
+            strongSelf.setToolbar(toolbar, transition: transition)
         }))
         
         self.tabContainerNode.tabSelected = { [weak self] id in
