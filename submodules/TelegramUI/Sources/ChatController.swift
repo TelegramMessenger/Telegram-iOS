@@ -1753,7 +1753,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
-                        var signal = getBankCardInfo(account: strongSelf.context.account, cardNumber: number)
+                        var signal = strongSelf.context.engine.payments.getBankCardInfo(cardNumber: number)
                         let disposable: MetaDisposable
                         if let current = strongSelf.bankCardDisposable {
                             disposable = current

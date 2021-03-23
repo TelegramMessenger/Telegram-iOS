@@ -26,7 +26,7 @@ public enum AddressNameDomain {
     case theme(TelegramTheme)
 }
 
-public func checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> AddressNameFormatError? {
+func _internal_checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> AddressNameFormatError? {
     var index = 0
     let length = value.count
     for char in value {
@@ -52,7 +52,7 @@ public func checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> A
     return nil
 }
 
-public func addressNameAvailability(account: Account, domain: AddressNameDomain, name: String) -> Signal<AddressNameAvailability, NoError> {
+func _internal_addressNameAvailability(account: Account, domain: AddressNameDomain, name: String) -> Signal<AddressNameAvailability, NoError> {
     return account.postbox.transaction { transaction -> Signal<AddressNameAvailability, NoError> in
         switch domain {
             case .account:
@@ -120,7 +120,7 @@ public enum UpdateAddressNameError {
     case generic
 }
 
-public func updateAddressName(account: Account, domain: AddressNameDomain, name: String?) -> Signal<Void, UpdateAddressNameError> {
+func _internal_updateAddressName(account: Account, domain: AddressNameDomain, name: String?) -> Signal<Void, UpdateAddressNameError> {
     return account.postbox.transaction { transaction -> Signal<Void, UpdateAddressNameError> in
         switch domain {
             case .account:
@@ -134,7 +134,7 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                         updatePeers(transaction: transaction, peers: [user], update: { _, updated in
                             return updated
                         })
-                    } |> mapError { _ -> UpdateAddressNameError in return .generic }
+                    } |> mapError { _ -> UpdateAddressNameError in }
                 }
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
@@ -155,7 +155,7 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                                         })
                                     }
                                 }
-                            } |> mapError { _ -> UpdateAddressNameError in return .generic }
+                            } |> mapError { _ -> UpdateAddressNameError in }
                     }
                 } else {
                     return .fail(.generic)
@@ -170,10 +170,10 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                     return Void()
                 }
         }
-    } |> mapError { _ -> UpdateAddressNameError in return .generic } |> switchToLatest
+    } |> mapError { _ -> UpdateAddressNameError in } |> switchToLatest
 }
 
-public func checkPublicChannelCreationAvailability(account: Account, location: Bool = false) -> Signal<Bool, NoError> {
+func _internal_checkPublicChannelCreationAvailability(account: Account, location: Bool = false) -> Signal<Bool, NoError> {
     var flags: Int32 = (1 << 1)
     if location {
         flags |= (1 << 0)
@@ -194,7 +194,7 @@ public enum AdminedPublicChannelsScope {
     case forVoiceChat
 }
 
-public func adminedPublicChannels(account: Account, scope: AdminedPublicChannelsScope = .all) -> Signal<[Peer], NoError> {
+func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChannelsScope = .all) -> Signal<[Peer], NoError> {
     var flags: Int32 = 0
     switch scope {
     case .all:
@@ -238,7 +238,7 @@ public enum ChannelAddressNameAssignmentAvailability {
     case addressNameLimitReached
 }
 
-public func channelAddressNameAssignmentAvailability(account: Account, peerId: PeerId?) -> Signal<ChannelAddressNameAssignmentAvailability, NoError> {
+func _internal_channelAddressNameAssignmentAvailability(account: Account, peerId: PeerId?) -> Signal<ChannelAddressNameAssignmentAvailability, NoError> {
     return account.postbox.transaction { transaction -> Signal<ChannelAddressNameAssignmentAvailability, NoError> in
         var inputChannel: Api.InputChannel?
         if let peerId = peerId {
