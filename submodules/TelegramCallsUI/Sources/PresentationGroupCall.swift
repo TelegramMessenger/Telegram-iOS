@@ -572,7 +572,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
-        //self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: true)
+        self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: false)
         self.isVideo = self.videoCapturer != nil
         
         var didReceiveAudioOutputs = false

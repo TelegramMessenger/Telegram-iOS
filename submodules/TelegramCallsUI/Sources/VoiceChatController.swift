@@ -174,6 +174,8 @@ final class GroupVideoNode: ASDisplayNode {
         self.videoViewContainer.addSubview(self.videoView.view)
         self.view.addSubview(self.videoViewContainer)
         
+        self.clipsToBounds = true
+        
         videoView.setOnFirstFrameReceived({ [weak self] _ in
             Queue.mainQueue().async {
                 guard let strongSelf = self else {
@@ -763,9 +765,9 @@ public final class VoiceChatController: ViewController {
             self.backgroundNode.backgroundColor = secondaryPanelBackgroundColor
             self.backgroundNode.clipsToBounds = false
             
-            /*if false {
+            if sharedContext.immediateExperimentalUISettings.demoVideoChats {
                 self.mainVideoContainer = MainVideoContainerNode(context: call.accountContext, call: call)
-            }*/
+            }
             
             self.listNode = ListView()
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
@@ -859,12 +861,6 @@ public final class VoiceChatController: ViewController {
                 let _ = self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
             }, openPeer: { [weak self] peerId in
                 if let strongSelf = self {
-                    /*let context = strongSelf.context
-                    strongSelf.controller?.dismiss(completion: {
-                        Queue.mainQueue().justDispatch {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
-                        }
-                    })*/
                     for entry in strongSelf.currentEntries {
                         switch entry {
                         case let .peer(peer):
@@ -1167,17 +1163,19 @@ public final class VoiceChatController: ViewController {
                             }
                         }), true))
                     }
-                    
-                    /*items.append(.action(ContextMenuActionItem(text: "Toggle Full Screen", icon: { theme in
-                        return nil
-                    }, action: { _, f in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        strongSelf.itemInteraction?.openPeer(peer.id)
-                        f(.default)
-                    })))*/
+
+                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.demoVideoChats {
+                        items.append(.action(ContextMenuActionItem(text: "Toggle Full Screen", icon: { theme in
+                            return nil
+                        }, action: { _, f in
+                            guard let strongSelf = self else {
+                                return
+                            }
+
+                            strongSelf.itemInteraction?.openPeer(peer.id)
+                            f(.default)
+                        })))
+                    }
                     
                     if peer.id == strongSelf.callState?.myPeerId {
                         if entry.raisedHand {
