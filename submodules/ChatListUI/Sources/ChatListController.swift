@@ -302,7 +302,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let previousEditingAndNetworkState = previousEditingAndNetworkStateValue.swap((stateAndFilterId.state.editing, networkState))
                     if stateAndFilterId.state.editing {
                         if strongSelf.groupId == .root {
-                            strongSelf.navigationItem.rightBarButtonItem = nil
+                            strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                         }
                         let title = !stateAndFilterId.state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(stateAndFilterId.state.selectedPeerIds.count)) : defaultTitle
                         
@@ -315,10 +315,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         strongSelf.titleView.setTitle(NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false), animated: animated)
                     } else if isReorderingTabs {
                         if strongSelf.groupId == .root {
-                            strongSelf.navigationItem.rightBarButtonItem = nil
+                            strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                         }
                         let leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
-                        strongSelf.navigationItem.leftBarButtonItem = leftBarButtonItem
+                        strongSelf.navigationItem.setLeftBarButton(leftBarButtonItem, animated: true)
                         
                         let (_, connectsViaProxy) = proxy
                         switch networkState {
@@ -341,16 +341,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             isRoot = true
                             
                             if isReorderingTabs {
-                                strongSelf.navigationItem.rightBarButtonItem = nil
+                                strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                             } else {
                                 let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
                                 rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
-                                strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
+                                strongSelf.navigationItem.setRightBarButton(rightBarButtonItem, animated: true)
                             }
                             
                             if isReorderingTabs {
                                 let leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
-                                strongSelf.navigationItem.leftBarButtonItem = leftBarButtonItem
+                                strongSelf.navigationItem.setLeftBarButton(leftBarButtonItem, animated: true)
                             } else {
                                 let editItem: UIBarButtonItem
                                 if stateAndFilterId.state.editing {
@@ -360,7 +360,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(strongSelf.editPressed))
                                     editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
                                 }
-                                strongSelf.navigationItem.leftBarButtonItem = editItem
+                                strongSelf.navigationItem.setLeftBarButton(editItem, animated: true)
                             }
                         }
                         
