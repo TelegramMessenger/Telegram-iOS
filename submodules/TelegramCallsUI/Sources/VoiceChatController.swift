@@ -268,6 +268,7 @@ private final class MainVideoContainerNode: ASDisplayNode {
     private let call: PresentationGroupCall
     
     private var currentVideoNode: GroupVideoNode?
+    private var candidateVideoNode: GroupVideoNode?
     private var currentPeer: (PeerId, UInt32)?
     
     private var validLayout: CGSize?
@@ -281,7 +282,7 @@ private final class MainVideoContainerNode: ASDisplayNode {
         self.backgroundColor = .black
     }
     
-    func updatePeer(peer: (peerId: PeerId, source: UInt32)?) {
+    func updatePeer(peer: (peerId: PeerId, source: UInt32)?, waitForFullSize: Bool) {
         if self.currentPeer?.0 == peer?.0 && self.currentPeer?.1 == peer?.1 {
             return
         }
@@ -292,15 +293,40 @@ private final class MainVideoContainerNode: ASDisplayNode {
                     guard let strongSelf = self, let videoView = videoView else {
                         return
                     }
-                    let videoNode = GroupVideoNode(videoView: videoView)
-                    if let currentVideoNode = strongSelf.currentVideoNode {
-                        currentVideoNode.removeFromSupernode()
-                        strongSelf.currentVideoNode = nil
-                    }
-                    strongSelf.currentVideoNode = videoNode
-                    strongSelf.addSubnode(videoNode)
-                    if let size = strongSelf.validLayout {
-                        strongSelf.update(size: size, transition: .immediate)
+
+                    if waitForFullSize {
+                        let candidateVideoNode = GroupVideoNode(videoView: videoView)
+                        strongSelf.candidateVideoNode = candidateVideoNode
+
+                        Queue.mainQueue().after(0.3, { [weak candidateVideoNode] in
+                            guard let strongSelf = self, let videoNode = candidateVideoNode, videoNode === strongSelf.candidateVideoNode else {
+                                return
+                            }
+
+                            if let currentVideoNode = strongSelf.currentVideoNode {
+                                currentVideoNode.removeFromSupernode()
+                                strongSelf.currentVideoNode = nil
+                            }
+                            strongSelf.currentVideoNode = videoNode
+                            strongSelf.addSubnode(videoNode)
+                            if let size = strongSelf.validLayout {
+                                strongSelf.update(size: size, transition: .immediate)
+                            }
+                        })
+                    } else {
+                        strongSelf.candidateVideoNode = nil
+
+                        let videoNode = GroupVideoNode(videoView: videoView)
+
+                        if let currentVideoNode = strongSelf.currentVideoNode {
+                            currentVideoNode.removeFromSupernode()
+                            strongSelf.currentVideoNode = nil
+                        }
+                        strongSelf.currentVideoNode = videoNode
+                        strongSelf.addSubnode(videoNode)
+                        if let size = strongSelf.validLayout {
+                            strongSelf.update(size: size, transition: .immediate)
+                        }
                     }
                 }
             })
@@ -874,11 +900,11 @@ public final class VoiceChatController: ViewController {
                                     if strongSelf.currentDominantSpeakerWithVideo?.0 != peerId || strongSelf.currentDominantSpeakerWithVideo?.1 != source {
                                         strongSelf.currentDominantSpeakerWithVideo = (peerId, source)
                                         strongSelf.call.setFullSizeVideo(peerId: peerId)
-                                        strongSelf.mainVideoContainer?.updatePeer(peer: (peerId: peerId, source: source))
+                                        strongSelf.mainVideoContainer?.updatePeer(peer: (peerId: peerId, source: source), waitForFullSize: false)
                                     } else {
                                         strongSelf.currentDominantSpeakerWithVideo = nil
                                         strongSelf.call.setFullSizeVideo(peerId: nil)
-                                        strongSelf.mainVideoContainer?.updatePeer(peer: nil)
+                                        strongSelf.mainVideoContainer?.updatePeer(peer: nil, waitForFullSize: false)
                                     }
                                 }
                             }
@@ -1557,7 +1583,7 @@ public final class VoiceChatController: ViewController {
                     if strongSelf.currentDominantSpeakerWithVideo?.0 != peerId || strongSelf.currentDominantSpeakerWithVideo?.1 != source {
                         strongSelf.currentDominantSpeakerWithVideo = (peerId, source)
                         strongSelf.call.setFullSizeVideo(peerId: peerId)
-                        strongSelf.mainVideoContainer?.updatePeer(peer: (peerId: peerId, source: source))
+                        strongSelf.mainVideoContainer?.updatePeer(peer: (peerId: peerId, source: source), waitForFullSize: true)
                     }
                 }
                 
@@ -1709,7 +1735,7 @@ public final class VoiceChatController: ViewController {
                     if !validSources.contains(source) {
                         strongSelf.currentDominantSpeakerWithVideo = nil
                         strongSelf.call.setFullSizeVideo(peerId: nil)
-                        strongSelf.mainVideoContainer?.updatePeer(peer: nil)
+                        strongSelf.mainVideoContainer?.updatePeer(peer: nil, waitForFullSize: false)
                     }
                 }
                 
@@ -2493,7 +2519,7 @@ public final class VoiceChatController: ViewController {
             let topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelOffset), size: CGSize(width: size.width, height: topPanelHeight))
             
             if let mainVideoContainer = self.mainVideoContainer {
-                let videoContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: layout.size.width, height: 200.0))
+                let videoContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: layout.size.width, height: min(300.0, layout.size.width)))
                 transition.updateFrameAdditive(node: mainVideoContainer, frame: videoContainerFrame)
                 mainVideoContainer.update(size: videoContainerFrame.size, transition: transition)
             }
@@ -2764,7 +2790,7 @@ public final class VoiceChatController: ViewController {
             let bottomPanelHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             var listTopInset = layoutTopInset + topPanelHeight
             if self.mainVideoContainer != nil {
-                listTopInset += 200.0
+                listTopInset += min(300.0, layout.size.width)
             }
             let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
                  

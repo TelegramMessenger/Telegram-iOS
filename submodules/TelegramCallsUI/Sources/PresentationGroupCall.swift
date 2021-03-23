@@ -571,8 +571,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.statePromise = ValuePromise(self.stateValue)
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-        
-        self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: false)
+
+        if accountContext.sharedContext.immediateExperimentalUISettings.demoVideoChats {
+            self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: false)
+        }
         self.isVideo = self.videoCapturer != nil
         
         var didReceiveAudioOutputs = false
@@ -1061,7 +1063,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
-                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit)
+                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideo)
                     self.incomingVideoSourcePromise.set(callContext.videoSources
                     |> deliverOnMainQueue
                     |> map { [weak self] sources -> [PeerId: UInt32] in

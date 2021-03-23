@@ -179,7 +179,7 @@ public final class OngoingGroupCallContext {
         
         private var broadcastPartsSource: BroadcastPartSource?
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?) {
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
@@ -221,7 +221,8 @@ public final class OngoingGroupCallContext {
                     
                     return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
-                outgoingAudioBitrateKbit: outgoingAudioBitrateKbit ?? 32
+                outgoingAudioBitrateKbit: outgoingAudioBitrateKbit ?? 32,
+                enableVideo: enableVideo
             )
             
             let queue = self.queue
@@ -509,10 +510,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, audioStreamData: audioStreamData, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, audioStreamData: audioStreamData, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: enableVideo)
         })
     }
     
