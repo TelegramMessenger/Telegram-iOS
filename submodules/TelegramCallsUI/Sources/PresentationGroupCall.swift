@@ -1039,6 +1039,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if let current = self.callContext {
                     callContext = current
                 } else {
+                    var outgoingAudioBitrateKbit: Int32?
+                    let appConfiguration = self.accountContext.currentAppConfiguration.with({ $0 })
+                    if let data = appConfiguration.data, let value = data["voice_chat_send_bitrate"] as? Int32 {
+                        outgoingAudioBitrateKbit = value
+                    }
+
                     callContext = OngoingGroupCallContext(video: self.videoCapturer, participantDescriptionsRequired: { [weak self] ssrcs in
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
@@ -1055,7 +1061,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
-                    })
+                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit)
                     self.incomingVideoSourcePromise.set(callContext.videoSources
                     |> deliverOnMainQueue
                     |> map { [weak self] sources -> [PeerId: UInt32] in
