@@ -110,7 +110,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating):
+                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
                         let peerId: PeerId
                         switch apiPeerId {
                             case let .peerUser(userId):
@@ -134,13 +134,13 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                         } else if mutedByYou {
                             muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
-                        let jsonParams: String? = nil
-                        /*if let params = params {
+                        var jsonParams: String? = nil
+                        if let params = params {
                             switch params {
                             case let .dataJSON(data):
                                 jsonParams = data
                             }
-                        }*/
+                        }
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
@@ -297,7 +297,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating):
+                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
                         let peerId: PeerId
                         switch apiPeerId {
                             case let .peerUser(userId):
@@ -320,13 +320,13 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                         } else if mutedByYou {
                             muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
-                        let jsonParams: String? = nil
-                        /*if let params = params {
+                        var jsonParams: String? = nil
+                        if let params = params {
                             switch params {
                             case let .dataJSON(data):
                                 jsonParams = data
                             }
-                        }*/
+                        }
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
@@ -525,7 +525,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                         case let .updateGroupCallParticipants(_, participants, _):
                             loop: for participant in participants {
                                 switch participant {
-                                case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating):
+                                case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
                                     let peerId: PeerId
                                     switch apiPeerId {
                                         case let .peerUser(userId):
@@ -548,13 +548,13 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                     } else if mutedByYou {
                                         muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                                     }
-                                    let jsonParams: String? = nil
-                                    /*if let params = params {
+                                    var jsonParams: String? = nil
+                                    if let params = params {
                                         switch params {
                                         case let .dataJSON(data):
                                             jsonParams = data
                                         }
-                                    }*/
+                                    }
                                     if !state.participants.contains(where: { $0.peer.id == peer.id }) {
                                         state.participants.append(GroupCallParticipantsContext.Participant(
                                             peer: peer,
@@ -1731,7 +1731,7 @@ public final class GroupCallParticipantsContext {
 extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
     init(_ apiParticipant: Api.GroupCallParticipant) {
         switch apiParticipant {
-        case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating):
+        case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
             let peerId: PeerId
             switch apiPeerId {
                 case let .peerUser(userId):
@@ -1764,13 +1764,13 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 participationStatusChange = .none
             }
             
-            let jsonParams: String? = nil
-            /*if let params = params {
+            var jsonParams: String? = nil
+            if let params = params {
                 switch params {
                 case let .dataJSON(data):
                     jsonParams = data
                 }
-            }*/
+            }
             
             self.init(
                 peerId: peerId,
@@ -1794,7 +1794,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
         var participantUpdates: [GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate] = []
         for participant in participants {
             switch participant {
-            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating):
+            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
                 let peerId: PeerId
                 switch apiPeerId {
                     case let .peerUser(userId):
@@ -1827,13 +1827,13 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     participationStatusChange = .none
                 }
                 
-                let jsonParams: String? = nil
-                /*if let params = params {
+                var jsonParams: String? = nil
+                if let params = params {
                     switch params {
                     case let .dataJSON(data):
                         jsonParams = data
                     }
-                }*/
+                }
                 
                 participantUpdates.append(GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(
                     peerId: peerId,

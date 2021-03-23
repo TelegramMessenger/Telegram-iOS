@@ -854,7 +854,7 @@ private:
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -938,7 +938,8 @@ private:
                 });
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
-            .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit
+            .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
+            .enableVideo = enableVideo
         }));
     }
     return self;
@@ -1232,6 +1233,22 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
             [self parseJsonIntoParticipant:participant.jsonParams participant:parsedParticipant];
         }
         parsedParticipants.push_back(parsedParticipant);
+    }
+
+    NSDictionary *video = dict[@"video"];
+    if ([video isKindOfClass:[NSDictionary class]]) {
+        NSArray *serverSources = video[@"server_sources"];
+        if ([serverSources isKindOfClass:[NSArray class]]) {
+            for (NSNumber *sourceNumber in serverSources) {
+                if ([sourceNumber isKindOfClass:[NSNumber class]]) {
+                    int32_t signedSource = [sourceNumber intValue];
+                    result.serverVideoBandwidthProbingSsrc = *(int32_t *)&signedSource;
+                } else if ([sourceNumber isKindOfClass:[NSString class]]) {
+                    uint32_t source = (uint32_t)[sourceNumber longLongValue];
+                    result.serverVideoBandwidthProbingSsrc = source;
+                }
+            }
+        }
     }
     
     if (_instance) {

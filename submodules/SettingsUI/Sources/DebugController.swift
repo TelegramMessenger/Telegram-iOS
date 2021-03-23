@@ -73,8 +73,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
-    case demoAudioStream(Bool)
-    case snapPinListToTop(Bool)
+    case demoVideoChats(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -94,7 +93,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoAudioStream, .snapPinListToTop, .playerEmbedding, .playlistPlayback, .voiceConference:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .playerEmbedding, .playlistPlayback, .voiceConference:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -155,10 +154,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 22
         case .knockoutWallpaper:
             return 23
-        case .demoAudioStream:
+        case .demoVideoChats:
             return 24
-        case .snapPinListToTop:
-            return 25
         case .playerEmbedding:
             return 26
         case .playlistPlayback:
@@ -706,22 +703,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .demoAudioStream(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Demo Audio Stream", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .demoVideoChats(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Demo Video", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.demoAudioStream = value
-                        return settings
-                    })
-                }).start()
-            })
-        case let .snapPinListToTop(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Pin List Top Edge", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.snapPinListToTop = value
+                        settings.demoVideoChats = value
                         return settings
                     })
                 }).start()
@@ -824,10 +811,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.reindexUnread(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
-    //entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
-    entries.append(.demoAudioStream(experimentalSettings.demoAudioStream))
-    entries.append(.snapPinListToTop(experimentalSettings.snapPinListToTop))
+    entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     
