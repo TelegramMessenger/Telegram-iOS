@@ -24,6 +24,10 @@ import DirectionalPanGesture
 import PeerInfoUI
 import AvatarNode
 import TooltipUI
+import LegacyUI
+import LegacyComponents
+import LegacyMediaPickerUI
+import WebSearchUI
 
 private let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 private let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
@@ -598,7 +602,9 @@ public final class VoiceChatController: ViewController {
                         }
                         switch state {
                         case .listening:
-                            if let muteState = peerEntry.muteState, muteState.mutedByYou {
+                            if peerEntry.isMyPeer {
+                                text = .text(presentationData.strings.VoiceChat_You, .accent)
+                            } else if let muteState = peerEntry.muteState, muteState.mutedByYou {
                                 text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, .destructive)
                             } else if let about = peerEntry.about, !about.isEmpty {
                                 text = .text(about, .generic)
@@ -629,7 +635,9 @@ public final class VoiceChatController: ViewController {
                             text = .text(presentationData.strings.VoiceChat_StatusInvited, .generic)
                             icon = .invite(true)
                         case .raisedHand:
-                            if let about = peerEntry.about, !about.isEmpty && !peerEntry.displayRaisedHandStatus {
+                            if peerEntry.isMyPeer && !peerEntry.displayRaisedHandStatus {
+                                text = .text(presentationData.strings.VoiceChat_You, .accent)
+                            } else if let about = peerEntry.about, !about.isEmpty && !peerEntry.displayRaisedHandStatus {
                                 text = .text(about, .generic)
                             } else {
                                 text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
@@ -667,6 +675,8 @@ public final class VoiceChatController: ViewController {
             
             return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, canInvite: canInvite, crossFade: crossFade, count: toEntries.count, animated: animated)
         }
+        
+        private let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
         
         private weak var controller: VoiceChatController?
         private let sharedContext: SharedAccountContext
@@ -1221,6 +1231,35 @@ public final class VoiceChatController: ViewController {
                                 f(.default)
                             })))
                         }
+//                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_ChangePhoto, icon: { theme in
+//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Camera"), color: theme.actionSheet.primaryTextColor)
+//                        }, action: { _, f in
+//                            guard let strongSelf = self else {
+//                                return
+//                            }
+//                            
+//                            f(.default)
+//                            
+//                            strongSelf.openAvatarForEditing(fromGallery: false, completion: {})
+//                        })))
+//                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditBio, icon: { theme in
+//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pencil"), color: theme.actionSheet.primaryTextColor)
+//                        }, action: { _, f in
+//                            guard let strongSelf = self else {
+//                                return
+//                            }
+//                            f(.default)
+//                                                        
+//                            let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, apply: { bio in
+//                                if let strongSelf = self {
+//                                    let _ = updateAbout(account: strongSelf.context.account, about: bio)
+//                                    |> `catch` { _ -> Signal<Void, NoError> in
+//                                        return .complete()
+//                                    }
+//                                }
+//                            })
+//                            self?.controller?.present(controller, in: .window(.root))
+//                        })))
                     } else {
                         if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
                             if callState.adminIds.contains(peer.id) {
@@ -3481,6 +3520,152 @@ public final class VoiceChatController: ViewController {
                 self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             }
         }
+        
+        private func openAvatarForEditing(fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
+            guard let peerId = self.callState?.myPeerId else {
+                return
+            }
+            
+            let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+                return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] peer, searchBotsConfiguration in
+                guard let strongSelf = self, let peer = peer else {
+                    return
+                }
+                
+                let presentationData = strongSelf.presentationData
+                
+                let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+                legacyController.statusBar.statusBarStyle = .Ignore
+                
+                let emptyController = LegacyEmptyController(context: legacyController.context)!
+                let navigationController = makeLegacyNavigationController(rootController: emptyController)
+                navigationController.setNavigationBarHidden(true, animated: false)
+                navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+                
+                legacyController.bind(controller: navigationController)
+                
+                strongSelf.view.endEditing(true)
+                strongSelf.controller?.present(legacyController, in: .window(.root))
+                
+                var hasPhotos = false
+                if !peer.profileImageRepresentations.isEmpty {
+                    hasPhotos = true
+                }
+                
+                let paintStickersContext = LegacyPaintStickersContext(context: strongSelf.context)
+//                paintStickersContext.presentStickersController = { completion in
+//                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+//                        let coder = PostboxEncoder()
+//                        coder.encodeRootObject(fileReference.media)
+//                        completion?(coder.makeData(), fileReference.media.isAnimatedSticker, node.view, rect)
+//                        return true
+//                    })
+//                    strongSelf.controller?.present(controller, in: .window(.root))
+//                    return controller
+//                }
+                
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && !fromGallery, hasViewButton: false, personalPhoto: peerId.namespace == Namespaces.Peer.CloudUser, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+                mixin.stickersContext = paintStickersContext
+                let _ = strongSelf.currentAvatarMixin.swap(mixin)
+                mixin.requestSearchController = { [weak self] assetsController in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let controller = WebSearchController(context: strongSelf.context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
+                        assetsController?.dismiss()
+//                        self?.updateProfilePhoto(result)
+                    }))
+                    controller.navigationPresentation = .modal
+                    strongSelf.controller?.push(controller)
+                    
+                    if fromGallery {
+                        completion()
+                    }
+                }
+                mixin.didFinishWithImage = { [weak self] image in
+                    if let image = image {
+                        completion()
+//                        self?.updateProfilePhoto(image)
+                    }
+                }
+                mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
+                    if let image = image, let asset = asset {
+                        completion()
+//                        self?.updateProfileVideo(image, asset: asset, adjustments: adjustments)
+                    }
+                }
+                mixin.didFinishWithDelete = {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+//                    let proceed = {
+//                        if let item = item {
+//                            strongSelf.deleteAvatar(item, remove: false)
+//                        }
+//                        
+//                        let _ = strongSelf.currentAvatarMixin.swap(nil)
+//                        if let _ = peer.smallProfileImage {
+//                            strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+//                            if let (layout, navigationHeight) = strongSelf.validLayout {
+//                                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+//                            }
+//                        }
+//                        let postbox = strongSelf.context.account.postbox
+//                        strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+//                            return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+//                        })
+//                        |> deliverOnMainQueue).start(next: { result in
+//                            guard let strongSelf = self else {
+//                                return
+//                            }
+//                            switch result {
+//                            case .complete:
+//                                strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+//                                if let (layout, navigationHeight) = strongSelf.validLayout {
+//                                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+//                                }
+//                            case .progress:
+//                                break
+//                            }
+//                        }))
+//                    }
+//                    
+//                    let actionSheet = ActionSheetController(presentationData: presentationData)
+//                    let items: [ActionSheetItem] = [
+//                        ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
+//                            actionSheet?.dismissAnimated()
+//                            proceed()
+//                        })
+//                    ]
+//                    
+//                    actionSheet.setItemGroups([
+//                        ActionSheetItemGroup(items: items),
+//                        ActionSheetItemGroup(items: [
+//                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+//                                actionSheet?.dismissAnimated()
+//                            })
+//                        ])
+//                    ])
+//                    strongSelf.controller?.present(actionSheet, in: .window(.root))
+                }
+                mixin.didDismiss = { [weak legacyController] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = strongSelf.currentAvatarMixin.swap(nil)
+                    legacyController?.dismiss()
+                }
+                let menuController = mixin.present()
+                if let menuController = menuController {
+                    menuController.customRemoveFromParentViewController = { [weak legacyController] in
+                        legacyController?.dismiss()
+                    }
+                }
+            })
+        }
     }
     
     private let sharedContext: SharedAccountContext
@@ -3520,6 +3705,8 @@ public final class VoiceChatController: ViewController {
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.blocksBackgroundWhenInOverlay = true
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
                  
@@ -3698,7 +3885,7 @@ public final class VoiceChatController: ViewController {
 
 private final class VoiceChatContextExtractedContentSource: ContextExtractedContentSource {
     var keepInPlace: Bool
-    let ignoreContentTouches: Bool = true
+    let ignoreContentTouches: Bool = false
     let blurBackground: Bool
     
     private let controller: ViewController

@@ -345,20 +345,26 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.scrubberView.updateScrubbing = { [weak self] timecode in
-            guard let strongSelf = self, let videoFramePreview = strongSelf.videoFramePreview else {
+            guard let strongSelf = self else {
                 return
             }
-            if let timecode = timecode {
-                if !strongSelf.scrubbingFrames {
-                    strongSelf.scrubbingFrames = true
-                    strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
-                    |> map(Optional.init))
+            
+            strongSelf.isInteractingPromise.set(timecode != nil)
+            
+            if let videoFramePreview = strongSelf.videoFramePreview {        
+                if let timecode = timecode {
+                    if !strongSelf.scrubbingFrames {
+                        strongSelf.scrubbingFrames = true
+                        strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
+                        |> map(Optional.init))
+                    }
+                    videoFramePreview.generateFrame(at: timecode)
+                } else {
+                    strongSelf.isInteractingPromise.set(false)
+                    strongSelf.scrubbingFrame.set(.single(nil))
+                    videoFramePreview.cancelPendingFrames()
+                    strongSelf.scrubbingFrames = false
                 }
-                videoFramePreview.generateFrame(at: timecode)
-            } else {
-                strongSelf.scrubbingFrame.set(.single(nil))
-                videoFramePreview.cancelPendingFrames()
-                strongSelf.scrubbingFrames = false
             }
         }
         

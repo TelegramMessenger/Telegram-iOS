@@ -338,40 +338,6 @@ private func peerInfoScreenInputData(context: AccountContext, peerId: PeerId, is
     |> distinctUntilChanged
 }
 
-private func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
-    return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
-    |> mapToSignal { view -> Signal<AvatarGalleryEntry?, NoError> in
-        guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
-            return .single(nil)
-        }
-        return initialAvatarGalleryEntries(account: context.account, peer: peer)
-        |> map { entries in
-            return entries.first
-        }
-    }
-    |> distinctUntilChanged
-    |> mapToSignal { firstEntry -> Signal<(Bool, [AvatarGalleryEntry]), NoError> in
-        if let firstEntry = firstEntry {
-            return context.account.postbox.loadedPeerWithId(peerId)
-            |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry]), NoError>in
-                return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
-            }
-        } else {
-            return .single((true, []))
-        }
-    }
-    |> map { items -> Any in
-        return items
-    }
-}
-
-func peerInfoProfilePhotosWithCache(context: AccountContext, peerId: PeerId) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
-    return context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId))
-    |> map { items -> (Bool, [AvatarGalleryEntry]) in
-        return items as? (Bool, [AvatarGalleryEntry]) ?? (true, [])
-    }
-}
-
 func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId) -> Signal<Never, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: false)
     |> mapToSignal { inputData -> Signal<Never, NoError> in

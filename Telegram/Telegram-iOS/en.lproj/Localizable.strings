@@ -6309,3 +6309,11 @@ Sorry for the inconvenience.";
 "UserInfo.LinkForwardTooltip.TwoChats.One" = "Link forwarded to **%@** and **%@**";
 "UserInfo.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
 "UserInfo.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";
+
+"VoiceChat.You" = "this is you";
+"VoiceChat.ChangePhoto" = "Change Photo";
+"VoiceChat.EditBio" = "Edit Bio";
+"VoiceChat.EditBioTitle" = "Bio";
+"VoiceChat.EditBioText" = "Any details such as age, occupation or city.";
+"VoiceChat.EditBioPlaceholder" = "Bio";
+"VoiceChat.EditBioSave" = "Save";

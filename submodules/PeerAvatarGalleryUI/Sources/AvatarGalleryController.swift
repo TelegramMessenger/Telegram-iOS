@@ -22,6 +22,40 @@ public enum AvatarGalleryEntryId: Hashable {
     case resource(String)
 }
 
+public func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
+    return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+    |> mapToSignal { view -> Signal<AvatarGalleryEntry?, NoError> in
+        guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
+            return .single(nil)
+        }
+        return initialAvatarGalleryEntries(account: context.account, peer: peer)
+        |> map { entries in
+            return entries.first
+        }
+    }
+    |> distinctUntilChanged
+    |> mapToSignal { firstEntry -> Signal<(Bool, [AvatarGalleryEntry]), NoError> in
+        if let firstEntry = firstEntry {
+            return context.account.postbox.loadedPeerWithId(peerId)
+            |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry]), NoError>in
+                return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
+            }
+        } else {
+            return .single((true, []))
+        }
+    }
+    |> map { items -> Any in
+        return items
+    }
+}
+
+public func peerInfoProfilePhotosWithCache(context: AccountContext, peerId: PeerId) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
+    return context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId))
+    |> map { items -> (Bool, [AvatarGalleryEntry]) in
+        return items as? (Bool, [AvatarGalleryEntry]) ?? (true, [])
+    }
+}
+
 public enum AvatarGalleryEntry: Equatable {
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Peer?, GalleryItemIndexData?, Data?, String?)
     case image(MediaId, TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Peer?, Int32?, GalleryItemIndexData?, MessageId?, Data?, String?)
@@ -115,20 +149,20 @@ public final class AvatarGalleryControllerPresentationArguments {
 }
 
 public func normalizeEntries(_ entries: [AvatarGalleryEntry]) -> [AvatarGalleryEntry] {
-       var updatedEntries: [AvatarGalleryEntry] = []
-       let count: Int32 = Int32(entries.count)
-       var index: Int32 = 0
-       for entry in entries {
-           let indexData = GalleryItemIndexData(position: index, totalCount: count)
-           if case let .topImage(representations, videoRepresentations, peer, _, immediateThumbnailData, category) = entry {
-               updatedEntries.append(.topImage(representations, videoRepresentations, peer, indexData, immediateThumbnailData, category))
-           } else if case let .image(id, reference, representations, videoRepresentations, peer, date, _, messageId, immediateThumbnailData, category) = entry {
-               updatedEntries.append(.image(id, reference, representations, videoRepresentations, peer, date, indexData, messageId, immediateThumbnailData, category))
-           }
-           index += 1
+   var updatedEntries: [AvatarGalleryEntry] = []
+   let count: Int32 = Int32(entries.count)
+   var index: Int32 = 0
+   for entry in entries {
+       let indexData = GalleryItemIndexData(position: index, totalCount: count)
+       if case let .topImage(representations, videoRepresentations, peer, _, immediateThumbnailData, category) = entry {
+           updatedEntries.append(.topImage(representations, videoRepresentations, peer, indexData, immediateThumbnailData, category))
+       } else if case let .image(id, reference, representations, videoRepresentations, peer, date, _, messageId, immediateThumbnailData, category) = entry {
+           updatedEntries.append(.image(id, reference, representations, videoRepresentations, peer, date, indexData, messageId, immediateThumbnailData, category))
        }
-       return updatedEntries
+       index += 1
    }
+   return updatedEntries
+}
 
 public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
     var initialEntries: [AvatarGalleryEntry] = []
