@@ -1445,13 +1445,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     @objc private func donePressed() {
         self.reorderingDonePressed()
         
-        let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-        editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
-        if case .root = self.groupId, self.filter == nil {
-            self.navigationItem.setLeftBarButton(editItem, animated: true)
-        } else {
-            self.navigationItem.setRightBarButton(editItem, animated: true)
-        }
         (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(nil, transition: .animated(duration: 0.4, curve: .spring))
         self.searchContentNode?.setIsEnabled(true, animated: true)
         self.chatListDisplayNode.didBeginSelectingChatsWhileEditing = false

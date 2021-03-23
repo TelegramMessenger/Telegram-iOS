@@ -563,7 +563,12 @@ public final class VoiceChatController: ViewController {
                         var text: VoiceChatParticipantItem.ParticipantText
                         var expandedText: VoiceChatParticipantItem.ParticipantText?
                         let icon: VoiceChatParticipantItem.Icon
-                        switch peerEntry.state {
+                        
+                        var state = peerEntry.state
+                        if let muteState = peerEntry.muteState, case .speaking = state, muteState.mutedByYou || !muteState.canUnmute {
+                            state = .listening
+                        }
+                        switch state {
                         case .listening:
                             if let muteState = peerEntry.muteState, muteState.mutedByYou {
                                 text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, .destructive)

@@ -1364,6 +1364,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .replyThread:
                             postAsReply = true
                     }
+                    
+                    if let messageId = messageId, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                        if let author = message.author as? TelegramUser, author.botInfo != nil {
+                        } else {
+                            postAsReply = false
+                        }
+                    }
                 }
                 
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
