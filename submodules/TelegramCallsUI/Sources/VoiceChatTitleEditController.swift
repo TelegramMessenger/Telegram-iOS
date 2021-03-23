@@ -408,7 +408,7 @@ private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
     }
 }
 
-func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, text: String, placeholder: String, value: String?, apply: @escaping (String?) -> Void) -> AlertController {
+func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, text: String, placeholder: String, doneButtonTitle: String? = nil, value: String?, apply: @escaping (String?) -> Void) -> AlertController {
     var presentationData = sharedContext.currentPresentationData.with { $0 }
     if let forceTheme = forceTheme {
         presentationData = presentationData.withUpdated(theme: forceTheme)
@@ -419,7 +419,7 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
     
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
+    }), TextAlertAction(type: .defaultAction, title: doneButtonTitle ?? presentationData.strings.Common_Done, action: {
         applyImpl?()
     })]
     

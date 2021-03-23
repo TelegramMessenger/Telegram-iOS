@@ -26,6 +26,7 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
 }
 
 public final class ContextExtractedContentNode: ASDisplayNode {
+    public var customHitTest: ((CGPoint) -> UIView?)?
 }
 
 public final class ContextControllerContentNode: ASDisplayNode {

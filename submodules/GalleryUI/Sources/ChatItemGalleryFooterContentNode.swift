@@ -424,6 +424,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     @objc private func seekBackwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         switch gestureRecognizer.state {
             case .began:
+                self.interacting?(true)
                 self.backwardButton.isPressing = true
                 self.wasPlaying = !self.currentIsPaused
                 if self.wasPlaying == true {
@@ -447,6 +448,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 self.seekTimer = seekTimer
                 seekTimer.start()
             case .ended, .cancelled:
+                self.interacting?(false)
                 self.backwardButton.isPressing = false
                 self.seekTimer?.invalidate()
                 self.seekTimer = nil
@@ -462,6 +464,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     @objc private func seekForwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         switch gestureRecognizer.state {
             case .began:
+                self.interacting?(true)
                 self.forwardButton.isPressing = true
                 self.wasPlaying = !self.currentIsPaused
                 if self.wasPlaying == false {
@@ -485,6 +488,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 self.seekTimer = seekTimer
                 seekTimer.start()
             case .ended, .cancelled:
+                self.interacting?(false)
                 self.forwardButton.isPressing = false
                 self.setPlayRate?(1.0)
                 self.seekTimer?.invalidate()
@@ -1372,11 +1376,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
     
     @objc func backwardButtonPressed() {
+        self.interacting?(true)
         self.seekBackward?(15.0)
+        self.interacting?(false)
     }
     
     @objc func forwardButtonPressed() {
+        self.interacting?(true)
         self.seekForward?(15.0)
+        self.interacting?(false)
     }
     
     @objc private func statusPressed() {
@@ -1540,7 +1548,7 @@ private final class PlaybackButtonNode: HighlightTrackingButtonNode {
                     strongSelf.textNode.alpha = 1.0
                     strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .linear)
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
                     transition.updateTransformRotation(node: strongSelf.backgroundIconNode, angle: 0.0)
                 }
             }

@@ -1625,7 +1625,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 if case let .extracted(source) = self.source {
                     if !source.ignoreContentTouches {
                         let contentPoint = self.view.convert(point, to: contentParentNode.contentNode.view)
-                        if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
+                        if let result = contentParentNode.contentNode.customHitTest?(contentPoint) {
+                            return result
+                        } else if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
                             if result is TextSelectionNodeView {
                                 return result
                             } else if contentParentNode.contentRect.contains(contentPoint) {

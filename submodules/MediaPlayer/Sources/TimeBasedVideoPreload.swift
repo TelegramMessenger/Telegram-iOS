@@ -5,9 +5,8 @@ import Postbox
 import TelegramCore
 import SyncCore
 import FFMpegBinding
-import UniversalMediaPlayer
 
-func preloadVideoResource(postbox: Postbox, resourceReference: MediaResourceReference, duration: Double) -> Signal<Never, NoError> {
+public func preloadVideoResource(postbox: Postbox, resourceReference: MediaResourceReference, duration: Double) -> Signal<Never, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         let disposable = MetaDisposable()

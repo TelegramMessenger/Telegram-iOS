@@ -59,6 +59,7 @@ import MediaResources
 import HashtagSearchUI
 import ActionSheetPeerItem
 import TelegramCallsUI
+import PeerInfoAvatarListNode
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }

@@ -577,7 +577,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
                     |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                         if case .Fetching = value.fetchStatus {
-                            return .single(value) |> delay(0.25, queue: Queue.concurrentDefaultQueue())
+                            return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
                         } else {
                             return .single(value)
                         }

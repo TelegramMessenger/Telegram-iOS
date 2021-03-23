@@ -42,6 +42,8 @@ swift_library(
         "//submodules/DeviceProximity:DeviceProximity",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/TemporaryCachedPeerDataManager:TemporaryCachedPeerDataManager",
+        "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
+        "//submodules/WebSearchUI:WebSearchUI",
     ],
     visibility = [
         "//visibility:public",

@@ -64,6 +64,7 @@ import ChatHistoryImportTasks
 import Markdown
 import TelegramPermissionsUI
 import Speak
+import UniversalMediaPlayer
 
 extension ChatLocation {
     var peerId: PeerId {
@@ -1627,7 +1628,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
                                 
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_UsernameCopied)
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
                                 self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             }))
                         }
@@ -1652,7 +1653,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
                                 
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_UsernameCopied)
                                 self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             })
                         ]), ActionSheetItemGroup(items: [
