@@ -1268,7 +1268,7 @@ public final class VoiceChatController: ViewController {
                             openIcon = UIImage(bundleImageName: "Chat/Context Menu/Channels")
                         } else {
                             openTitle = strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile
-                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/Info")
+                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/User")
                         }
                         items.append(.action(ContextMenuActionItem(text: openTitle, icon: { theme in
                             return generateTintedImage(image: openIcon, color: theme.actionSheet.primaryTextColor)
@@ -2236,7 +2236,7 @@ public final class VoiceChatController: ViewController {
                             return formatSendTitle(presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
                         })]
                     }
-                    let shareController = ShareController(context: strongSelf.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forcedTheme: strongSelf.darkTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink)
+                    let shareController = ShareController(context: strongSelf.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: strongSelf.darkTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink)
                     shareController.completed = { [weak self] peerIds in
                         if let strongSelf = self {
                             let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in

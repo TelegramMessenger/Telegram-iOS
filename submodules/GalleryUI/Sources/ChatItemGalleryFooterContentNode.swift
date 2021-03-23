@@ -154,6 +154,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     var setPlayRate: ((Double) -> Void)?
     var fetchControl: (() -> Void)?
     
+    var interacting: ((Bool) -> Void)?
+    
     private var seekTimer: SwiftSignalKit.Timer?
     private var currentIsPaused: Bool = true
     private var seekRate: Double = 1.0
@@ -892,6 +894,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     if messages.count == 1 {
                         strongSelf.commitDeleteMessages(messages, ask: true)
                     } else {
+                        strongSelf.interacting?(true)
+                        
                         var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         if !presentationData.theme.overallDarkAppearance {
                             presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
@@ -930,8 +934,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }
                         }
                     
-                        
                         let actionSheet = ActionSheetController(presentationData: presentationData)
+                        actionSheet.dismissed = { [weak self] _ in
+                            self?.interacting?(false)
+                        }
                         let items: [ActionSheetItem] = [
                             ActionSheetButtonItem(title: singleText, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -1012,6 +1018,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forEveryone).start()
                     strongSelf.controllerInteraction?.dismissController()
                 } else if !items.isEmpty {
+                    strongSelf.interacting?(true)
+                    actionSheet.dismissed = { [weak self] _ in
+                        self?.interacting?(false)
+                    }
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -1024,13 +1034,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
     
     @objc func actionButtonPressed() {
+        self.interacting?(true)
+        
         if let currentMessage = self.currentMessage {
             let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
                 return transaction.getMessageGroup(currentMessage.id) ?? []
             } |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
                     var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    var forceTheme: PresentationTheme?
                     if !presentationData.theme.overallDarkAppearance {
+                        forceTheme = defaultDarkColorPresentationTheme
                         presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
                     }
                     var generalMessageContentKind: MessageContentKind?
@@ -1109,7 +1123,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 }
                             }
                         }
-                        let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, forcedTheme: presentationData.theme.overallDarkAppearance ? nil : defaultDarkColorPresentationTheme)
+                        let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, forceTheme: forceTheme)
+                        shareController.dismissed = { [weak self] _ in
+                            self?.interacting?(false)
+                        }
                         shareController.completed = { [weak self] peerIds in
                             if let strongSelf = self {
                                 let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -1170,7 +1187,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         
                         let shareAction: ([Message]) -> Void = { messages in
                             if let strongSelf = self {
-                                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), preferredAction: preferredAction, forcedTheme: presentationData.theme.overallDarkAppearance ? nil : defaultDarkColorPresentationTheme)
+                                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), preferredAction: preferredAction, forceTheme: forceTheme)
+                                shareController.dismissed = { [weak self] _ in
+                                    self?.interacting?(false)
+                                }
                                 shareController.completed = { [weak self] peerIds in
                                     if let strongSelf = self {
                                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -1240,7 +1260,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             })
         } else if let (webPage, media) = self.currentWebPageAndMedia {
             var presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            var forceTheme: PresentationTheme?
             if !presentationData.theme.overallDarkAppearance {
+                forceTheme = defaultDarkColorPresentationTheme
                 presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
             }
             
@@ -1265,7 +1287,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     if availableOpenInOptions(context: self.context, item: item).count > 1 {
                         preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Conversation_FileOpenIn, action: { [weak self] in
                             if let strongSelf = self {
-                                let openInController = OpenInActionSheetController(context: strongSelf.context, forceTheme: presentationData.theme.overallDarkAppearance ? nil : defaultDarkColorPresentationTheme, item: item, additionalAction: nil, openUrl: { [weak self] url in
+                                let openInController = OpenInActionSheetController(context: strongSelf.context, forceTheme: forceTheme, item: item, additionalAction: nil, openUrl: { [weak self] url in
                                     if let strongSelf = self {
                                         strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                     }
@@ -1290,7 +1312,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     }
                 }
             }
-            let shareController = ShareController(context: self.context, subject: subject, preferredAction: preferredAction, forcedTheme: presentationData.theme.overallDarkAppearance ? nil : defaultDarkColorPresentationTheme)
+            let shareController = ShareController(context: self.context, subject: subject, preferredAction: preferredAction, forceTheme: forceTheme)
+            shareController.dismissed = { [weak self] _ in
+                self?.interacting?(false)
+            }
             shareController.completed = { [weak self] peerIds in
                 if let strongSelf = self {
                     let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
