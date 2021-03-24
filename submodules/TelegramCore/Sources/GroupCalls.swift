@@ -110,7 +110,8 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
+                        let params: Api.DataJSON? = nil
                         let peerId: PeerId
                         switch apiPeerId {
                             case let .peerUser(userId):
@@ -297,7 +298,8 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
+                        let params: Api.DataJSON? = nil
                         let peerId: PeerId
                         switch apiPeerId {
                             case let .peerUser(userId):
@@ -404,15 +406,35 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
         }
 
         let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, params: .dataJSON(data: joinPayload)))
-        |> mapError { error -> JoinGroupCallError in
+            |> `catch` { error -> Signal<Api.Updates, JoinGroupCallError> in
             if error.errorDescription == "GROUPCALL_ANONYMOUS_FORBIDDEN" {
-                return .anonymousNotAllowed
+                return .fail(.anonymousNotAllowed)
             } else if error.errorDescription == "GROUPCALL_PARTICIPANTS_TOO_MUCH" {
-                return .tooManyParticipants
+                return .fail(.tooManyParticipants)
             } else if error.errorDescription == "JOIN_AS_PEER_INVALID" {
-                return .invalidJoinAsPeer
+                return .fail(.invalidJoinAsPeer)
+            } else if error.errorDescription == "GROUPCALL_INVALID" {
+                return account.postbox.transaction { transaction -> Signal<Api.Updates, JoinGroupCallError> in
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        if let current = current as? CachedGroupData {
+                            if current.activeCall?.id == callId {
+                                return current.withUpdatedActiveCall(nil)
+                            }
+                        } else if let current = current as? CachedChannelData {
+                            if current.activeCall?.id == callId {
+                                return current.withUpdatedActiveCall(nil)
+                            }
+                        }
+                        return current
+                    })
+
+                    return .fail(.generic)
+                }
+                |> castError(JoinGroupCallError.self)
+                |> switchToLatest
+            } else {
+                return .fail(.generic)
             }
-            return .generic
         }
 
         let getParticipantsRequest = getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: true)
@@ -525,7 +547,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                         case let .updateGroupCallParticipants(_, participants, _):
                             loop: for participant in participants {
                                 switch participant {
-                                case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+                                case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
+                                    let params: Api.DataJSON? = nil
                                     let peerId: PeerId
                                     switch apiPeerId {
                                         case let .peerUser(userId):
@@ -1731,7 +1754,8 @@ public final class GroupCallParticipantsContext {
 extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
     init(_ apiParticipant: Api.GroupCallParticipant) {
         switch apiParticipant {
-        case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+        case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
+            let params: Api.DataJSON? = nil
             let peerId: PeerId
             switch apiPeerId {
                 case let .peerUser(userId):
@@ -1794,7 +1818,8 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
         var participantUpdates: [GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate] = []
         for participant in participants {
             switch participant {
-            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
+                let params: Api.DataJSON? = nil
                 let peerId: PeerId
                 switch apiPeerId {
                     case let .peerUser(userId):
@@ -2016,6 +2041,14 @@ public final class CachedDisplayAsPeers: PostboxCoding {
     }
 }
 
+public func clearCachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        let key = ValueBoxKey(length: 8)
+        key.setInt64(0, value: peerId.toInt64())
+        transaction.removeItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key))
+    }
+    |> ignoreValues
+}
 
 public func cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
     let key = ValueBoxKey(length: 8)
