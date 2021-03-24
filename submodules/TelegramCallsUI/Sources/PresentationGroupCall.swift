@@ -1184,6 +1184,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             ]), on: .root, blockInteraction: false, completion: {})
                         } else if case .invalidJoinAsPeer = error {
                             let peerId = strongSelf.peerId
+                            let _ = clearCachedGroupCallDisplayAsAvailablePeers(account: strongSelf.accountContext.account, peerId: peerId).start()
                             let _ = (strongSelf.accountContext.account.postbox.transaction { transaction -> Void in
                                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                     if let current = current as? CachedChannelData {
