@@ -377,6 +377,7 @@ public final class VoiceChatController: ViewController {
             let peerContextAction: (PeerEntry, ASDisplayNode, ContextGesture?) -> Void
             let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
             let getPeerVideo: (UInt32) -> GroupVideoNode?
+            var isExpanded: Bool = false
             
             private var audioLevels: [PeerId: ValuePipe<Float>] = [:]
             
@@ -661,7 +662,9 @@ public final class VoiceChatController: ViewController {
                             interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
                         }, action: { node in
                             interaction.peerContextAction(peerEntry, node, nil)
-                        }, contextAction: nil)
+                        }, contextAction: nil, getIsExpanded: {
+                            return interaction.isExpanded
+                        })
                 }
             }
         }
@@ -3317,7 +3320,11 @@ public final class VoiceChatController: ViewController {
             return false
         }
         
-        private var isExpanded = false
+        private var isExpanded = false {
+            didSet {
+                self.itemInteraction?.isExpanded = self.isExpanded
+            }
+        }
         private var animatingExpansion = false
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
         
