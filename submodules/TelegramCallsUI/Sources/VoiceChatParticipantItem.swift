@@ -78,8 +78,9 @@ final class VoiceChatParticipantItem: ListViewItem {
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let action: ((ASDisplayNode) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    let getIsExpanded: () -> Bool
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -99,6 +100,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.action = action
         self.contextAction = contextAction
+        self.getIsExpanded = getIsExpanded
     }
         
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -328,6 +330,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 let springDuration: Double = isExtracted ? 0.42 : 0.3
                 let springDamping: CGFloat = isExtracted ? 104.0 : 1000.0
                 
+                let itemBackgroundColor: UIColor = item.getIsExpanded() ? UIColor(rgb: 0x1c1c1e) : UIColor(rgb: 0x2c2c2e)
+                
                 if !extractedVerticalOffset.isZero {
                     let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                     if isExtracted {
@@ -335,7 +339,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             let bounds = CGRect(origin: CGPoint(), size: size)
                             context.clear(bounds)
                             
-                            context.setFillColor(UIColor(rgb: 0x2c2c2e).cgColor)
+                            context.setFillColor(itemBackgroundColor.cgColor)
                             context.fillEllipse(in: bounds)
                             context.fill(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height / 2.0))
                         })?.stretchableImage(withLeftCapWidth: Int(cornerRadius), topCapHeight: Int(cornerRadius))
@@ -348,7 +352,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             context.fill(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height / 2.0))
                         })?.stretchableImage(withLeftCapWidth: Int(cornerRadius), topCapHeight: Int(cornerRadius))
                         strongSelf.backgroundImageNode.cornerRadius = cornerRadius
-                                                    
+                                              
+                        strongSelf.avatarNode.transform = CATransform3DIdentity
                         var avatarInitialRect = strongSelf.avatarNode.view.convert(strongSelf.avatarNode.bounds, to: strongSelf.offsetContainerNode.supernode?.view)
                         if strongSelf.avatarTransitionNode == nil {
                             transition.updateCornerRadius(node: strongSelf.backgroundImageNode, cornerRadius: 0.0)
@@ -483,7 +488,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.extractedBackgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                     } else {
                         strongSelf.extractedBackgroundImageNode.alpha = 0.0
-                        strongSelf.extractedBackgroundImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0.0, removeOnCompletion: false, completion: { [weak self] _ in
+                        strongSelf.extractedBackgroundImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
                             self?.backgroundImageNode.image = nil
                             self?.extractedBackgroundImageNode.image = nil
                             self?.extractedBackgroundImageNode.layer.removeAllAnimations()
@@ -491,11 +496,14 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     }
                 } else {
                     if isExtracted {
-                        strongSelf.backgroundImageNode.image = generateStretchableFilledCircleImage(diameter: cornerRadius * 2.0, color: UIColor(rgb: 0x2c2c2e))
+                        strongSelf.backgroundImageNode.alpha = 0.0
+                        strongSelf.extractedBackgroundImageNode.alpha = 1.0
+                        strongSelf.backgroundImageNode.image = generateStretchableFilledCircleImage(diameter: cornerRadius * 2.0, color: itemBackgroundColor)
                         strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: cornerRadius * 2.0, color: item.presentationData.theme.list.itemBlocksBackgroundColor)
                     }
                     
                     transition.updateFrame(node: strongSelf.backgroundImageNode, frame: rect)
+                    transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: CGRect(origin: CGPoint(), size: rect.size))
                     
                     transition.updateAlpha(node: strongSelf.statusNode, alpha: isExtracted ? 0.0 : 1.0)
                     transition.updateAlpha(node: strongSelf.expandedStatusNode, alpha: isExtracted ? 1.0 : 0.0)
@@ -504,7 +512,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? inset : 0.0, y: isExtracted ? extractedVerticalOffset : 0.0))
                     transition.updateSublayerTransformOffset(layer: strongSelf.actionContainerNode.layer, offset: CGPoint(x: isExtracted ? -24.0 : 0.0, y: 0.0))
                     
-                    transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
+                    transition.updateAlpha(node: strongSelf.backgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
                         if !isExtracted {
                             self?.backgroundImageNode.image = nil
                             self?.extractedBackgroundImageNode.image = nil
@@ -748,6 +756,10 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.nonExtractedRect = nonExtractedRect
                     
                     if strongSelf.isExtracted {
+                        var extractedRect = extractedRect
+                        if !extractedVerticalOffset.isZero {
+                            extractedRect = CGRect(x: extractedRect.minX, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
+                        }
                         strongSelf.backgroundImageNode.frame = extractedRect
                     } else {
                         strongSelf.backgroundImageNode.frame = nonExtractedRect
@@ -913,7 +925,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     }
                                     
                                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
-                                    transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
+                                    transition.updateTransformScale(node: strongSelf.avatarNode, scale: strongSelf.isExtracted ? 1.0 : avatarScale, beginWithCurrentState: true)
                                 }
                             }))
                         }

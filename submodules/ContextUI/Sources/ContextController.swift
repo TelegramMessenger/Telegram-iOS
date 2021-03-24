@@ -1271,33 +1271,29 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     
                     var overflowOffset: CGFloat
                     var contentContainerFrame: CGRect
-//                    if keepInPlace {
-                        overflowOffset = min(0.0, originalActionsFrame.minY - contentTopInset)
+
+                    overflowOffset = min(0.0, originalActionsFrame.minY - contentTopInset)
                     let contentParentNode = referenceNode
-                        contentContainerFrame = originalContentFrame
-                        if !overflowOffset.isZero {
-                            let offsetDelta = contentParentNode.frame.height + 4.0
-                            overflowOffset += offsetDelta
-                            overflowOffset = min(0.0, overflowOffset)
-                            
-                            originalActionsFrame.origin.x -= contentParentNode.frame.width + 14.0
-                            originalActionsFrame.origin.x = max(actionsSideInset, originalActionsFrame.origin.x)
-                            //originalActionsFrame.origin.y += contentParentNode.contentRect.height
-                            if originalActionsFrame.minX < contentContainerFrame.minX {
-                                contentContainerFrame.origin.x = min(originalActionsFrame.maxX + 14.0, layout.size.width - actionsSideInset)
-                            }
-                            originalActionsFrame.origin.y += offsetDelta
-                            if originalActionsFrame.maxY < originalContentFrame.maxY {
-                                originalActionsFrame.origin.y += contentParentNode.frame.height
-                                originalActionsFrame.origin.y = min(originalActionsFrame.origin.y, layout.size.height - originalActionsFrame.height - actionsBottomInset)
-                            }
-                            contentHeight -= offsetDelta
+                    contentContainerFrame = originalContentFrame
+                    if !overflowOffset.isZero {
+                        let offsetDelta = contentParentNode.frame.height + 4.0
+                        overflowOffset += offsetDelta
+                        overflowOffset = min(0.0, overflowOffset)
+                        
+                        originalActionsFrame.origin.x -= contentParentNode.frame.width + 14.0
+                        originalActionsFrame.origin.x = max(actionsSideInset, originalActionsFrame.origin.x)
+                        
+                        if originalActionsFrame.minX < contentContainerFrame.minX {
+                            contentContainerFrame.origin.x = min(originalActionsFrame.maxX + 14.0, layout.size.width - actionsSideInset)
                         }
-//                    } else {
-//                        overflowOffset = min(0.0, originalContentFrame.minY - contentTopInset)
-//                        contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -overflowOffset - contentParentNode.contentRect.minY)
-//                    }
-                    
+                        originalActionsFrame.origin.y += offsetDelta
+                        if originalActionsFrame.maxY < originalContentFrame.maxY {
+                            originalActionsFrame.origin.y += contentParentNode.frame.height
+                            originalActionsFrame.origin.y = min(originalActionsFrame.origin.y, layout.size.height - originalActionsFrame.height - actionsBottomInset)
+                        }
+                        contentHeight -= offsetDelta
+                    }
+
                     let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
                     if self.scrollNode.view.contentSize != scrollContentSize {
                         self.scrollNode.view.contentSize = scrollContentSize
@@ -1386,6 +1382,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     } else {
                         overflowOffset = min(0.0, originalContentFrame.minY - contentTopInset)
                         contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -overflowOffset - contentParentNode.contentRect.minY)
+                    }
+                    
+                    if case let .extracted(source) = self.source, source.centerVertically {
+                        let totalHeight = contentContainerFrame.height + originalActionsFrame.height
+                        let updatedOrigin = floor((layout.size.height - totalHeight) / 2.0)
+                        let delta = updatedOrigin - contentContainerFrame.origin.y
+                        contentContainerFrame.origin.y = updatedOrigin
+                        originalActionsFrame.origin.y += delta
                     }
                     
                     let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
@@ -1697,6 +1701,7 @@ public final class ContextControllerPutBackViewInfo {
 }
 
 public protocol ContextExtractedContentSource: class {
+    var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
     var blurBackground: Bool { get }
@@ -1707,6 +1712,10 @@ public protocol ContextExtractedContentSource: class {
 }
 
 public extension ContextExtractedContentSource {
+    var centerVertically: Bool {
+        return false
+    }
+
     var shouldBeDismissed: Signal<Bool, NoError> {
         return .single(false)
     }

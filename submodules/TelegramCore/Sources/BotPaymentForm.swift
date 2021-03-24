@@ -22,6 +22,8 @@ public struct BotPaymentInvoiceFields: OptionSet {
     public static let email = BotPaymentInvoiceFields(rawValue: 1 << 2)
     public static let shippingAddress = BotPaymentInvoiceFields(rawValue: 1 << 3)
     public static let flexibleShipping = BotPaymentInvoiceFields(rawValue: 1 << 4)
+    public static let phoneAvailableToProvider = BotPaymentInvoiceFields(rawValue: 1 << 5)
+    public static let emailAvailableToProvider = BotPaymentInvoiceFields(rawValue: 1 << 6)
 }
 
 public struct BotPaymentPrice : Equatable {
@@ -127,6 +129,12 @@ extension BotPaymentInvoice {
                 }
                 if (flags & (1 << 5)) != 0 {
                     fields.insert(.flexibleShipping)
+                }
+                if (flags & (1 << 6)) != 0 {
+                    fields.insert(.phoneAvailableToProvider)
+                }
+                if (flags & (1 << 7)) != 0 {
+                    fields.insert(.emailAvailableToProvider)
                 }
                 self.init(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
                     switch $0 {
