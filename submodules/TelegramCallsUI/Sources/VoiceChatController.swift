@@ -1432,7 +1432,7 @@ public final class VoiceChatController: ViewController {
                 
                 
                 let dismissPromise = ValuePromise<Bool>(false)
-                let source = VoiceChatContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false, blurBackground: true, shouldBeDismissed: dismissPromise.get())
+                let source = VoiceChatContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false, blurBackground: true, centerVertically: entry.peer.smallProfileImage != nil, shouldBeDismissed: dismissPromise.get())
                 sourceNode.requestDismiss = {
                     dismissPromise.set(true)
                 }
@@ -3905,13 +3905,15 @@ private final class VoiceChatContextExtractedContentSource: ContextExtractedCont
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
     
+    var centerVertically: Bool
     var shouldBeDismissed: Signal<Bool, NoError>
     
-    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool, shouldBeDismissed: Signal<Bool, NoError>) {
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool, centerVertically: Bool, shouldBeDismissed: Signal<Bool, NoError>) {
         self.controller = controller
         self.sourceNode = sourceNode
         self.keepInPlace = keepInPlace
         self.blurBackground = blurBackground
+        self.centerVertically = centerVertically
         self.shouldBeDismissed = shouldBeDismissed
     }
     

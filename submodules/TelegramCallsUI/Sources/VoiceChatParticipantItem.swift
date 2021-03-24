@@ -756,6 +756,10 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.nonExtractedRect = nonExtractedRect
                     
                     if strongSelf.isExtracted {
+                        var extractedRect = extractedRect
+                        if !extractedVerticalOffset.isZero {
+                            extractedRect = CGRect(x: extractedRect.minX, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
+                        }
                         strongSelf.backgroundImageNode.frame = extractedRect
                     } else {
                         strongSelf.backgroundImageNode.frame = nonExtractedRect
