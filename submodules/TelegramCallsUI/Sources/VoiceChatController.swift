@@ -1427,7 +1427,14 @@ public final class VoiceChatController: ViewController {
                     return itemsForEntry(entry, muteState)
                 }
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false, blurBackground: true)), items: items, reactionItems: [], gesture: gesture)
+                
+                let dismissPromise = ValuePromise<Bool>(false)
+                let source = VoiceChatContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false, blurBackground: true, shouldBeDismissed: dismissPromise.get())
+                sourceNode.requestDismiss = {
+                    dismissPromise.set(true)
+                }
+                
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(source), items: items, reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }, setPeerIdWithRevealedOptions: { peerId, _ in
                 updateState { state in
@@ -3891,11 +3898,14 @@ private final class VoiceChatContextExtractedContentSource: ContextExtractedCont
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
     
-    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
+    var shouldBeDismissed: Signal<Bool, NoError>
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool, shouldBeDismissed: Signal<Bool, NoError>) {
         self.controller = controller
         self.sourceNode = sourceNode
         self.keepInPlace = keepInPlace
         self.blurBackground = blurBackground
+        self.shouldBeDismissed = shouldBeDismissed
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {

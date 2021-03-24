@@ -24,28 +24,37 @@ public enum AvatarGalleryEntryId: Hashable {
 
 public func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
     return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
-    |> mapToSignal { view -> Signal<AvatarGalleryEntry?, NoError> in
+    |> mapToSignal { view -> Signal<[AvatarGalleryEntry]?, NoError> in
         guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
             return .single(nil)
         }
         return initialAvatarGalleryEntries(account: context.account, peer: peer)
-        |> map { entries in
-            return entries.first
-        }
     }
     |> distinctUntilChanged
-    |> mapToSignal { firstEntry -> Signal<(Bool, [AvatarGalleryEntry]), NoError> in
-        if let firstEntry = firstEntry {
-            return context.account.postbox.loadedPeerWithId(peerId)
-            |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry]), NoError>in
-                return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
+    |> mapToSignal { entries -> Signal<(Bool, [AvatarGalleryEntry])?, NoError> in
+        if let entries = entries {
+            if let firstEntry = entries.first {
+                return context.account.postbox.loadedPeerWithId(peerId)
+                |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry])?, NoError>in
+                    return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
+                    |> map(Optional.init)
+                }
+            } else {
+                return .single((true, []))
             }
         } else {
-            return .single((true, []))
+            return fetchAndUpdateCachedPeerData(accountPeerId: context.account.peerId, peerId: peerId, network: context.account.network, postbox: context.account.postbox)
+            |> map { _ -> (Bool, [AvatarGalleryEntry])? in
+                return nil
+            }
         }
     }
     |> map { items -> Any in
-        return items
+        if let items = items {
+            return items
+        } else {
+            return peerInfoProfilePhotos(context: context, peerId: peerId)
+        }
     }
 }
 
@@ -164,7 +173,7 @@ public func normalizeEntries(_ entries: [AvatarGalleryEntry]) -> [AvatarGalleryE
    return updatedEntries
 }
 
-public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
+public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry]?, NoError> {
     var initialEntries: [AvatarGalleryEntry] = []
     if !peer.profileImageRepresentations.isEmpty, let peerReference = PeerReference(peer) {
         initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), [], peer, nil, nil, nil))
@@ -189,7 +198,7 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                 }
                 return [.image(photo.imageId, photo.reference, representations, photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, nil, nil, nil, photo.immediateThumbnailData, nil)]
             } else {
-                return []
+                return cachedData != nil ? [] : nil
             }
         }
     } else {
@@ -199,6 +208,9 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
 
 public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
     return initialAvatarGalleryEntries(account: account, peer: peer)
+    |> map { entries -> [AvatarGalleryEntry] in
+        return entries ?? []
+    }
     |> mapToSignal { initialEntries in
         return .single(initialEntries)
         |> then(
@@ -390,7 +402,12 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             remoteEntriesSignal = fetchedAvatarGalleryEntries(account: context.account, peer: peer)
         }
         
-        let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = skipInitial ? remoteEntriesSignal : (initialAvatarGalleryEntries(account: context.account, peer: peer) |> then(remoteEntriesSignal))
+        let initialSignal = initialAvatarGalleryEntries(account: context.account, peer: peer)
+        |> map { entries -> [AvatarGalleryEntry] in
+            return entries ?? []
+        }
+        
+        let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = skipInitial ? remoteEntriesSignal : (initialSignal |> then(remoteEntriesSignal))
         
         let presentationData = self.presentationData
         

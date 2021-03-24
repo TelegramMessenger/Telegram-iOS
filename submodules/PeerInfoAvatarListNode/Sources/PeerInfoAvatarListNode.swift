@@ -310,7 +310,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.isReady.set(videoNode.ready |> map { return true })
     }
     
-    func setup(item: PeerInfoAvatarListItem, synchronous: Bool) {
+    func setup(item: PeerInfoAvatarListItem, synchronous: Bool, fullSizeOnly: Bool = false) {
         self.item = item
         
         let representations: [ImageRepresentationWithReference]
@@ -336,7 +336,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 id = Int64(self.peer.id.id._internalGetInt32Value())
             }
         }
-        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
         
         if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
@@ -418,6 +418,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private var validLayout: CGSize?
     public var isCollapsing = false
     private var isExpanded = false
+    
+    public var firstFullSizeOnly = false
+    public var customCenterTapAction: (() -> Void)?
     
     private let disposable = MetaDisposable()
     private let positionDisposable = MetaDisposable()
@@ -717,11 +720,16 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         }
     }
     
+    public var offsetLocation = false
     @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 if let size = self.validLayout, case .tap = gesture {
+                    var location = location
+                    if self.offsetLocation {
+                        location.x += size.width / 2.0
+                    }
                     if location.x < size.width * 1.0 / 5.0 {
                         if self.currentIndex != 0 {
                             let previousIndex = self.currentIndex
@@ -739,6 +747,10 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
                         }
                     } else {
+                        if let customAction = self.customCenterTapAction, location.x < size.width - size.width * 1.0 / 5.0 {
+                            customAction()
+                            return
+                        }
                         if self.currentIndex < self.items.count - 1 {
                             let previousIndex = self.currentIndex
                             self.currentIndex += 1
@@ -1049,13 +1061,13 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 if let current = self.itemNodes[self.items[i].id] {
                     itemNode = current
                     if update {
-                        current.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex)
+                        current.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex, fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     }
                 } else if let peer = self.peer {
                     wasAdded = true
                     let addedItemNode = PeerInfoAvatarListItemNode(context: self.context, peer: peer)
                     itemNode = addedItemNode
-                    addedItemNode.setup(item: self.items[i], synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex))
+                    addedItemNode.setup(item: self.items[i], synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex), fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     self.itemNodes[self.items[i].id] = addedItemNode
                     self.contentNode.addSubnode(addedItemNode)
                 }
