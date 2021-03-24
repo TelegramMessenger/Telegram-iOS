@@ -8,7 +8,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
         fileprivate var rawValue: UInt32
 
-        public init(rawValue: UInt32) {
+        fileprivate init(rawValue: UInt32) {
             precondition((rawValue | 0x7) == 0x7)
 
             self.rawValue = rawValue
@@ -28,10 +28,14 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
 
     public struct Id: Comparable, Hashable, Codable {
+        public static var max: Id {
+            return Id(rawValue: 0x000000007fffffff)
+        }
+
         fileprivate var rawValue: UInt64
 
-        public init(rawValue: UInt64) {
-            precondition((rawValue | 0xFFFFFFFFFFFFF) == 0xFFFFFFFFFFFFF)
+        fileprivate init(rawValue: UInt64) {
+            precondition((rawValue | 0x000FFFFFFFFFFFFF) == 0x000FFFFFFFFFFFFF)
 
             self.rawValue = rawValue
         }
@@ -50,7 +54,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
 
     public static var max: PeerId {
-        return PeerId(Int64(bitPattern: UInt64.max))
+        return PeerId(namespace: .max, id: .max)
     }
     
     public let namespace: Namespace
@@ -64,14 +68,21 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     public init(_ n: Int64) {
         let data = UInt64(bitPattern: n)
 
-        let namespaceBits = ((data >> 32) & 0x7)
-        self.namespace = Namespace(rawValue: UInt32(namespaceBits))
-
+        let legacyNamespaceBits = ((data >> 32) & 0xffffffff)
         let idLowBits = data & 0xffffffff
-        let idHighBits = (data >> (32 + 3)) & 0xffffffff
-        assert(idHighBits == 0)
 
-        self.id = Id(rawValue: idLowBits)
+        if legacyNamespaceBits == 0x7fffffff {
+            self.namespace = .max
+            self.id = Id(rawValue: idLowBits)
+        } else {
+            let namespaceBits = ((data >> 32) & 0x7)
+            self.namespace = Namespace(rawValue: UInt32(namespaceBits))
+
+            let idHighBits = (data >> (32 + 3)) & 0xffffffff
+            assert(idHighBits == 0)
+
+            self.id = Id(rawValue: idLowBits)
+        }
     }
     
     public func toInt64() -> Int64 {
