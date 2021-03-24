@@ -322,6 +322,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 let springDamping: CGFloat = isExtracted ? 104.0 : 1000.0
                 
                 if !extractedVerticalOffset.isZero {
+                    let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
                     if isExtracted {
                         strongSelf.extractedBackgroundImageNode.image = generateImage(CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0), rotatedContext: { (size, context) in
                             let bounds = CGRect(origin: CGPoint(), size: size)
@@ -353,7 +354,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             transitionNode.image = strongSelf.avatarNode.unroundedImage
                             transitionNode.frame = CGRect(origin: CGPoint(), size: targetRect.size)
                             transitionNode.cornerRadius = targetRect.width / 2.0
-                            transition.updateCornerRadius(node: transitionNode, cornerRadius: 0.0)
+                            radiusTransition.updateCornerRadius(node: transitionNode, cornerRadius: 0.0)
                             
                             strongSelf.avatarNode.isHidden = true
                             
@@ -368,7 +369,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             
                             avatarListWrapperNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
                             avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: avatarInitialRect.center), to: NSValue(cgPoint: avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-                            transition.updateCornerRadius(node: avatarListContainerNode, cornerRadius: 0.0)
+                            radiusTransition.updateCornerRadius(node: avatarListContainerNode, cornerRadius: 0.0)
                             
                             let avatarListNode = PeerInfoAvatarListContainerNode(context: item.context)
                             avatarListNode.backgroundColor = .clear
@@ -416,8 +417,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             self?.avatarNode.isHidden = false
                         })
     
-                        transition.updateCornerRadius(node: avatarListContainerNode, cornerRadius: avatarListContainerNode.frame.width / 2.0)
-                        transition.updateCornerRadius(node: transitionNode, cornerRadius: avatarListContainerNode.frame.width / 2.0)
+                        radiusTransition.updateCornerRadius(node: avatarListContainerNode, cornerRadius: avatarListContainerNode.frame.width / 2.0)
+                        radiusTransition.updateCornerRadius(node: transitionNode, cornerRadius: avatarListContainerNode.frame.width / 2.0)
                     }
                     
                     transition.updateAlpha(node: strongSelf.statusNode, alpha: isExtracted ? 0.0 : 1.0)
@@ -623,10 +624,15 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             if let currentCredibilityIconImage = currentCredibilityIconImage {
                 titleIconsWidth += 4.0 + currentCredibilityIconImage.size.width
             }
+            
+            var expandedRightInset: CGFloat = 30.0
+            if item.peer.smallProfileImage != nil {
+                expandedRightInset = 0.0
+            }
                               
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - rightInset - 30.0 - titleIconsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(TextNodeLayoutArguments(attributedString: expandedStatusAttributedString, backgroundColor: nil, maximumNumberOfLines: 6, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(TextNodeLayoutArguments(attributedString: expandedStatusAttributedString, backgroundColor: nil, maximumNumberOfLines: 6, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = UIEdgeInsets()
     
