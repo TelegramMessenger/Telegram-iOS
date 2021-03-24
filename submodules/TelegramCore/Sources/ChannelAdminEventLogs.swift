@@ -220,7 +220,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                             action = .pollStopped(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
-                                        action = .linkedPeerUpdated(previous: prevValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: prevValue)], updated: newValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: newValue)])
+                                        action = .linkedPeerUpdated(previous: prevValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(prevValue))], updated: newValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(newValue))])
                                     case let .channelAdminLogEventActionChangeLocation(prevValue, newValue):
                                         action = .changeGeoLocation(previous: PeerGeoLocation(apiLocation: prevValue), updated: PeerGeoLocation(apiLocation: newValue))
                                     case let .channelAdminLogEventActionToggleSlowMode(prevValue, newValue):
@@ -251,7 +251,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                     case let .channelAdminLogEventActionChangeHistoryTTL(prevValue, newValue):
                                         action = .changeHistoryTTL(previousValue: prevValue, updatedValue: newValue)
                                 }
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                 if let action = action {
                                     events.append(AdminLogEvent(id: id, peerId: peerId, date: date, action: action))
                                 }

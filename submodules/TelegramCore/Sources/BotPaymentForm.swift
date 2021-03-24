@@ -188,9 +188,9 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                                     parsedSavedCredentials = .card(id: id, title: title)
                             }
                         }
-                        return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: providerId), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                        return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
                 }
-            } |> mapError { _ -> BotPaymentFormRequestError in return .generic }
+            } |> mapError { _ -> BotPaymentFormRequestError in }
         }
 }
 

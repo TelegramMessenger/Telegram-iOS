@@ -23,7 +23,7 @@ final class GlobalMessageIdsTable: Table {
     
     func set(_ globalId: Int32, id: MessageId) {
         assert(id.namespace == 0)
-        assert(id.peerId.namespace == 0 || id.peerId.namespace == 1)
+        assert(id.peerId.namespace._internalGetInt32Value() == 0 || id.peerId.namespace._internalGetInt32Value() == 1)
         assert(self.seedConfiguration.globalMessageIdsPeerIdNamespaces.contains(GlobalMessageIdsNamespace(peerIdNamespace: id.peerId.namespace, messageIdNamespace: id.namespace)))
         
         self.sharedBuffer.reset()

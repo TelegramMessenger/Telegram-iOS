@@ -196,7 +196,7 @@ private enum RevealOptionKey: Int32 {
 }
 
 private func canArchivePeer(id: PeerId, accountPeerId: PeerId) -> Bool {
-    if id.namespace == Namespaces.Peer.CloudUser && id.id == 777000 {
+    if id.namespace == Namespaces.Peer.CloudUser && id.id._internalGetInt32Value() == 777000 {
         return false
     }
     if id == accountPeerId {

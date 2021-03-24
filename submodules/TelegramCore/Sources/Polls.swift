@@ -286,11 +286,11 @@ private final class PollResultsOptionContext {
                                 let peerId: PeerId
                                 switch vote {
                                 case let .messageUserVote(userId, _, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                 case let .messageUserVoteInputOption(userId, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                 case let .messageUserVoteMultiple(userId, _, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                 }
                                 if let peer = transaction.getPeer(peerId) {
                                     resultPeers.append(RenderedPeer(peer: peer))

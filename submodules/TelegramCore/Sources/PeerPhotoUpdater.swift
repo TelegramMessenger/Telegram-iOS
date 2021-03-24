@@ -223,7 +223,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                     
                                     let request: Signal<Api.Updates, MTRpcError>
                                     if let peer = peer as? TelegramGroup {
-                                        request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp)))
+                                        request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id._internalGetInt32Value(), photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp)))
                                     } else if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
                                         request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp)))
                                     } else {
@@ -311,7 +311,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
             } else {
                 let request: Signal<Api.Updates, MTRpcError>
                 if let peer = peer as? TelegramGroup {
-                    request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatPhotoEmpty))
+                    request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id._internalGetInt32Value(), photo: .inputChatPhotoEmpty))
                 } else if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
                     request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatPhotoEmpty))
                 } else {

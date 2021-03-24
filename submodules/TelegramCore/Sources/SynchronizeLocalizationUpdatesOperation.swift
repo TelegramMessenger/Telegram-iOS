@@ -6,7 +6,7 @@ import SyncCore
 
 func addSynchronizeLocalizationUpdatesOperation(transaction: Transaction) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeLocalizationUpdates
-    let peerId = PeerId(namespace: 0, id: 0)
+    let peerId = PeerId(0)
     
     var topLocalIndex: Int32?
     transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in

@@ -21,11 +21,10 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
     }
     
     public init(_ buffer: ReadBuffer) {
-        var peerIdNamespaceValue: Int32 = 0
-        memcpy(&peerIdNamespaceValue, buffer.memory + buffer.offset, 4)
-        var peerIdIdValue: Int32 = 0
-        memcpy(&peerIdIdValue, buffer.memory + (buffer.offset + 4), 4)
-        self.peerId = PeerId(namespace: peerIdNamespaceValue, id: peerIdIdValue)
+        var peerIdInt64Value: Int64 = 0
+        memcpy(&peerIdInt64Value, buffer.memory + buffer.offset, 8)
+
+        self.peerId = PeerId(peerIdInt64Value)
         
         var namespaceValue: Int32 = 0
         memcpy(&namespaceValue, buffer.memory + (buffer.offset + 8), 4)
@@ -120,11 +119,11 @@ public struct MessageIndex: Comparable, Hashable {
     }
     
     public static func absoluteUpperBound() -> MessageIndex {
-        return MessageIndex(id: MessageId(peerId: PeerId(namespace: Int32(Int8.max), id: Int32.max), namespace: Int32(Int8.max), id: Int32.max), timestamp: Int32.max)
+        return MessageIndex(id: MessageId(peerId: PeerId.max, namespace: Int32(Int8.max), id: Int32.max), timestamp: Int32.max)
     }
     
     public static func absoluteLowerBound() -> MessageIndex {
-        return MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0)
+        return MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: 0), timestamp: 0)
     }
     
     public static func lowerBound(peerId: PeerId) -> MessageIndex {
