@@ -945,12 +945,11 @@ public final class VoiceChatController: ViewController {
                     }
                     
                     if let groupPeer = groupPeer as? TelegramChannel {
-                        var canInvite = true
+                        var canInviteMembers = true
                         if case .broadcast = groupPeer.info, !(groupPeer.addressName?.isEmpty ?? true) {
-                            canInvite = false
+                            canInviteMembers = false
                         }
-                        
-                        if !canInvite {
+                        if !canInviteMembers {
                             if let inviteLinks = inviteLinks {
                                 strongSelf.presentShare(inviteLinks)
                             }
@@ -963,7 +962,7 @@ public final class VoiceChatController: ViewController {
                         filters.append(.disable(Array(currentCallMembers.map { $0.peer.id })))
                     }
                     if let groupPeer = groupPeer as? TelegramChannel {
-                        if !groupPeer.hasPermission(.inviteMembers) {
+                        if !groupPeer.hasPermission(.inviteMembers) && inviteLinks?.listenerLink == nil {
                             filters.append(.excludeNonMembers)
                         }
                     } else if let groupPeer = groupPeer as? TelegramGroup {
@@ -981,7 +980,6 @@ public final class VoiceChatController: ViewController {
                         }
                         
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        
                         if peer.id == strongSelf.callState?.myPeerId {
                             return
                         }
@@ -992,154 +990,171 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
                             }
                         } else {
-                            let text: String
-                            if let groupPeer = groupPeer as? TelegramChannel, case .broadcast = groupPeer.info {
-                                text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToChannelFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0
+                            if let groupPeer = groupPeer as? TelegramChannel, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
+                                let text = strongSelf.presentationData.strings.VoiceChat_SendPublicLinkText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0
+                                
+                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_SendPublicLinkSend, action: { [weak self] in
+                                    dismissController?()
+                                    
+                                    if let strongSelf = self {
+                                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+                                        |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                            if let strongSelf = self {
+                                                strongSelf.presentUndoOverlay(content: .forward(savedMessages: false, text: strongSelf.presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return true })
+                                            }
+                                        })
+                                    }
+                                })]), in: .window(.root))
                             } else {
-                                text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0
-                            }
-                            
-                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
-                                guard let strongSelf = self else {
-                                    return
+                                let text: String
+                                if let groupPeer = groupPeer as? TelegramChannel, case .broadcast = groupPeer.info {
+                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToChannelFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0
+                                } else {
+                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0
                                 }
                                 
-                                if let groupPeer = groupPeer as? TelegramChannel {
-                                    let selfController = strongSelf.controller
-                                    let inviteDisposable = strongSelf.inviteDisposable
-                                    var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(account: strongSelf.context.account, peerId: groupPeer.id, memberIds: [peer.id])
-                                    var cancelImpl: (() -> Void)?
-                                    let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
-                                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                            cancelImpl?()
-                                        }))
-                                        selfController?.present(controller, in: .window(.root))
-                                        return ActionDisposable { [weak controller] in
-                                            Queue.mainQueue().async() {
-                                                controller?.dismiss()
-                                            }
-                                        }
-                                    }
-                                    |> runOn(Queue.mainQueue())
-                                    |> delay(0.15, queue: Queue.mainQueue())
-                                    let progressDisposable = progressSignal.start()
-                                    
-                                    inviteSignal = inviteSignal
-                                    |> afterDisposed {
-                                        Queue.mainQueue().async {
-                                            progressDisposable.dispose()
-                                        }
-                                    }
-                                    cancelImpl = {
-                                        inviteDisposable.set(nil)
+                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
+                                    guard let strongSelf = self else {
+                                        return
                                     }
                                     
-                                    inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
-                                        dismissController?()
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                        
-                                        let text: String
-                                        switch error {
-                                            case .limitExceeded:
-                                                text = presentationData.strings.Channel_ErrorAddTooMuch
-                                            case .tooMuchJoined:
-                                                text = presentationData.strings.Invite_ChannelsTooMuch
-                                            case .generic:
-                                                text = presentationData.strings.Login_UnknownError
-                                            case .restricted:
-                                                text = presentationData.strings.Channel_ErrorAddBlocked
-                                            case .notMutualContact:
-                                                if case .broadcast = groupPeer.info {
-                                                    text = presentationData.strings.Channel_AddUserLeftError
-                                                } else {
-                                                    text = presentationData.strings.GroupInfo_AddUserLeftError
+                                    if let groupPeer = groupPeer as? TelegramChannel {
+                                        let selfController = strongSelf.controller
+                                        let inviteDisposable = strongSelf.inviteDisposable
+                                        var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(account: strongSelf.context.account, peerId: groupPeer.id, memberIds: [peer.id])
+                                        var cancelImpl: (() -> Void)?
+                                        let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
+                                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                                                cancelImpl?()
+                                            }))
+                                            selfController?.present(controller, in: .window(.root))
+                                            return ActionDisposable { [weak controller] in
+                                                Queue.mainQueue().async() {
+                                                    controller?.dismiss()
                                                 }
-                                            case .botDoesntSupportGroups:
-                                                text = presentationData.strings.Channel_BotDoesntSupportGroups
-                                            case .tooMuchBots:
-                                                text = presentationData.strings.Channel_TooMuchBots
-                                            case .bot:
-                                                text = presentationData.strings.Login_UnknownError
-                                        }
-                                        strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                    }, completed: {
-                                        guard let strongSelf = self else {
-                                            dismissController?()
-                                            return
-                                        }
-                                        dismissController?()
-                                        
-                                        if strongSelf.call.invitePeer(peer.id) {
-                                            strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
-                                        }
-                                    }))
-                                } else if let groupPeer = groupPeer as? TelegramGroup {
-                                    let selfController = strongSelf.controller
-                                    let inviteDisposable = strongSelf.inviteDisposable
-                                    var inviteSignal = addGroupMember(account: strongSelf.context.account, peerId: groupPeer.id, memberId: peer.id)
-                                    var cancelImpl: (() -> Void)?
-                                    let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
-                                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                            cancelImpl?()
-                                        }))
-                                        selfController?.present(controller, in: .window(.root))
-                                        return ActionDisposable { [weak controller] in
-                                            Queue.mainQueue().async() {
-                                                controller?.dismiss()
                                             }
                                         }
-                                    }
-                                    |> runOn(Queue.mainQueue())
-                                    |> delay(0.15, queue: Queue.mainQueue())
-                                    let progressDisposable = progressSignal.start()
-                                    
-                                    inviteSignal = inviteSignal
-                                    |> afterDisposed {
-                                        Queue.mainQueue().async {
-                                            progressDisposable.dispose()
-                                        }
-                                    }
-                                    cancelImpl = {
-                                        inviteDisposable.set(nil)
-                                    }
-                                    
-                                    inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
-                                        dismissController?()
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        let context = strongSelf.context
-                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        |> runOn(Queue.mainQueue())
+                                        |> delay(0.15, queue: Queue.mainQueue())
+                                        let progressDisposable = progressSignal.start()
                                         
-                                        switch error {
-                                        case .privacy:
-                                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
-                                            |> deliverOnMainQueue).start(next: { peer in
-                                                self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                            })
-                                        case .notMutualContact:
-                                            strongSelf.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                        case .tooManyChannels:
-                                            strongSelf.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                        case .groupFull, .generic:
-                                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        inviteSignal = inviteSignal
+                                        |> afterDisposed {
+                                            Queue.mainQueue().async {
+                                                progressDisposable.dispose()
+                                            }
                                         }
-                                    }, completed: {
-                                        guard let strongSelf = self else {
+                                        cancelImpl = {
+                                            inviteDisposable.set(nil)
+                                        }
+                                        
+                                        inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
                                             dismissController?()
-                                            return
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                            
+                                            let text: String
+                                            switch error {
+                                                case .limitExceeded:
+                                                    text = presentationData.strings.Channel_ErrorAddTooMuch
+                                                case .tooMuchJoined:
+                                                    text = presentationData.strings.Invite_ChannelsTooMuch
+                                                case .generic:
+                                                    text = presentationData.strings.Login_UnknownError
+                                                case .restricted:
+                                                    text = presentationData.strings.Channel_ErrorAddBlocked
+                                                case .notMutualContact:
+                                                    if case .broadcast = groupPeer.info {
+                                                        text = presentationData.strings.Channel_AddUserLeftError
+                                                    } else {
+                                                        text = presentationData.strings.GroupInfo_AddUserLeftError
+                                                    }
+                                                case .botDoesntSupportGroups:
+                                                    text = presentationData.strings.Channel_BotDoesntSupportGroups
+                                                case .tooMuchBots:
+                                                    text = presentationData.strings.Channel_TooMuchBots
+                                                case .bot:
+                                                    text = presentationData.strings.Login_UnknownError
+                                            }
+                                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        }, completed: {
+                                            guard let strongSelf = self else {
+                                                dismissController?()
+                                                return
+                                            }
+                                            dismissController?()
+                                            
+                                            if strongSelf.call.invitePeer(peer.id) {
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
+                                            }
+                                        }))
+                                    } else if let groupPeer = groupPeer as? TelegramGroup {
+                                        let selfController = strongSelf.controller
+                                        let inviteDisposable = strongSelf.inviteDisposable
+                                        var inviteSignal = addGroupMember(account: strongSelf.context.account, peerId: groupPeer.id, memberId: peer.id)
+                                        var cancelImpl: (() -> Void)?
+                                        let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
+                                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                                                cancelImpl?()
+                                            }))
+                                            selfController?.present(controller, in: .window(.root))
+                                            return ActionDisposable { [weak controller] in
+                                                Queue.mainQueue().async() {
+                                                    controller?.dismiss()
+                                                }
+                                            }
                                         }
-                                        dismissController?()
+                                        |> runOn(Queue.mainQueue())
+                                        |> delay(0.15, queue: Queue.mainQueue())
+                                        let progressDisposable = progressSignal.start()
                                         
-                                        if strongSelf.call.invitePeer(peer.id) {
-                                            strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
+                                        inviteSignal = inviteSignal
+                                        |> afterDisposed {
+                                            Queue.mainQueue().async {
+                                                progressDisposable.dispose()
+                                            }
                                         }
-                                    }))
-                                }
-                            })]), in: .window(.root))
+                                        cancelImpl = {
+                                            inviteDisposable.set(nil)
+                                        }
+                                        
+                                        inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { error in
+                                            dismissController?()
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            let context = strongSelf.context
+                                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                            
+                                            switch error {
+                                            case .privacy:
+                                                let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
+                                                |> deliverOnMainQueue).start(next: { peer in
+                                                    self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                                })
+                                            case .notMutualContact:
+                                                strongSelf.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            case .tooManyChannels:
+                                                strongSelf.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            case .groupFull, .generic:
+                                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                            }
+                                        }, completed: {
+                                            guard let strongSelf = self else {
+                                                dismissController?()
+                                                return
+                                            }
+                                            dismissController?()
+                                            
+                                            if strongSelf.call.invitePeer(peer.id) {
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
+                                            }
+                                        }))
+                                    }
+                                })]), in: .window(.root))
+                            }
                         }
                     })
                     controller.copyInviteLink = {
@@ -1151,7 +1166,9 @@ public final class VoiceChatController: ViewController {
                         let callPeerId = strongSelf.call.peerId
                         
                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
-                            if let peer = transaction.getPeer(callPeerId), let addressName = peer.addressName, !addressName.isEmpty {
+                            if let link = inviteLinks?.listenerLink {
+                                return link
+                            } else if let peer = transaction.getPeer(callPeerId), let addressName = peer.addressName, !addressName.isEmpty {
                                 return "https://t.me/\(addressName)"
                             } else if let cachedData = transaction.getPeerCachedData(peerId: callPeerId) {
                                 if let cachedData = cachedData as? CachedChannelData {
