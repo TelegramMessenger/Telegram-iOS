@@ -15,4 +15,12 @@ public final class TelegramEngine {
     public lazy var peersNearby: PeersNearby = {
         return PeersNearby(account: self.account)
     }()
+
+    public lazy var payments: Payments = {
+        return Payments(account: self.account)
+    }()
+
+    public lazy var peerNames: PeerNames = {
+        return PeerNames(account: self.account)
+    }()
 }

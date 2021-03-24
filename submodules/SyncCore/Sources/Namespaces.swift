@@ -202,7 +202,6 @@ private enum PreferencesKeyValues: Int32 {
     case globalNotifications = 0
     case suggestedLocalization = 3
     case limitsConfiguration = 4
-    case coreSettings = 7
     case contentPrivacySettings = 8
     case networkSettings = 9
     case remoteStorageConfiguration = 10
@@ -248,12 +247,6 @@ public struct PreferencesKeys {
     public static let limitsConfiguration: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.limitsConfiguration.rawValue)
-        return key
-    }()
-    
-    public static let coreSettings: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.coreSettings.rawValue)
         return key
     }()
     

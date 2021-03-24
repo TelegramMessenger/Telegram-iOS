@@ -5,17 +5,7 @@ import SyncCore
 import MtProtoKit
 import SwiftSignalKit
 
-public struct BankCardUrl {
-    public let title: String
-    public let url: String
-}
-
-public struct BankCardInfo {
-    public let title: String
-    public let urls: [BankCardUrl]
-}
-
-public func getBankCardInfo(account: Account, cardNumber: String) -> Signal<BankCardInfo?, NoError> {
+func _internal_getBankCardInfo(account: Account, cardNumber: String) -> Signal<BankCardInfo?, NoError> {
     return currentWebDocumentsHostDatacenterId(postbox: account.postbox, isTestingEnvironment: false)
     |> mapToSignal { datacenterId in
         let signal: Signal<Api.payments.BankCardData, MTRpcError>
@@ -36,6 +26,16 @@ public func getBankCardInfo(account: Account, cardNumber: String) -> Signal<Bank
             return .single(nil)
         }
     }
+}
+
+public struct BankCardUrl {
+    public let title: String
+    public let url: String
+}
+
+public struct BankCardInfo {
+    public let title: String
+    public let urls: [BankCardUrl]
 }
 
 extension BankCardUrl {
