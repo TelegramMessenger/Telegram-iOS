@@ -251,7 +251,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
     if publicKey.isEmpty {
         return .fail(.serverError("PUBLIC_KEY_REQUIRED"))
     }
-    return network.request(Api.functions.account.getAuthorizationForm(botId: peerId.id, scope: scope, publicKey: publicKey))
+    return network.request(Api.functions.account.getAuthorizationForm(botId: peerId.id._internalGetInt32Value(), scope: scope, publicKey: publicKey))
     |> mapError { error -> RequestSecureIdFormError in
         switch error.errorDescription {
             case "APP_VERSION_OUTDATED":

@@ -56,7 +56,7 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
         let contactPeerIds = transaction.getContactPeerIds()
         let totalCount = transaction.getRemoteContactCount()
         let peerIds = Set(contactPeerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }))
-        return hashForCountAndIds(count: totalCount, ids: peerIds.map({ $0.id }).sorted())
+        return hashForCountAndIds(count: totalCount, ids: peerIds.map({ $0.id._internalGetInt32Value() }).sorted())
     }
 
     let updatedPeers = initialContactPeerIdsHash

@@ -7,7 +7,7 @@ import SyncCore
 
 public func addAppLogEvent(postbox: Postbox, time: Double = Date().timeIntervalSince1970, type: String, peerId: PeerId? = nil, data: JSON = .dictionary([:])) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeAppLogEvents
-    let peerId = PeerId(namespace: 0, id: 0)
+    let peerId = PeerId(0)
     let _ = (postbox.transaction { transaction in
         transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeAppLogEventsOperation(content: .add(time: time, type: type, peerId: peerId, data: data)))
     }).start()
@@ -15,7 +15,7 @@ public func addAppLogEvent(postbox: Postbox, time: Double = Date().timeIntervalS
 
 public func invokeAppLogEventsSynchronization(postbox: Postbox) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeAppLogEvents
-    let peerId = PeerId(namespace: 0, id: 0)
+    let peerId = PeerId(0)
     
     let _ = (postbox.transaction { transaction in
         var topOperation: (SynchronizeSavedStickersOperation, Int32)?

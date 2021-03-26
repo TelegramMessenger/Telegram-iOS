@@ -63,7 +63,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         super.init()
         
-        let peer = TelegramGroup(id: PeerId(namespace: 0, id: 0), title: title, photo: image.flatMap { [$0] } ?? [], participantCount: Int(memberCount), role: .member, membership: .Left, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
+        let peer = TelegramGroup(id: PeerId(0), title: title, photo: image.flatMap { [$0] } ?? [], participantCount: Int(memberCount), role: .member, membership: .Left, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
         
         self.addSubnode(self.avatarNode)
         self.avatarNode.setPeer(context: context, theme: theme, peer: peer, emptyColor: theme.list.mediaPlaceholderColor)

@@ -62,8 +62,7 @@ final class ChatListIndexTable: Table {
     }
     
     private func key(_ peerId: PeerId) -> ValueBoxKey {
-        self.sharedKey.setInt32(0, value: peerId.namespace)
-        self.sharedKey.setInt32(4, value: peerId.id)
+        self.sharedKey.setInt64(0, value: peerId.toInt64())
         assert(self.sharedKey.getInt64(0) == peerId.toInt64())
         return self.sharedKey
     }
@@ -648,7 +647,7 @@ final class ChatListIndexTable: Table {
         var summary = PeerGroupUnreadCountersCombinedSummary(namespaces: [:])
         
         postbox.chatListTable.forEachPeer(groupId: groupId, { peerId in
-            if peerId.namespace == Int32.max {
+            if peerId.namespace == .max {
                 return
             }
             guard let combinedState = postbox.readStateTable.getCombinedState(peerId) else {

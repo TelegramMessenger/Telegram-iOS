@@ -360,7 +360,7 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
         
         if view.laterIndex == nil, case .chatList = mode {
             for groupReference in view.groupEntries {
-                let messageIndex = MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 1)
+                let messageIndex = MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: 0), timestamp: 1)
                 result.append(.GroupReferenceEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex), presentationData: state.presentationData, groupId: groupReference.groupId, peers: groupReference.renderedPeers, message: groupReference.message, editing: state.editing, unreadState: groupReference.unreadState, revealed: state.archiveShouldBeTemporaryRevealed, hiddenByDefault: hideArchivedFolderByDefault))
                 if pinningIndex != 0 {
                     pinningIndex -= 1

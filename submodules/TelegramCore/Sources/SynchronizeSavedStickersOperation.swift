@@ -7,7 +7,7 @@ import SyncCore
 
 func addSynchronizeSavedStickersOperation(transaction: Transaction, operation: SynchronizeSavedStickersOperationContent) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeSavedStickers
-    let peerId = PeerId(namespace: 0, id: 0)
+    let peerId = PeerId(0)
     
     var topOperation: (SynchronizeSavedStickersOperation, Int32)?
     transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
