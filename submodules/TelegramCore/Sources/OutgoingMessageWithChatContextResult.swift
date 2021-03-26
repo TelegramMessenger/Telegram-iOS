@@ -141,5 +141,10 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                 attributes.append(replyMarkup)
             }
             return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil)
+        case let .invoice(media, replyMarkup):
+            if let replyMarkup = replyMarkup {
+                attributes.append(replyMarkup)
+            }
+            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil)
     }
 }

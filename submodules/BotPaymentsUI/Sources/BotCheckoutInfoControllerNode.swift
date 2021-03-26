@@ -317,7 +317,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                 shippingAddress = BotPaymentShippingAddress(streetLine1: "", streetLine2: "", city: "", state: "", countryIso2: iso2, postCode: "")
             }
                 
-            self.formInfo = BotPaymentRequestedInfo(name: self.formInfo.name, phone: self.formInfo.phone, email: self.formInfo.email, shippingAddress: BotPaymentShippingAddress(streetLine1: shippingAddress.streetLine1, streetLine2: shippingAddress.streetLine2, city: shippingAddress.city, state: shippingAddress.state, countryIso2: iso2, postCode: shippingAddress.postCode))
+            self.formInfo = BotPaymentRequestedInfo(name: self.formInfo.name, phone: self.formInfo.phone, email: self.formInfo.email, shippingAddress: BotPaymentShippingAddress(streetLine1: shippingAddress.streetLine1, streetLine2: shippingAddress.streetLine2, city: shippingAddress.city, state: shippingAddress.state, countryIso2: iso2, postCode: shippingAddress.postCode), tipAmount: self.formInfo.tipAmount)
             self.addressItems?.country.text = name
             if let containerLayout = self.containerLayout {
                 self.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
@@ -332,13 +332,13 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         if let addressItems = self.addressItems, let current = self.formInfo.shippingAddress {
             address = BotPaymentShippingAddress(streetLine1: addressItems.address1.text, streetLine2: addressItems.address2.text, city: addressItems.city.text, state: addressItems.state.text, countryIso2: current.countryIso2, postCode: addressItems.postcode.text)
         }
-        return BotPaymentRequestedInfo(name: self.nameItem?.text, phone: self.phoneItem?.text, email: self.emailItem?.text, shippingAddress: address)
+        return BotPaymentRequestedInfo(name: self.nameItem?.text, phone: self.phoneItem?.text, email: self.emailItem?.text, shippingAddress: address, tipAmount: self.formInfo.tipAmount)
     }
     
     func verify() {
         self.isVerifying = true
         let formInfo = self.collectFormInfo()
-        self.verifyDisposable.set((validateBotPaymentForm(network: self.context.account.network, saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.verifyDisposable.set((validateBotPaymentForm(account: self.context.account, saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.formInfoUpdated(formInfo, result)
             }

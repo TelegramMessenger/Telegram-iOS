@@ -619,6 +619,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if canSetupAutoremoveTimeout {
                                 strongSelf.presentAutoremoveSetup()
                             }
+                        case .paymentSent:
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ReplyMessageAttribute {
+                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId))
+                                    break
+                                }
+                            }
+                            return true
                         default:
                             break
                     }
