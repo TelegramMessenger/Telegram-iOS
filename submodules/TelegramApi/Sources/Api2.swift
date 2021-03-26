@@ -3906,28 +3906,27 @@ public extension Api {
     
     }
     public enum PaymentRequestedInfo: TypeConstructorDescription {
-        case paymentRequestedInfo(flags: Int32, name: String?, phone: String?, email: String?, shippingAddress: Api.PostAddress?, tipAmount: Int64?)
+        case paymentRequestedInfo(flags: Int32, name: String?, phone: String?, email: String?, shippingAddress: Api.PostAddress?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress, let tipAmount):
+                case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
                     if boxed {
-                        buffer.appendInt32(-2017173756)
+                        buffer.appendInt32(-1868808300)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(name!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(phone!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(email!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {shippingAddress!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 4) != 0 {serializeInt64(tipAmount!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress, let tipAmount):
-                return ("paymentRequestedInfo", [("flags", flags), ("name", name), ("phone", phone), ("email", email), ("shippingAddress", shippingAddress), ("tipAmount", tipAmount)])
+                case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
+                return ("paymentRequestedInfo", [("flags", flags), ("name", name), ("phone", phone), ("email", email), ("shippingAddress", shippingAddress)])
     }
     }
     
@@ -3944,16 +3943,13 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.PostAddress
             } }
-            var _6: Int64?
-            if Int(_1!) & Int(1 << 4) != 0 {_6 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PaymentRequestedInfo.paymentRequestedInfo(flags: _1!, name: _2, phone: _3, email: _4, shippingAddress: _5, tipAmount: _6)
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.PaymentRequestedInfo.paymentRequestedInfo(flags: _1!, name: _2, phone: _3, email: _4, shippingAddress: _5)
             }
             else {
                 return nil

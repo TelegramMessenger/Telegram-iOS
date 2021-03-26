@@ -4897,9 +4897,9 @@ public extension Api {
                     })
                 }
             
-                public static func sendPaymentForm(flags: Int32, formId: Int64, peer: Api.InputPeer, msgId: Int32, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
+                public static func sendPaymentForm(flags: Int32, formId: Int64, peer: Api.InputPeer, msgId: Int32, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials, tipAmount: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1940324740)
+                    buffer.appendInt32(818134173)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(formId, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
@@ -4907,7 +4907,8 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(requestedInfoId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(shippingOptionId!, buffer: buffer, boxed: false)}
                     credentials.serialize(buffer, true)
-                    return (FunctionDescription(name: "payments.sendPaymentForm", parameters: [("flags", flags), ("formId", formId), ("peer", peer), ("msgId", msgId), ("requestedInfoId", requestedInfoId), ("shippingOptionId", shippingOptionId), ("credentials", credentials)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentResult? in
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt64(tipAmount!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "payments.sendPaymentForm", parameters: [("flags", flags), ("formId", formId), ("peer", peer), ("msgId", msgId), ("requestedInfoId", requestedInfoId), ("shippingOptionId", shippingOptionId), ("credentials", credentials), ("tipAmount", tipAmount)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.payments.PaymentResult?
                         if let signature = reader.readInt32() {

@@ -657,28 +657,17 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     initialValue = "0"
                 }
                 let controller = tipEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: nil, title: "Tip", text: "Enter Tip Amount", placeholder: "", value: initialValue, apply: { value in
-                    guard let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, var currentFormInfo = strongSelf.currentFormInfo, let value = value else {
+                    guard let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo, let value = value else {
                         return
                     }
 
                     let tipAmount = fractionalToCurrencyAmount(value: (Double(value) ?? 0.0), currency: paymentFormValue.invoice.currency) ?? 0
 
-                    currentFormInfo.tipAmount = tipAmount
+                    strongSelf.currentTipAmount = tipAmount
 
-                    let _ = (validateBotPaymentForm(account: strongSelf.context.account, saveInfo: false, messageId: strongSelf.messageId, formInfo: currentFormInfo)
-                    |> deliverOnMainQueue).start(next: { result in
-                        guard let strongSelf = self else {
-                            return
-                        }
+                    strongSelf.paymentFormAndInfo.set(.single((paymentFormValue, currentFormInfo, strongSelf.currentValidatedFormInfo, strongSelf.currentShippingOptionId, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
 
-                        strongSelf.currentValidatedFormInfo = result
-
-                        strongSelf.currentTipAmount = tipAmount
-
-                        strongSelf.paymentFormAndInfo.set(.single((paymentFormValue, currentFormInfo, strongSelf.currentValidatedFormInfo, strongSelf.currentShippingOptionId, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
-
-                        strongSelf.updateActionButton()
-                    })
+                    strongSelf.updateActionButton()
                 })
                 strongSelf.present(controller, nil)
             }
@@ -736,7 +725,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 if let current = form.savedInfo {
                     savedInfo = current
                 } else {
-                    savedInfo = BotPaymentRequestedInfo(name: nil, phone: nil, email: nil, shippingAddress: nil, tipAmount: nil)
+                    savedInfo = BotPaymentRequestedInfo(name: nil, phone: nil, email: nil, shippingAddress: nil)
                 }
                 strongSelf.paymentFormValue = form
                 strongSelf.currentFormInfo = savedInfo
@@ -991,7 +980,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             self.inProgressDimNode.alpha = 1.0
             self.actionButton.isEnabled = false
             self.updateActionButton()
-            self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: self.currentTipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
                     strongSelf.inProgressDimNode.alpha = 0.0

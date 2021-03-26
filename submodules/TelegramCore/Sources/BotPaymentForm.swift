@@ -78,14 +78,12 @@ public struct BotPaymentRequestedInfo: Equatable {
     public var phone: String?
     public var email: String?
     public var shippingAddress: BotPaymentShippingAddress?
-    public var tipAmount: Int64?
     
-    public init(name: String?, phone: String?, email: String?, shippingAddress: BotPaymentShippingAddress?, tipAmount: Int64?) {
+    public init(name: String?, phone: String?, email: String?, shippingAddress: BotPaymentShippingAddress?) {
         self.name = name
         self.phone = phone
         self.email = email
         self.shippingAddress = shippingAddress
-        self.tipAmount = tipAmount
     }
 }
 
@@ -163,7 +161,7 @@ extension BotPaymentInvoice {
 extension BotPaymentRequestedInfo {
     init(apiInfo: Api.PaymentRequestedInfo) {
         switch apiInfo {
-            case let .paymentRequestedInfo(_, name, phone, email, shippingAddress, tipAmount):
+            case let .paymentRequestedInfo(_, name, phone, email, shippingAddress):
                 var parsedShippingAddress: BotPaymentShippingAddress?
                 if let shippingAddress = shippingAddress {
                     switch shippingAddress {
@@ -171,7 +169,7 @@ extension BotPaymentRequestedInfo {
                         parsedShippingAddress = BotPaymentShippingAddress(streetLine1: streetLine1, streetLine2: streetLine2, city: city, state: state, countryIso2: countryIso2, postCode: postCode)
                     }
                 }
-                self.init(name: name, phone: phone, email: email, shippingAddress: parsedShippingAddress, tipAmount: tipAmount)
+                self.init(name: name, phone: phone, email: email, shippingAddress: parsedShippingAddress)
         }
     }
 }
@@ -291,10 +289,7 @@ public func validateBotPaymentForm(account: Account, saveInfo: Bool, messageId: 
             infoFlags |= (1 << 3)
             apiShippingAddress = .postAddress(streetLine1: address.streetLine1, streetLine2: address.streetLine2, city: address.city, state: address.state, countryIso2: address.countryIso2, postCode: address.postCode)
         }
-        if let _ = formInfo.tipAmount {
-            infoFlags |= (1 << 4)
-        }
-        return account.network.request(Api.functions.payments.validateRequestedInfo(flags: flags, peer: inputPeer, msgId: messageId.id, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress, tipAmount: formInfo.tipAmount)))
+        return account.network.request(Api.functions.payments.validateRequestedInfo(flags: flags, peer: inputPeer, msgId: messageId.id, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress)))
         |> mapError { error -> ValidateBotPaymentFormError in
             if error.errorDescription == "SHIPPING_NOT_AVAILABLE" {
                 return .shippingNotAvailable
@@ -343,7 +338,7 @@ public enum SendBotPaymentResult {
     case externalVerificationRequired(url: String)
 }
 
-public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -373,7 +368,10 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: I
         if shippingOptionId != nil {
             flags |= (1 << 1)
         }
-        return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, formId: formId, peer: inputPeer, msgId: messageId.id, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials))
+        if tipAmount != nil {
+            flags |= (1 << 2)
+        }
+        return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, formId: formId, peer: inputPeer, msgId: messageId.id, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials, tipAmount: tipAmount))
         |> map { result -> SendBotPaymentResult in
             switch result {
                 case let .paymentResult(updates):
