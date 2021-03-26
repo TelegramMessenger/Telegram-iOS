@@ -8,6 +8,22 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
         fileprivate var rawValue: UInt32
 
+        var predecessor: Namespace {
+            if self.rawValue != 0 {
+                return Namespace(rawValue: self.rawValue - 1)
+            } else {
+                return self
+            }
+        }
+
+        var successor: Namespace {
+            if self.rawValue != Namespace.max.rawValue {
+                return Namespace(rawValue: self.rawValue + 1)
+            } else {
+                return self
+            }
+        }
+
         fileprivate init(rawValue: UInt32) {
             precondition((rawValue | 0x7) == 0x7)
 
@@ -28,11 +44,31 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
 
     public struct Id: Comparable, Hashable, Codable {
+        public static var min: Id {
+            return Id(rawValue: 0)
+        }
+
         public static var max: Id {
             return Id(rawValue: 0x000000007fffffff)
         }
 
         fileprivate var rawValue: UInt64
+
+        var predecessor: Id {
+            if self.rawValue != 0 {
+                return Id(rawValue: self.rawValue - 1)
+            } else {
+                return self
+            }
+        }
+
+        var successor: Id {
+            if self.rawValue != Id.max.rawValue {
+                return Id(rawValue: self.rawValue + 1)
+            } else {
+                return self
+            }
+        }
 
         fileprivate init(rawValue: UInt64) {
             precondition((rawValue | 0x000FFFFFFFFFFFFF) == 0x000FFFFFFFFFFFFF)
@@ -59,6 +95,34 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     
     public let namespace: Namespace
     public let id: Id
+
+    var predecessor: PeerId {
+        let previousId = self.id.predecessor
+        if previousId != self.id {
+            return PeerId(namespace: self.namespace, id: previousId)
+        } else {
+            let previousNamespace = self.namespace.predecessor
+            if previousNamespace != self.namespace {
+                return PeerId(namespace: previousNamespace, id: .max)
+            } else {
+                return self
+            }
+        }
+    }
+
+    var successor: PeerId {
+        let nextId = self.id.successor
+        if nextId != self.id {
+            return PeerId(namespace: self.namespace, id: nextId)
+        } else {
+            let nextNamespace = self.namespace.successor
+            if nextNamespace != self.namespace {
+                return PeerId(namespace: nextNamespace, id: .min)
+            } else {
+                return self
+            }
+        }
+    }
     
     public init(namespace: Namespace, id: Id) {
         self.namespace = namespace

@@ -10,7 +10,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
     
     public var description: String {
         get {
-            return "\(namespace)_\(id)"
+            return "\(peerId):\(namespace)_\(id)"
         }
     }
     
@@ -18,6 +18,9 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
         self.peerId = peerId
         self.namespace = namespace
         self.id = id
+        if namespace == 0 && id == 0 {
+            assert(true)
+        }
     }
     
     public init(_ buffer: ReadBuffer) {
@@ -103,8 +106,11 @@ public struct MessageIndex: Comparable, Hashable {
     }
     
     public func predecessor() -> MessageIndex {
-        if self.id.id != 0 {
-            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id - 1), timestamp: self.timestamp)
+        let previousPeerId = self.id.peerId.predecessor
+        if previousPeerId != self.id.peerId {
+            return MessageIndex(id: MessageId(peerId: previousPeerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
+        } else if self.id.id != 0 {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
         } else if self.id.namespace != 0 {
             return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace - 1, id: Int32.max - 1), timestamp: self.timestamp)
         } else if self.timestamp != 0 {
@@ -115,7 +121,12 @@ public struct MessageIndex: Comparable, Hashable {
     }
     
     public func successor() -> MessageIndex {
-        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id == Int32.max ? self.id.id : (self.id.id + 1)), timestamp: self.timestamp)
+        let nextPeerId = self.id.peerId.successor
+        if nextPeerId != self.id.peerId {
+            return MessageIndex(id: MessageId(peerId: nextPeerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
+        } else {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id == Int32.max ? self.id.id : (self.id.id + 1)), timestamp: self.timestamp)
+        }
     }
     
     public static func absoluteUpperBound() -> MessageIndex {
