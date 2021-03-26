@@ -110,8 +110,8 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
-                        let params: Api.DataJSON? = nil
+                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+                        //let params: Api.DataJSON? = nil
                         let peerId: PeerId
                         switch apiPeerId {
                             case let .peerUser(userId):
@@ -298,8 +298,8 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 
                 loop: for participant in participants {
                     switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
-                        let params: Api.DataJSON? = nil
+                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+                        //let params: Api.DataJSON? = nil
                         let peerId: PeerId
                         switch apiPeerId {
                             case let .peerUser(userId):
@@ -547,8 +547,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                         case let .updateGroupCallParticipants(_, participants, _):
                             loop: for participant in participants {
                                 switch participant {
-                                case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
-                                    let params: Api.DataJSON? = nil
+                                case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+                                    //let params: Api.DataJSON? = nil
                                     let peerId: PeerId
                                     switch apiPeerId {
                                         case let .peerUser(userId):
@@ -1754,8 +1754,8 @@ public final class GroupCallParticipantsContext {
 extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
     init(_ apiParticipant: Api.GroupCallParticipant) {
         switch apiParticipant {
-        case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
-            let params: Api.DataJSON? = nil
+        case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+            //let params: Api.DataJSON? = nil
             let peerId: PeerId
             switch apiPeerId {
                 case let .peerUser(userId):
@@ -1818,8 +1818,8 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
         var participantUpdates: [GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate] = []
         for participant in participants {
             switch participant {
-            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating/*, params*/):
-                let params: Api.DataJSON? = nil
+            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, params):
+                //let params: Api.DataJSON? = nil
                 let peerId: PeerId
                 switch apiPeerId {
                     case let .peerUser(userId):
