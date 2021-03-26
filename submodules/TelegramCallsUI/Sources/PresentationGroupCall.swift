@@ -406,6 +406,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         }
     }
+
+    private let isNoiseSuppressionEnabledPromise = ValuePromise<Bool>(true)
+    public var isNoiseSuppressionEnabled: Signal<Bool, NoError> {
+        return self.isNoiseSuppressionEnabledPromise.get()
+    }
+    private let isNoiseSuppressionEnabledDisposable = MetaDisposable()
     
     private let audioOutputStatePromise = Promise<([AudioSessionOutput], AudioSessionOutput?)>(([], nil))
     private var audioOutputStateDisposable: Disposable?
@@ -812,6 +818,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.groupCallParticipantUpdatesDisposable?.dispose()
         self.leaveDisposable.dispose()
         self.isMutedDisposable.dispose()
+        self.isNoiseSuppressionEnabledDisposable.dispose()
         self.memberStatesDisposable.dispose()
         self.networkStateDisposable.dispose()
         self.checkCallDisposable?.dispose()
@@ -1259,6 +1266,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.reconnectedAsEventsPipe.putNext(peer)
                         }
                     }
+                }))
+
+                self.isNoiseSuppressionEnabledDisposable.set((callContext.isNoiseSuppressionEnabled
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.isNoiseSuppressionEnabledPromise.set(value)
                 }))
                 
                 self.audioLevelsDisposable.set((callContext.audioLevels
@@ -1921,6 +1936,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         } else {
             self.stateValue.muteState = nil
         }
+    }
+
+    public func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {
+        self.callContext?.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
     }
     
     public func raiseHand() {

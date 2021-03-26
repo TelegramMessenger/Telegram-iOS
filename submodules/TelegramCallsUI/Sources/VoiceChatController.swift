@@ -737,6 +737,8 @@ public final class VoiceChatController: ViewController {
         private let leaveDisposable = MetaDisposable()
         
         private var isMutedDisposable: Disposable?
+        private var isNoiseSuppressionEnabled: Bool = true
+        private var isNoiseSuppressionEnabledDisposable: Disposable?
         private var callStateDisposable: Disposable?
         
         private var pushingToTalk = false
@@ -886,6 +888,14 @@ public final class VoiceChatController: ViewController {
             |> map { peer in
                 return [FoundPeer(peer: peer, subscribers: nil)]
             }
+
+            self.isNoiseSuppressionEnabledDisposable = (call.isNoiseSuppressionEnabled
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.isNoiseSuppressionEnabled = value
+            })
             
             let displayAsPeers: Signal<[FoundPeer], NoError> = currentAccountPeer
             |> then(
@@ -1842,6 +1852,7 @@ public final class VoiceChatController: ViewController {
             self.peerViewDisposable?.dispose()
             self.leaveDisposable.dispose()
             self.isMutedDisposable?.dispose()
+            self.isNoiseSuppressionEnabledDisposable?.dispose()
             self.callStateDisposable?.dispose()
             self.audioOutputStateDisposable?.dispose()
             self.memberStatesDisposable?.dispose()
@@ -2000,6 +2011,18 @@ public final class VoiceChatController: ViewController {
                         self?.controller?.present(controller, in: .window(.root))
                     })))
                 }
+
+                items.append(.action(ContextMenuActionItem(text: strongSelf.isNoiseSuppressionEnabled ? "Disable Noise Suppression" : "Enable Noise Suppression", textColor: .primary, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    f(.dismissWithoutContent)
+
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    strongSelf.call.setIsNoiseSuppressionEnabled(!strongSelf.isNoiseSuppressionEnabled)
+                })))
 
                 if let callState = strongSelf.callState, callState.canManageCall {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
