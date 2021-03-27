@@ -162,7 +162,7 @@ extension SelectivePrivacySettings {
                     current = .enableContacts(enableFor: [:], disableFor: [:])
                 case let .privacyValueAllowUsers(users):
                     for id in users {
-                        if let peer = peers[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] {
+                        if let peer = peers[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))] {
                             enableFor[peer.peer.id] = peer
                         }
                     }
@@ -172,13 +172,13 @@ extension SelectivePrivacySettings {
                     break
                 case let .privacyValueDisallowUsers(users):
                     for id in users {
-                        if let peer = peers[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] {
+                        if let peer = peers[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))] {
                             disableFor[peer.peer.id] = peer
                         }
                     }
                 case let .privacyValueAllowChatParticipants(chats):
                     for id in chats {
-                        for possibleId in [PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)] {
+                        for possibleId in [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id)), PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(id))] {
                             if let peer = peers[possibleId] {
                                 enableFor[peer.peer.id] = peer
                             }
@@ -186,7 +186,7 @@ extension SelectivePrivacySettings {
                     }
                 case let .privacyValueDisallowChatParticipants(chats):
                     for id in chats {
-                        for possibleId in [PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)] {
+                        for possibleId in [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id)), PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(id))] {
                             if let peer = peers[possibleId] {
                                 disableFor[peer.peer.id] = peer
                             }

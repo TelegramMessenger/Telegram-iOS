@@ -46,6 +46,28 @@ private func loadCurrencyFormatterEntries() -> [String: CurrencyFormatterEntry] 
 
 private let currencyFormatterEntries = loadCurrencyFormatterEntries()
 
+public func fractionalToCurrencyAmount(value: Double, currency: String) -> Int64? {
+    guard let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] else {
+        return nil
+    }
+    var factor: Double = 1.0
+    for _ in 0 ..< entry.decimalDigits {
+        factor *= 10.0
+    }
+    return Int64(value * factor)
+}
+
+public func currencyToFractionalAmount(value: Int64, currency: String) -> Double? {
+    guard let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] else {
+        return nil
+    }
+    var factor: Double = 1.0
+    for _ in 0 ..< entry.decimalDigits {
+        factor *= 10.0
+    }
+    return Double(value) / factor
+}
+
 public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
     if let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
         var result = ""

@@ -573,13 +573,13 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
 func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
     switch peerId.namespace {
         case Namespaces.Peer.CloudUser:
-            return Api.Peer.peerUser(userId: peerId.id)
+            return Api.Peer.peerUser(userId: peerId.id._internalGetInt32Value())
         case Namespaces.Peer.CloudGroup:
-            return Api.Peer.peerChat(chatId: peerId.id)
+            return Api.Peer.peerChat(chatId: peerId.id._internalGetInt32Value())
         case Namespaces.Peer.CloudChannel:
-            return Api.Peer.peerChannel(channelId: peerId.id)
+            return Api.Peer.peerChannel(channelId: peerId.id._internalGetInt32Value())
         default:
-            return Api.Peer.peerUser(userId: accountPeerId.id)
+            return Api.Peer.peerUser(userId: accountPeerId.id._internalGetInt32Value())
     }
 }
 

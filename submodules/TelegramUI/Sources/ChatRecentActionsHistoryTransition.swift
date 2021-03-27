@@ -286,7 +286,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     case .header:
                         var peers = SimpleDictionary<PeerId, Peer>()
                         var author: Peer?
-                        if self.entry.event.peerId == PeerId(namespace: Namespaces.Peer.CloudUser, id: 136817688) {
+                        if self.entry.event.peerId == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(136817688)) {
                             author = message?.effectiveAuthor
                         } else if let peer = self.entry.peers[self.entry.event.peerId] {
                             author = peer

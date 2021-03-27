@@ -287,7 +287,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         
         super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
-        self.dataRequestDisposable = (requestBotPaymentReceipt(network: context.account.network, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
+        self.dataRequestDisposable = (requestBotPaymentReceipt(account: context.account, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
             if let strongSelf = self {
                 strongSelf.receiptData.set(.single((receipt.invoice, receipt.info, receipt.shippingOption, receipt.credentialsTitle)))
             }

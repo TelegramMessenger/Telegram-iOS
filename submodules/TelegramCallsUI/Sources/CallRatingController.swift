@@ -241,7 +241,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
 }
 
 func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comment: String, userInitiated: Bool, includeLogs: Bool) -> Signal<Void, NoError> {
-    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 4244000)
+    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(4244000))
 
     let rate = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment, userInitiated: userInitiated)
     if includeLogs {

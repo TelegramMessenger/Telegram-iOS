@@ -83,7 +83,7 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizePinnedChatsOperation {
-                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, groupId: PeerGroupId(rawValue: entry.peerId.id), operation: operation)
+                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, groupId: PeerGroupId(rawValue: entry.peerId.id._internalGetInt32Value()), operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -182,15 +182,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                             continue loop
                     }
                     
-                    let peerId: PeerId
-                    switch apiPeer {
-                        case let .peerUser(userId):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                        case let .peerChat(chatId):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        case let .peerChannel(channelId):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                    }
+                    let peerId: PeerId = apiPeer.peerId
                     
                     remoteItemIds.append(.peer(peerId))
                     

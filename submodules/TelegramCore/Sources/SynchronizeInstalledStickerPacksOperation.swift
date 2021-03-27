@@ -35,7 +35,7 @@ func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, name
     }
     var previousStickerPackIds: [ItemCollectionId]?
     var archivedPacks: [ItemCollectionId] = []
-    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
+    transaction.operationLogEnumerateEntries(peerId: PeerId(0), tag: tag, { entry in
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
             previousStickerPackIds = operation.previousPacks
@@ -64,16 +64,16 @@ func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, name
     }
     let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousPacks, archivedPacks: archivedPacks, noDelay: noDelay)
     if let updateLocalIndex = updateLocalIndex {
-        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(0), tag: tag, tagLocalIndex: updateLocalIndex)
     }
-    transaction.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+    transaction.operationLogAddEntry(peerId: PeerId(0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }
 
 func addSynchronizeMarkFeaturedStickerPacksAsSeenOperation(transaction: Transaction, ids: [ItemCollectionId]) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeMarkFeaturedStickerPacksAsSeen
     var previousIds = Set<ItemCollectionId>()
-    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
+    transaction.operationLogEnumerateEntries(peerId: PeerId(0), tag: tag, { entry in
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeMarkFeaturedStickerPacksAsSeenOperation {
             previousIds = Set(operation.ids)
@@ -84,7 +84,7 @@ func addSynchronizeMarkFeaturedStickerPacksAsSeenOperation(transaction: Transact
     })
     let operationContents = SynchronizeMarkFeaturedStickerPacksAsSeenOperation(ids: Array(previousIds.union(Set(ids))))
     if let updateLocalIndex = updateLocalIndex {
-        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(0), tag: tag, tagLocalIndex: updateLocalIndex)
     }
-    transaction.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+    transaction.operationLogAddEntry(peerId: PeerId(0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }

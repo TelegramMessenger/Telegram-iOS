@@ -22,6 +22,8 @@ public struct BotPaymentInvoiceFields: OptionSet {
     public static let email = BotPaymentInvoiceFields(rawValue: 1 << 2)
     public static let shippingAddress = BotPaymentInvoiceFields(rawValue: 1 << 3)
     public static let flexibleShipping = BotPaymentInvoiceFields(rawValue: 1 << 4)
+    public static let phoneAvailableToProvider = BotPaymentInvoiceFields(rawValue: 1 << 5)
+    public static let emailAvailableToProvider = BotPaymentInvoiceFields(rawValue: 1 << 6)
 }
 
 public struct BotPaymentPrice : Equatable {
@@ -35,10 +37,17 @@ public struct BotPaymentPrice : Equatable {
 }
 
 public struct BotPaymentInvoice : Equatable {
+    public struct Tip: Equatable {
+        public var min: Int64
+        public var max: Int64
+        public var `default`: Int64
+    }
+
     public let isTest: Bool
     public let requestedFields: BotPaymentInvoiceFields
     public let currency: String
     public let prices: [BotPaymentPrice]
+    public let tip: Tip?
 }
 
 public struct BotPaymentNativeProvider : Equatable {
@@ -65,10 +74,10 @@ public struct BotPaymentShippingAddress: Equatable {
 }
 
 public struct BotPaymentRequestedInfo: Equatable {
-    public let name: String?
-    public let phone: String?
-    public let email: String?
-    public let shippingAddress: BotPaymentShippingAddress?
+    public var name: String?
+    public var phone: String?
+    public var email: String?
+    public var shippingAddress: BotPaymentShippingAddress?
     
     public init(name: String?, phone: String?, email: String?, shippingAddress: BotPaymentShippingAddress?) {
         self.name = name
@@ -94,6 +103,7 @@ public enum BotPaymentSavedCredentials: Equatable {
 }
 
 public struct BotPaymentForm : Equatable {
+    public let id: Int64
     public let canSaveCredentials: Bool
     public let passwordMissing: Bool
     public let invoice: BotPaymentInvoice
@@ -111,7 +121,7 @@ public enum BotPaymentFormRequestError {
 extension BotPaymentInvoice {
     init(apiInvoice: Api.Invoice) {
         switch apiInvoice {
-            case let .invoice(flags, currency, prices):
+            case let .invoice(flags, currency, prices, minTipAmount, maxTipAmount, defaultTipAmount):
                 var fields = BotPaymentInvoiceFields()
                 if (flags & (1 << 1)) != 0 {
                     fields.insert(.name)
@@ -128,12 +138,22 @@ extension BotPaymentInvoice {
                 if (flags & (1 << 5)) != 0 {
                     fields.insert(.flexibleShipping)
                 }
+                if (flags & (1 << 6)) != 0 {
+                    fields.insert(.phoneAvailableToProvider)
+                }
+                if (flags & (1 << 7)) != 0 {
+                    fields.insert(.emailAvailableToProvider)
+                }
+                var parsedTip: BotPaymentInvoice.Tip?
+                if let minTipAmount = minTipAmount, let maxTipAmount = maxTipAmount, let defaultTipAmount = defaultTipAmount {
+                    parsedTip = BotPaymentInvoice.Tip(min: minTipAmount, max: maxTipAmount, default: defaultTipAmount)
+                }
                 self.init(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
                     switch $0 {
                         case let .labeledPrice(label, amount):
                             return BotPaymentPrice(label: label, amount: amount)
                     }
-                })
+                }, tip: parsedTip)
         }
     }
 }
@@ -155,14 +175,22 @@ extension BotPaymentRequestedInfo {
 }
 
 public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
-    return network.request(Api.functions.payments.getPaymentForm(msgId: messageId.id))
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> castError(BotPaymentFormRequestError.self)
+    |> mapToSignal { inputPeer -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
+        guard let inputPeer = inputPeer else {
+            return .fail(.generic)
+        }
+        return network.request(Api.functions.payments.getPaymentForm(flags: 0, peer: inputPeer, msgId: messageId.id, themeParams: nil))
         |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
             return .fail(.generic)
         }
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> BotPaymentForm in
                 switch result {
-                    case let .paymentForm(flags, _, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                    case let .paymentForm(flags, id, _, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
                         var peers: [Peer] = []
                         for user in apiUsers {
                             let parsed = TelegramUser(user: user)
@@ -171,7 +199,7 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                             return updated
                         })
-                        
+
                         let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                         var parsedNativeProvider: BotPaymentNativeProvider?
                         if let nativeProvider = nativeProvider, let nativeParams = nativeParams {
@@ -188,10 +216,12 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                                     parsedSavedCredentials = .card(id: id, title: title)
                             }
                         }
-                        return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: providerId), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
                 }
-            } |> mapError { _ -> BotPaymentFormRequestError in return .generic }
+            }
+            |> mapError { _ -> BotPaymentFormRequestError in }
         }
+    }
 }
 
 public enum ValidateBotPaymentFormError {
@@ -230,27 +260,36 @@ extension BotPaymentShippingOption {
     }
 }
 
-public func validateBotPaymentForm(network: Network, saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError>  {
-    var flags: Int32 = 0
-    if saveInfo {
-        flags |= (1 << 0)
+public func validateBotPaymentForm(account: Account, saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
-    var infoFlags: Int32 = 0
-    if let _ = formInfo.name {
-        infoFlags |= (1 << 0)
-    }
-    if let _ = formInfo.phone {
-        infoFlags |= (1 << 1)
-    }
-    if let _ = formInfo.email {
-        infoFlags |= (1 << 2)
-    }
-    var apiShippingAddress: Api.PostAddress?
-    if let address = formInfo.shippingAddress {
-        infoFlags |= (1 << 3)
-        apiShippingAddress = .postAddress(streetLine1: address.streetLine1, streetLine2: address.streetLine2, city: address.city, state: address.state, countryIso2: address.countryIso2, postCode: address.postCode)
-    }
-    return network.request(Api.functions.payments.validateRequestedInfo(flags: flags, msgId: messageId.id, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress)))
+    |> castError(ValidateBotPaymentFormError.self)
+    |> mapToSignal { inputPeer -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> in
+        guard let inputPeer = inputPeer else {
+            return .fail(.generic)
+        }
+
+        var flags: Int32 = 0
+        if saveInfo {
+            flags |= (1 << 0)
+        }
+        var infoFlags: Int32 = 0
+        if let _ = formInfo.name {
+            infoFlags |= (1 << 0)
+        }
+        if let _ = formInfo.phone {
+            infoFlags |= (1 << 1)
+        }
+        if let _ = formInfo.email {
+            infoFlags |= (1 << 2)
+        }
+        var apiShippingAddress: Api.PostAddress?
+        if let address = formInfo.shippingAddress {
+            infoFlags |= (1 << 3)
+            apiShippingAddress = .postAddress(streetLine1: address.streetLine1, streetLine2: address.streetLine2, city: address.city, state: address.state, countryIso2: address.countryIso2, postCode: address.postCode)
+        }
+        return account.network.request(Api.functions.payments.validateRequestedInfo(flags: flags, peer: inputPeer, msgId: messageId.id, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress)))
         |> mapError { error -> ValidateBotPaymentFormError in
             if error.errorDescription == "SHIPPING_NOT_AVAILABLE" {
                 return .shippingNotAvailable
@@ -278,6 +317,7 @@ public func validateBotPaymentForm(network: Network, saveInfo: Bool, messageId: 
                     })
             }
         }
+    }
 }
 
 public enum BotPaymentCredentials {
@@ -298,46 +338,59 @@ public enum SendBotPaymentResult {
     case externalVerificationRequired(url: String)
 }
 
-public func sendBotPaymentForm(account: Account, messageId: MessageId, validatedInfoId: String?, shippingOptionId: String?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
-    let apiCredentials: Api.InputPaymentCredentials
-    switch credentials {
-        case let .generic(data, saveOnServer):
-            var credentialsFlags: Int32 = 0
-            if saveOnServer {
-                credentialsFlags |= (1 << 0)
+public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> castError(SendBotPaymentFormError.self)
+    |> mapToSignal { inputPeer -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+        guard let inputPeer = inputPeer else {
+            return .fail(.generic)
+        }
+
+        let apiCredentials: Api.InputPaymentCredentials
+        switch credentials {
+            case let .generic(data, saveOnServer):
+                var credentialsFlags: Int32 = 0
+                if saveOnServer {
+                    credentialsFlags |= (1 << 0)
+                }
+                apiCredentials = .inputPaymentCredentials(flags: credentialsFlags, data: .dataJSON(data: data))
+            case let .saved(id, tempPassword):
+                apiCredentials = .inputPaymentCredentialsSaved(id: id, tmpPassword: Buffer(data: tempPassword))
+            case let .applePay(data):
+                apiCredentials = .inputPaymentCredentialsApplePay(paymentData: .dataJSON(data: data))
+        }
+        var flags: Int32 = 0
+        if validatedInfoId != nil {
+            flags |= (1 << 0)
+        }
+        if shippingOptionId != nil {
+            flags |= (1 << 1)
+        }
+        if tipAmount != nil {
+            flags |= (1 << 2)
+        }
+        return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, formId: formId, peer: inputPeer, msgId: messageId.id, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials, tipAmount: tipAmount))
+        |> map { result -> SendBotPaymentResult in
+            switch result {
+                case let .paymentResult(updates):
+                    account.stateManager.addUpdates(updates)
+                    return .done
+                case let .paymentVerificationNeeded(url):
+                    return .externalVerificationRequired(url: url)
             }
-            apiCredentials = .inputPaymentCredentials(flags: credentialsFlags, data: .dataJSON(data: data))
-        case let .saved(id, tempPassword):
-            apiCredentials = .inputPaymentCredentialsSaved(id: id, tmpPassword: Buffer(data: tempPassword))
-        case let .applePay(data):
-            apiCredentials = .inputPaymentCredentialsApplePay(paymentData: .dataJSON(data: data))
-    }
-    var flags: Int32 = 0
-    if validatedInfoId != nil {
-        flags |= (1 << 0)
-    }
-    if shippingOptionId != nil {
-        flags |= (1 << 1)
-    }
-    return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, msgId: messageId.id, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials))
-    |> map { result -> SendBotPaymentResult in
-        switch result {
-            case let .paymentResult(updates):
-                account.stateManager.addUpdates(updates)
-                return .done
-            case let .paymentVerificationNeeded(url):
-                return .externalVerificationRequired(url: url)
         }
-    }
-    |> `catch` { error -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
-        if error.errorDescription == "BOT_PRECHECKOUT_FAILED" {
-            return .fail(.precheckoutFailed)
-        } else if error.errorDescription == "PAYMENT_FAILED" {
-            return .fail(.paymentFailed)
-        } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
-            return .fail(.alreadyPaid)
+        |> `catch` { error -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+            if error.errorDescription == "BOT_PRECHECKOUT_FAILED" {
+                return .fail(.precheckoutFailed)
+            } else if error.errorDescription == "PAYMENT_FAILED" {
+                return .fail(.paymentFailed)
+            } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
+                return .fail(.alreadyPaid)
+            }
+            return .fail(.generic)
         }
-        return .fail(.generic)
     }
 }
 
@@ -348,16 +401,32 @@ public struct BotPaymentReceipt : Equatable {
     public let credentialsTitle: String
 }
 
-public func requestBotPaymentReceipt(network: Network, messageId: MessageId) -> Signal<BotPaymentReceipt, NoError> {
-    return network.request(Api.functions.payments.getPaymentReceipt(msgId: messageId.id))
-    |> retryRequest
-    |> map { result -> BotPaymentReceipt in
-        switch result {
-            case let .paymentReceipt(_, _, _, invoice, _, info, shipping, _, _, credentialsTitle, _):
-                let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
-                let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
-                let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
-                return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
+public enum RequestBotPaymentReceiptError {
+    case generic
+}
+
+public func requestBotPaymentReceipt(account: Account, messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> castError(RequestBotPaymentReceiptError.self)
+    |> mapToSignal { inputPeer -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> in
+        guard let inputPeer = inputPeer else {
+            return .fail(.generic)
+        }
+
+        return account.network.request(Api.functions.payments.getPaymentReceipt(peer: inputPeer, msgId: messageId.id))
+        |> mapError { _ -> RequestBotPaymentReceiptError in
+            return .generic
+        }
+        |> map { result -> BotPaymentReceipt in
+            switch result {
+                case let .paymentReceipt(_, _, _, invoice, _, info, shipping, _, _, credentialsTitle, _):
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
+                    let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
+                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
+            }
         }
     }
 }

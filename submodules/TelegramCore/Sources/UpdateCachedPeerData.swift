@@ -217,7 +217,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                     }
                 }
             } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-                return network.request(Api.functions.messages.getFullChat(chatId: peerId.id))
+                return network.request(Api.functions.messages.getFullChat(chatId: peerId.id._internalGetInt32Value()))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<Bool, NoError> in
                     return postbox.transaction { transaction -> Bool in
@@ -236,7 +236,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                 for botInfo in chatFull.botInfo ?? [] {
                                     switch botInfo {
                                     case let .botInfo(userId, _, _):
-                                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                         let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
                                         botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
                                     }
@@ -381,7 +381,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                             
                                             let linkedDiscussionPeerId: PeerId?
                                             if let linkedChatId = linkedChatId, linkedChatId != 0 {
-                                                linkedDiscussionPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: linkedChatId)
+                                                linkedDiscussionPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(linkedChatId))
                                             } else {
                                                 linkedDiscussionPeerId = nil
                                             }
@@ -399,7 +399,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                             for botInfo in apiBotInfos {
                                                 switch botInfo {
                                                 case let .botInfo(userId, _, _):
-                                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                                     let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
                                                     botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
                                                 }
@@ -421,7 +421,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                             
                                             var migrationReference: ChannelMigrationReference?
                                             if let migratedFromChatId = migratedFromChatId, let migratedFromMaxId = migratedFromMaxId {
-                                                migrationReference = ChannelMigrationReference(maxMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: migratedFromChatId), namespace: Namespaces.Message.Cloud, id: migratedFromMaxId))
+                                                migrationReference = ChannelMigrationReference(maxMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(migratedFromChatId)), namespace: Namespaces.Message.Cloud, id: migratedFromMaxId))
                                             }
                                             
                                             var peers: [Peer] = []
@@ -490,7 +490,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                                 case let.channelParticipant(participant, _, _):
                                                     switch participant {
                                                     case let .channelParticipantSelf(_, inviterId, _):
-                                                        invitedBy = PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId)
+                                                        invitedBy = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(inviterId))
                                                     default:
                                                         break
                                                     }

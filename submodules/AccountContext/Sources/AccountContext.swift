@@ -513,7 +513,7 @@ public enum ChatListSearchFilter: Equatable {
             case .voice:
                 return 5
             case let .peer(peerId, _, _, _):
-                return peerId.id
+                return peerId.id._internalGetInt32Value()
             case let .date(_, date, _):
                 return date
         }

@@ -250,13 +250,13 @@ public final class SharedNotificationManager {
                     var peerId: PeerId?
                     if let fromId = payload["from_id"] {
                         let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                     } else if let fromId = payload["chat_id"] {
                         let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                     } else if let fromId = payload["channel_id"] {
                         let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                     }
                     if let peerId = peerId {
                         if let messageIds = payload["messages"] as? String {
@@ -314,13 +314,13 @@ public final class SharedNotificationManager {
                     
                     if let fromId = payload["from_id"] {
                         let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                     } else if let fromId = payload["chat_id"] {
                         let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                     } else if let fromId = payload["channel_id"] {
                         let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                     }
                     
                     if let msgId = payload["msg_id"] {
@@ -332,7 +332,7 @@ public final class SharedNotificationManager {
                         let randomIdValue = randomId as! NSString
                         var peerId: PeerId?
                         if let encryptionIdString = payload["encryption_id"] as? String, let encryptionId = Int32(encryptionIdString) {
-                            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: encryptionId)
+                            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(encryptionId))
                         }
                         notificationRequestId = .globallyUniqueId(randomIdValue.longLongValue, peerId)
                     } else {
@@ -344,13 +344,13 @@ public final class SharedNotificationManager {
                 
                 if let fromId = payload["from_id"] {
                     let fromIdValue = fromId as! NSString
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                 } else if let fromId = payload["chat_id"] {
                     let fromIdValue = fromId as! NSString
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                 } else if let fromId = payload["channel_id"] {
                     let fromIdValue = fromId as! NSString
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                 }
                 
                 if let peerId = peerId {

@@ -308,6 +308,7 @@ public protocol PresentationGroupCall: class {
     var audioLevels: Signal<[(PeerId, UInt32, Float, Bool)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
+    var isNoiseSuppressionEnabled: Signal<Bool, NoError> { get }
     
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     var reconnectedAsEvents: Signal<Peer, NoError> { get }
@@ -318,6 +319,7 @@ public protocol PresentationGroupCall: class {
     
     func toggleIsMuted()
     func setIsMuted(action: PresentationGroupCallMuteAction)
+    func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool)
     func raiseHand()
     func lowerHand()
     func requestVideo()

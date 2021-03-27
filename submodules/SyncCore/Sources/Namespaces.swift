@@ -31,11 +31,11 @@ public struct Namespaces {
     }
     
     public struct Peer {
-        public static let CloudUser: Int32 = 0
-        public static let CloudGroup: Int32 = 1
-        public static let CloudChannel: Int32 = 2
-        public static let SecretChat: Int32 = 3
-        public static let Empty: Int32 = Int32.max
+        public static let CloudUser = PeerId.Namespace._internalFromInt32Value(0)
+        public static let CloudGroup = PeerId.Namespace._internalFromInt32Value(1)
+        public static let CloudChannel = PeerId.Namespace._internalFromInt32Value(2)
+        public static let SecretChat = PeerId.Namespace._internalFromInt32Value(3)
+        public static let Empty = PeerId.Namespace.max
     }
     
     public struct ItemCollection {

@@ -17,7 +17,7 @@ public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId)
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.deleteChatUser(flags: 0, chatId: group.id.id, userId: inputUser))
+                return account.network.request(Api.functions.messages.deleteChatUser(flags: 0, chatId: group.id.id._internalGetInt32Value(), userId: inputUser))
                 |> mapError { error -> Void in
                     return Void()
                 }

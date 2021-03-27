@@ -301,15 +301,16 @@ public struct payments {
     
     }
     public enum PaymentForm: TypeConstructorDescription {
-        case paymentForm(flags: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
+        case paymentForm(flags: Int32, formId: Int64, botId: Int32, invoice: Api.Invoice, providerId: Int32, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .paymentForm(let flags, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
+                case .paymentForm(let flags, let formId, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
                     if boxed {
-                        buffer.appendInt32(1062645411)
+                        buffer.appendInt32(-1928649707)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(formId, buffer: buffer, boxed: false)
                     serializeInt32(botId, buffer: buffer, boxed: false)
                     invoice.serialize(buffer, true)
                     serializeInt32(providerId, buffer: buffer, boxed: false)
@@ -329,54 +330,57 @@ public struct payments {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .paymentForm(let flags, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
-                return ("paymentForm", [("flags", flags), ("botId", botId), ("invoice", invoice), ("providerId", providerId), ("url", url), ("nativeProvider", nativeProvider), ("nativeParams", nativeParams), ("savedInfo", savedInfo), ("savedCredentials", savedCredentials), ("users", users)])
+                case .paymentForm(let flags, let formId, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
+                return ("paymentForm", [("flags", flags), ("formId", formId), ("botId", botId), ("invoice", invoice), ("providerId", providerId), ("url", url), ("nativeProvider", nativeProvider), ("nativeParams", nativeParams), ("savedInfo", savedInfo), ("savedCredentials", savedCredentials), ("users", users)])
     }
     }
     
         public static func parse_paymentForm(_ reader: BufferReader) -> PaymentForm? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Api.Invoice?
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Api.Invoice?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Invoice
+                _4 = Api.parse(reader, signature: signature) as? Api.Invoice
             }
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: String?
-            _5 = parseString(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
             var _6: String?
-            if Int(_1!) & Int(1 << 4) != 0 {_6 = parseString(reader) }
-            var _7: Api.DataJSON?
+            _6 = parseString(reader)
+            var _7: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_7 = parseString(reader) }
+            var _8: Api.DataJSON?
             if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.DataJSON
+                _8 = Api.parse(reader, signature: signature) as? Api.DataJSON
             } }
-            var _8: Api.PaymentRequestedInfo?
+            var _9: Api.PaymentRequestedInfo?
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+                _9 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
             } }
-            var _9: Api.PaymentSavedCredentials?
+            var _10: Api.PaymentSavedCredentials?
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.PaymentSavedCredentials
+                _10 = Api.parse(reader, signature: signature) as? Api.PaymentSavedCredentials
             } }
-            var _10: [Api.User]?
+            var _11: [Api.User]?
             if let _ = reader.readInt32() {
-                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
+            let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
-            let _c10 = _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.payments.PaymentForm.paymentForm(flags: _1!, botId: _2!, invoice: _3!, providerId: _4!, url: _5!, nativeProvider: _6, nativeParams: _7, savedInfo: _8, savedCredentials: _9, users: _10!)
+            let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 0) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.payments.PaymentForm.paymentForm(flags: _1!, formId: _2!, botId: _3!, invoice: _4!, providerId: _5!, url: _6!, nativeProvider: _7, nativeParams: _8, savedInfo: _9, savedCredentials: _10, users: _11!)
             }
             else {
                 return nil

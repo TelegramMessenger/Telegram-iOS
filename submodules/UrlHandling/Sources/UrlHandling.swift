@@ -146,7 +146,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                     }
                 } else if pathComponents[0].hasPrefix(phonebookUsernamePathPrefix), let idValue = Int32(String(pathComponents[0][pathComponents[0].index(pathComponents[0].startIndex, offsetBy: phonebookUsernamePathPrefix.count)...])) {
-                    return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
+                    return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(idValue)))
                 } else if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
                     return .join(String(pathComponents[0].dropFirst()))
                 }
@@ -261,7 +261,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 }
                             }
                         }
-                        return .privateMessage(messageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: messageId), threadId: threadId)
+                        return .privateMessage(messageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId), threadId: threadId)
                     } else {
                         return nil
                     }
@@ -374,7 +374,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {
-                    foundPeer = TelegramEngine(account: account).peerNames.findChannelById(channelId: messageId.peerId.id)
+                    foundPeer = TelegramEngine(account: account).peerNames.findChannelById(channelId: messageId.peerId.id._internalGetInt32Value())
                 }
                 return foundPeer
                 |> mapToSignal { foundPeer -> Signal<ResolvedUrl?, NoError> in

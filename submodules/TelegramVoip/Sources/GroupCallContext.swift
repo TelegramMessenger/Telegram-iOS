@@ -173,6 +173,7 @@ public final class OngoingGroupCallContext {
         let joinPayload = Promise<(String, UInt32)>()
         let networkState = ValuePromise<NetworkState>(NetworkState(isConnected: false, isTransitioningFromBroadcastToRtc: false), ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
+        let isNoiseSuppressionEnabled = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
         
         let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
@@ -222,7 +223,8 @@ public final class OngoingGroupCallContext {
                     return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
                 outgoingAudioBitrateKbit: outgoingAudioBitrateKbit ?? 32,
-                enableVideo: enableVideo
+                enableVideo: enableVideo,
+                enableNoiseSuppression: true
             )
             
             let queue = self.queue
@@ -338,6 +340,11 @@ public final class OngoingGroupCallContext {
         func setIsMuted(_ isMuted: Bool) {
             self.isMuted.set(isMuted)
             self.context.setIsMuted(isMuted)
+        }
+
+        func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {
+            self.isNoiseSuppressionEnabled.set(isNoiseSuppressionEnabled)
+            self.context.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
         }
         
         func requestVideo(_ capturer: OngoingCallVideoCapturer?) {
@@ -497,6 +504,18 @@ public final class OngoingGroupCallContext {
             return disposable
         }
     }
+
+    public var isNoiseSuppressionEnabled: Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.isNoiseSuppressionEnabled.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
     
     public var videoSources: Signal<Set<UInt32>, NoError> {
         return Signal { subscriber in
@@ -526,6 +545,12 @@ public final class OngoingGroupCallContext {
     public func setIsMuted(_ isMuted: Bool) {
         self.impl.with { impl in
             impl.setIsMuted(isMuted)
+        }
+    }
+
+    public func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {
+        self.impl.with { impl in
+            impl.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
         }
     }
     

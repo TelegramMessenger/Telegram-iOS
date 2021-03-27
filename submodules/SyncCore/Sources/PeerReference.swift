@@ -39,15 +39,15 @@ public enum PeerReference: PostboxCoding, Hashable, Equatable {
         switch peer {
             case let user as TelegramUser:
                 if let accessHash = user.accessHash {
-                    self = .user(id: user.id.id, accessHash: accessHash.value)
+                    self = .user(id: user.id.id._internalGetInt32Value(), accessHash: accessHash.value)
                 } else {
                     return nil
                 }
             case let group as TelegramGroup:
-                self = .group(id: group.id.id)
+                self = .group(id: group.id.id._internalGetInt32Value())
             case let channel as TelegramChannel:
                 if let accessHash = channel.accessHash {
-                    self = .channel(id: channel.id.id, accessHash: accessHash.value)
+                    self = .channel(id: channel.id.id._internalGetInt32Value(), accessHash: accessHash.value)
                 } else {
                     return nil
                 }
