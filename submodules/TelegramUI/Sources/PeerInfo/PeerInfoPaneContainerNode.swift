@@ -24,6 +24,7 @@ protocol PeerInfoPaneNode: ASDisplayNode {
     func addToTransitionSurface(view: UIView)
     func updateHiddenMedia()
     func updateSelectedMessages(animated: Bool)
+    func ensureMessageIsVisible(id: MessageId)
 }
 
 final class PeerInfoPaneWrapper {

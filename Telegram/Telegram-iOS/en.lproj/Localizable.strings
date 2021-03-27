@@ -6317,6 +6317,7 @@ Sorry for the inconvenience.";
 "VoiceChat.EditBioText" = "Any details such as age, occupation or city.";
 "VoiceChat.EditBioPlaceholder" = "Bio";
 "VoiceChat.EditBioSave" = "Save";
+"VoiceChat.EditBioSuccess" = "Your bio is saved.";
 
 "VoiceChat.SendPublicLinkText" = "%1$@ isn't a member of \"%2$@\" yet. Send them a public invite link instead?";
 "VoiceChat.SendPublicLinkSend" = "Send";

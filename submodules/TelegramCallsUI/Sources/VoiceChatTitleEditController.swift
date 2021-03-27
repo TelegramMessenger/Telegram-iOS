@@ -41,8 +41,11 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         }
     }
     
-    init(theme: PresentationTheme, placeholder: String) {
+    private let maxLength: Int
+    
+    init(theme: PresentationTheme, placeholder: String, maxLength: Int) {
         self.theme = theme
+        self.maxLength = maxLength
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -135,7 +138,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
     
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         let updatedText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: text)
-        if updatedText.count > 40 {
+        if updatedText.count > maxLength {
             self.textInputNode.layer.addShakeAnimation()
             return false
         }
@@ -205,7 +208,7 @@ private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?, maxLength: Int) {
         self.strings = strings
         self.title = title
         self.text = text
@@ -215,7 +218,7 @@ private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 8
         
-        self.inputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: placeholder)
+        self.inputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: placeholder, maxLength: maxLength)
         self.inputFieldNode.text = value ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()
@@ -408,7 +411,7 @@ private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
     }
 }
 
-func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, text: String, placeholder: String, doneButtonTitle: String? = nil, value: String?, apply: @escaping (String?) -> Void) -> AlertController {
+func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, text: String, placeholder: String, doneButtonTitle: String? = nil, value: String?, maxLength: Int, apply: @escaping (String?) -> Void) -> AlertController {
     var presentationData = sharedContext.currentPresentationData.with { $0 }
     if let forceTheme = forceTheme {
         presentationData = presentationData.withUpdated(theme: forceTheme)
@@ -423,7 +426,7 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
         applyImpl?()
     })]
     
-    let contentNode = VoiceChatTitleEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value)
+    let contentNode = VoiceChatTitleEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength)
     contentNode.complete = {
         applyImpl?()
     }

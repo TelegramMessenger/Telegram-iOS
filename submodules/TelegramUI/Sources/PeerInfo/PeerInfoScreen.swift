@@ -3107,7 +3107,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     })
                 }
             })
-        })))
+        }), centralItemUpdated: { [weak self] messageId in
+            self?.paneContainerNode.requestExpandTabs?()
+            self?.paneContainerNode.currentPane?.node.ensureMessageIsVisible(id: messageId)
+        }))
     }
     private func openResolved(_ result: ResolvedUrl) {
         guard let navigationController = self.controller?.navigationController as? NavigationController else {

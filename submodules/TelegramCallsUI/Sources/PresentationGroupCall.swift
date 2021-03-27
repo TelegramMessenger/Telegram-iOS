@@ -1401,13 +1401,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 )
                 self.temporaryParticipantsContext = nil
                 self.participantsContext = participantsContext
-                let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
-                    if let peer = transaction.getPeer(myPeerId) {
-                        return (peer, transaction.getPeerCachedData(peerId: myPeerId))
+                let myPeer = self.accountContext.account.postbox.peerView(id: myPeerId)
+                |> map { view -> (Peer, CachedPeerData?)? in
+                    if let peer = peerViewMainPeer(view) {
+                        return (peer, view.cachedData)
                     } else {
                         return nil
                     }
                 }
+                
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
                     participantsContext.activeSpeakers,
@@ -1507,6 +1509,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         
                         if participant.peer.id == strongSelf.joinAsPeerId {
+                            if let (myPeer, cachedData) = myPeerAndCachedData {
+                                let about: String?
+                                if let cachedData = cachedData as? CachedUserData {
+                                    about = cachedData.about
+                                } else if let cachedData = cachedData as? CachedChannelData {
+                                    about = cachedData.about
+                                } else {
+                                    about = nil
+                                }
+                                participant.peer = myPeer
+                                participant.about = about
+                            }
+                        
                             var filteredMuteState = participant.muteState
                             if isReconnectingAsSpeaker || strongSelf.currentConnectionMode != .rtc {
                                 filteredMuteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false)

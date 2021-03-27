@@ -8527,7 +8527,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let presentationDisposable = strongSelf.context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
                 if let controller = controller {
-                    controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
+                    controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme, forceDark: false)
                 }
             })
             legacyController.disposables.add(presentationDisposable)

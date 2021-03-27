@@ -28,6 +28,7 @@ import LegacyUI
 import LegacyComponents
 import LegacyMediaPickerUI
 import WebSearchUI
+import MapResourceToAvatarSizes
 
 private let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 private let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
@@ -381,6 +382,8 @@ public final class VoiceChatController: ViewController {
             
             private var audioLevels: [PeerId: ValuePipe<Float>] = [:]
             
+            var updateAvatarPromise = Promise<(TelegramMediaImageRepresentation, Float)?>(nil)
+            
             init(
                 updateIsMuted: @escaping (PeerId, Bool) -> Void,
                 openPeer: @escaping (PeerId) -> Void,
@@ -652,7 +655,7 @@ public final class VoiceChatController: ViewController {
                                                 
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, expandedText: expandedText, icon: icon, enabled: true, selectable: !peerEntry.isMyPeer || peerEntry.canManageCall || peerEntry.raisedHand, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, expandedText: expandedText, icon: icon, enabled: true, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
                             if let ssrc = peerEntry.ssrc {
                                 return interaction.getPeerVideo(ssrc)
                             } else {
@@ -664,6 +667,8 @@ public final class VoiceChatController: ViewController {
                             interaction.peerContextAction(peerEntry, node, nil)
                         }, contextAction: nil, getIsExpanded: {
                             return interaction.isExpanded
+                        }, getUpdatingAvatar: {
+                            return interaction.updateAvatarPromise.get()
                         })
                 }
             }
@@ -786,6 +791,10 @@ public final class VoiceChatController: ViewController {
         private let displayedRaisedHandsPromise = ValuePromise<Set<PeerId>>(Set())
         
         private var currentDominantSpeakerWithVideo: (PeerId, UInt32)?
+        
+        private var updateAvatarDisposable = MetaDisposable()
+        private let updateAvatarPromise = Promise<(TelegramMediaImageRepresentation, Float)?>(nil)
+        private var currentUpdatingAvatar: TelegramMediaImageRepresentation?
         
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
@@ -1239,6 +1248,12 @@ public final class VoiceChatController: ViewController {
                     }
                     
                     if peer.id == strongSelf.callState?.myPeerId {
+                        let maxLength: Int
+                        if peer.id.namespace == Namespaces.Peer.CloudUser {
+                            maxLength = 70
+                        } else {
+                            maxLength = 100
+                        }
                         if entry.raisedHand {
                             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_CancelSpeakRequest, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/RevokeSpeak"), color: theme.actionSheet.primaryTextColor)
@@ -1251,35 +1266,41 @@ public final class VoiceChatController: ViewController {
                                 f(.default)
                             })))
                         }
-//                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_ChangePhoto, icon: { theme in
-//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Camera"), color: theme.actionSheet.primaryTextColor)
-//                        }, action: { _, f in
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//                            
-//                            f(.default)
-//                            
-//                            strongSelf.openAvatarForEditing(fromGallery: false, completion: {})
-//                        })))
-//                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditBio, icon: { theme in
-//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pencil"), color: theme.actionSheet.primaryTextColor)
-//                        }, action: { _, f in
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//                            f(.default)
-//                                                        
-//                            let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, apply: { bio in
-//                                if let strongSelf = self {
-//                                    let _ = updateAbout(account: strongSelf.context.account, about: bio)
-//                                    |> `catch` { _ -> Signal<Void, NoError> in
-//                                        return .complete()
-//                                    }
-//                                }
-//                            })
-//                            self?.controller?.present(controller, in: .window(.root))
-//                        })))
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_ChangePhoto, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Camera"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            f(.default)
+                                                        
+                            Queue.mainQueue().after(0.1) {
+                                strongSelf.openAvatarForEditing(fromGallery: false, completion: {})
+                            }
+                        })))
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditBio, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pencil"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            f(.default)
+                               
+                            Queue.mainQueue().after(0.1) {
+                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, maxLength: maxLength, apply: { bio in
+                                    if let strongSelf = self {
+                                        let _ = (updateAbout(account: strongSelf.context.account, about: bio)
+                                        |> `catch` { _ -> Signal<Void, NoError> in
+                                            return .complete()
+                                        }).start()
+                                        
+                                        strongSelf.presentUndoOverlay(content: .voiceChatFlag(text: strongSelf.presentationData.strings.VoiceChat_EditBioSuccess), action: { _ in return false })
+                                    }
+                                })
+                                self?.controller?.present(controller, in: .window(.root))
+                            }
+                        })))
                     } else {
                         if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
                             if callState.adminIds.contains(peer.id) {
@@ -1355,8 +1376,8 @@ public final class VoiceChatController: ViewController {
                             openTitle = strongSelf.presentationData.strings.VoiceChat_OpenChannel
                             openIcon = UIImage(bundleImageName: "Chat/Context Menu/Channels")
                         } else {
-                            openTitle = strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile
-                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/User")
+                            openTitle = strongSelf.presentationData.strings.Conversation_ContextMenuSendMessage
+                            openIcon = UIImage(bundleImageName: "Chat/Context Menu/Message")
                         }
                         items.append(.action(ContextMenuActionItem(text: openTitle, icon: { theme in
                             return generateTintedImage(image: openIcon, color: theme.actionSheet.primaryTextColor)
@@ -1368,24 +1389,7 @@ public final class VoiceChatController: ViewController {
                             let context = strongSelf.context
                             strongSelf.controller?.dismiss(completion: {
                                 Queue.mainQueue().after(0.3) {
-                                    if peer.id.namespace == Namespaces.Peer.CloudUser {
-                                        let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
-                                        |> take(1)
-                                        |> deliverOnMainQueue).start(next: { peer in
-                                            var expandAvatar = true
-                                            if peer.smallProfileImage == nil {
-                                                expandAvatar = false
-                                            }
-                                            if let (validLayout, _) = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
-                                                expandAvatar = false
-                                            }
-                                            if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: false) {
-                                                navigationController.pushViewController(controller)
-                                            }
-                                        })
-                                    } else {
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
-                                    }
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
                                 }
                             })
                         
@@ -1473,6 +1477,7 @@ public final class VoiceChatController: ViewController {
                 }
                 return nil
             })
+            self.itemInteraction?.updateAvatarPromise = self.updateAvatarPromise
             
             self.topPanelNode.addSubnode(self.topPanelEdgeNode)
             self.topPanelNode.addSubnode(self.topPanelBackgroundNode)
@@ -1851,6 +1856,7 @@ public final class VoiceChatController: ViewController {
             self.memberEventsDisposable.dispose()
             self.reconnectedAsEventsDisposable.dispose()
             self.voiceSourcesDisposable.dispose()
+            self.updateAvatarDisposable.dispose()
         }
 
         private func openContextMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
@@ -1911,7 +1917,7 @@ public final class VoiceChatController: ViewController {
                         return
                     }
 
-                    let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditTitleTitle, text: presentationData.strings.VoiceChat_EditTitleText, placeholder: chatPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), value: strongSelf.callState?.title, apply: { title in
+                    let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditTitleTitle, text: presentationData.strings.VoiceChat_EditTitleText, placeholder: chatPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), value: strongSelf.callState?.title, maxLength: 40, apply: { title in
                         if let strongSelf = self, let title = title {
                             strongSelf.call.updateTitle(title)
 
@@ -1989,7 +1995,7 @@ public final class VoiceChatController: ViewController {
                             return
                         }
 
-                        let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, apply: { title in
+                        let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
                             if let strongSelf = self, let title = title {
                                 strongSelf.call.setShouldBeRecording(true, title: title)
 
@@ -3251,8 +3257,13 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
+                var memberPeer = member.peer
+                if member.peer.id == self.callState?.myPeerId, let user = memberPeer as? TelegramUser, let photo = self.currentUpdatingAvatar {
+                    memberPeer = user.withUpdatedPhoto([photo])
+                }
+                                
                 entries.append(.peer(PeerEntry(
-                    peer: member.peer,
+                    peer: memberPeer,
                     about: member.about,
                     isMyPeer: self.callState?.myPeerId == member.peer.id,
                     ssrc: member.ssrc,
@@ -3567,7 +3578,7 @@ public final class VoiceChatController: ViewController {
                 
                 let presentationData = strongSelf.presentationData
                 
-                let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+                let legacyController = LegacyController(presentation: .custom, theme: strongSelf.darkTheme)
                 legacyController.statusBar.statusBarStyle = .Ignore
                 
                 let emptyController = LegacyEmptyController(context: legacyController.context)!
@@ -3598,6 +3609,7 @@ public final class VoiceChatController: ViewController {
 //                }
                 
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && !fromGallery, hasViewButton: false, personalPhoto: peerId.namespace == Namespaces.Peer.CloudUser, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+                mixin.forceDark = true
                 mixin.stickersContext = paintStickersContext
                 let _ = strongSelf.currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { [weak self] assetsController in
@@ -3606,7 +3618,7 @@ public final class VoiceChatController: ViewController {
                     }
                     let controller = WebSearchController(context: strongSelf.context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
                         assetsController?.dismiss()
-//                        self?.updateProfilePhoto(result)
+                        self?.updateProfilePhoto(result)
                     }))
                     controller.navigationPresentation = .modal
                     strongSelf.controller?.push(controller)
@@ -3618,7 +3630,7 @@ public final class VoiceChatController: ViewController {
                 mixin.didFinishWithImage = { [weak self] image in
                     if let image = image {
                         completion()
-//                        self?.updateProfilePhoto(image)
+                       self?.updateProfilePhoto(image)
                     }
                 }
                 mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
@@ -3696,6 +3708,41 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             })
+        }
+        
+        private func updateProfilePhoto(_ image: UIImage) {
+            guard let data = image.jpegData(compressionQuality: 0.6), let peerId = self.callState?.myPeerId else {
+                return
+            }
+            
+            let resource = LocalFileMediaResource(fileId: arc4random64())
+            self.call.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [])
+            
+            self.currentUpdatingAvatar = representation
+            self.updateAvatarPromise.set(.single((representation, 0.0)))
+
+            let postbox = self.call.account.postbox
+            let signal = peerId.namespace == Namespaces.Peer.CloudUser ? updateAccountPhoto(account: self.call.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+                return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+            }) : updatePeerPhoto(postbox: postbox, network: self.call.account.network, stateManager: self.call.account.stateManager, accountPeerId: self.context.account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: postbox, network: self.call.account.network, resource: resource), mapResourceToAvatarSizes: { resource, representations in
+                return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+            })
+            
+            self.updateAvatarDisposable.set((signal
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch result {
+                    case .complete:
+                        strongSelf.updateAvatarPromise.set(.single(nil))
+                    case let .progress(value):
+                        strongSelf.updateAvatarPromise.set(.single((representation, value)))
+                }
+            }))
+            
+            self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
         }
     }
     

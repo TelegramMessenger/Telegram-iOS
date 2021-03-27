@@ -34,6 +34,8 @@
 @property (nonatomic, assign) bool dismissesByOutsideTap;
 @property (nonatomic, assign) bool hasSwipeGesture;
 
+@property (nonatomic, assign) bool forceDark;
+
 @property (nonatomic, assign) bool followsKeyboard;
 
 @property (nonatomic, assign) bool ignoreNextDismissal;
