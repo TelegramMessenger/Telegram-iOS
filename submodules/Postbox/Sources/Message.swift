@@ -52,14 +52,12 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
     }
     
     public func encodeToBuffer(_ buffer: WriteBuffer) {
-        var peerIdNamespace = self.peerId.namespace
-        var peerIdId = self.peerId.id
+        var peerIdValue = self.peerId.toInt64()
         var namespace = self.namespace
         var id = self.id
-        buffer.write(&peerIdNamespace, offset: 0, length: 4);
-        buffer.write(&peerIdId, offset: 0, length: 4);
-        buffer.write(&namespace, offset: 0, length: 4);
-        buffer.write(&id, offset: 0, length: 4);
+        buffer.write(&peerIdValue, offset: 0, length: 8)
+        buffer.write(&namespace, offset: 0, length: 4)
+        buffer.write(&id, offset: 0, length: 4)
     }
     
     public static func encodeArrayToBuffer(_ array: [MessageId], buffer: WriteBuffer) {
