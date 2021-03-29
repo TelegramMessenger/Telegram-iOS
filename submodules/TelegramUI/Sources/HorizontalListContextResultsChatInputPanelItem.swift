@@ -352,7 +352,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     if let stickerFile = stickerFile {
                         updateImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false, fetched: true)
                     } else {
-                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0)), resource: imageResource, progressiveSizes: [])
+                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0)), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil)
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                         updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .standalone(media: tmpImage), synchronousLoad: true)
                     }

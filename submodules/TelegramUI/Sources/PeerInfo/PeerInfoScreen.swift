@@ -4947,7 +4947,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let resource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [])
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
         
         self.state = self.state.withUpdatingAvatar(.image(representation))
         if let (layout, navigationHeight) = self.validLayout {
@@ -4992,7 +4992,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let photoResource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [])
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
         
         self.state = self.state.withUpdatingAvatar(.image(representation))
         if let (layout, navigationHeight) = self.validLayout {

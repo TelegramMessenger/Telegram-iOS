@@ -132,10 +132,10 @@ final class WebSearchItemNode: GridItemNode {
             
             var representations: [TelegramMediaImageRepresentation] = []
             if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: []))
+                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
             }
             if let imageResource = imageResource, let imageDimensions = imageDimensions {
-                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: []))
+                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil))
             }
             if !representations.isEmpty {
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])

@@ -468,7 +468,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                             let stickerPack: StickerPackCollectionInfo? = stickerSet.flatMap { apiSet -> StickerPackCollectionInfo in
                                                 let namespace: ItemCollectionId.Namespace
                                                 switch apiSet {
-                                                    case let .stickerSet(flags, _, _, _, _, _, _, _, _, _):
+                                                    case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
                                                         if (flags & (1 << 3)) != 0 {
                                                             namespace = Namespaces.ItemCollection.CloudMaskPacks
                                                         } else {
