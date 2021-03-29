@@ -16,6 +16,9 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AccountContext:AccountContext",
         "//submodules/Emoji:Emoji",
+        "//submodules/ImageCompression:ImageCompression",
+        "//submodules/TinyThumbnail:TinyThumbnail",
+        "//submodules/FastBlur:FastBlur",
     ],
     visibility = [
         "//visibility:public",
