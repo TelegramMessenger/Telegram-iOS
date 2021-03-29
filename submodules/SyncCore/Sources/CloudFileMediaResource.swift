@@ -277,7 +277,7 @@ public struct CloudPeerPhotoSizeMediaResourceId: MediaResourceId, Hashable {
     
     public func isEqual(to: MediaResourceId) -> Bool {
         if let to = to as? CloudPeerPhotoSizeMediaResourceId {
-            return self.datacenterId == to.datacenterId && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId
+            return self.datacenterId == to.datacenterId && self.photoId == to.photoId && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId
         } else {
             return false
         }

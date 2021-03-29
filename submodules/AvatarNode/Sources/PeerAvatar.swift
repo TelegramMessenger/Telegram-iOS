@@ -6,7 +6,6 @@ import Display
 import ImageIO
 import TelegramCore
 import SyncCore
-import ImageCompression
 import TinyThumbnail
 import FastBlur
 
@@ -43,6 +42,12 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
                 }
             } else {
                 return Signal { subscriber in
+                    var emittedFirstData = false
+                    if let miniData = representation?.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: miniData) {
+                        emittedFirstData = true
+                        subscriber.putNext((decodedData, .blurred))
+                    }
+
                     let resourceDataDisposable = resourceData.start(next: { data in
                         if data.complete {
                             if let dataValue = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)) {
@@ -52,7 +57,9 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
                             }
                             subscriber.putCompletion()
                         } else {
-                            subscriber.putNext(nil)
+                            if !emittedFirstData {
+                                subscriber.putNext(nil)
+                            }
                         }
                     }, error: { error in
                         subscriber.putError(error)
@@ -75,24 +82,6 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
             }
         }
         return imageData
-        |> mapToSignal { data -> Signal<(Data, PeerAvatarImageType)?, NoError> in
-            guard let (dataValue, type) = data, case .complete = type else {
-                return .single(data)
-            }
-
-            if let mappedImage = UIImage(data: dataValue), let miniData = compressImageMiniThumbnail(mappedImage, type: .avatar) {
-                //print("Demo avatar size: \(miniData.count) bytes")
-                if let decodedData = decodeTinyThumbnail(data: miniData) {
-                    return Signal<(Data, PeerAvatarImageType)?, NoError>.single((decodedData, .blurred))
-                    |> then(
-                        Signal<(Data, PeerAvatarImageType)?, NoError>.single((dataValue, .complete))
-                        |> delay(1.0, queue: .concurrentDefaultQueue())
-                    )
-                }
-            }
-
-            return .single(data)
-        }
     } else {
         return nil
     }
@@ -148,7 +137,7 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                                 let imageContextSize = CGSize(width: 64.0, height: 64.0)
                                 let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, premultiplied: true, clear: true)
                                 imageContext.withFlippedContext { c in
-                                    c.draw(dataImage, in: CGRect(origin: CGPoint(), size: imageContextSize).insetBy(dx: inset, dy: inset))
+                                    c.draw(dataImage, in: CGRect(origin: CGPoint(), size: imageContextSize))
                                 }
 
                                 telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
