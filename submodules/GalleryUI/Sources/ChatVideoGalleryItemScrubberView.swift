@@ -9,7 +9,7 @@ import Display
 import UniversalMediaPlayer
 import TelegramPresentationData
 
-private let textFont = Font.regular(13.0)
+private let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 
 private let scrubberBackgroundColor = UIColor(white: 1.0, alpha: 0.42)
 private let scrubberForegroundColor = UIColor.white

@@ -6321,3 +6321,12 @@ Sorry for the inconvenience.";
 
 "VoiceChat.SendPublicLinkText" = "%1$@ isn't a member of \"%2$@\" yet. Send them a public invite link instead?";
 "VoiceChat.SendPublicLinkSend" = "Send";
+
+"VoiceChat.TapToAddPhotoOrBio" = "tap to add photo or bio";
+"VoiceChat.TapToAddPhoto" = "tap to add photo";
+"VoiceChat.TapToAddBio" = "tap to add bio";
+"VoiceChat.ImproveYourProfileText" = "You can improve your profile by adding missing information.";
+
+"VoiceChat.AddPhoto" = "Add Photo";
+"VoiceChat.AddBio" = "Add Bio";
+"VoiceChat.ChangeName" = "Change Name";

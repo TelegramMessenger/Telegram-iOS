@@ -1258,12 +1258,6 @@ public final class VoiceChatController: ViewController {
                     }
                     
                     if peer.id == strongSelf.callState?.myPeerId {
-                        let maxLength: Int
-                        if peer.id.namespace == Namespaces.Peer.CloudUser {
-                            maxLength = 70
-                        } else {
-                            maxLength = 100
-                        }
                         if entry.raisedHand {
                             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_CancelSpeakRequest, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/RevokeSpeak"), color: theme.actionSheet.primaryTextColor)
@@ -1276,7 +1270,7 @@ public final class VoiceChatController: ViewController {
                                 f(.default)
                             })))
                         }
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_ChangePhoto, icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: peer.smallProfileImage == nil ? strongSelf.presentationData.strings.VoiceChat_AddPhoto : strongSelf.presentationData.strings.VoiceChat_ChangePhoto, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Camera"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             guard let strongSelf = self else {
@@ -1289,8 +1283,9 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.openAvatarForEditing(fromGallery: false, completion: {})
                             }
                         })))
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditBio, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pencil"), color: theme.actionSheet.primaryTextColor)
+                        
+                        items.append(.action(ContextMenuActionItem(text: (entry.about?.isEmpty ?? true) ? strongSelf.presentationData.strings.VoiceChat_AddBio : strongSelf.presentationData.strings.VoiceChat_EditBio, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             guard let strongSelf = self else {
                                 return
@@ -1298,7 +1293,13 @@ public final class VoiceChatController: ViewController {
                             f(.default)
                                
                             Queue.mainQueue().after(0.1) {
-                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, maxLength: maxLength, apply: { bio in
+                                let maxBioLength: Int
+                                if peer.id.namespace == Namespaces.Peer.CloudUser {
+                                    maxBioLength = 70
+                                } else {
+                                    maxBioLength = 100
+                                }
+                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, maxLength: maxBioLength, apply: { bio in
                                     if let strongSelf = self {
                                         let _ = (updateAbout(account: strongSelf.context.account, about: bio)
                                         |> `catch` { _ -> Signal<Void, NoError> in
