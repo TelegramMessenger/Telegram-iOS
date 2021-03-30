@@ -6317,7 +6317,7 @@ Sorry for the inconvenience.";
 "VoiceChat.EditBioText" = "Any details such as age, occupation or city.";
 "VoiceChat.EditBioPlaceholder" = "Bio";
 "VoiceChat.EditBioSave" = "Save";
-"VoiceChat.EditBioSuccess" = "Your bio is saved.";
+"VoiceChat.EditBioSuccess" = "Your bio is changed.";
 
 "VoiceChat.SendPublicLinkText" = "%1$@ isn't a member of \"%2$@\" yet. Send them a public invite link instead?";
 "VoiceChat.SendPublicLinkSend" = "Send";
@@ -6330,3 +6330,10 @@ Sorry for the inconvenience.";
 "VoiceChat.AddPhoto" = "Add Photo";
 "VoiceChat.AddBio" = "Add Bio";
 "VoiceChat.ChangeName" = "Change Name";
+"VoiceChat.ChangeNameTitle" = "Change Name";
+"VoiceChat.EditNameSuccess" = "Your name is changed.";
+
+"VoiceChat.Video" = "video";
+
+"VoiceChat.PinVideo" = "Pin Video";
+"VoiceChat.UnpinVideo" = "Unpin Video";

@@ -70,6 +70,7 @@ final class VoiceChatParticipantItem: ListViewItem {
     let expandedText: ParticipantText?
     let icon: Icon
     let enabled: Bool
+    let transparent: Bool
     public let selectable: Bool
     let getAudioLevel: (() -> Signal<Float, NoError>)?
     let getVideo: () -> GroupVideoNode?
@@ -81,7 +82,7 @@ final class VoiceChatParticipantItem: ListViewItem {
     let getIsExpanded: () -> Bool
     let getUpdatingAvatar: () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, transparent: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -93,6 +94,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         self.expandedText = expandedText
         self.icon = icon
         self.enabled = enabled
+        self.transparent = transparent
         self.selectable = selectable
         self.getAudioLevel = getAudioLevel
         self.getVideo = getVideo

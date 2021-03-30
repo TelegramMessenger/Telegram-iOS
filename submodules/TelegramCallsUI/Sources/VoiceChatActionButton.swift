@@ -24,6 +24,9 @@ private let pink = UIColor(rgb: 0xef436c)
 private let areaSize = CGSize(width: 300.0, height: 300.0)
 private let blobSize = CGSize(width: 190.0, height: 190.0)
 
+private let smallScale: CGFloat = 0.48
+private let smallIconScale: CGFloat = 0.69
+
 final class VoiceChatActionButton: HighlightTrackingButtonNode {
     enum State: Equatable {
         enum ActiveState: Equatable {
@@ -80,13 +83,18 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     var wasActiveWhenPressed = false
     var pressing: Bool = false {
         didSet {
-            guard let (_, _, state, _, _, _, _, snap) = self.currentParams, !self.isDisabled else {
+            guard let (_, _, state, _, small, _, _, snap) = self.currentParams, !self.isDisabled else {
                 return
             }
             if self.pressing {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
-            
+                if small {
+                    transition.updateTransformScale(node: self.backgroundNode, scale: smallScale * 0.9)
+                    transition.updateTransformScale(node: self.iconNode, scale: smallIconScale * 0.9)
+                } else {
+                    transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
+                }
+                
                 switch state {
                     case let .active(state):
                         switch state {
@@ -100,7 +108,12 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 }
             } else {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
+                if small {
+                    transition.updateTransformScale(node: self.backgroundNode, scale: smallScale)
+                    transition.updateTransformScale(node: self.iconNode, scale: smallIconScale)
+                } else {
+                    transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
+                }
                 self.wasActiveWhenPressed = false
             }
         }
@@ -127,15 +140,25 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
-                guard let (_, _, _, _, _, _, _, snap) = strongSelf.currentParams else {
+                guard let (_, _, _, _, small, _, _, snap) = strongSelf.currentParams else {
                     return
                 }
                 if pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                    transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
+                    if small {
+                        transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale * 0.9)
+                        transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale * 0.9)
+                    } else {
+                        transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
+                    }
                 } else if !strongSelf.pressing {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                    transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
+                    if small {
+                        transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale)
+                        transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale)
+                    } else {
+                        transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
+                    }
                 }
             }
         }
@@ -222,8 +245,14 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0, delay: 0.05)
-            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+            
+            if small {
+                transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? smallScale * 0.9 : smallScale, delay: 0.05)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.05)
+            } else {
+                transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.05)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+            }
             transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)

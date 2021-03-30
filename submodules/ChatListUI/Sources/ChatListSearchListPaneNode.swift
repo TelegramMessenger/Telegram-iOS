@@ -965,7 +965,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             let resolvedMessage = .single(nil)
-                |> then(context.sharedContext.resolveUrl(context: context, peerId: nil, url: finalQuery, skipUrlAuth: true)
+            |> then(context.sharedContext.resolveUrl(context: context, peerId: nil, url: finalQuery, skipUrlAuth: true)
             |> mapToSignal { resolvedUrl -> Signal<Message?, NoError> in
                 if case let .channelMessage(_, messageId) = resolvedUrl {
                     return downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: messageId)

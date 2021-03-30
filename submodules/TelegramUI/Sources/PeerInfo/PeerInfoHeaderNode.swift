@@ -20,6 +20,7 @@ import UniversalMediaPlayer
 import RadialStatusNode
 import TelegramUIPreferences
 import PeerInfoAvatarListNode
+import AnimationUI
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -53,7 +54,9 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let backgroundNode: ASImageNode
+    private let backgroundWithIconNode: ASImageNode
     private let textNode: ImmediateTextNode
+    private var animationNode: AnimationNode?
     
     private var theme: PresentationTheme?
     private var icon: PeerInfoHeaderButtonIcon?
@@ -70,6 +73,11 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.isHidden = true
+        
+        self.backgroundWithIconNode = ASImageNode()
+        self.backgroundWithIconNode.displaysAsynchronously = false
+        self.backgroundWithIconNode.displayWithoutProcessing = true
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -80,6 +88,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         self.containerNode.addSubnode(self.referenceNode)
         self.referenceNode.addSubnode(self.backgroundNode)
+        self.referenceNode.addSubnode(self.backgroundWithIconNode)
         self.addSubnode(self.containerNode)
         self.addSubnode(self.textNode)
         
@@ -105,10 +114,20 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     }
     
     @objc private func buttonPressed() {
+        switch self.icon {
+            case .voiceChat:
+                self.animationNode?.playOnce()
+            case .more:
+                self.animationNode?.playOnce()
+            default:
+                break
+        }
         self.action(self, nil)
     }
     
     func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+        let previousIcon = self.icon
+        let iconUpdated = self.icon != icon
         if self.theme != presentationData.theme || self.icon != icon || self.isActive != isActive {
             self.theme = presentationData.theme
             self.icon = icon
@@ -121,12 +140,88 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 isGestureEnabled = true
             }
             self.containerNode.isGestureEnabled = isGestureEnabled
+                        
+            let animationName: String?
+            var colors: [String: UIColor] = [:]
+            var playOnce = false
+            var seekToEnd = false
+            let iconColor = presentationData.theme.list.itemCheckColors.foregroundColor
+            switch icon {
+                case .voiceChat:
+                    animationName = "anim_profilevc"
+                    colors = ["Line 3.Group 1.Stroke 1": iconColor,
+                              "Line 1.Group 1.Stroke 1": iconColor,
+                              "Line 2.Group 1.Stroke 1": iconColor]
+                case .mute:
+                    animationName = "anim_profileunmute"
+                    colors = ["Middle.Group 1.Fill 1": iconColor,
+                              "Top.Group 1.Fill 1": iconColor,
+                              "Bottom.Group 1.Fill 1": iconColor,
+                              "Line.Group 1.Stroke 1": iconColor]
+                    if previousIcon == .unmute {
+                        playOnce = true
+                    } else {
+                        seekToEnd = true
+                    }
+                case .unmute:
+                    animationName = "anim_profilemute"
+                    colors = ["Middle.Group 1.Fill 1": iconColor,
+                              "Top.Group 1.Fill 1": iconColor,
+                              "Bottom.Group 1.Fill 1": iconColor,
+                              "Line.Group 1.Stroke 1": iconColor]
+                    if previousIcon == .mute {
+                        playOnce = true
+                    } else {
+                        seekToEnd = true
+                    }
+                case .more:
+                    animationName = "anim_profilemore"
+                    colors = ["Point 2.Group 1.Fill 1": iconColor,
+                              "Point 3.Group 1.Fill 1": iconColor,
+                              "Point 1.Group 1.Fill 1": iconColor]
+                case .leave:
+                    animationName = "anim_profileleave"
+                default:
+                    animationName = nil
+            }
+            
+            if let animationName = animationName {
+                let animationNode: AnimationNode
+                if let current = self.animationNode {
+                    animationNode = current
+                    if iconUpdated {
+                        animationNode.setAnimation(name: animationName, colors: colors)
+                    }
+                } else {
+                    animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
+                    self.addSubnode(animationNode)
+                    self.animationNode = animationNode
+                }
+                animationNode.frame = CGRect(origin: CGPoint(), size: size)
+                self.backgroundWithIconNode.isHidden = true
+                self.backgroundNode.isHidden = false
+            } else if let animationNode = self.animationNode {
+                self.animationNode = nil
+                animationNode.removeFromSupernode()
+                self.backgroundWithIconNode.isHidden = false
+                self.backgroundNode.isHidden = true
+            }
+            
+            if playOnce {
+                self.animationNode?.play()
+            } else if seekToEnd {
+                self.animationNode?.seekToEnd()
+            }
             
             if isActiveUpdated, !self.containerNode.alpha.isZero {
-                if let snapshotView = self.backgroundNode.view.snapshotContentTree() {
-                    snapshotView.frame = self.backgroundNode.view.frame
-                    self.view.addSubview(snapshotView)
-                    
+                let backgroundNode = !self.backgroundNode.isHidden ? self.backgroundNode : self.backgroundWithIconNode
+                if let snapshotView = backgroundNode.view.snapshotContentTree() {
+                    snapshotView.frame = backgroundNode.view.frame
+                    if let animationNode = self.animationNode {
+                        self.view.insertSubview(snapshotView, belowSubview: animationNode.view)
+                    } else {
+                        self.view.addSubview(snapshotView)
+                    }
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
                     })
@@ -141,13 +236,14 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 }
             }
             
-            self.backgroundNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+            self.backgroundNode.image = generateFilledCircleImage(diameter: 40.0, color: isActive ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemDisabledTextColor)
+            self.backgroundWithIconNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(isActive ? presentationData.theme.list.itemAccentColor.cgColor : presentationData.theme.list.itemDisabledTextColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.normal)
                 context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                let imageName: String
+                let imageName: String?
                 switch icon {
                 case .message:
                     imageName = "Peer Info/ButtonMessage"
@@ -156,21 +252,21 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 case .videoCall:
                     imageName = "Peer Info/ButtonVideo"
                 case .voiceChat:
-                    imageName = "Peer Info/ButtonVoiceChat"
+                    imageName = nil
                 case .mute:
-                    imageName = "Peer Info/ButtonMute"
+                    imageName = nil
                 case .unmute:
-                    imageName = "Peer Info/ButtonUnmute"
+                    imageName = nil
                 case .more:
-                    imageName = "Peer Info/ButtonMore"
+                    imageName = nil
                 case .addMember:
                     imageName = "Peer Info/ButtonAddMember"
                 case .search:
                     imageName = "Peer Info/ButtonSearch"
                 case .leave:
-                    imageName = "Peer Info/ButtonLeave"
+                    imageName = nil
                 }
-                if let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white) {
+                if let imageName = imageName, let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white) {
                     let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
                     context.clip(to: imageRect, mask: image.cgImage!)
                     context.fill(imageRect)
@@ -184,6 +280,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.backgroundWithIconNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height + 6.0), size: titleSize))
         transition.updateAlpha(node: self.textNode, alpha: isExpanded ? 0.0 : 1.0)
         
