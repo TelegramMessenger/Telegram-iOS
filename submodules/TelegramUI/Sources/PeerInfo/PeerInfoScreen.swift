@@ -4190,8 +4190,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
 //            self.controller?.present(regdateController, in: .window(.root))
             self.requestLayout()
             
-        }, error: {_ in
-            let text = "NGLab.RegDate.FetchError"
+        }, error: { error in
+            var text = ""
+            switch (error) {
+            case .badDeviceToken:
+                text = "NGLab.BadDeviceToken"
+            default:
+                text = "NGLab.RegDate.FetchError"
+            }
             let errorController = textAlertController(context: self.context, title: nil, text: l(text, self.presentationData.strings.baseLanguageCode), actions: [
                                                         TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {
                                                         })])

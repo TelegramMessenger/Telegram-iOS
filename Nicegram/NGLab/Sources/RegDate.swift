@@ -9,12 +9,14 @@
 import Foundation
 import SwiftSignalKit
 import NGEnv
+import NGDeviceCheck
 
 let ngLabData = [NGENV.ng_lab_url, NGENV.ng_lab_token]
 
 
 public enum RegDateError {
     case generic
+    case badDeviceToken
 }
 
 public func requestRegDate(jsonData: Data) -> Signal<Date, RegDateError> {
@@ -68,24 +70,27 @@ public func requestRegDate(jsonData: Data) -> Signal<Date, RegDateError> {
 public func getRegDate(_ userId: Int64, owner: Int64
     ) -> Signal<Date, RegDateError> {
     return Signal { subscriber in
-        let requestSignal = requestRegDate(jsonData: prepareRegDateData(userId, owner: owner))
-        
-        let _ = (requestSignal |> deliverOnMainQueue).start(next: {
-            responseDate in
-            setCachedRegDate(userId, Int(responseDate.timeIntervalSince1970))
-            subscriber.putNext(responseDate)
-            subscriber.putCompletion()
-        }, error: { _ in
-            subscriber.putError(.generic)
-        })
-        
-        return ActionDisposable {
+        getDeviceToken { deviceToken in
+            if deviceToken != nil {
+                let requestSignal = requestRegDate(jsonData: prepareRegDateData(userId, owner: owner, deviceToken: deviceToken!))
+                let _ = (requestSignal |> deliverOnMainQueue).start(next: {
+                    responseDate in
+                    setCachedRegDate(userId, Int(responseDate.timeIntervalSince1970))
+                    subscriber.putNext(responseDate)
+                    subscriber.putCompletion()
+                }, error: { _ in
+                    subscriber.putError(.generic)
+                })
+            } else {
+                subscriber.putError(.badDeviceToken)
+            }
         }
+        return ActionDisposable {}
     }
 }
 
-func prepareRegDateData(_ userId: Int64, owner: Int64) -> Data {
-    let json = ["user_id": userId, "owner": owner, "data": ngLabData[1]] as [String : Any]
+func prepareRegDateData(_ userId: Int64, owner: Int64, deviceToken: String) -> Data {
+    let json = ["user_id": userId, "owner": owner, "device_token": deviceToken, "data": ngLabData[1]] as [String : Any]
     let jsonData = try! JSONSerialization.data(withJSONObject: json)
     return jsonData
 }
