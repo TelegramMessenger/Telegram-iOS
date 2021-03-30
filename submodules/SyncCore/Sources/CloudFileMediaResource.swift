@@ -120,8 +120,6 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
     public let photoId: Int64
     public let accessHash: Int64
     public let sizeSpec: String
-    public let volumeId: Int64
-    public let localId: Int32
     public let size: Int?
     public let fileReference: Data?
     
@@ -129,13 +127,11 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
         return CloudPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), photoId: self.photoId, sizeSpec: self.sizeSpec)
     }
     
-    public init(datacenterId: Int32, photoId: Int64, accessHash: Int64, sizeSpec: String, volumeId: Int64, localId: Int32, size: Int?, fileReference: Data?) {
+    public init(datacenterId: Int32, photoId: Int64, accessHash: Int64, sizeSpec: String, size: Int?, fileReference: Data?) {
         self.datacenterId = Int(datacenterId)
         self.photoId = photoId
         self.accessHash = accessHash
         self.sizeSpec = sizeSpec
-        self.volumeId = volumeId
-        self.localId = localId
         self.size = size
         self.fileReference = fileReference
     }
@@ -145,8 +141,6 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
         self.photoId = decoder.decodeInt64ForKey("i", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
         self.sizeSpec = decoder.decodeStringForKey("s", orElse: "")
-        self.volumeId = decoder.decodeInt64ForKey("v", orElse: 0)
-        self.localId = decoder.decodeInt32ForKey("l", orElse: 0)
         if let size = decoder.decodeOptionalInt32ForKey("n") {
             self.size = Int(size)
         } else {
@@ -160,8 +154,6 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
         encoder.encodeInt64(self.photoId, forKey: "i")
         encoder.encodeInt64(self.accessHash, forKey: "h")
         encoder.encodeString(self.sizeSpec, forKey: "s")
-        encoder.encodeInt64(self.volumeId, forKey: "v")
-        encoder.encodeInt32(self.localId, forKey: "l")
         if let size = self.size {
             encoder.encodeInt32(Int32(size), forKey: "n")
         } else {
@@ -176,7 +168,7 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? CloudPhotoSizeMediaResource {
-            return self.datacenterId == to.datacenterId && self.photoId == to.photoId && self.accessHash == to.accessHash && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId && self.size == to.size && self.fileReference == to.fileReference
+            return self.datacenterId == to.datacenterId && self.photoId == to.photoId && self.accessHash == to.accessHash && self.sizeSpec == to.sizeSpec && self.size == to.size && self.fileReference == to.fileReference
         } else {
             return false
         }
@@ -212,21 +204,17 @@ public final class CloudDocumentSizeMediaResource: TelegramMediaResource {
     public let documentId: Int64
     public let accessHash: Int64
     public let sizeSpec: String
-    public let volumeId: Int64
-    public let localId: Int32
     public let fileReference: Data?
     
     public var id: MediaResourceId {
         return CloudDocumentSizeMediaResourceId(datacenterId: Int32(self.datacenterId), documentId: self.documentId, sizeSpec: self.sizeSpec)
     }
     
-    public init(datacenterId: Int32, documentId: Int64, accessHash: Int64, sizeSpec: String, volumeId: Int64, localId: Int32, fileReference: Data?) {
+    public init(datacenterId: Int32, documentId: Int64, accessHash: Int64, sizeSpec: String, fileReference: Data?) {
         self.datacenterId = Int(datacenterId)
         self.documentId = documentId
         self.accessHash = accessHash
         self.sizeSpec = sizeSpec
-        self.volumeId = volumeId
-        self.localId = localId
         self.fileReference = fileReference
     }
     
@@ -235,8 +223,6 @@ public final class CloudDocumentSizeMediaResource: TelegramMediaResource {
         self.documentId = decoder.decodeInt64ForKey("i", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
         self.sizeSpec = decoder.decodeStringForKey("s", orElse: "")
-        self.volumeId = decoder.decodeInt64ForKey("v", orElse: 0)
-        self.localId = decoder.decodeInt32ForKey("l", orElse: 0)
         self.fileReference = decoder.decodeBytesForKey("fr")?.makeData()
     }
     
@@ -245,8 +231,6 @@ public final class CloudDocumentSizeMediaResource: TelegramMediaResource {
         encoder.encodeInt64(self.documentId, forKey: "i")
         encoder.encodeInt64(self.accessHash, forKey: "h")
         encoder.encodeString(self.sizeSpec, forKey: "s")
-        encoder.encodeInt64(self.volumeId, forKey: "v")
-        encoder.encodeInt32(self.localId, forKey: "l")
         if let fileReference = self.fileReference {
             encoder.encodeBytes(MemoryBuffer(data: fileReference), forKey: "fr")
         } else {
@@ -256,7 +240,7 @@ public final class CloudDocumentSizeMediaResource: TelegramMediaResource {
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? CloudDocumentSizeMediaResource {
-            return self.datacenterId == to.datacenterId && self.documentId == to.documentId && self.accessHash == to.accessHash && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId && self.fileReference == to.fileReference
+            return self.datacenterId == to.datacenterId && self.documentId == to.documentId && self.accessHash == to.accessHash && self.sizeSpec == to.sizeSpec && self.fileReference == to.fileReference
         } else {
             return false
         }
@@ -270,24 +254,30 @@ public enum CloudPeerPhotoSizeSpec: Int32 {
 
 public struct CloudPeerPhotoSizeMediaResourceId: MediaResourceId, Hashable {
     let datacenterId: Int32
+    let photoId: Int64?
     let sizeSpec: CloudPeerPhotoSizeSpec
-    let volumeId: Int64
-    let localId: Int32
+    let volumeId: Int64?
+    let localId: Int32?
     
-    init(datacenterId: Int32, sizeSpec: CloudPeerPhotoSizeSpec, volumeId: Int64, localId: Int32) {
+    init(datacenterId: Int32, photoId: Int64?, sizeSpec: CloudPeerPhotoSizeSpec, volumeId: Int64?, localId: Int32?) {
         self.datacenterId = datacenterId
+        self.photoId = photoId
         self.sizeSpec = sizeSpec
         self.volumeId = volumeId
         self.localId = localId
     }
     
     public var uniqueId: String {
-        return "telegram-peer-photo-size-\(self.datacenterId)-\(self.sizeSpec.rawValue)-\(self.volumeId)-\(self.localId)"
+        if let photoId = self.photoId {
+            return "telegram-peer-photo-size-\(self.datacenterId)-\(photoId)-\(self.sizeSpec.rawValue)-\(self.volumeId ?? 0)-\(self.localId ?? 0)"
+        } else {
+            return "telegram-peer-photo-size-\(self.datacenterId)-\(self.sizeSpec.rawValue)-\(self.volumeId ?? 0)-\(self.localId ?? 0)"
+        }
     }
     
     public func isEqual(to: MediaResourceId) -> Bool {
         if let to = to as? CloudPeerPhotoSizeMediaResourceId {
-            return self.datacenterId == to.datacenterId && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId
+            return self.datacenterId == to.datacenterId && self.photoId == to.photoId && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId
         } else {
             return false
         }
@@ -296,16 +286,18 @@ public struct CloudPeerPhotoSizeMediaResourceId: MediaResourceId, Hashable {
 
 public final class CloudPeerPhotoSizeMediaResource: TelegramMediaResource {
     public let datacenterId: Int
+    public let photoId: Int64?
     public let sizeSpec: CloudPeerPhotoSizeSpec
-    public let volumeId: Int64
-    public let localId: Int32
+    public let volumeId: Int64?
+    public let localId: Int32?
     
     public var id: MediaResourceId {
-        return CloudPeerPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), sizeSpec: self.sizeSpec, volumeId: self.volumeId, localId: self.localId)
+        return CloudPeerPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), photoId: self.photoId, sizeSpec: self.sizeSpec, volumeId: self.volumeId, localId: self.localId)
     }
     
-    public init(datacenterId: Int32, sizeSpec: CloudPeerPhotoSizeSpec, volumeId: Int64, localId: Int32) {
+    public init(datacenterId: Int32, photoId: Int64?, sizeSpec: CloudPeerPhotoSizeSpec, volumeId: Int64?, localId: Int32?) {
         self.datacenterId = Int(datacenterId)
+        self.photoId = photoId
         self.sizeSpec = sizeSpec
         self.volumeId = volumeId
         self.localId = localId
@@ -313,21 +305,35 @@ public final class CloudPeerPhotoSizeMediaResource: TelegramMediaResource {
     
     public required init(decoder: PostboxDecoder) {
         self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
+        self.photoId = decoder.decodeOptionalInt64ForKey("p")
         self.sizeSpec = CloudPeerPhotoSizeSpec(rawValue: decoder.decodeInt32ForKey("s", orElse: 0)) ?? .small
-        self.volumeId = decoder.decodeInt64ForKey("v", orElse: 0)
-        self.localId = decoder.decodeInt32ForKey("l", orElse: 0)
+        self.volumeId = decoder.decodeOptionalInt64ForKey("v")
+        self.localId = decoder.decodeOptionalInt32ForKey("l")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.datacenterId), forKey: "d")
+        if let photoId = self.photoId {
+            encoder.encodeInt64(photoId, forKey: "p")
+        } else {
+            encoder.encodeNil(forKey: "p")
+        }
         encoder.encodeInt32(self.sizeSpec.rawValue, forKey: "s")
-        encoder.encodeInt64(self.volumeId, forKey: "v")
-        encoder.encodeInt32(self.localId, forKey: "l")
+        if let volumeId = self.volumeId {
+            encoder.encodeInt64(volumeId, forKey: "v")
+        } else {
+            encoder.encodeNil(forKey: "v")
+        }
+        if let localId = self.localId {
+            encoder.encodeInt32(localId, forKey: "l")
+        } else {
+            encoder.encodeNil(forKey: "l")
+        }
     }
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? CloudPeerPhotoSizeMediaResource {
-            return self.datacenterId == to.datacenterId && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId
+            return self.datacenterId == to.datacenterId && self.photoId == to.photoId && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId
         } else {
             return false
         }
@@ -336,17 +342,23 @@ public final class CloudPeerPhotoSizeMediaResource: TelegramMediaResource {
 
 public struct CloudStickerPackThumbnailMediaResourceId: MediaResourceId, Hashable {
     let datacenterId: Int32
-    let volumeId: Int64
-    let localId: Int32
+    let thumbVersion: Int32?
+    let volumeId: Int64?
+    let localId: Int32?
     
-    init(datacenterId: Int32, volumeId: Int64, localId: Int32) {
+    init(datacenterId: Int32, thumbVersion: Int32?, volumeId: Int64?, localId: Int32?) {
         self.datacenterId = datacenterId
+        self.thumbVersion = thumbVersion
         self.volumeId = volumeId
         self.localId = localId
     }
     
     public var uniqueId: String {
-        return "telegram-stickerpackthumbnail-\(self.datacenterId)-\(self.volumeId)-\(self.localId)"
+        if let thumbVersion = self.thumbVersion {
+            return "telegram-stickerpackthumbnail-\(self.datacenterId)-\(thumbVersion)-\(self.volumeId ?? 0)-\(self.localId ?? 0)"
+        } else {
+            return "telegram-stickerpackthumbnail-\(self.datacenterId)-\(self.volumeId ?? 0)-\(self.localId ?? 0)"
+        }
     }
     
     public func isEqual(to: MediaResourceId) -> Bool {
@@ -360,34 +372,50 @@ public struct CloudStickerPackThumbnailMediaResourceId: MediaResourceId, Hashabl
 
 public final class CloudStickerPackThumbnailMediaResource: TelegramMediaResource {
     public let datacenterId: Int
-    public let volumeId: Int64
-    public let localId: Int32
+    public let thumbVersion: Int32?
+    public let volumeId: Int64?
+    public let localId: Int32?
     
     public var id: MediaResourceId {
-        return CloudStickerPackThumbnailMediaResourceId(datacenterId: Int32(self.datacenterId), volumeId: self.volumeId, localId: self.localId)
+        return CloudStickerPackThumbnailMediaResourceId(datacenterId: Int32(self.datacenterId), thumbVersion: self.thumbVersion, volumeId: self.volumeId, localId: self.localId)
     }
     
-    public init(datacenterId: Int32, volumeId: Int64, localId: Int32) {
+    public init(datacenterId: Int32, thumbVersion: Int32?, volumeId: Int64?, localId: Int32?) {
         self.datacenterId = Int(datacenterId)
+        self.thumbVersion = thumbVersion
         self.volumeId = volumeId
         self.localId = localId
     }
     
     public required init(decoder: PostboxDecoder) {
         self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
-        self.volumeId = decoder.decodeInt64ForKey("v", orElse: 0)
-        self.localId = decoder.decodeInt32ForKey("l", orElse: 0)
+        self.thumbVersion = decoder.decodeOptionalInt32ForKey("t")
+        self.volumeId = decoder.decodeOptionalInt64ForKey("v")
+        self.localId = decoder.decodeOptionalInt32ForKey("l")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.datacenterId), forKey: "d")
-        encoder.encodeInt64(self.volumeId, forKey: "v")
-        encoder.encodeInt32(self.localId, forKey: "l")
+        if let thumbVersion = self.thumbVersion {
+            encoder.encodeInt32(thumbVersion, forKey: "t")
+        } else {
+            encoder.encodeNil(forKey: "t")
+        }
+        if let volumeId = self.volumeId {
+            encoder.encodeInt64(volumeId, forKey: "v")
+        } else {
+            encoder.encodeNil(forKey: "v")
+        }
+        if let localId = self.localId {
+            encoder.encodeInt32(localId, forKey: "l")
+        } else {
+            encoder.encodeNil(forKey: "l")
+        }
     }
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? CloudStickerPackThumbnailMediaResource {
-            return self.datacenterId == to.datacenterId && self.volumeId == to.volumeId && self.localId == to.localId
+            return self.datacenterId == to.datacenterId && self.thumbVersion == to.thumbVersion && self.volumeId == to.volumeId && self.localId == to.localId
         } else {
             return false
         }

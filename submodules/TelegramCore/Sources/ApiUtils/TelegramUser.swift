@@ -7,21 +7,17 @@ import SyncCore
 func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
-        case let .userProfilePhoto(flags, _, photoSmall, photoBig, dcId):
+        case let .userProfilePhoto(flags, id, strippedThumb, dcId):
             let _ = (flags & (1 << 0)) != 0
             
             let smallResource: TelegramMediaResource
             let fullSizeResource: TelegramMediaResource
-            switch photoSmall {
-                case let .fileLocationToBeDeprecated(volumeId, localId):
-                    smallResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .small, volumeId: volumeId, localId: localId)
-            }
-            switch photoBig {
-                case let .fileLocationToBeDeprecated(volumeId, localId):
-                    fullSizeResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .fullSize, volumeId: volumeId, localId: localId)
-            }
-            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 80, height: 80), resource: smallResource, progressiveSizes: []))
-            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: fullSizeResource, progressiveSizes: []))
+
+            smallResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: .small, volumeId: nil, localId: nil)
+            fullSizeResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: .fullSize, volumeId: nil, localId: nil)
+
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 80, height: 80), resource: smallResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData()))
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: fullSizeResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData()))
         case .userProfilePhotoEmpty:
             break
     }

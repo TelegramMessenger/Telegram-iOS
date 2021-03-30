@@ -152,6 +152,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     public func toInt64() -> Int64 {
         let idLowBits = self.id.rawValue & 0xffffffff
 
+        let result: Int64
         if self.namespace == .max && self.id.rawValue == 0 {
             var data: UInt64 = 0
 
@@ -160,7 +161,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
             data |= idLowBits
 
-            return Int64(bitPattern: data)
+            result = Int64(bitPattern: data)
         } else {
             var data: UInt64 = 0
             data |= UInt64(self.namespace.rawValue) << 32
@@ -170,8 +171,12 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
             data |= idLowBits
 
-            return Int64(bitPattern: data)
+            result = Int64(bitPattern: data)
         }
+
+        assert(PeerId(result) == self)
+
+        return result
     }
     
     public static func encodeArrayToBuffer(_ array: [PeerId], buffer: WriteBuffer) {

@@ -9,13 +9,10 @@ private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource,
         case let .photo(_, id, accessHash, fileReference, _, sizes, _, dcId):
             for size in sizes {
                 switch size {
-                    case let .photoCachedSize(type, location, _, _, bytes):
-                        switch location {
-                            case let .fileLocationToBeDeprecated(volumeId, localId):
-                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, size: nil, fileReference: fileReference.makeData())
-                                let data = bytes.makeData()
-                                return [(resource, data)]
-                        }
+                    case let .photoCachedSize(type, _, _, bytes):
+                        let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, size: nil, fileReference: fileReference.makeData())
+                        let data = bytes.makeData()
+                        return [(resource, data)]
                     default:
                         break
                 }
@@ -32,13 +29,10 @@ private func collectPreCachedResources(for document: Api.Document) -> [(MediaRes
             if let thumbs = thumbs {
                 for thumb in thumbs {
                     switch thumb {
-                        case let .photoCachedSize(type, location, _, _, bytes):
-                            switch location {
-                                case let .fileLocationToBeDeprecated(volumeId, localId):
-                                    let resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
-                                    let data = bytes.makeData()
-                                    return [(resource, data)]
-                            }
+                        case let .photoCachedSize(type, _, _, bytes):
+                            let resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, fileReference: fileReference.makeData())
+                            let data = bytes.makeData()
+                            return [(resource, data)]
                         default:
                             break
                     }
