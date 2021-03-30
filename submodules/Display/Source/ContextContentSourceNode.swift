@@ -15,6 +15,7 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
     public var applyAbsoluteOffsetSpring: ((CGFloat, Double, CGFloat) -> Void)?
     public var layoutUpdated: ((CGSize) -> Void)?
     public var updateDistractionFreeMode: ((Bool) -> Void)?
+    public var requestDismiss: (() -> Void)?
     
     public override init() {
         self.contentNode = ContextExtractedContentNode()
@@ -26,6 +27,7 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
 }
 
 public final class ContextExtractedContentNode: ASDisplayNode {
+    public var customHitTest: ((CGPoint) -> UIView?)?
 }
 
 public final class ContextControllerContentNode: ASDisplayNode {

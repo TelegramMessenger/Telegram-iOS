@@ -7,6 +7,7 @@ import SyncCore
 import MtProtoKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramNotices
 import AccountContext
 
 private let baseTelegramMePaths = ["telegram.me", "t.me", "telegram.dog"]
@@ -373,7 +374,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {
-                    foundPeer = findChannelById(postbox: account.postbox, network: account.network, channelId: messageId.peerId.id)
+                    foundPeer = TelegramEngine(account: account).peerNames.findChannelById(channelId: messageId.peerId.id)
                 }
                 return foundPeer
                 |> mapToSignal { foundPeer -> Signal<ResolvedUrl?, NoError> in
@@ -525,60 +526,72 @@ private struct UrlHandlingConfiguration {
     }
 }
 
-public func resolveUrlImpl(account: Account, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
+public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
     
-    return account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
-        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
-        let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
-        
-        var url = url
-        if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
-            if !(url.hasPrefix("http") || url.hasPrefix("https")) {
-                url = "http://\(url)"
+    return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
+    |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
+        return context.account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
+            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+            let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
+            
+            var skipUrlAuth = skipUrlAuth
+            if let peerId = peerId, peerId.namespace == Namespaces.Peer.SecretChat {
+                if let linkPreviews = linkPreviews, linkPreviews {
+                } else {
+                    skipUrlAuth = true
+                }
             }
-        }
-        if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
-            if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
-                components.scheme = "https"
-                var queryItems = components.queryItems ?? []
-                queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
-                components.queryItems = queryItems
-                url = components.url?.absoluteString ?? url
-            } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
-                return .single(.urlAuth(url))
+            
+            var url = url
+            if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
+                if !(url.hasPrefix("http") || url.hasPrefix("https")) {
+                    url = "http://\(url)"
+                }
             }
-        }
-        
-        for basePath in baseTelegramMePaths {
-            for scheme in schemes {
-                let basePrefix = scheme + basePath + "/"
-                if url.lowercased().hasPrefix(basePrefix) {
-                    if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
-                        return resolveInternalUrl(account: account, url: internalUrl)
-                        |> map { resolved -> ResolvedUrl in
-                            if let resolved = resolved {
-                                return resolved
-                            } else {
-                                return .externalUrl(url)
+            
+            if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
+                if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
+                    components.scheme = "https"
+                    var queryItems = components.queryItems ?? []
+                    queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
+                    components.queryItems = queryItems
+                    url = components.url?.absoluteString ?? url
+                } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
+                    return .single(.urlAuth(url))
+                }
+            }
+            
+            for basePath in baseTelegramMePaths {
+                for scheme in schemes {
+                    let basePrefix = scheme + basePath + "/"
+                    if url.lowercased().hasPrefix(basePrefix) {
+                        if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
+                            return resolveInternalUrl(account: context.account, url: internalUrl)
+                            |> map { resolved -> ResolvedUrl in
+                                if let resolved = resolved {
+                                    return resolved
+                                } else {
+                                    return .externalUrl(url)
+                                }
                             }
+                        } else {
+                            return .single(.externalUrl(url))
                         }
-                    } else {
-                        return .single(.externalUrl(url))
                     }
                 }
             }
-        }
-        for basePath in baseTelegraPhPaths {
-            for scheme in schemes {
-                let basePrefix = scheme + basePath
-                if url.lowercased().hasPrefix(basePrefix) {
-                    return resolveInstantViewUrl(account: account, url: url)
+            for basePath in baseTelegraPhPaths {
+                for scheme in schemes {
+                    let basePrefix = scheme + basePath
+                    if url.lowercased().hasPrefix(basePrefix) {
+                        return resolveInstantViewUrl(account: context.account, url: url)
+                    }
                 }
             }
-        }
-        return .single(.externalUrl(url))
-    } |> switchToLatest
+            return .single(.externalUrl(url))
+        } |> switchToLatest
+    }
 }
 
 public func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {

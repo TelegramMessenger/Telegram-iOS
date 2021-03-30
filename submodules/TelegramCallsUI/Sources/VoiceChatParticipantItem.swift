@@ -17,6 +17,7 @@ import ContextUI
 import AccountContext
 import LegacyComponents
 import AudioBlob
+import PeerInfoAvatarListNode
 
 final class VoiceChatParticipantItem: ListViewItem {
     enum ParticipantText {
@@ -77,8 +78,9 @@ final class VoiceChatParticipantItem: ListViewItem {
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let action: ((ASDisplayNode) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    let getIsExpanded: () -> Bool
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -98,6 +100,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.action = action
         self.contextAction = contextAction
+        self.getIsExpanded = getIsExpanded
     }
         
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -153,17 +156,24 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     
     let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
+    private let backgroundImageNode: ASImageNode
     private let extractedBackgroundImageNode: ASImageNode
     private let offsetContainerNode: ASDisplayNode
     
     private var extractedRect: CGRect?
     private var nonExtractedRect: CGRect?
+    private var extractedVerticalOffset: CGFloat?
         
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let statusNode: TextNode
     private let expandedStatusNode: TextNode
     private var credibilityIconNode: ASImageNode?
+    
+    private var avatarTransitionNode: ASImageNode?
+    private var avatarListContainerNode: ASDisplayNode?
+    private var avatarListWrapperNode: ASDisplayNode?
+    private var avatarListNode: PeerInfoAvatarListContainerNode?
     
     private let actionContainerNode: ASDisplayNode
     private var animationNode: VoiceChatMicrophoneNode?
@@ -179,6 +189,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (VoiceChatParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
+    private var isExtracted = false
     private var wavesColor: UIColor?
     
     private var videoNode: GroupVideoNode?
@@ -199,7 +210,13 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         
+        self.backgroundImageNode = ASImageNode()
+        self.backgroundImageNode.clipsToBounds = true
+        self.backgroundImageNode.displaysAsynchronously = false
+        self.backgroundImageNode.alpha = 0.0
+        
         self.extractedBackgroundImageNode = ASImageNode()
+        self.extractedBackgroundImageNode.clipsToBounds = true
         self.extractedBackgroundImageNode.displaysAsynchronously = false
         self.extractedBackgroundImageNode.alpha = 0.0
         
@@ -238,7 +255,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
         
-        self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.backgroundImageNode)
+        self.backgroundImageNode.addSubnode(self.extractedBackgroundImageNode)
         self.contextSourceNode.contentNode.addSubnode(self.offsetContainerNode)
         self.offsetContainerNode.addSubnode(self.avatarNode)
         self.offsetContainerNode.addSubnode(self.titleNode)
@@ -279,35 +297,239 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 return
             }
             
+            strongSelf.isExtracted = isExtracted
+            
+            let inset: CGFloat = 12.0
+            let cornerRadius: CGFloat = 14.0
             if isExtracted {
-                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.list.itemBlocksBackgroundColor)
-            }
-            
-            if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
-                let rect = isExtracted ? extractedRect : nonExtractedRect
-                transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: rect)
-            }
-            
-            transition.updateAlpha(node: strongSelf.statusNode, alpha: isExtracted ? 0.0 : 1.0)
-            transition.updateAlpha(node: strongSelf.expandedStatusNode, alpha: isExtracted ? 1.0 : 0.0)
-            
-            transition.updateAlpha(node: strongSelf.actionContainerNode, alpha: isExtracted ? 0.0 : 1.0)
-            
-            transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? 12.0 : 0.0, y: 0.0))
-           
-            transition.updateSublayerTransformOffset(layer: strongSelf.actionContainerNode.layer, offset: CGPoint(x: isExtracted ? -24.0 : 0.0, y: 0.0))
-            
-            transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
-                if !isExtracted {
-                    self?.extractedBackgroundImageNode.image = nil
+                strongSelf.contextSourceNode.contentNode.customHitTest = { [weak self] point in
+                    if let strongSelf = self {
+                        if let avatarListWrapperNode = strongSelf.avatarListWrapperNode, avatarListWrapperNode.frame.contains(point) {
+                            return strongSelf.avatarListNode?.view
+                        }
+                    }
+                    return nil
                 }
-            })
+            } else {
+                strongSelf.contextSourceNode.contentNode.customHitTest = nil
+            }
+                       
+            let extractedVerticalOffset = strongSelf.extractedVerticalOffset ?? 0.0
+            if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
+                let rect: CGRect
+                if isExtracted {
+                    if extractedVerticalOffset > 0.0 {
+                        rect = CGRect(x: extractedRect.minX, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
+                    } else {
+                        rect = extractedRect
+                    }
+                } else {
+                    rect = nonExtractedRect
+                }
+                
+                let springDuration: Double = isExtracted ? 0.42 : 0.3
+                let springDamping: CGFloat = isExtracted ? 104.0 : 1000.0
+                
+                let itemBackgroundColor: UIColor = item.getIsExpanded() ? UIColor(rgb: 0x1c1c1e) : UIColor(rgb: 0x2c2c2e)
+                
+                if !extractedVerticalOffset.isZero {
+                    let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                    if isExtracted {
+                        strongSelf.backgroundImageNode.image = generateImage(CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0), rotatedContext: { (size, context) in
+                            let bounds = CGRect(origin: CGPoint(), size: size)
+                            context.clear(bounds)
+                            
+                            context.setFillColor(itemBackgroundColor.cgColor)
+                            context.fillEllipse(in: bounds)
+                            context.fill(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height / 2.0))
+                        })?.stretchableImage(withLeftCapWidth: Int(cornerRadius), topCapHeight: Int(cornerRadius))
+                        strongSelf.extractedBackgroundImageNode.image = generateImage(CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0), rotatedContext: { (size, context) in
+                            let bounds = CGRect(origin: CGPoint(), size: size)
+                            context.clear(bounds)
+                            
+                            context.setFillColor(item.presentationData.theme.list.itemBlocksBackgroundColor.cgColor)
+                            context.fillEllipse(in: bounds)
+                            context.fill(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height / 2.0))
+                        })?.stretchableImage(withLeftCapWidth: Int(cornerRadius), topCapHeight: Int(cornerRadius))
+                        strongSelf.backgroundImageNode.cornerRadius = cornerRadius
+                                              
+                        strongSelf.avatarNode.transform = CATransform3DIdentity
+                        var avatarInitialRect = strongSelf.avatarNode.view.convert(strongSelf.avatarNode.bounds, to: strongSelf.offsetContainerNode.supernode?.view)
+                        if strongSelf.avatarTransitionNode == nil {
+                            transition.updateCornerRadius(node: strongSelf.backgroundImageNode, cornerRadius: 0.0)
+                              
+                            let targetRect = CGRect(x: extractedRect.minX, y: extractedRect.minY, width: extractedRect.width, height: extractedRect.width)
+                            let initialScale = avatarInitialRect.width / targetRect.width
+                            avatarInitialRect.origin.y += cornerRadius / 2.0 * initialScale
+                            
+                            let avatarListWrapperNode = ASDisplayNode()
+                            avatarListWrapperNode.clipsToBounds = true
+                            avatarListWrapperNode.frame = CGRect(x: targetRect.minX, y: targetRect.minY, width: targetRect.width, height: targetRect.height + cornerRadius)
+                            avatarListWrapperNode.cornerRadius = cornerRadius
+                            
+                            let transitionNode = ASImageNode()
+                            transitionNode.clipsToBounds = true
+                            transitionNode.displaysAsynchronously = false
+                            transitionNode.displayWithoutProcessing = true
+                            transitionNode.image = strongSelf.avatarNode.unroundedImage
+                            transitionNode.frame = CGRect(origin: CGPoint(), size: targetRect.size)
+                            transitionNode.cornerRadius = targetRect.width / 2.0
+                            radiusTransition.updateCornerRadius(node: transitionNode, cornerRadius: 0.0)
+                            
+                            strongSelf.avatarNode.isHidden = true
+                            
+                            avatarListWrapperNode.addSubnode(transitionNode)
+                            strongSelf.avatarTransitionNode = transitionNode
+    
+                            let avatarListContainerNode = ASDisplayNode()
+                            avatarListContainerNode.clipsToBounds = true
+                            avatarListContainerNode.frame = CGRect(origin: CGPoint(), size: targetRect.size)
+                            avatarListContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            avatarListContainerNode.cornerRadius = targetRect.width / 2.0
+                            
+                            avatarListWrapperNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+                            avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: avatarInitialRect.center), to: NSValue(cgPoint: avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+                            radiusTransition.updateCornerRadius(node: avatarListContainerNode, cornerRadius: 0.0)
+                            
+                            let avatarListNode = PeerInfoAvatarListContainerNode(context: item.context)
+                            avatarListNode.backgroundColor = .clear
+                            avatarListNode.peer = item.peer
+                            avatarListNode.firstFullSizeOnly = true
+                            avatarListNode.offsetLocation = true
+                            avatarListNode.customCenterTapAction = { [weak self] in
+                                self?.contextSourceNode.requestDismiss?()
+                            }
+                            avatarListNode.frame = CGRect(x: targetRect.width / 2.0, y: targetRect.height / 2.0, width: targetRect.width, height: targetRect.height)
+                            avatarListNode.controlsClippingNode.frame = CGRect(x: -targetRect.width / 2.0, y: -targetRect.height / 2.0, width: targetRect.width, height: targetRect.height)
+                            avatarListNode.controlsClippingOffsetNode.frame = CGRect(origin: CGPoint(x: targetRect.width / 2.0, y: targetRect.height / 2.0), size: CGSize())
+                            avatarListNode.stripContainerNode.frame = CGRect(x: 0.0, y: 13.0, width: targetRect.width, height: 2.0)
+                            
+                            avatarListContainerNode.addSubnode(avatarListNode)
+                            avatarListContainerNode.addSubnode(avatarListNode.controlsClippingOffsetNode)
+                            avatarListWrapperNode.addSubnode(avatarListContainerNode)
+                            
+                            avatarListNode.update(size: targetRect.size, peer: item.peer, isExpanded: true, transition: .immediate)
+                            strongSelf.offsetContainerNode.supernode?.addSubnode(avatarListWrapperNode)
+
+                            strongSelf.audioLevelView?.alpha = 0.0
+                            
+                            strongSelf.avatarListWrapperNode = avatarListWrapperNode
+                            strongSelf.avatarListContainerNode = avatarListContainerNode
+                            strongSelf.avatarListNode = avatarListNode
+                        }
+                    } else if let transitionNode = strongSelf.avatarTransitionNode, let avatarListWrapperNode = strongSelf.avatarListWrapperNode, let avatarListContainerNode = strongSelf.avatarListContainerNode {
+                        transition.updateCornerRadius(node: strongSelf.backgroundImageNode, cornerRadius: cornerRadius)
+                        
+                        var avatarInitialRect = CGRect(origin: strongSelf.avatarNode.frame.origin, size: strongSelf.avatarNode.frame.size)
+                        let targetScale = avatarInitialRect.width / avatarListContainerNode.frame.width
+                        avatarInitialRect.origin.y += cornerRadius / 2.0 * targetScale
+                        
+                        strongSelf.avatarTransitionNode = nil
+                        strongSelf.avatarListWrapperNode = nil
+                        strongSelf.avatarListContainerNode = nil
+                        strongSelf.avatarListNode = nil
+                        
+                        avatarListContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak avatarListContainerNode] _ in
+                            avatarListContainerNode?.removeFromSupernode()
+                        })
+                        
+                        avatarListWrapperNode.layer.animate(from: 1.0 as NSNumber, to: targetScale as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, removeOnCompletion: false)
+                        avatarListWrapperNode.layer.animate(from: NSValue(cgPoint: avatarListWrapperNode.position), to: NSValue(cgPoint: avatarInitialRect.center), keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionNode, weak self] _ in
+                            transitionNode?.removeFromSupernode()
+                            self?.avatarNode.isHidden = false
+                            
+                            self?.audioLevelView?.alpha = 1.0
+                            self?.audioLevelView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        })
+    
+                        radiusTransition.updateCornerRadius(node: avatarListContainerNode, cornerRadius: avatarListContainerNode.frame.width / 2.0)
+                        radiusTransition.updateCornerRadius(node: transitionNode, cornerRadius: avatarListContainerNode.frame.width / 2.0)
+                    }
+                    
+                    let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                    alphaTransition.updateAlpha(node: strongSelf.statusNode, alpha: isExtracted ? 0.0 : 1.0)
+                    alphaTransition.updateAlpha(node: strongSelf.expandedStatusNode, alpha: isExtracted ? 1.0 : 0.0)
+                    alphaTransition.updateAlpha(node: strongSelf.actionContainerNode, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
+                    
+                    let offsetInitialSublayerTransform = strongSelf.offsetContainerNode.layer.sublayerTransform
+                    strongSelf.offsetContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? -33 : 0.0, isExtracted ? extractedVerticalOffset : 0.0, 0.0)
+                    
+                    let actionInitialSublayerTransform = strongSelf.actionContainerNode.layer.sublayerTransform
+                    strongSelf.actionContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? 21.0 : 0.0, 0.0, 0.0)
+                    
+                    let initialBackgroundPosition = strongSelf.backgroundImageNode.position
+                    strongSelf.backgroundImageNode.layer.position = rect.center
+                    let initialBackgroundBounds = strongSelf.backgroundImageNode.bounds
+                    strongSelf.backgroundImageNode.layer.bounds = CGRect(origin: CGPoint(), size: rect.size)
+                    
+                    let initialExtractedBackgroundPosition = strongSelf.extractedBackgroundImageNode.position
+                    strongSelf.extractedBackgroundImageNode.layer.position = CGPoint(x: rect.size.width / 2.0, y: rect.size.height / 2.0)
+                    let initialExtractedBackgroundBounds = strongSelf.extractedBackgroundImageNode.bounds
+                    strongSelf.extractedBackgroundImageNode.layer.bounds = strongSelf.backgroundImageNode.layer.bounds
+                    if isExtracted {
+                        strongSelf.offsetContainerNode.layer.animateSpring(from: NSValue(caTransform3D: offsetInitialSublayerTransform), to: NSValue(caTransform3D: strongSelf.offsetContainerNode.layer.sublayerTransform), keyPath: "sublayerTransform", duration: springDuration, delay: 0.0, initialVelocity: 0.0, damping: springDamping)
+                        strongSelf.actionContainerNode.layer.animateSpring(from: NSValue(caTransform3D: actionInitialSublayerTransform), to: NSValue(caTransform3D: strongSelf.actionContainerNode.layer.sublayerTransform), keyPath: "sublayerTransform", duration: springDuration, delay: 0.0, initialVelocity: 0.0, damping: springDamping)
+                        strongSelf.backgroundImageNode.layer.animateSpring(from: NSValue(cgPoint: initialBackgroundPosition), to: NSValue(cgPoint: strongSelf.backgroundImageNode.position), keyPath: "position", duration: springDuration, delay: 0.0, initialVelocity: 0.0, damping: springDamping)
+                        strongSelf.backgroundImageNode.layer.animateSpring(from: NSValue(cgRect: initialBackgroundBounds), to: NSValue(cgRect: strongSelf.backgroundImageNode.bounds), keyPath: "bounds", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+                        strongSelf.extractedBackgroundImageNode.layer.animateSpring(from: NSValue(cgPoint: initialExtractedBackgroundPosition), to: NSValue(cgPoint: strongSelf.extractedBackgroundImageNode.position), keyPath: "position", duration: springDuration, delay: 0.0, initialVelocity: 0.0, damping: springDamping)
+                        strongSelf.extractedBackgroundImageNode.layer.animateSpring(from: NSValue(cgRect: initialExtractedBackgroundBounds), to: NSValue(cgRect: strongSelf.extractedBackgroundImageNode.bounds), keyPath: "bounds", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+                    } else {
+                        strongSelf.offsetContainerNode.layer.animate(from: NSValue(caTransform3D: offsetInitialSublayerTransform), to: NSValue(caTransform3D: strongSelf.offsetContainerNode.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                        strongSelf.actionContainerNode.layer.animate(from: NSValue(caTransform3D: actionInitialSublayerTransform), to: NSValue(caTransform3D: strongSelf.actionContainerNode.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                        strongSelf.backgroundImageNode.layer.animate(from: NSValue(cgPoint: initialBackgroundPosition), to: NSValue(cgPoint: strongSelf.backgroundImageNode.position), keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                        strongSelf.backgroundImageNode.layer.animate(from: NSValue(cgRect: initialBackgroundBounds), to: NSValue(cgRect: strongSelf.backgroundImageNode.bounds), keyPath: "bounds", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                        strongSelf.extractedBackgroundImageNode.layer.animate(from: NSValue(cgPoint: initialExtractedBackgroundPosition), to: NSValue(cgPoint: strongSelf.extractedBackgroundImageNode.position), keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                        strongSelf.extractedBackgroundImageNode.layer.animate(from: NSValue(cgRect: initialExtractedBackgroundBounds), to: NSValue(cgRect: strongSelf.extractedBackgroundImageNode.bounds), keyPath: "bounds", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                    }
+
+                    if isExtracted {
+                        strongSelf.backgroundImageNode.alpha = 1.0
+                        strongSelf.extractedBackgroundImageNode.alpha = 1.0
+                        strongSelf.extractedBackgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                    } else {
+                        strongSelf.extractedBackgroundImageNode.alpha = 0.0
+                        strongSelf.extractedBackgroundImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+                            self?.backgroundImageNode.image = nil
+                            self?.extractedBackgroundImageNode.image = nil
+                            self?.extractedBackgroundImageNode.layer.removeAllAnimations()
+                        })
+                    }
+                } else {
+                    if isExtracted {
+                        strongSelf.backgroundImageNode.alpha = 0.0
+                        strongSelf.extractedBackgroundImageNode.alpha = 1.0
+                        strongSelf.backgroundImageNode.image = generateStretchableFilledCircleImage(diameter: cornerRadius * 2.0, color: itemBackgroundColor)
+                        strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: cornerRadius * 2.0, color: item.presentationData.theme.list.itemBlocksBackgroundColor)
+                    }
+                    
+                    transition.updateFrame(node: strongSelf.backgroundImageNode, frame: rect)
+                    transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: CGRect(origin: CGPoint(), size: rect.size))
+                    
+                    transition.updateAlpha(node: strongSelf.statusNode, alpha: isExtracted ? 0.0 : 1.0)
+                    transition.updateAlpha(node: strongSelf.expandedStatusNode, alpha: isExtracted ? 1.0 : 0.0)
+                    transition.updateAlpha(node: strongSelf.actionContainerNode, alpha: isExtracted ? 0.0 : 1.0)
+                    
+                    transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? inset : 0.0, y: isExtracted ? extractedVerticalOffset : 0.0))
+                    transition.updateSublayerTransformOffset(layer: strongSelf.actionContainerNode.layer, offset: CGPoint(x: isExtracted ? -24.0 : 0.0, y: 0.0))
+                    
+                    transition.updateAlpha(node: strongSelf.backgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
+                        if !isExtracted {
+                            self?.backgroundImageNode.image = nil
+                            self?.extractedBackgroundImageNode.image = nil
+                        }
+                    })
+                }
+            }
         }
     }
     
     deinit {
         self.audioLevelDisposable.dispose()
         self.raiseHandTimer?.invalidate()
+    }
+
+    @objc private func handleTap() {
+        print("tap")
     }
     
     override func selected() {
@@ -444,10 +666,15 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             if let currentCredibilityIconImage = currentCredibilityIconImage {
                 titleIconsWidth += 4.0 + currentCredibilityIconImage.size.width
             }
+            
+            var expandedRightInset: CGFloat = 30.0
+            if item.peer.smallProfileImage != nil {
+                expandedRightInset = 0.0
+            }
                               
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - rightInset - 30.0 - titleIconsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(TextNodeLayoutArguments(attributedString: expandedStatusAttributedString, backgroundColor: nil, maximumNumberOfLines: 4, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(TextNodeLayoutArguments(attributedString: expandedStatusAttributedString, backgroundColor: nil, maximumNumberOfLines: 6, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = UIEdgeInsets()
     
@@ -512,20 +739,32 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.layoutParams = (item, params, first, last)
                     strongSelf.wavesColor = wavesColor
                     
-                    let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width - 16.0, height: layout.contentSize.height))
+                    let nonExtractedRect = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: CGSize(width: layout.contentSize.width - 32.0, height: layout.contentSize.height))
                                     
                     var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
-                    let extractedHeight = extractedRect.height + expandedStatusLayout.size.height - statusLayout.size.height
+                    var extractedHeight = extractedRect.height + expandedStatusLayout.size.height - statusLayout.size.height
+                    var extractedVerticalOffset: CGFloat = 0.0
+                    if item.peer.smallProfileImage != nil {
+                        extractedVerticalOffset = extractedRect.width
+                        extractedHeight += extractedVerticalOffset
+                    }
+
                     extractedRect.size.height = extractedHeight
                     
+                    strongSelf.extractedVerticalOffset = extractedVerticalOffset
                     strongSelf.extractedRect = extractedRect
                     strongSelf.nonExtractedRect = nonExtractedRect
                     
-                    if strongSelf.contextSourceNode.isExtractedToContextPreview {
-                        strongSelf.extractedBackgroundImageNode.frame = extractedRect
+                    if strongSelf.isExtracted {
+                        var extractedRect = extractedRect
+                        if !extractedVerticalOffset.isZero {
+                            extractedRect = CGRect(x: extractedRect.minX, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
+                        }
+                        strongSelf.backgroundImageNode.frame = extractedRect
                     } else {
-                        strongSelf.extractedBackgroundImageNode.frame = nonExtractedRect
+                        strongSelf.backgroundImageNode.frame = nonExtractedRect
                     }
+                    strongSelf.extractedBackgroundImageNode.frame = strongSelf.backgroundImageNode.bounds
                     strongSelf.contextSourceNode.contentRect = extractedRect
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
@@ -663,6 +902,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     audioLevelView.layer.mask = playbackMaskLayer
                                     
                                     audioLevelView.setColor(wavesColor)
+                                    audioLevelView.alpha = strongSelf.isExtracted ? 0.0 : 1.0
+                                    
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
                                 }
@@ -684,7 +925,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     }
                                     
                                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
-                                    transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
+                                    transition.updateTransformScale(node: strongSelf.avatarNode, scale: strongSelf.isExtracted ? 1.0 : avatarScale, beginWithCurrentState: true)
                                 }
                             }))
                         }
@@ -699,7 +940,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     if item.peer.isDeleted {
                         overrideImage = .deletedIcon
                     }
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
                 
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
                     

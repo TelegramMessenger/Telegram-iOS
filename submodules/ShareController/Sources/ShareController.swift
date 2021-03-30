@@ -299,7 +299,7 @@ public final class ShareController: ViewController {
     private var currentAccount: Account
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    private let forcedTheme: PresentationTheme?
+    private let forceTheme: PresentationTheme?
     
     private let externalShare: Bool
     private let immediateExternalShare: Bool
@@ -327,11 +327,11 @@ public final class ShareController: ViewController {
         }
     }
     
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
-        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, fromForeignApp: fromForeignApp, segmentedValues: segmentedValues, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forcedTheme: forcedTheme, forcedActionTitle: forcedActionTitle)
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
+        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, fromForeignApp: fromForeignApp, segmentedValues: segmentedValues, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forceTheme: forceTheme, forcedActionTitle: forcedActionTitle)
     }
     
-    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forcedTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
+    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
         self.sharedContext = sharedContext
         self.currentContext = currentContext
         self.currentAccount = currentContext.account
@@ -343,11 +343,11 @@ public final class ShareController: ViewController {
         self.immediatePeerId = immediatePeerId
         self.fromForeignApp = fromForeignApp
         self.segmentedValues = segmentedValues
-        self.forcedTheme = forcedTheme
+        self.forceTheme = forceTheme
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
-        if let forcedTheme = self.forcedTheme {
-            self.presentationData = self.presentationData.withUpdated(theme: forcedTheme)
+        if let forceTheme = self.forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
         }
         
         super.init(navigationBarPresentationData: nil)
@@ -487,17 +487,17 @@ public final class ShareController: ViewController {
                 return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forcedTheme: self.forcedTheme, segmentedValues: self.segmentedValues)
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, segmentedValues: self.segmentedValues)
         self.controllerNode.completed = self.completed
         self.controllerNode.dismiss = { [weak self] shared in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
             self?.dismissed?(shared)
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         self.controllerNode.cancel = { [weak self] in
             self?.controllerNode.view.endEditing(true)
             self?.controllerNode.animateOut(shared: false, completion: {
-                self?.presentingViewController?.dismiss(animated: false, completion: nil)
                 self?.dismissed?(false)
+                self?.presentingViewController?.dismiss(animated: false, completion: nil)
             })
         }
         self.controllerNode.share = { [weak self] text, peerIds in

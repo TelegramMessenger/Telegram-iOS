@@ -6,6 +6,7 @@ import SyncCore
 import TelegramUIPreferences
 import AccountContext
 import PhotoResources
+import UniversalMediaPlayer
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()

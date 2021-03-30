@@ -16,6 +16,7 @@ public struct PresentationDateTimeFormat: Equatable {
     public let dateFormat: PresentationDateFormat
     public let dateSeparator: String
     public let dateSuffix: String
+    public let requiresFullYear: Bool
     public let decimalSeparator: String
     public let groupingSeparator: String
     
@@ -24,15 +25,17 @@ public struct PresentationDateTimeFormat: Equatable {
         self.dateFormat = .monthFirst
         self.dateSeparator = "."
         self.dateSuffix = ""
+        self.requiresFullYear = false
         self.decimalSeparator = "."
         self.groupingSeparator = "."
     }
     
-    public init(timeFormat: PresentationTimeFormat, dateFormat: PresentationDateFormat, dateSeparator: String, dateSuffix: String, decimalSeparator: String, groupingSeparator: String) {
+    public init(timeFormat: PresentationTimeFormat, dateFormat: PresentationDateFormat, dateSeparator: String, dateSuffix: String, requiresFullYear: Bool, decimalSeparator: String, groupingSeparator: String) {
         self.timeFormat = timeFormat
         self.dateFormat = dateFormat
         self.dateSeparator = dateSeparator
         self.dateSuffix = dateSuffix
+        self.requiresFullYear = requiresFullYear
         self.decimalSeparator = decimalSeparator
         self.groupingSeparator = groupingSeparator
     }
@@ -157,13 +160,17 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
     let dateFormat: PresentationDateFormat
     var dateSeparator = "/"
     var dateSuffix = ""
+    var requiresFullYear = false
     if let dateString = DateFormatter.dateFormat(fromTemplate: "MdY", options: 0, locale: locale) {
-        for separator in [".", "/", "-", "/"] {
+        for separator in [". ", ".", "/", "-", "/"] {
             if dateString.contains(separator) {
                 if separator == ". " {
                     dateSuffix = "."
+                    dateSeparator = "."
+                    requiresFullYear = true
+                } else {
+                    dateSeparator = separator
                 }
-                dateSeparator = separator
                 break
             }
         }
@@ -178,7 +185,7 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
 
     let decimalSeparator = locale.decimalSeparator ?? "."
     let groupingSeparator = locale.groupingSeparator ?? ""
-    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, dateSuffix: dateSuffix, decimalSeparator: decimalSeparator, groupingSeparator: groupingSeparator)
+    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, dateSuffix: dateSuffix, requiresFullYear: requiresFullYear, decimalSeparator: decimalSeparator, groupingSeparator: groupingSeparator)
 }
 
 private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {

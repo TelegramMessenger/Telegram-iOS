@@ -100,7 +100,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()
-        self.lineNode.displayWithoutProcessing = true
+        self.lineNode.displayWithoutProcessing = false
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
         
@@ -158,6 +158,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 strongSelf.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
                 
                 strongSelf.setNeedsLayout()
+                if let subnodes = strongSelf.subnodes {
+                    for subnode in subnodes {
+                        subnode.setNeedsDisplay()
+                    }
+                }
             }
         }))
     }
@@ -195,6 +200,9 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: constrainedSize.width, height: 45.0)
+    }
+
+    override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
     }
     
     override func layout() {

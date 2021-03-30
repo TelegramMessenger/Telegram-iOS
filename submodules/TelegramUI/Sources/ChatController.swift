@@ -71,6 +71,7 @@ import ChatHistoryImportTasks
 import Markdown
 import TelegramPermissionsUI
 import Speak
+import UniversalMediaPlayer
 
 extension ChatLocation {
     var peerId: PeerId {
@@ -1371,6 +1372,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .replyThread:
                             postAsReply = true
                     }
+                    
+                    if let messageId = messageId, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                        if let author = message.author as? TelegramUser, author.botInfo != nil {
+                        } else {
+                            postAsReply = false
+                        }
+                    }
                 }
                 
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
@@ -1441,6 +1449,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 shareController.dismissed = { [weak self] shared in
                     if shared {
                         self?.commitPurposefulAction()
+                    }
+                }
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .linkCopied(text: strongSelf.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     }
                 }
                 shareController.completed = { [weak self] peerIds in
@@ -1622,7 +1635,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
                                 
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_UsernameCopied)
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
                                 self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             }))
                         }
@@ -1647,7 +1660,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
                                 
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_UsernameCopied)
                                 self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             })
                         ]), ActionSheetItemGroup(items: [
@@ -1748,7 +1761,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
-                        var signal = getBankCardInfo(account: strongSelf.context.account, cardNumber: number)
+                        var signal = strongSelf.context.engine.payments.getBankCardInfo(cardNumber: number)
                         let disposable: MetaDisposable
                         if let current = strongSelf.bankCardDisposable {
                             disposable = current
@@ -2425,7 +2438,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     var items: [ContextMenuItem] = [
                         .action(ContextMenuActionItem(text: isChannel ? strongSelf.presentationData.strings.Conversation_ContextMenuOpenChannelProfile : strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
                             self?.openPeer(peerId: peer.id, navigation: .info, fromMessage: nil)
@@ -3716,13 +3729,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var isScrolled: Bool
             }
             
-            let messageRangeEdge: Signal<Bool, NoError> = self.context.sharedContext.accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.experimentalUISettings]))
-            |> map { sharedData -> Bool in
-                let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
-                return experimentalSettings.snapPinListToTop
-            }
-            |> distinctUntilChanged
-            
             let referenceMessage: Signal<ReferenceMessage?, NoError>
             if latest {
                 referenceMessage = .single(nil)
@@ -3730,16 +3736,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 referenceMessage = combineLatest(
                     queue: Queue.mainQueue(),
                     self.scrolledToMessageId.get(),
-                    self.chatDisplayNode.historyNode.topVisibleMessageRange.get(),
-                    messageRangeEdge
+                    self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
                 )
-                |> map { scrolledToMessageId, topVisibleMessageRange, messageRangeEdge -> ReferenceMessage? in
+                |> map { scrolledToMessageId, topVisibleMessageRange -> ReferenceMessage? in
                     let topVisibleMessage: MessageId?
-                    if messageRangeEdge {
-                        topVisibleMessage = topVisibleMessageRange?.lowerBound
-                    } else {
-                        topVisibleMessage = topVisibleMessageRange?.upperBound
-                    }
+                    topVisibleMessage = topVisibleMessageRange?.upperBound
                     
                     if let scrolledToMessageId = scrolledToMessageId {
                         if let topVisibleMessage = topVisibleMessage {
@@ -4329,7 +4330,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             //effectiveCachedDataReady = .single(true)
             effectiveCachedDataReady = self.cachedDataReady.get()
         }
-        self.ready.set(combineLatest(self.chatDisplayNode.historyNode.historyState.get(), self._chatLocationInfoReady.get(), effectiveCachedDataReady, initialData) |> map { _, chatLocationInfoReady, cachedDataReady, _ in
+        self.ready.set(combineLatest(queue: .mainQueue(),
+            self.chatDisplayNode.historyNode.historyState.get(),
+            self._chatLocationInfoReady.get(),
+            effectiveCachedDataReady,
+            initialData
+        )
+        |> map { _, chatLocationInfoReady, cachedDataReady, _ in
             return chatLocationInfoReady && cachedDataReady
         })
         
@@ -7306,19 +7313,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
         })
-    }
-    
-    override public func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
-        guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
-            return
-        }
-        let hasOverlayNodes = self.context.sharedContext.mediaManager.overlayMediaManager.controller?.hasNodes ?? false
-        if self.validLayout != nil && orientation.isLandscape && !hasOverlayNodes && self.traceVisibility() && isTopmostChatController(self) {
-            var completed = false
-            self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
-                if !completed, let itemNode = itemNode as? ChatMessageItemView, let message = itemNode.item?.message,  let (_, soundEnabled, _, _, _) = itemNode.playMediaWithSound(), soundEnabled {
-                    let _ = self.controllerInteraction?.openMessage(message, .landscape)
-                    completed = true
+        
+        if case .compact = layout.metrics.widthClass {
+            let hasOverlayNodes = self.context.sharedContext.mediaManager.overlayMediaManager.controller?.hasNodes ?? false
+            if self.validLayout != nil && layout.size.width > layout.size.height && !hasOverlayNodes && self.traceVisibility() && isTopmostChatController(self) {
+                var completed = false
+                self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                    if !completed, let itemNode = itemNode as? ChatMessageItemView, let message = itemNode.item?.message, let (_, soundEnabled, _, _, _) = itemNode.playMediaWithSound(), soundEnabled {
+                        let _ = self.controllerInteraction?.openMessage(message, .landscape)
+                        completed = true
+                    }
                 }
             }
         }
@@ -8120,7 +8124,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if filteredSize == 0 {
                                     title = presentationData.strings.Cache_ClearNone
                                 } else {
-                                    title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
+                                    title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0
                                 }
                                 
                                 if let item = item as? ActionSheetButtonItem {
@@ -8173,7 +8177,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 totalSize += categorySize
                                 if categorySize > 1024 {
                                     let index = itemIndex
-                                    items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
+                                    items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, formatting: DataSizeStringFormatting(presentationData: presentationData)), value: true, action: { value in
                                         toggleCheck(categoryId, index)
                                     }))
                                     itemIndex += 1
@@ -8185,7 +8189,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if items.isEmpty {
                             strongSelf.presentClearCacheSuggestion()
                         } else {
-                            items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").0, action: {
                                 let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 var clearMediaIds = Set<MediaId>()
                                 
@@ -8243,7 +8247,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let _ = strongSelf.validLayout {
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     }
                                 }))
 
@@ -8905,58 +8909,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentContactPicker() {
-        let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: self.context, title: { $0.Contacts_Title }, displayDeviceContacts: true))
+        let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: self.context, title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: true))
         contactsController.navigationPresentation = .modal
         self.chatDisplayNode.dismissInput()
         self.effectiveNavigationController?.pushViewController(contactsController)
         self.controllerNavigationDisposable.set((contactsController.result
-        |> deliverOnMainQueue).start(next: { [weak self] peer in
-            if let strongSelf = self, let (peer, _) = peer {
-                let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
-                switch peer {
-                    case let .peer(contact, _, _):
-                        guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
-                            return
-                        }
-                        let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
-                        let context = strongSelf.context
-                        dataSignal = (strongSelf.context.sharedContext.contactDataManager?.basicData() ?? .single([:]))
-                        |> take(1)
-                        |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
-                            var stableId: String?
-                            let queryPhoneNumber = formatPhoneNumber(phoneNumber)
-                            outer: for (id, data) in basicData {
-                                for phoneNumber in data.phoneNumbers {
-                                    if formatPhoneNumber(phoneNumber.value) == queryPhoneNumber {
-                                        stableId = id
-                                        break outer
-                                    }
+        |> deliverOnMainQueue).start(next: { [weak self] peers in
+            if let strongSelf = self, let (peers, _) = peers {
+                if peers.count > 1 {
+                    var enqueueMessages: [EnqueueMessage] = []
+                    for peer in peers {
+                        var media: TelegramMediaContact?
+                        switch peer {
+                            case let .peer(contact, _, _):
+                                guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
+                                    continue
                                 }
-                            }
-                            
-                            if let stableId = stableId {
-                                return (context.sharedContext.contactDataManager?.extendedData(stableId: stableId) ?? .single(nil))
-                                |> take(1)
-                                |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
-                                    return (contact, extendedData)
+                                let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
+                                
+                                let phone = contactData.basicData.phoneNumbers[0].value
+                                media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: contact.id, vCardData: nil)
+                            case let .deviceContact(_, basicData):
+                                guard !basicData.phoneNumbers.isEmpty else {
+                                    continue
                                 }
-                            } else {
-                                return .single((contact, contactData))
-                            }
+                                let contactData = DeviceContactExtendedData(basicData: basicData, middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
+                                
+                                let phone = contactData.basicData.phoneNumbers[0].value
+                                media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: nil)
                         }
-                    case let .deviceContact(id, _):
-                        dataSignal = (strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
-                        |> take(1)
-                        |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
-                            return (nil, extendedData)
-                        }
-                }
-                strongSelf.controllerNavigationDisposable.set((dataSignal
-                |> deliverOnMainQueue).start(next: { peerAndContactData in
-                    if let strongSelf = self, let contactData = peerAndContactData.1, contactData.basicData.phoneNumbers.count != 0 {
-                        if contactData.isPrimitive {
-                            let phone = contactData.basicData.phoneNumbers[0].value
-                            let media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: peerAndContactData.0?.id, vCardData: nil)
+
+                        if let media = media {
                             let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                 if let strongSelf = self {
@@ -8966,31 +8949,91 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             })
                             let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
-                            strongSelf.sendMessages([message])
-                        } else {
-                            let contactController = strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
-                                guard let strongSelf = self, !contactData.basicData.phoneNumbers.isEmpty else {
-                                    return
-                                }
-                                let phone = contactData.basicData.phoneNumbers[0].value
-                                if let vCardData = contactData.serializedVCard() {
-                                    let media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: peer?.id, vCardData: vCardData)
-                                    let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                                    strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                                        if let strongSelf = self {
-                                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                                            })
-                                        }
-                                    })
-                                    let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
-                                    strongSelf.sendMessages([message])
-                                }
-                            }), completed: nil, cancelled: nil)
-                            strongSelf.effectiveNavigationController?.pushViewController(contactController)
+                            enqueueMessages.append(message)
                         }
                     }
-                }))
+                    strongSelf.sendMessages(enqueueMessages)
+                } else if let peer = peers.first {
+                    let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
+                    switch peer {
+                        case let .peer(contact, _, _):
+                            guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
+                                return
+                            }
+                            let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
+                            let context = strongSelf.context
+                            dataSignal = (strongSelf.context.sharedContext.contactDataManager?.basicData() ?? .single([:]))
+                            |> take(1)
+                            |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
+                                var stableId: String?
+                                let queryPhoneNumber = formatPhoneNumber(phoneNumber)
+                                outer: for (id, data) in basicData {
+                                    for phoneNumber in data.phoneNumbers {
+                                        if formatPhoneNumber(phoneNumber.value) == queryPhoneNumber {
+                                            stableId = id
+                                            break outer
+                                        }
+                                    }
+                                }
+                                
+                                if let stableId = stableId {
+                                    return (context.sharedContext.contactDataManager?.extendedData(stableId: stableId) ?? .single(nil))
+                                    |> take(1)
+                                    |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
+                                        return (contact, extendedData)
+                                    }
+                                } else {
+                                    return .single((contact, contactData))
+                                }
+                            }
+                        case let .deviceContact(id, _):
+                            dataSignal = (strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
+                            |> take(1)
+                            |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
+                                return (nil, extendedData)
+                            }
+                    }
+                    strongSelf.controllerNavigationDisposable.set((dataSignal
+                    |> deliverOnMainQueue).start(next: { peerAndContactData in
+                        if let strongSelf = self, let contactData = peerAndContactData.1, contactData.basicData.phoneNumbers.count != 0 {
+                            if contactData.isPrimitive {
+                                let phone = contactData.basicData.phoneNumbers[0].value
+                                let media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: peerAndContactData.0?.id, vCardData: nil)
+                                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                                    if let strongSelf = self {
+                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                                        })
+                                    }
+                                })
+                                let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
+                                strongSelf.sendMessages([message])
+                            } else {
+                                let contactController = strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
+                                    guard let strongSelf = self, !contactData.basicData.phoneNumbers.isEmpty else {
+                                        return
+                                    }
+                                    let phone = contactData.basicData.phoneNumbers[0].value
+                                    if let vCardData = contactData.serializedVCard() {
+                                        let media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: peer?.id, vCardData: vCardData)
+                                        let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                                            if let strongSelf = self {
+                                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                                                })
+                                            }
+                                        })
+                                        let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
+                                        strongSelf.sendMessages([message])
+                                    }
+                                }), completed: nil, cancelled: nil)
+                                strongSelf.effectiveNavigationController?.pushViewController(contactController)
+                            }
+                        }
+                    }))
+                }
             }
         }))
     }
@@ -10648,7 +10691,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var attemptSelectionImpl: ((Peer) -> Void)?
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: filter, attemptSelection: { peer in
                 attemptSelectionImpl?(peer)
-            }))
+            }, multipleSelection: true))
             let context = self.context
             attemptSelectionImpl = { [weak controller] peer in
                 guard let controller = controller else {
@@ -11396,7 +11439,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, present: { [weak self] c in
+            openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(resolved)

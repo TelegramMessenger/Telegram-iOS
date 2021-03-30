@@ -26,14 +26,19 @@ private func fetchChannelBlacklist(account: Account, peerId: PeerId, filter: Cha
                 |> map { result -> [RenderedChannelParticipant] in
                     var items: [RenderedChannelParticipant] = []
                     switch result {
-                        case let .channelParticipants(_, participants, users):
+                        case let .channelParticipants(_, participants, chats, users):
                             var peers: [PeerId: Peer] = [:]
-                            var presences:[PeerId: PeerPresence] = [:]
+                            var presences: [PeerId: PeerPresence] = [:]
                             for user in users {
                                 let peer = TelegramUser(user: user)
                                 peers[peer.id] = peer
                                 if let presence = TelegramUserPresence(apiUser: user) {
                                     presences[peer.id] = presence
+                                }
+                            }
+                            for chat in chats {
+                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                    peers[groupOrChannel.id] = groupOrChannel
                                 }
                             }
                             
@@ -133,7 +138,7 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> in
         return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> in
-            if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = transaction.getPeer(account.peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
+            if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = transaction.getPeer(account.peerId), let memberPeer = transaction.getPeer(memberId), let inputPeer = apiInputPeer(memberPeer) {
                 let updatedParticipant: ChannelParticipant
                 if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo, _) = currentParticipant {
                     let banInfo: ChannelParticipantBannedInfo?
@@ -152,8 +157,15 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                     }
                     updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: banInfo, rank: nil)
                 }
+
+                let apiRights: Api.ChatBannedRights
+                if let rights = rights, !rights.flags.isEmpty {
+                    apiRights = rights.apiBannedRights
+                } else {
+                    apiRights = .chatBannedRights(flags: 0, untilDate: 0)
+                }
                 
-                return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, userId: inputUser, bannedRights: rights?.apiBannedRights ?? Api.ChatBannedRights.chatBannedRights(flags: 0, untilDate: 0)))
+                return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, participant: inputPeer, bannedRights: apiRights))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> in
                     account.stateManager.addUpdates(result)

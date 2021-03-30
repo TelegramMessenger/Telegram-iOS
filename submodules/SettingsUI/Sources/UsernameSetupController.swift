@@ -260,7 +260,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                 return state.withUpdatedEditingPublicLinkText(text)
             }
             
-            checkAddressNameDisposable.set((validateAddressNameInteractive(account: context.account, domain: .account, name: text)
+            checkAddressNameDisposable.set((context.engine.peerNames.validateAddressNameInteractive(domain: .account, name: text)
             |> deliverOnMainQueue).start(next: { result in
                 updateState { state in
                     return state.withUpdatedAddressNameValidationStatus(result)
@@ -325,7 +325,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                     }
                     
                     if let updatedAddressNameValue = updatedAddressNameValue {
-                        updateAddressNameDisposable.set((updateAddressName(account: context.account, domain: .account, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                        updateAddressNameDisposable.set((context.engine.peerNames.updateAddressName(domain: .account, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)

@@ -238,7 +238,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .builtin:
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
-                            signal = settingsBuiltinWallpaperImage(account: context.account)
+                            signal = settingsBuiltinWallpaperImage(account: self.context.account)
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
@@ -316,8 +316,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.colorPreview = self.arguments.colorPreview
                                 
-                                signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
-                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.account.postbox.mediaBox)
+                                signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
+                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                                 
                                 isBlurrable = false
                             } else {
@@ -341,7 +341,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 }
                             }
                             if let fileSize = file.file.size {
-                                subtitleSignal = .single(dataSizeString(fileSize))
+                                subtitleSignal = .single(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData)))
                             } else {
                                 subtitleSignal = .single(nil)
                             }
@@ -374,7 +374,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     }
                                 }
                                 if let fileSize = largestSize.resource.size {
-                                    subtitleSignal = .single(dataSizeString(fileSize))
+                                    subtitleSignal = .single(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData)))
                                 } else {
                                     subtitleSignal = .single(nil)
                                 }

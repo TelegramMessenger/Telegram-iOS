@@ -258,47 +258,47 @@ private enum NetworkUsageStatsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NetworkUsageStatsControllerArguments
         switch self {
-            case let .messagesHeader(theme, text):
+            case let .messagesHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .messagesSent(theme, text, value):
+            case let .messagesSent(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .messagesReceived(theme, text, value):
+            case let .messagesReceived(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .imageHeader(theme, text):
+            case let .imageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .imageSent(theme, text, value):
+            case let .imageSent(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .imageReceived(theme, text, value):
+            case let .imageReceived(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .videoHeader(theme, text):
+            case let .videoHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .videoSent(theme, text, value):
+            case let .videoSent(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .videoReceived(theme, text, value):
+            case let .videoReceived(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .audioHeader(theme, text):
+            case let .audioHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .audioSent(theme, text, value):
+            case let .audioSent(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .audioReceived(theme, text, value):
+            case let .audioReceived(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .fileHeader(theme, text):
+            case let .fileHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .fileSent(theme, text, value):
+            case let .fileSent(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .fileReceived(theme, text, value):
+            case let .fileReceived(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .callHeader(theme, text):
+            case let .callHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .callSent(theme, text, value):
+            case let .callSent(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .callReceived(theme, text, value):
+            case let .callReceived(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none , action: nil)
-            case let .reset(theme, section, text):
+            case let .reset(_, section, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetStatistics(section)
                 })
-            case let .resetTimestamp(theme, text):
+            case let .resetTimestamp(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -307,31 +307,32 @@ private enum NetworkUsageStatsEntry: ItemListNodeEntry {
 private func networkUsageStatsControllerEntries(presentationData: PresentationData, section: NetworkUsageControllerSection, stats: NetworkUsageStats) -> [NetworkUsageStatsEntry] {
     var entries: [NetworkUsageStatsEntry] = []
     
+    let formatting = DataSizeStringFormatting(presentationData: presentationData)
     switch section {
         case .cellular:
             entries.append(.messagesHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_GeneralDataSection))
-            entries.append(.messagesSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.generic.cellular.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.messagesReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.generic.cellular.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.messagesSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.generic.cellular.outgoing, formatting: formatting)))
+            entries.append(.messagesReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.generic.cellular.incoming, formatting: formatting)))
             
             entries.append(.imageHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaImageDataSection))
-            entries.append(.imageSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.image.cellular.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.imageReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.image.cellular.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.imageSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.image.cellular.outgoing, formatting: formatting)))
+            entries.append(.imageReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.image.cellular.incoming, formatting: formatting)))
             
             entries.append(.videoHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaVideoDataSection))
-            entries.append(.videoSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.video.cellular.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.videoReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.video.cellular.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.videoSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.video.cellular.outgoing, formatting: formatting)))
+            entries.append(.videoReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.video.cellular.incoming, formatting: formatting)))
             
             entries.append(.audioHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaAudioDataSection))
-            entries.append(.audioSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.audio.cellular.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.audioReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.audio.cellular.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.audioSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.audio.cellular.outgoing, formatting: formatting)))
+            entries.append(.audioReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.audio.cellular.incoming, formatting: formatting)))
             
             entries.append(.fileHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaDocumentDataSection))
-            entries.append(.fileSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.file.cellular.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.file.cellular.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.fileSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.file.cellular.outgoing, formatting: formatting)))
+            entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.file.cellular.incoming, formatting: formatting)))
             
             entries.append(.callHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_CallDataSection))
-            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.call.cellular.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.call.cellular.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.call.cellular.outgoing, formatting: formatting)))
+            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.call.cellular.incoming, formatting: formatting)))
             
             entries.append(.reset(presentationData.theme, section, presentationData.strings.NetworkUsageSettings_ResetStats))
         
@@ -344,28 +345,28 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
             }
         case .wifi:
             entries.append(.messagesHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_GeneralDataSection))
-            entries.append(.messagesSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.generic.wifi.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.messagesReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.generic.wifi.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.messagesSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.generic.wifi.outgoing, formatting: formatting)))
+            entries.append(.messagesReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.generic.wifi.incoming, formatting: formatting)))
             
             entries.append(.imageHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaImageDataSection))
-            entries.append(.imageSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.image.wifi.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.imageReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.image.wifi.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.imageSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.image.wifi.outgoing, formatting: formatting)))
+            entries.append(.imageReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.image.wifi.incoming, formatting: formatting)))
             
             entries.append(.videoHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaVideoDataSection))
-            entries.append(.videoSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.video.wifi.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.videoReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.video.wifi.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.videoSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.video.wifi.outgoing, formatting: formatting)))
+            entries.append(.videoReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.video.wifi.incoming, formatting: formatting)))
             
             entries.append(.audioHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaAudioDataSection))
-            entries.append(.audioSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.audio.wifi.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.audioReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.audio.wifi.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.audioSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.audio.wifi.outgoing, formatting: formatting)))
+            entries.append(.audioReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.audio.wifi.incoming, formatting: formatting)))
             
             entries.append(.fileHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaDocumentDataSection))
-            entries.append(.fileSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.file.wifi.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.file.wifi.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.fileSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.file.wifi.outgoing, formatting: formatting)))
+            entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.file.wifi.incoming, formatting: formatting)))
             
             entries.append(.callHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_CallDataSection))
-            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.call.wifi.outgoing, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.call.wifi.incoming, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.call.wifi.outgoing, formatting: formatting)))
+            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.call.wifi.incoming, formatting: formatting)))
             
             entries.append(.reset(presentationData.theme, section, presentationData.strings.NetworkUsageSettings_ResetStats))
             if stats.resetWifiTimestamp != 0 {

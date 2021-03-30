@@ -14,6 +14,7 @@ import PresentationDataUtils
 import PeerInfoUI
 import ShareController
 import AvatarNode
+import UndoUI
 
 public final class VoiceChatJoinScreen: ViewController {
     private var controllerNode: Node {
@@ -152,7 +153,8 @@ public final class VoiceChatJoinScreen: ViewController {
                         strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount)
                     }
                 } else {
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.InviteLinks_InviteLinkExpired, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLinks_InviteLinkExpired), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
                     strongSelf.dismiss()
                 }
             }

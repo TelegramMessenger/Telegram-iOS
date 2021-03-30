@@ -4376,12 +4376,12 @@ public extension Api {
                     })
                 }
             
-                public static func getParticipant(channel: Api.InputChannel, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.ChannelParticipant>) {
+                public static func getParticipant(channel: Api.InputChannel, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.ChannelParticipant>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1416484774)
+                    buffer.appendInt32(-1599378234)
                     channel.serialize(buffer, true)
-                    userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.getParticipant", parameters: [("channel", channel), ("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.channels.ChannelParticipant? in
+                    participant.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.getParticipant", parameters: [("channel", channel), ("participant", participant)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.channels.ChannelParticipant? in
                         let reader = BufferReader(buffer)
                         var result: Api.channels.ChannelParticipant?
                         if let signature = reader.readInt32() {
@@ -4624,13 +4624,13 @@ public extension Api {
                     })
                 }
             
-                public static func editBanned(channel: Api.InputChannel, userId: Api.InputUser, bannedRights: Api.ChatBannedRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func editBanned(channel: Api.InputChannel, participant: Api.InputPeer, bannedRights: Api.ChatBannedRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1920559378)
+                    buffer.appendInt32(-1763259007)
                     channel.serialize(buffer, true)
-                    userId.serialize(buffer, true)
+                    participant.serialize(buffer, true)
                     bannedRights.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.editBanned", parameters: [("channel", channel), ("userId", userId), ("bannedRights", bannedRights)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "channels.editBanned", parameters: [("channel", channel), ("participant", participant), ("bannedRights", bannedRights)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

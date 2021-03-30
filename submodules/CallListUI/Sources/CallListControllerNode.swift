@@ -383,7 +383,7 @@ final class CallListControllerNode: ASDisplayNode {
                 }
                 
                 if let activeCall = activeCall {
-                    strongSelf.context.joinGroupCall(peerId: peerId, invite: nil, requestJoinAsPeerId: nil, activeCall: activeCall)
+                    strongSelf.joinGroupCall(peerId, activeCall)
                 }
             }))
         })
