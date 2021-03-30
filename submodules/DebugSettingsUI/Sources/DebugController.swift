@@ -13,7 +13,6 @@ import ItemListUI
 import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
-import TelegramCallsUI
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -191,7 +190,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     
                     var items: [ActionSheetButtonItem] = []
                     
-                    if let context = arguments.context {
+                    if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
                         items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             
@@ -261,7 +260,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         
                         var items: [ActionSheetButtonItem] = []
                         
-                        if let context = arguments.context {
+                        if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
                             items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
@@ -343,7 +342,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     
                     var items: [ActionSheetButtonItem] = []
                     
-                    if let context = arguments.context {
+                    if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
                         items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             
@@ -438,7 +437,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         
                         var items: [ActionSheetButtonItem] = []
                         
-                        if let context = arguments.context {
+                        if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
                             items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
@@ -781,42 +780,49 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool) -> [DebugControllerEntry] {
+private func debugControllerEntries(sharedContext: SharedAccountContext, presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
+
+    let isMainApp = sharedContext.applicationBindings.isMainApp
     
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.sendOneLog(presentationData.theme))
     entries.append(.sendShareLogs)
     entries.append(.sendNotificationLogs(presentationData.theme))
     entries.append(.sendCriticalLogs(presentationData.theme))
-    entries.append(.accounts(presentationData.theme))
+    if isMainApp {
+        entries.append(.accounts(presentationData.theme))
+    }
     
     entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
     entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
     entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
-    
-    entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
-    entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
-    #if DEBUG
-    entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
-    #endif
+
+    if isMainApp {
+        entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
+        entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
+        #if DEBUG
+        entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
+        #endif
+    }
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
-    entries.append(.clearTips(presentationData.theme))
-    if hasLegacyAppData {
-        entries.append(.reimport(presentationData.theme))
+    if isMainApp {
+        entries.append(.clearTips(presentationData.theme))
     }
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetDatabaseAndCache(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
-    entries.append(.reindexUnread(presentationData.theme))
+    if isMainApp {
+        entries.append(.reindexUnread(presentationData.theme))
+    }
     entries.append(.optimizeDatabase(presentationData.theme))
-    entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
-    entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
-    entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
-    entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
-    
-    entries.append(.voiceConference)
+    if isMainApp {
+        entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
+        entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
+        entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
+        entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
+    }
     
     let codecs: [(String, String?)] = [
         ("No Preference", nil),
@@ -829,9 +835,11 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     for i in 0 ..< codecs.count {
         entries.append(.preferredVideoCodec(i, codecs[i].0, codecs[i].1, experimentalSettings.preferredVideoCodec == codecs[i].1))
     }
-    
-    entries.append(.disableVideoAspectScaling(experimentalSettings.disableVideoAspectScaling))
-    entries.append(.enableVoipTcp(experimentalSettings.enableVoipTcp))
+
+    if isMainApp {
+        entries.append(.disableVideoAspectScaling(experimentalSettings.disableVideoAspectScaling))
+        entries.append(.enableVoipTcp(experimentalSettings.enableVoipTcp))
+    }
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
@@ -900,7 +908,7 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
