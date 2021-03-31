@@ -1406,8 +1406,6 @@ public final class Postbox {
         self.basePath = basePath
         self.seedConfiguration = seedConfiguration
         self.tempDir = tempDir
-
-        sleep(1)
         
         print("MediaBox path: \(self.basePath + "/media")")
         
