@@ -421,11 +421,11 @@ public func requestBotPaymentReceipt(account: Account, messageId: MessageId) -> 
         }
         |> map { result -> BotPaymentReceipt in
             switch result {
-                case let .paymentReceipt(_, _, _, invoice, _, info, shipping, _, _, credentialsTitle, _):
-                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
-                    let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
-                    let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
-                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
+            case let .paymentReceipt(flags, date, botId, providerId, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
+                let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
+                let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
+                return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
             }
         }
     }
