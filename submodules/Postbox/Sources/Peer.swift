@@ -1,7 +1,7 @@
 import Foundation
 
 public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
-    public struct Namespace: Comparable, Hashable, Codable {
+    public struct Namespace: Comparable, Hashable, Codable, CustomStringConvertible {
         public static var max: Namespace {
             return Namespace(rawValue: 0x7)
         }
@@ -22,6 +22,10 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             } else {
                 return self
             }
+        }
+
+        public var description: String {
+            return "\(self.rawValue)"
         }
 
         fileprivate init(rawValue: UInt32) {
@@ -52,11 +56,11 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             return Id(rawValue: 0x000000007fffffff)
         }
 
-        fileprivate var rawValue: UInt32
+        fileprivate var rawValue: Int32
 
         var predecessor: Id {
             if self.rawValue != 0 {
-                return Id(rawValue: UInt64(self.rawValue - 1))
+                return Id(rawValue: self.rawValue - 1)
             } else {
                 return self
             }
@@ -64,24 +68,28 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
         var successor: Id {
             if self.rawValue != Id.max.rawValue {
-                return Id(rawValue: UInt64(self.rawValue + 1))
+                return Id(rawValue: self.rawValue + 1)
             } else {
                 return self
             }
         }
 
-        fileprivate init(rawValue: UInt64) {
-            precondition((rawValue | 0x000FFFFFFFFFFFFF) == 0x000FFFFFFFFFFFFF)
+        public var description: String {
+            return "\(self.rawValue)"
+        }
 
-            self.rawValue = UInt32(rawValue)
+        fileprivate init(rawValue: Int32) {
+            //precondition((rawValue | 0x000FFFFFFFFFFFFF) == 0x000FFFFFFFFFFFFF)
+
+            self.rawValue = rawValue
         }
 
         public static func _internalFromInt32Value(_ value: Int32) -> Id {
-            return Id(rawValue: UInt64(UInt32(bitPattern: value)))
+            return Id(rawValue: value)
         }
 
         public func _internalGetInt32Value() -> Int32 {
-            return Int32(clamping: self.rawValue)
+            return self.rawValue
         }
 
         public static func <(lhs: Id, rhs: Id) -> Bool {
@@ -137,7 +145,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
         if legacyNamespaceBits == 0x7fffffff && idLowBits == 0 {
             self.namespace = .max
-            self.id = Id(rawValue: idLowBits)
+            self.id = Id(rawValue: Int32(bitPattern: UInt32(clamping: idLowBits)))
         } else {
             let namespaceBits = ((data >> 32) & 0x7)
             self.namespace = Namespace(rawValue: UInt32(namespaceBits))
@@ -145,12 +153,12 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             let idHighBits = (data >> (32 + 3)) & 0xffffffff
             assert(idHighBits == 0)
 
-            self.id = Id(rawValue: idLowBits)
+            self.id = Id(rawValue: Int32(bitPattern: UInt32(clamping: idLowBits)))
         }
     }
     
     public func toInt64() -> Int64 {
-        let idLowBits = self.id.rawValue & 0xffffffff
+        let idLowBits = UInt32(bitPattern: self.id.rawValue)
 
         let result: Int64
         if self.namespace == .max && self.id.rawValue == 0 {
@@ -166,7 +174,8 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             var data: UInt64 = 0
             data |= UInt64(self.namespace.rawValue) << 32
 
-            let idHighBits = (self.id.rawValue >> 32) & 0x3FFFFFFF
+            let idValue = UInt32(bitPattern: self.id.rawValue)
+            let idHighBits = (idValue >> 32) & 0x3FFFFFFF
             assert(idHighBits == 0)
 
             data |= UInt64(idLowBits)
