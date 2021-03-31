@@ -184,6 +184,7 @@ private func requestActivity(postbox: Postbox, network: Network, accountPeerId: 
                     return .complete()
                 }
             } else if let peer = peer as? TelegramSecretChat, activity == .typingText {
+                let _ = PeerId(peer.id.toInt64())
                 return network.request(Api.functions.messages.setEncryptedTyping(peer: .inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash), typing: .boolTrue))
                 |> `catch` { _ -> Signal<Api.Bool, NoError> in
                     return .single(.boolFalse)

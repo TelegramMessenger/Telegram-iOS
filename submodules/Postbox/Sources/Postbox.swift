@@ -1412,17 +1412,6 @@ public final class Postbox {
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.valueBox = valueBox
         
-        /*self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
-            //if let strongSelf = self {
-                /*strongSelf.queue.async {
-                    if strongSelf.valueBox != nil {
-                        let _ = strongSelf.transaction({ _ -> Void in
-                        }).start()
-                    }
-                }*/
-            //}
-        })*/
-        
         self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
         
         self.keychainTable = KeychainTable(valueBox: self.valueBox, table: KeychainTable.tableSpec(1))
