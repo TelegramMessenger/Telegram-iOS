@@ -115,9 +115,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     
     @objc private func buttonPressed() {
         switch self.icon {
-            case .voiceChat:
-                self.animationNode?.playOnce()
-            case .more:
+            case .voiceChat, .more, .leave:
                 self.animationNode?.playOnce()
             default:
                 break
@@ -181,6 +179,9 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                               "Point 1.Group 1.Fill 1": iconColor]
                 case .leave:
                     animationName = "anim_profileleave"
+                    colors = ["Arrow.Group 2.Stroke 1": iconColor,
+                              "Door.Group 1.Stroke 1": iconColor,
+                              "Arrow.Group 1.Stroke 1": iconColor]
                 default:
                     animationName = nil
             }
