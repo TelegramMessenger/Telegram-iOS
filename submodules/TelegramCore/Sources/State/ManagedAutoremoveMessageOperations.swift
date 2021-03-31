@@ -79,6 +79,8 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                 let signal = Signal<Void, NoError>.complete()
                 |> suspendAwareDelay(delay, queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in
+                    Logger.shared.log("Autoremove", "Performing autoremove for \(entry.messageId), isRemove: \(isRemove)")
+
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
                             deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
@@ -106,6 +108,8 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                                 return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: updatedMedia))
                             })
                         }
+                    } else {
+                        Logger.shared.log("Autoremove", "No message to autoremove for \(entry.messageId)")
                     }
                 })
                 disposable.set(signal.start())
