@@ -33,6 +33,7 @@ import AccountUtils
 import CoreSpotlight
 import LightweightAccountData
 import TelegramAudio
+import DebugSettingsUI
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -813,6 +814,15 @@ final class SharedApplicationContext {
                     }
                 }
             })
+
+            self.mainWindow.debugAction = {
+                self.mainWindow.debugAction = nil
+                
+                let presentationData = sharedContext.currentPresentationData.with { $0 }
+                let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
+                navigationController.viewControllers = [debugController(sharedContext: sharedContext, context: nil)]
+                self.mainWindow.present(navigationController, on: .root)
+            }
             
             presentationDataPromise.set(sharedContext.presentationData)
             
@@ -1083,6 +1093,8 @@ final class SharedApplicationContext {
                         print("Application: context took \(readyTime) to become ready")
                     }
                     print("Launch to ready took \((CFAbsoluteTimeGetCurrent() - launchStartTime) * 1000.0) ms")
+
+                    self.mainWindow.debugAction = nil
                     
                     self.mainWindow.viewController = context.rootController
                     if firstTime {
