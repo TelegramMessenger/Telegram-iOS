@@ -6337,3 +6337,5 @@ Sorry for the inconvenience.";
 
 "VoiceChat.PinVideo" = "Pin Video";
 "VoiceChat.UnpinVideo" = "Unpin Video";
+
+"Notification.VoiceChatScheduled" = "Voice chat scheduled";

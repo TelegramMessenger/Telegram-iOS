@@ -446,8 +446,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
-            case let .groupPhoneCall(_, _, duration):
-                if let duration = duration {
+            case let .groupPhoneCall(_, _, scheduleDate, duration):
+                if let scheduleDate = scheduleDate {
+                    let titleString = strings.Notification_VoiceChatScheduled
+                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                } else if let duration = duration {
                     let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 } else {
