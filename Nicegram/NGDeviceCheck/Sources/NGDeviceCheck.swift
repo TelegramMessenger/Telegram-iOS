@@ -11,7 +11,7 @@ public func getDeviceToken(completion: @escaping (String?) -> ()) {
         {
             currentDevice.generateToken(completionHandler: { (data, error) in
                 if let tokenData = data {
-                    let tokenString = tokenData.map { String(format: "%02x", $0) }.joined()
+                    let tokenString = tokenData.base64EncodedString()
                     #if DEBUG
                     ngLog("Received token \(tokenString)", LOGTAG)
                     #endif

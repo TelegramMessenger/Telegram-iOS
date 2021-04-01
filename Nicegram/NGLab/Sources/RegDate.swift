@@ -71,8 +71,8 @@ public func getRegDate(_ userId: Int64, owner: Int64
     ) -> Signal<Date, RegDateError> {
     return Signal { subscriber in
         getDeviceToken { deviceToken in
-            if deviceToken != nil {
-                let requestSignal = requestRegDate(jsonData: prepareRegDateData(userId, owner: owner, deviceToken: deviceToken!))
+            if let deviceToken = deviceToken {
+                let requestSignal = requestRegDate(jsonData: prepareRegDateData(userId, owner: owner, deviceToken: deviceToken))
                 let _ = (requestSignal |> deliverOnMainQueue).start(next: {
                     responseDate in
                     setCachedRegDate(userId, Int(responseDate.timeIntervalSince1970))
