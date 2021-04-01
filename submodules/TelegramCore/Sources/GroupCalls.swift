@@ -43,7 +43,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(flags, id, accessHash, participantCount, params, title, streamDcId, recordStartDate, scheduleDate, _):
+        case let .groupCall(flags, id, accessHash, participantCount, params, title, streamDcId, recordStartDate/*, scheduleDate*/, _):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -177,7 +177,8 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
             return .fail(.generic)
         }
         
-        return account.network.request(Api.functions.phone.createGroupCall(flags: 0, peer: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max), title: nil, scheduleDate: nil))
+        //return account.network.request(Api.functions.phone.createGroupCall(flags: 0, peer: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max), title: nil, scheduleDate: nil))
+        return account.network.request(Api.functions.phone.createGroupCall(peer: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max)))
         |> mapError { error -> CreateGroupCallError in
             if error.errorDescription == "ANONYMOUS_CALLS_DISABLED" {
                 return .anonymousNotAllowed
@@ -465,7 +466,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                         maybeParsedCall = GroupCallInfo(call)
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, _, title, _, recordStartDate, scheduleDate, _):
+                        case let .groupCall(flags, _, _, _, _, title, _, recordStartDate/*, scheduleDate*/, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             state.defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)
