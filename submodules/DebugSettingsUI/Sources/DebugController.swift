@@ -62,7 +62,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case skipReadHistory(PresentationTheme, Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
-    case reimport(PresentationTheme)
+    case crash(PresentationTheme)
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
     case resetDatabaseAndCache(PresentationTheme)
@@ -92,7 +92,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .playerEmbedding, .playlistPlayback, .voiceConference:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .playerEmbedding, .playlistPlayback, .voiceConference:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -133,7 +133,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 12
         case .clearTips:
             return 13
-        case .reimport:
+        case .crash:
             return 14
         case .resetData:
             return 15
@@ -550,20 +550,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     }).start()
                 }
             })
-        case let .reimport(theme):
-            return ItemListActionItem(presentationData: presentationData, title: "Reimport Application Data", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
-                let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-                
-                guard let appGroupUrl = maybeAppGroupUrl else {
-                    return
-                }
-                
-                let statusPath = appGroupUrl.path + "/Documents/importcompleted"
-                if FileManager.default.fileExists(atPath: statusPath) {
-                    let _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: statusPath))
-                    exit(0)
-                }
+        case let .crash(theme):
+            return ItemListActionItem(presentationData: presentationData, title: "Crash", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                preconditionFailure()
             })
         case let .resetData(theme):
             return ItemListActionItem(presentationData: presentationData, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -809,6 +798,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if isMainApp {
         entries.append(.clearTips(presentationData.theme))
     }
+    entries.append(.crash(presentationData.theme))
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetDatabaseAndCache(presentationData.theme))
