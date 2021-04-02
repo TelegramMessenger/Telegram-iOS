@@ -234,10 +234,8 @@ public final class SqliteValueBox: ValueBox {
         
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         let path = basePath + "/db_sqlite"
-        
-        #if DEBUG
-        print("Instance \(self) opening sqlite at \(path)")
-        #endif
+
+        postboxLog("Instance \(self) opening sqlite at \(path)")
         
         #if DEBUG
         let exists = FileManager.default.fileExists(atPath: path)
@@ -298,6 +296,8 @@ public final class SqliteValueBox: ValueBox {
             preconditionFailure("Couldn't open database")
         }
 
+        postboxLog("Did open DB at \(path)")
+
         //sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         var resultCode: Bool = true
@@ -306,6 +306,8 @@ public final class SqliteValueBox: ValueBox {
         assert(resultCode)
         resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
         assert(resultCode)
+
+        postboxLog("Did set up cipher")
         
         if self.isEncrypted(database) {
             if let encryptionParameters = encryptionParameters {
@@ -410,7 +412,9 @@ public final class SqliteValueBox: ValueBox {
             }
         }
 
-        sqlite3_busy_timeout(database.handle, 1000 * 10000)
+        postboxLog("Did set up encryption")
+
+        //sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
@@ -423,6 +427,9 @@ public final class SqliteValueBox: ValueBox {
         assert(resultCode)
         resultCode = database.execute("PRAGMA cipher_memory_security = OFF")
         assert(resultCode)
+
+        postboxLog("Did set up pragmas")
+
         //resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
         //database.execute("PRAGMA journal_size_limit=1536")
         
@@ -443,8 +450,12 @@ public final class SqliteValueBox: ValueBox {
         
         let _ = self.runPragma(database, "checkpoint_fullfsync = 1")
         assert(self.runPragma(database, "checkpoint_fullfsync") == "1")
+
+        postboxLog("Did set up checkpoint_fullfsync")
         
         self.beginInternal(database: database)
+
+        postboxLog("Did begin transaction")
         
         let result = self.getUserVersion(database)
         
@@ -464,8 +475,12 @@ public final class SqliteValueBox: ValueBox {
         for table in self.listFullTextTables(database) {
             self.fullTextTables[table.id] = table
         }
+
+        postboxLog("Did load tables")
         
         self.commitInternal(database: database)
+
+        postboxLog("Did commit final")
         
         lock.unlock()
         
