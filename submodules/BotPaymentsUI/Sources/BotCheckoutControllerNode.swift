@@ -44,7 +44,7 @@ private enum BotCheckoutSection: Int32 {
 enum BotCheckoutEntry: ItemListNodeEntry {
     case header(PresentationTheme, TelegramMediaInvoice, String)
     case price(Int, PresentationTheme, String, String, Bool, Bool)
-    case tip(Int, PresentationTheme, String, String, String, Int64, [(String, Int64)])
+    case tip(Int, PresentationTheme, String, String, String, Int64, Int64, [(String, Int64)])
     case paymentMethod(PresentationTheme, String, String)
     case shippingInfo(PresentationTheme, String, String)
     case shippingMethod(PresentationTheme, String, String)
@@ -69,7 +69,7 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 return 0
             case let .price(index, _, _, _, _, _):
                 return 1 + Int32(index)
-            case let .tip(index, _, _, _, _, _, _):
+            case let .tip(index, _, _, _, _, _, _, _):
                 return 1 + Int32(index)
             case .paymentMethod:
                 return 10000 + 2
@@ -127,8 +127,8 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .tip(lhsIndex, lhsTheme, lhsText, lhsCurrency, lhsValue, lhsNumericValue, lhsVariants):
-                if case let .tip(rhsIndex, rhsTheme, rhsText, rhsCurrency, rhsValue, rhsNumericValue, rhsVariants) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText, lhsCurrency == rhsCurrency, lhsValue == rhsValue, lhsNumericValue == rhsNumericValue {
+            case let .tip(lhsIndex, lhsTheme, lhsText, lhsCurrency, lhsValue, lhsNumericValue, lhsMaxValue, lhsVariants):
+                if case let .tip(rhsIndex, rhsTheme, rhsText, rhsCurrency, rhsValue, rhsNumericValue, rhsMaxValue, rhsVariants) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText, lhsCurrency == rhsCurrency, lhsValue == rhsValue, lhsNumericValue == rhsNumericValue, lhsMaxValue == rhsMaxValue {
                     if lhsVariants.count != rhsVariants.count {
                         return false
                     }
@@ -194,8 +194,8 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
             case let .price(_, theme, text, value, isFinal, hasSeparator):
                 return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, sectionId: self.section)
-            case let .tip(_, _, text, currency, value, numericValue, variants):
-                return BotCheckoutTipItem(theme: presentationData.theme, title: text, currency: currency, value: value, numericValue: numericValue, availableVariants: variants, sectionId: self.section, updateValue: { value in
+            case let .tip(_, _, text, currency, value, numericValue, maxValue, variants):
+                return BotCheckoutTipItem(theme: presentationData.theme, strings: presentationData.strings, title: text, currency: currency, value: value, numericValue: numericValue, maxValue: maxValue, availableVariants: variants, sectionId: self.section, updateValue: { value in
                     arguments.updateTip(value)
                 })
             case let .paymentMethod(_, text, value):
@@ -324,7 +324,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
             let tipTitle: String
             //TODO:localize
             tipTitle = "Tip (Optional)"
-            entries.append(.tip(index, presentationData.theme, tipTitle, paymentForm.invoice.currency, "\(formatCurrencyAmount(currentTip ?? 0, currency: paymentForm.invoice.currency))", currentTip ?? 0, tip.suggested.map { item -> (String, Int64) in
+            entries.append(.tip(index, presentationData.theme, tipTitle, paymentForm.invoice.currency, "\(formatCurrencyAmount(currentTip ?? 0, currency: paymentForm.invoice.currency))", currentTip ?? 0, tip.max, tip.suggested.map { item -> (String, Int64) in
                 return ("\(formatCurrencyAmount(item, currency: paymentForm.invoice.currency))", item)
             }))
             index += 1

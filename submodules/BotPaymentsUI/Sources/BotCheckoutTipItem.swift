@@ -10,10 +10,12 @@ import TelegramStringFormatting
 
 class BotCheckoutTipItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let title: String
     let currency: String
     let value: String
     let numericValue: Int64
+    let maxValue: Int64
     let availableVariants: [(String, Int64)]
     let updateValue: (Int64) -> Void
 
@@ -21,12 +23,14 @@ class BotCheckoutTipItem: ListViewItem, ItemListItem {
     
     let requestsNoInset: Bool = true
     
-    init(theme: PresentationTheme, title: String, currency: String, value: String, numericValue: Int64, availableVariants: [(String, Int64)], sectionId: ItemListSectionId, updateValue: @escaping (Int64) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: String, currency: String, value: String, numericValue: Int64, maxValue: Int64, availableVariants: [(String, Int64)], sectionId: ItemListSectionId, updateValue: @escaping (Int64) -> Void) {
         self.theme = theme
+        self.strings = strings
         self.title = title
         self.currency = currency
         self.value = value
         self.numericValue = numericValue
+        self.maxValue = maxValue
         self.availableVariants = availableVariants
         self.updateValue = updateValue
         self.sectionId = sectionId
@@ -154,6 +158,8 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
     let labelNode: TextNode
     private let textNode: TextFieldNode
 
+    private var formatterDelegate: CurrencyUITextFieldDelegate?
+
     private let scrollNode: ASScrollNode
     private var valueNodes: [TipValueNode] = []
     
@@ -187,7 +193,6 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
         self.addSubnode(self.scrollNode)
 
         self.textNode.clipsToBounds = true
-        self.textNode.textField.delegate = self
         self.textNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
@@ -216,6 +221,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
 
+            //TODO:locali
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Enter Custom", font: textFont, textColor: textColor.withMultipliedAlpha(0.8)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
@@ -239,6 +245,25 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     if strongSelf.textNode.textField.text ?? "" != text {
                         strongSelf.textNode.textField.text = text
                         strongSelf.labelNode.isHidden = !text.isEmpty
+                    }
+
+                    if strongSelf.formatterDelegate == nil {
+                        strongSelf.formatterDelegate = CurrencyUITextFieldDelegate(formatter: CurrencyFormatter(currency: item.currency, { formatter in
+                            formatter.maxValue = currencyToFractionalAmount(value: item.maxValue, currency: item.currency) ?? 10000.0
+                            formatter.minValue = 0.0
+                            formatter.hasDecimals = true
+                        }))
+                        strongSelf.formatterDelegate?.passthroughDelegate = strongSelf
+
+                        strongSelf.formatterDelegate?.textUpdated = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.textFieldTextChanged(strongSelf.textNode.textField)
+                        }
+
+                        strongSelf.textNode.clipsToBounds = true
+                        strongSelf.textNode.textField.delegate = strongSelf.formatterDelegate
                     }
 
                     strongSelf.textNode.textField.typingAttributes = [NSAttributedString.Key.font: titleFont]
@@ -323,11 +348,6 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
     }
 
     @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        guard let item = self.item else {
-            return false
-        }
-        let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
-
         return true
     }
 
