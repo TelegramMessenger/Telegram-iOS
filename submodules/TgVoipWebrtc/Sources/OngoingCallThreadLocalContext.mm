@@ -332,8 +332,14 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
-+ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)__unused includeReference {
-    return @[@"2.7.7", @"3.0.0", @"4.0.0"];
++ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
+    NSMutableArray<NSString *> *list = [[NSMutableArray alloc] init];
+    [list addObject:@"2.7.7"];
+    [list addObject:@"3.0.0"];
+    if (includeReference) {
+        [list addObject:@"4.0.0"];
+    }
+    return list;
 }
 
 + (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {

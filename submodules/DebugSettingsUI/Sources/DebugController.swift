@@ -73,6 +73,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case demoVideoChats(Bool)
+    case experimentalCompatibility(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -92,7 +93,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .playerEmbedding, .playlistPlayback, .voiceConference:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .experimentalCompatibility, .playerEmbedding, .playlistPlayback, .voiceConference:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -155,6 +156,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 23
         case .demoVideoChats:
             return 24
+        case .experimentalCompatibility:
+            return 25
         case .playerEmbedding:
             return 26
         case .playlistPlayback:
@@ -712,6 +715,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .experimentalCompatibility(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Compatibility", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.experimentalCompatibility = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .playerEmbedding(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -820,6 +833,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if isMainApp {
         entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
         entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
+        entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }
