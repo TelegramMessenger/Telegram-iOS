@@ -6,7 +6,7 @@
 
 #import "Instance.h"
 #import "InstanceImpl.h"
-#import "reference/InstanceImplReference.h"
+#import "v2/InstanceV2Impl.h"
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
@@ -333,7 +333,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 + (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)__unused includeReference {
-    return @[@"2.7.7", @"3.0.0"];
+    return @[@"2.7.7", @"3.0.0", @"4.0.0"];
 }
 
 + (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {
@@ -444,9 +444,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
+            tgcalls::Register<tgcalls::InstanceV2Impl>();
         });
-        
-        
         
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
             .config = config,
