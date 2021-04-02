@@ -324,6 +324,7 @@ public protocol PresentationGroupCall: class {
     func lowerHand()
     func requestVideo()
     func disableVideo()
+    func switchVideoCamera()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
     func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
     func setFullSizeVideo(peerId: PeerId?)

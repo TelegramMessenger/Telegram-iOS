@@ -57,9 +57,9 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, dark: Bool, small: Bool, title: String, subtitle: String, snap: Bool)?
     
     private var activePromise = ValuePromise<Bool>(false)
-    private var outerColorPromise = ValuePromise<UIColor?>(nil)
-    var outerColor: Signal<UIColor?, NoError> {
-        return outerColorPromise.get()
+    private var outerColorPromise = Promise<(UIColor?, UIColor?)>((nil, nil))
+    var outerColor: Signal<(UIColor?, UIColor?), NoError> {
+        return self.outerColorPromise.get()
     }
     
     var connectingColor: UIColor = UIColor(rgb: 0xb6b6bb) {
@@ -167,8 +167,8 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             self?.activePromise.set(active)
         }
         
-        self.backgroundNode.updatedOuterColor = { [weak self] color in
-            self?.outerColorPromise.set(color)
+        self.backgroundNode.updatedColors = { [weak self] outerColor, activeColor in
+            self?.outerColorPromise.set(.single((outerColor, activeColor)))
         }
     }
     
@@ -245,16 +245,17 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-            
             if small {
                 transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? smallScale * 0.9 : smallScale, delay: 0.05)
                 transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.05)
+                transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
+                transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             } else {
                 transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.05)
                 transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+                transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
+                transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
             }
-            transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
-            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
@@ -265,7 +266,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     
     private var previousIcon: VoiceChatActionButtonIconAnimationState?
     private func applyIconParams() {
-        guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
+        guard let (_, _, state, _, _, _, _, _) = self.currentParams else {
             return
         }
         
@@ -290,7 +291,6 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.previousIcon = icon
         
         self.iconNode.enqueueState(icon)
-//        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, filled: true, color: iconColor), animated: true)
     }
     
     func update(snap: Bool, animated: Bool) {
@@ -298,7 +298,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             self.currentParams = (previous.size, previous.buttonSize, previous.state, previous.dark, previous.small, previous.title, previous.subtitle, snap)
             
             self.backgroundNode.isSnap = snap
-            self.backgroundNode.glowHidden = snap
+            self.backgroundNode.glowHidden = snap || previous.small
             self.backgroundNode.updateColors()
             self.applyParams(animated: animated)
             self.applyIconParams()
@@ -328,6 +328,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         }
         self.applyIconParams()
         
+        self.backgroundNode.glowHidden = (self.currentParams?.snap ?? false) || small
         self.backgroundNode.isDark = dark
         self.backgroundNode.update(state: backgroundState, animated: true)
         
@@ -468,7 +469,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     }
     
     var updatedActive: ((Bool) -> Void)?
-    var updatedOuterColor: ((UIColor?) -> Void)?
+    var updatedColors: ((UIColor?, UIColor?) -> Void)?
     
     private let backgroundCircleLayer = CAShapeLayer()
     private let foregroundCircleLayer = CAShapeLayer()
@@ -706,6 +707,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let initialColors = self.foregroundGradientLayer.colors
         
         let outerColor: UIColor?
+        let activeColor: UIColor?
         let targetColors: [CGColor]
         let targetScale: CGFloat
         switch type {
@@ -713,20 +715,24 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
                 targetScale = 0.89
                 outerColor = UIColor(rgb: 0x21674f)
+                activeColor = green
             case .active:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.85
                 outerColor = UIColor(rgb: 0x1d588d)
+                activeColor = blue
             case .connecting:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.3
                 outerColor = nil
+                activeColor = blue
             case .muted:
                 targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
                 targetScale = 0.85
                 outerColor = UIColor(rgb: 0x3b3474)
+                activeColor = purple
         }
-        self.updatedOuterColor?(outerColor)
+        self.updatedColors?(outerColor, activeColor)
         
         self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
         if let _ = previousType {

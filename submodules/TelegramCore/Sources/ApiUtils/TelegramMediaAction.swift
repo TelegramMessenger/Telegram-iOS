@@ -73,11 +73,11 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             }
         case let .messageActionSetMessagesTTL(period):
             return TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(period))
-        /*case let .messageActionGroupCallScheduled(call, scheduleDate):
+        case let .messageActionGroupCallScheduled(call, scheduleDate):
             switch call {
             case let .inputGroupCall(id, accessHash):
                 return TelegramMediaAction(action: .groupPhoneCall(callId: id, accessHash: accessHash, scheduleDate: scheduleDate, duration: nil))
-            }*/
+            }
     }
 }
 

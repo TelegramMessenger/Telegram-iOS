@@ -538,7 +538,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var toneRenderer: PresentationCallToneRenderer?
     
     private var videoCapturer: OngoingCallVideoCapturer?
-    
+    private var useFrontCamera: Bool = true
     private let incomingVideoSourcePromise = Promise<[PeerId: UInt32]>([:])
     public var incomingVideoSources: Signal<[PeerId: UInt32], NoError> {
         return self.incomingVideoSourcePromise.get()
@@ -2006,6 +2006,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.videoCapturer = nil
             self.callContext?.disableVideo()
         }
+    }
+    
+    public func switchVideoCamera() {
+        self.useFrontCamera = !self.useFrontCamera
+        self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
     }
     
     public func setVolume(peerId: PeerId, volume: Int32, sync: Bool) {

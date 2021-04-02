@@ -121,7 +121,7 @@ public enum BotPaymentFormRequestError {
 extension BotPaymentInvoice {
     init(apiInvoice: Api.Invoice) {
         switch apiInvoice {
-            case let .invoice(flags, currency, prices, minTipAmount, maxTipAmount, defaultTipAmount):
+            case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts):
                 var fields = BotPaymentInvoiceFields()
                 if (flags & (1 << 1)) != 0 {
                     fields.insert(.name)
@@ -145,9 +145,9 @@ extension BotPaymentInvoice {
                     fields.insert(.emailAvailableToProvider)
                 }
                 var parsedTip: BotPaymentInvoice.Tip?
-                if let minTipAmount = minTipAmount, let maxTipAmount = maxTipAmount, let defaultTipAmount = defaultTipAmount {
-                    parsedTip = BotPaymentInvoice.Tip(min: minTipAmount, max: maxTipAmount, default: defaultTipAmount)
-                }
+//                if let minTipAmount = minTipAmount, let maxTipAmount = maxTipAmount, let defaultTipAmount = defaultTipAmount {
+//                    parsedTip = BotPaymentInvoice.Tip(min: minTipAmount, max: maxTipAmount, default: defaultTipAmount)
+//                }
                 self.init(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
                     switch $0 {
                         case let .labeledPrice(label, amount):
