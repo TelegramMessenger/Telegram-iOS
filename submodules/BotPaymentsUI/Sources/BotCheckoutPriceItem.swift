@@ -12,15 +12,17 @@ class BotCheckoutPriceItem: ListViewItem, ItemListItem {
     let title: String
     let label: String
     let isFinal: Bool
+    let hasSeparator: Bool
     let sectionId: ItemListSectionId
     
     let requestsNoInset: Bool = true
     
-    init(theme: PresentationTheme, title: String, label: String, isFinal: Bool, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, title: String, label: String, isFinal: Bool, hasSeparator: Bool, sectionId: ItemListSectionId) {
         self.theme = theme
         self.title = title
         self.label = label
         self.isFinal = isFinal
+        self.hasSeparator = hasSeparator
         self.sectionId = sectionId
     }
     
@@ -83,6 +85,10 @@ private func priceItemInsets(_ neighbors: ItemListNeighbors) -> UIEdgeInsets {
 class BotCheckoutPriceItemNode: ListViewItemNode {
     let titleNode: TextNode
     let labelNode: TextNode
+
+    let separatorNode: ASDisplayNode
+    let bottomSeparatorNode: ASDisplayNode
+    let spacerNode: ASDisplayNode
     
     private var item: BotCheckoutPriceItem?
     
@@ -92,11 +98,18 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
         
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
+
+        self.separatorNode = ASDisplayNode()
+        self.bottomSeparatorNode = ASDisplayNode()
+        self.spacerNode = ASDisplayNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
-        
+
+        self.addSubnode(self.spacerNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
+        self.addSubnode(self.separatorNode)
+        self.addSubnode(self.bottomSeparatorNode)
     }
     
     func asyncLayout() -> (_ item: BotCheckoutPriceItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -105,9 +118,18 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             let rightInset: CGFloat = 16.0 + params.rightInset
+
+            let naturalContentHeight: CGFloat = 34.0
             
-            let contentSize = CGSize(width: params.width, height: 34.0)
-            let insets = priceItemInsets(neighbors)
+            var contentSize = CGSize(width: params.width, height: naturalContentHeight)
+            var insets = priceItemInsets(neighbors)
+
+            if item.hasSeparator {
+                insets.top += 5.0
+            }
+            if item.isFinal {
+                contentSize.height += 34.0
+            }
             
             let textFont: UIFont
             let textColor: UIColor
@@ -130,9 +152,26 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
                     let _ = labelApply()
                     
                     let leftInset: CGFloat = 16.0 + params.leftInset
+
+                    strongSelf.separatorNode.isHidden = !item.hasSeparator
+                    strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
+
+                    strongSelf.bottomSeparatorNode.isHidden = !item.isFinal
+                    strongSelf.bottomSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                    strongSelf.bottomSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: naturalContentHeight + 10.0), size: CGSize(width: params.width, height: UIScreenPixel))
+
+                    strongSelf.spacerNode.isHidden = !item.isFinal
+                    strongSelf.spacerNode.backgroundColor = item.theme.list.blocksBackgroundColor
+                    strongSelf.spacerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: naturalContentHeight + 10.0 + UIScreenPixel), size: CGSize(width: params.width, height: max(0.0, contentSize.height - naturalContentHeight - UIScreenPixel)))
+
+                    var verticalOffset: CGFloat = 0.0
+                    if item.hasSeparator {
+                        verticalOffset += 5.0
+                    }
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset + floor((naturalContentHeight - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: verticalOffset + floor((naturalContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                 }
             })
         }

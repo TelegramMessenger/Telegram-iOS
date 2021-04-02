@@ -24,14 +24,14 @@ final class BotCheckoutControllerArguments {
     fileprivate let openInfo: (BotCheckoutInfoControllerFocus) -> Void
     fileprivate let openPaymentMethod: () -> Void
     fileprivate let openShippingMethod: () -> Void
-    fileprivate let openTip: () -> Void
+    fileprivate let updateTip: (Int64) -> Void
     
-    fileprivate init(account: Account, openInfo: @escaping (BotCheckoutInfoControllerFocus) -> Void, openPaymentMethod: @escaping () -> Void, openShippingMethod: @escaping () -> Void, openTip: @escaping () -> Void) {
+    fileprivate init(account: Account, openInfo: @escaping (BotCheckoutInfoControllerFocus) -> Void, openPaymentMethod: @escaping () -> Void, openShippingMethod: @escaping () -> Void, updateTip: @escaping (Int64) -> Void) {
         self.account = account
         self.openInfo = openInfo
         self.openPaymentMethod = openPaymentMethod
         self.openShippingMethod = openShippingMethod
-        self.openTip = openTip
+        self.updateTip = updateTip
     }
 }
 
@@ -43,8 +43,8 @@ private enum BotCheckoutSection: Int32 {
 
 enum BotCheckoutEntry: ItemListNodeEntry {
     case header(PresentationTheme, TelegramMediaInvoice, String)
-    case price(Int, PresentationTheme, String, String, Bool)
-    case tip(PresentationTheme, String, String)
+    case price(Int, PresentationTheme, String, String, Bool, Bool)
+    case tip(Int, PresentationTheme, String, String, String, Int64, [(String, Int64)])
     case paymentMethod(PresentationTheme, String, String)
     case shippingInfo(PresentationTheme, String, String)
     case shippingMethod(PresentationTheme, String, String)
@@ -56,7 +56,7 @@ enum BotCheckoutEntry: ItemListNodeEntry {
         switch self {
             case .header:
                 return BotCheckoutSection.header.rawValue
-            case .price:
+            case .price, .tip:
                 return BotCheckoutSection.prices.rawValue
             default:
                 return BotCheckoutSection.info.rawValue
@@ -67,10 +67,10 @@ enum BotCheckoutEntry: ItemListNodeEntry {
         switch self {
             case .header:
                 return 0
-            case let .price(index, _, _, _, _):
+            case let .price(index, _, _, _, _, _):
                 return 1 + Int32(index)
-            case .tip:
-                return 10000 + 1
+            case let .tip(index, _, _, _, _, _, _):
+                return 1 + Int32(index)
             case .paymentMethod:
                 return 10000 + 2
             case .shippingInfo:
@@ -103,8 +103,8 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .price(lhsIndex, lhsTheme, lhsText, lhsValue, lhsFinal):
-                if case let .price(rhsIndex, rhsTheme, rhsText, rhsValue, rhsFinal) = rhs {
+            case let .price(lhsIndex, lhsTheme, lhsText, lhsValue, lhsFinal, lhsHasSeparator):
+                if case let .price(rhsIndex, rhsTheme, rhsText, rhsValue, rhsFinal, rhsHasSeparator) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -120,12 +120,26 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                     if lhsFinal != rhsFinal {
                         return false
                     }
+                    if lhsHasSeparator != rhsHasSeparator {
+                        return false
+                    }
                     return true
                 } else {
                     return false
                 }
-            case let .tip(lhsTheme, lhsText, lhsValue):
-                if case let .tip(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .tip(lhsIndex, lhsTheme, lhsText, lhsCurrency, lhsValue, lhsNumericValue, lhsVariants):
+                if case let .tip(rhsIndex, rhsTheme, rhsText, rhsCurrency, rhsValue, rhsNumericValue, rhsVariants) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText, lhsCurrency == rhsCurrency, lhsValue == rhsValue, lhsNumericValue == rhsNumericValue {
+                    if lhsVariants.count != rhsVariants.count {
+                        return false
+                    }
+                    for i in 0 ..< lhsVariants.count {
+                        if lhsVariants[i].0 != rhsVariants[i].0 {
+                            return false
+                        }
+                        if lhsVariants[i].1 != rhsVariants[i].1 {
+                            return false
+                        }
+                    }
                     return true
                 } else {
                     return false
@@ -178,11 +192,11 @@ enum BotCheckoutEntry: ItemListNodeEntry {
         switch self {
             case let .header(theme, invoice, botName):
                 return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
-            case let .price(_, theme, text, value, isFinal):
-                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, sectionId: self.section)
-            case let .tip(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    arguments.openTip()
+            case let .price(_, theme, text, value, isFinal, hasSeparator):
+                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, sectionId: self.section)
+            case let .tip(_, _, text, currency, value, numericValue, variants):
+                return BotCheckoutTipItem(theme: presentationData.theme, title: text, currency: currency, value: value, numericValue: numericValue, availableVariants: variants, sectionId: self.section, updateValue: { value in
+                    arguments.updateTip(value)
                 })
             case let .paymentMethod(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
@@ -272,7 +286,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
         
         var index = 0
         for price in paymentForm.invoice.prices {
-            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false))
+            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, false))
             totalPrice += price.amount
             index += 1
         }
@@ -286,7 +300,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
                         shippingOptionString = option.title
                         
                         for price in option.prices {
-                            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false))
+                            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, false))
                             totalPrice += price.amount
                             index += 1
                         }
@@ -296,15 +310,27 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
                 }
             }
         }
-        
-        entries.append(.price(index, presentationData.theme, presentationData.strings.Checkout_TotalAmount, formatCurrencyAmount(totalPrice, currency: paymentForm.invoice.currency), true))
+
+        if !entries.isEmpty {
+            switch entries[entries.count - 1] {
+            case let .price(index, theme, title, value, _, _):
+                entries[entries.count - 1] = .price(index, theme, title, value, false, false)
+            default:
+                break
+            }
+        }
 
         if let tip = paymentForm.invoice.tip {
             let tipTitle: String
             //TODO:localize
-            tipTitle = "Tip"
-            entries.append(.tip(presentationData.theme, tipTitle, "\(formatCurrencyAmount(currentTip ?? 0, currency: paymentForm.invoice.currency))"))
+            tipTitle = "Tip (Optional)"
+            entries.append(.tip(index, presentationData.theme, tipTitle, paymentForm.invoice.currency, "\(formatCurrencyAmount(currentTip ?? 0, currency: paymentForm.invoice.currency))", currentTip ?? 0, tip.suggested.map { item -> (String, Int64) in
+                return ("\(formatCurrencyAmount(item, currency: paymentForm.invoice.currency))", item)
+            }))
+            index += 1
         }
+        
+        entries.append(.price(index, presentationData.theme, presentationData.strings.Checkout_TotalAmount, formatCurrencyAmount(totalPrice, currency: paymentForm.invoice.currency), true, true))
         
         var paymentMethodTitle = ""
         if let currentPaymentMethod = currentPaymentMethod {
@@ -439,7 +465,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var openInfoImpl: ((BotCheckoutInfoControllerFocus) -> Void)?
-        var openTipImpl: (() -> Void)?
+        var updateTipImpl: ((Int64) -> Void)?
         var openPaymentMethodImpl: (() -> Void)?
         var openShippingMethodImpl: (() -> Void)?
         
@@ -449,8 +475,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             openPaymentMethodImpl?()
         }, openShippingMethod: {
             openShippingMethodImpl?()
-        }, openTip: {
-            openTipImpl?()
+        }, updateTip: { value in
+            updateTipImpl?(value)
         })
         
         let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, self.state.get(), paymentFormAndInfo.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
@@ -643,30 +669,20 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             }
         }
 
-        openTipImpl = { [weak self] in
-            if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue {
-                //TODO:localize
-                let initialValue: String
-                if let tipAmount = strongSelf.currentTipAmount, let value = currencyToFractionalAmount(value: tipAmount, currency: paymentFormValue.invoice.currency) {
-                    initialValue = "\(value)"
-                } else {
-                    initialValue = "0"
-                }
-                let controller = tipEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: nil, title: "Tip", text: "Enter Tip Amount", placeholder: "", value: initialValue, apply: { value in
-                    guard let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo, let value = value else {
-                        return
-                    }
-
-                    let tipAmount = fractionalToCurrencyAmount(value: (Double(value) ?? 0.0), currency: paymentFormValue.invoice.currency) ?? 0
-
-                    strongSelf.currentTipAmount = tipAmount
-
-                    strongSelf.paymentFormAndInfo.set(.single((paymentFormValue, currentFormInfo, strongSelf.currentValidatedFormInfo, strongSelf.currentShippingOptionId, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
-
-                    strongSelf.updateActionButton()
-                })
-                strongSelf.present(controller, nil)
+        updateTipImpl = { [weak self] value in
+            guard let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo else {
+                return
             }
+
+            if strongSelf.currentTipAmount == value {
+                return
+            }
+            
+            strongSelf.currentTipAmount = value
+
+            strongSelf.paymentFormAndInfo.set(.single((paymentFormValue, currentFormInfo, strongSelf.currentValidatedFormInfo, strongSelf.currentShippingOptionId, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
+
+            strongSelf.updateActionButton()
         }
         
         openPaymentMethodImpl = { [weak self] in
