@@ -310,6 +310,8 @@ public final class SqliteValueBox: ValueBox {
         postboxLog("Did set up cipher")
         
         if self.isEncrypted(database) {
+            postboxLog("Database is encrypted")
+
             if let encryptionParameters = encryptionParameters {
                 precondition(encryptionParameters.salt.data.count == 16)
                 precondition(encryptionParameters.key.data.count == 32)
@@ -318,12 +320,15 @@ public final class SqliteValueBox: ValueBox {
                 
                 resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
                 assert(resultCode)
+
+                postboxLog("Setting encryption key")
                 
                 if self.isEncrypted(database) {
+                    postboxLog("Encryption key is invalid")
+
                     if isTemporary || isReadOnly {
                         return nil
                     }
-                    postboxLog("Encryption key is invalid")
                     
                     for fileName in dabaseFileNames {
                         let _ = try? FileManager.default.removeItem(atPath: basePath + "/\(fileName)")
@@ -356,6 +361,8 @@ public final class SqliteValueBox: ValueBox {
                 assert(resultCode)
             }
         } else if let encryptionParameters = encryptionParameters, encryptionParameters.forceEncryptionIfNoSet {
+            postboxLog("Not encrypted")
+
             let hexKey = hexString(encryptionParameters.key.data + encryptionParameters.salt.data)
             
             if FileManager.default.fileExists(atPath: path) {
@@ -535,7 +542,9 @@ public final class SqliteValueBox: ValueBox {
     
     private func isEncrypted(_ database: Database) -> Bool {
         var statement: OpaquePointer? = nil
+        postboxLog("isEncrypted prepare...")
         let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
+        postboxLog("isEncrypted prepare done")
         if statement == nil {
             postboxLog("isEncrypted: sqlite3_prepare_v2 status = \(status) [\(self.databasePath)]")
             return true
@@ -553,6 +562,7 @@ public final class SqliteValueBox: ValueBox {
             preparedStatement.destroy()
             return true
         }
+        postboxLog("isEncrypted step done")
         preparedStatement.destroy()
         return status == SQLITE_NOTADB
     }
