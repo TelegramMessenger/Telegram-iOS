@@ -3491,9 +3491,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 var items: [ContextMenuItem] = []
                 let muteValues: [(Int32, String)] = [
                     (1 * 60 * 60, "Chat/Context Menu/Mute2h"),
-                    (4 * 60 * 60, "Chat/Context Menu/Muted"),
-                    (8 * 60 * 60, "Chat/Context Menu/Muted"),
-                    (24 * 60 * 60, "Chat/Context Menu/Muted"),
+                    (4 * 60 * 60, "Chat/Context Menu/Mute2h"),
+                    (8 * 60 * 60, "Chat/Context Menu/Mute2h"),
+                    (1 * 24 * 60 * 60, "Chat/Context Menu/Mute2d"),
                     (2 * 24 * 60 * 60, "Chat/Context Menu/Mute2d"),
                     (Int32.max, "Chat/Context Menu/Muted")
                 ]
