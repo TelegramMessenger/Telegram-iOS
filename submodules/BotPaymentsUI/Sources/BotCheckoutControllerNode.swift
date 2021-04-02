@@ -302,11 +302,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
         if let tip = paymentForm.invoice.tip {
             let tipTitle: String
             //TODO:localize
-            if tip.min == 0 {
-                tipTitle = "Tip (Optional)"
-            } else {
-                tipTitle = "Tip"
-            }
+            tipTitle = "Tip"
             entries.append(.tip(presentationData.theme, tipTitle, "\(formatCurrencyAmount(currentTip ?? 0, currency: paymentForm.invoice.currency))"))
         }
         
