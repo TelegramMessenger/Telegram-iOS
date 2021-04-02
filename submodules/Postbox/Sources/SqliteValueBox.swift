@@ -297,8 +297,8 @@ public final class SqliteValueBox: ValueBox {
             let _ = try? FileManager.default.removeItem(atPath: path)
             preconditionFailure("Couldn't open database")
         }
-        
-        sqlite3_busy_timeout(database.handle, 1000 * 10000)
+
+        //sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         var resultCode: Bool = true
         
@@ -409,6 +409,8 @@ public final class SqliteValueBox: ValueBox {
                 }
             }
         }
+
+        sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
