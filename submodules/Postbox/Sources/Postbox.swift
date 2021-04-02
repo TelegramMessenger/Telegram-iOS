@@ -1420,7 +1420,7 @@ public final class Postbox {
         self.seedConfiguration = seedConfiguration
         self.tempDir = tempDir
         
-        postboxLog("MediaBox path: \(self.basePath + "/media")")
+        postboxLog("MediaBox path: \(basePath + "/media")")
         
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.valueBox = valueBox

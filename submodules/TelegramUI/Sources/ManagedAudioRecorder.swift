@@ -136,7 +136,7 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
 }
 
 private let beginToneData: TonePlayerData? = {
-    guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "caf") else {
+    guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "mp3") else {
         return nil
     }
     return loadTonePlayerData(path: url.path)

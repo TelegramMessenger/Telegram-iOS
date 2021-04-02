@@ -108,15 +108,15 @@ enum PresentationCallTone: Equatable {
 func presentationCallToneData(_ tone: PresentationCallTone) -> Data? {
     switch tone {
         case .ringing:
-            return loadToneData(name: "voip_ringback.caf")
+            return loadToneData(name: "voip_ringback.mp3")
         case .connecting:
             return loadToneData(name: "voip_connecting.mp3")
         case .busy:
-            return loadToneData(name: "voip_busy.caf")
+            return loadToneData(name: "voip_busy.mp3")
         case .failed:
-            return loadToneData(name: "voip_fail.caf")
+            return loadToneData(name: "voip_fail.mp3")
         case .ended:
-            return loadToneData(name: "voip_end.caf")
+            return loadToneData(name: "voip_end.mp3")
         case .groupJoined:
             return loadToneData(name: "voip_group_joined.mp3")
         case .groupLeft:

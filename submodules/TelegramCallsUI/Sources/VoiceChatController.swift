@@ -1544,7 +1544,7 @@ public final class VoiceChatController: ViewController {
             self.bottomPanelNode.addSubnode(self.bottomCornersNode)
             self.bottomPanelNode.addSubnode(self.bottomPanelBackgroundNode)
             self.bottomPanelNode.addSubnode(self.audioButton)
-            if let mainVideoContainer = self.mainVideoContainer {
+            if let _ = self.mainVideoContainer {
                 self.bottomPanelNode.addSubnode(self.cameraButton)
                 self.bottomPanelNode.addSubnode(self.switchCameraButton)
             }
@@ -2995,7 +2995,13 @@ public final class VoiceChatController: ViewController {
             let secondButtonFrame: CGRect
             let thirdButtonFrame: CGRect
             let forthButtonFrame: CGRect
-            let leftButtonFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height - upperButtonDistance - cameraButtonSize.height) / 2.0) + upperButtonDistance + cameraButtonSize.height), size: sideButtonSize)
+            
+            let leftButtonFrame: CGRect
+            if self.mainVideoContainer == nil {
+                leftButtonFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize)
+            } else {
+                leftButtonFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height - upperButtonDistance - cameraButtonSize.height) / 2.0) + upperButtonDistance + cameraButtonSize.height), size: sideButtonSize)
+            }
             let rightButtonFrame = CGRect(origin: CGPoint(x: size.width - sideButtonOrigin - sideButtonSize.width, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize)
             
             let smallButtons: Bool
