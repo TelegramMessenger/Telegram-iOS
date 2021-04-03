@@ -1,0 +1,9 @@
+/* A single strings file, whose title is specified in your preferences schema. The strings files provide the localized content to display to the user for each of your preferences. */
+
+"Reset.Title" = "TROUBLESHOOTING";
+"Reset.Toggle" = "Reset caches on next launch";
+"Reset.Notice" = "Use in case you're stuck and can't enter app. This WILL NOT logout your accounts.";
+
+"Export.Title" = "Export DB";
+"Export.Toggle" = "Export PLAINTEXT database on next launch";
+"Export.Notice" = "App will export database so you can download it and restore some data. Manually Export to saved messages via Debug menu.";

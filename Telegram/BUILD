@@ -1714,6 +1714,7 @@ ios_application(
         ":DisplayFramework",
         ":TelegramUIFramework",
     ],
+    settings_bundle = "//Nicegram/NGSettingsBundle:NGSettingsBundle",
     strings = [
         ":AppStringResources",
     ],
