@@ -1432,7 +1432,7 @@ final class SharedApplicationContext {
         // MARK: Nicegram fetch
         Queue().async {
         	self.fetchGlobalNGSettings()
-		self.fetchPremium()
+		    self.fetchPremium()
         }
         
         let _ = (self.context.get()

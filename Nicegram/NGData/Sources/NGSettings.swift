@@ -159,3 +159,19 @@ public func usetrButton() -> [(Bool, [String])] {
     }
     return [(false, [])]
 }
+
+public class SystemNGSettings {
+    let UD = UserDefaults.standard
+    
+    public init() {}
+    
+    public var dbReset: Bool {
+        get {
+            return UD.bool(forKey: "ng_db_reset")
+        }
+        set {
+            UD.set(newValue, forKey: "ng_db_reset")
+        }
+    }
+    
+}
