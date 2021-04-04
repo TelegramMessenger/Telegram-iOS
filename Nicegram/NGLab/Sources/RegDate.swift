@@ -19,13 +19,16 @@ public enum RegDateError {
     case badDeviceToken
 }
 
-public func requestRegDate(jsonData: Data) -> Signal<Date, RegDateError> {
+public func requestRegDate(jsonData: Data, requestByUserId: Int64, deviceToken: String) -> Signal<Date, RegDateError> {
     return Signal { subscriber in
         let completed = Atomic<Bool>(value: false)
         var request = URLRequest(url: URL(string: ngLabData[0] + "regdate")!)
         
         request.httpMethod = "POST"
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.setValue(deviceToken, forHTTPHeaderField: "Device-Token")
+        request.setValue("\(requestByUserId)", forHTTPHeaderField: "User-Id")
+        request.setValue("Bearer \(ngLabData[1])", forHTTPHeaderField: "Authorization")
         
         // insert json data to the request
         request.httpBody = jsonData as Data
@@ -67,12 +70,12 @@ public func requestRegDate(jsonData: Data) -> Signal<Date, RegDateError> {
 }
 
 
-public func getRegDate(_ userId: Int64, owner: Int64
+public func getRegDate(_ userId: Int64, requestByUserId: Int64
     ) -> Signal<Date, RegDateError> {
     return Signal { subscriber in
         getDeviceToken { deviceToken in
             if let deviceToken = deviceToken {
-                let requestSignal = requestRegDate(jsonData: prepareRegDateData(userId, owner: owner, deviceToken: deviceToken))
+                let requestSignal = requestRegDate(jsonData: prepareRegDateData(userId), requestByUserId: requestByUserId, deviceToken: deviceToken)
                 let _ = (requestSignal |> deliverOnMainQueue).start(next: {
                     responseDate in
                     setCachedRegDate(userId, Int(responseDate.timeIntervalSince1970))
@@ -89,8 +92,8 @@ public func getRegDate(_ userId: Int64, owner: Int64
     }
 }
 
-func prepareRegDateData(_ userId: Int64, owner: Int64, deviceToken: String) -> Data {
-    let json = ["user_id": userId, "owner": owner, "device_token": deviceToken, "data": ngLabData[1]] as [String : Any]
+func prepareRegDateData(_ userId: Int64) -> Data {
+    let json = ["user_id": userId] as [String : Any]
     let jsonData = try! JSONSerialization.data(withJSONObject: json)
     return jsonData
 }
