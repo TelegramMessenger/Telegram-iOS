@@ -65,7 +65,7 @@ struct SqlitePreparedStatement {
         }
         return res == SQLITE_ROW
     }
-    
+
     struct SqlError: Error {
         var code: Int32
     }
@@ -298,7 +298,7 @@ public final class SqliteValueBox: ValueBox {
 
         postboxLog("Did open DB at \(path)")
 
-        //sqlite3_busy_timeout(database.handle, 1000 * 10000)
+        sqlite3_busy_timeout(database.handle, 5 * 1000)
         
         var resultCode: Bool = true
         
@@ -420,8 +420,6 @@ public final class SqliteValueBox: ValueBox {
         }
 
         postboxLog("Did set up encryption")
-
-        //sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
@@ -543,7 +541,19 @@ public final class SqliteValueBox: ValueBox {
     private func isEncrypted(_ database: Database) -> Bool {
         var statement: OpaquePointer? = nil
         postboxLog("isEncrypted prepare...")
+
+        let allIsOk = Atomic<Bool>(value: false)
+        let databasePath = self.databasePath
+        DispatchQueue.global().asyncAfter(deadline: .now() + 5.0, execute: {
+            if allIsOk.with({ $0 }) == false {
+                postboxLog("Timeout reached, discarding database")
+                try? FileManager.default.removeItem(atPath: databasePath)
+
+                preconditionFailure()
+            }
+        })
         let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
+        let _ = allIsOk.swap(true)
         postboxLog("isEncrypted prepare done")
         if statement == nil {
             postboxLog("isEncrypted: sqlite3_prepare_v2 status = \(status) [\(self.databasePath)]")
