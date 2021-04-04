@@ -1080,6 +1080,21 @@ final class SharedApplicationContext {
             var network: Network?
             if let context = context {
                 network = context.context.account.network
+
+                if VarSystemNGSettings.dbReset {
+                    UIAlertView(title: nil,  message: "(1) Resetting database. Please wait...", delegate: nil, cancelButtonTitle: "OK").show()
+                    ngLog("Resetting DB by system settings", "System NG")
+                    let databasePath = context.context.sharedContext.accountManager.basePath + "/db"
+                    do {
+                        let _ = try FileManager.default.removeItem(atPath: databasePath)
+                        ngLog("Database reset completed!", "System NG")
+                        UIAlertView(title: nil,  message: "(2) Reset completed", delegate: nil, cancelButtonTitle: "OK").show()
+                    } catch let error as NSError {
+                        ngLog("Unable to reset database \(error)", "System NG")
+                        UIAlertView(title: "(2) ERROR. Unable to reset database",  message: "\(error)", delegate: nil, cancelButtonTitle: "OK").show()
+                    }
+                    VarSystemNGSettings.dbReset = false
+                }
             }
             
             Logger.shared.log("App \(self.episodeId)", "received context \(String(describing: context)) account \(String(describing: context?.context.account.id)) network \(String(describing: network))")
@@ -1155,22 +1170,6 @@ final class SharedApplicationContext {
             var network: Network?
             if let context = context {
                 network = context.account.network
-
-                if SystemNGSettings().dbReset {
-                    UIAlertView(title: nil,  message: "(1) Resetting database. Please wait...", delegate: nil, cancelButtonTitle: "OK").show()
-                    ngLog("Resetting DB by system settings", "System NG")
-                    let databasePath = context.sharedContext.accountManager.basePath + "/db"
-                    do {
-                        let _ = try FileManager.default.removeItem(atPath: databasePath)
-                        ngLog("Database reset completed!", "System NG")
-                        UIAlertView(title: nil,  message: "(2) Reset completed", delegate: nil, cancelButtonTitle: "OK").show()
-                    } catch let error as NSError {
-                        ngLog("Unable to reset database \(error)", "[System NG]")
-                        UIAlertView(title: "(2) ERROR. Unable to reset database",  message: "\(error)", delegate: nil, cancelButtonTitle: "OK").show()
-                    }
-                    SystemNGSettings().dbReset = false
-                    
-                }
             }
             
             Logger.shared.log("App \(self.episodeId)", "received auth context \(String(describing: context)) account \(String(describing: context?.account.id)) network \(String(describing: network))")

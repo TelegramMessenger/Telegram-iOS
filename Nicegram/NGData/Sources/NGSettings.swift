@@ -175,3 +175,5 @@ public class SystemNGSettings {
     }
     
 }
+
+public var VarSystemNGSettings = SystemNGSettings()
