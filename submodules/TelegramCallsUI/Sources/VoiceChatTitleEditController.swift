@@ -710,7 +710,7 @@ private final class VoiceChatUserNameEditAlertContentNode: AlertContentNode {
     }
 }
 
-func voiceChatUserNameController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, firstNamePlaceholder: String, lastNamePlaceholder: String, doneButtonTitle: String? = nil, firstName: String?, lastName: String?, maxLength: Int, apply: @escaping (String, String) -> Void) -> AlertController {
+func voiceChatUserNameController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, firstNamePlaceholder: String, lastNamePlaceholder: String, doneButtonTitle: String? = nil, firstName: String?, lastName: String?, maxLength: Int, apply: @escaping ((String, String)?) -> Void) -> AlertController {
     var presentationData = sharedContext.currentPresentationData.with { $0 }
     if let forceTheme = forceTheme {
         presentationData = presentationData.withUpdated(theme: forceTheme)
@@ -733,14 +733,24 @@ func voiceChatUserNameController(sharedContext: SharedAccountContext, account: A
         guard let contentNode = contentNode else {
             return
         }
-        dismissImpl?(true)
         
         let previousFirstName = firstName ?? ""
-        let previousLastName = firstName ?? ""
-        
+        let previousLastName = lastName ?? ""
         let newFirstName = contentNode.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
         let newLastName = contentNode.lastName.trimmingCharacters(in: .whitespacesAndNewlines)
-        apply(newFirstName, newLastName)
+        
+        if newFirstName.isEmpty {
+            contentNode.animateError()
+            return
+        }
+        
+        dismissImpl?(true)
+        
+        if previousFirstName != newFirstName || previousLastName != newLastName {
+            apply((newFirstName, newLastName))
+        } else {
+            apply(nil)
+        }
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
