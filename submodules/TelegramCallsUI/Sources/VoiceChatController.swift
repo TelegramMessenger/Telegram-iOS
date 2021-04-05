@@ -1322,7 +1322,7 @@ public final class VoiceChatController: ViewController {
                                     maxBioLength = 100
                                 }
                                 let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, maxLength: maxBioLength, apply: { bio in
-                                    if let strongSelf = self {
+                                    if let strongSelf = self, let bio = bio {
                                         let _ = (updateAbout(account: strongSelf.context.account, about: bio)
                                         |> `catch` { _ -> Signal<Void, NoError> in
                                             return .complete()
@@ -1345,8 +1345,8 @@ public final class VoiceChatController: ViewController {
                                 f(.default)
                                    
                                 Queue.mainQueue().after(0.1) {
-                                    let controller = voiceChatUserNameController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_ChangeNameTitle, firstNamePlaceholder: presentationData.strings.UserInfo_FirstNamePlaceholder, lastNamePlaceholder: presentationData.strings.UserInfo_LastNamePlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, firstName: peer.firstName, lastName: peer.lastName, maxLength: 128, apply: { firstName, lastName in
-                                        if let strongSelf = self {
+                                    let controller = voiceChatUserNameController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_ChangeNameTitle, firstNamePlaceholder: presentationData.strings.UserInfo_FirstNamePlaceholder, lastNamePlaceholder: presentationData.strings.UserInfo_LastNamePlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, firstName: peer.firstName, lastName: peer.lastName, maxLength: 128, apply: { firstAndLastName in
+                                        if let strongSelf = self, let (firstName, lastName) = firstAndLastName {
                                             let _ = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName).start()
                                             
                                             strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditNameSuccess), action: { _ in return false })
@@ -1994,6 +1994,15 @@ public final class VoiceChatController: ViewController {
                         c.setItems(strongSelf.contextMenuPermissionItems())
                     })))
                 }
+                
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EditPermissions, icon: { theme -> UIImage? in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+                }, action: { c, _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    c.setItems(strongSelf.contextMenuPermissionItems())
+                })))
 
                 if let inviteLinks = inviteLinks {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
@@ -3748,7 +3757,7 @@ public final class VoiceChatController: ViewController {
                 mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
                     if let image = image, let asset = asset {
                         completion()
-//                        self?.updateProfileVideo(image, asset: asset, adjustments: adjustments)
+                        self?.updateProfileVideo(image, asset: asset, adjustments: adjustments)
                     }
                 }
                 mixin.didFinishWithDelete = {
@@ -3756,55 +3765,42 @@ public final class VoiceChatController: ViewController {
                         return
                     }
                     
-//                    let proceed = {
-//                        if let item = item {
-//                            strongSelf.deleteAvatar(item, remove: false)
-//                        }
-//                        
-//                        let _ = strongSelf.currentAvatarMixin.swap(nil)
-//                        if let _ = peer.smallProfileImage {
-//                            strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-//                            if let (layout, navigationHeight) = strongSelf.validLayout {
-//                                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-//                            }
-//                        }
-//                        let postbox = strongSelf.context.account.postbox
-//                        strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
-//                            return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
-//                        })
-//                        |> deliverOnMainQueue).start(next: { result in
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//                            switch result {
-//                            case .complete:
-//                                strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-//                                if let (layout, navigationHeight) = strongSelf.validLayout {
-//                                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-//                                }
-//                            case .progress:
-//                                break
-//                            }
-//                        }))
-//                    }
-//                    
-//                    let actionSheet = ActionSheetController(presentationData: presentationData)
-//                    let items: [ActionSheetItem] = [
-//                        ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
-//                            actionSheet?.dismissAnimated()
-//                            proceed()
-//                        })
-//                    ]
-//                    
-//                    actionSheet.setItemGroups([
-//                        ActionSheetItemGroup(items: items),
-//                        ActionSheetItemGroup(items: [
-//                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-//                                actionSheet?.dismissAnimated()
-//                            })
-//                        ])
-//                    ])
-//                    strongSelf.controller?.present(actionSheet, in: .window(.root))
+                    let proceed = {                        
+                        let _ = strongSelf.currentAvatarMixin.swap(nil)
+                        let postbox = strongSelf.context.account.postbox
+                        strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+                        })
+                        |> deliverOnMainQueue).start(next: { result in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            switch result {
+                            case .complete:
+                                break
+                            case .progress:
+                                break
+                            }
+                        }))
+                    }
+                    
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    let items: [ActionSheetItem] = [
+                        ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            proceed()
+                        })
+                    ]
+                    
+                    actionSheet.setItemGroups([
+                        ActionSheetItemGroup(items: items),
+                        ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])
+                    ])
+                    strongSelf.controller?.present(actionSheet, in: .window(.root))
                 }
                 mixin.didDismiss = { [weak legacyController] in
                     guard let strongSelf = self else {
@@ -3855,6 +3851,125 @@ public final class VoiceChatController: ViewController {
             }))
             
             self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+        }
+        
+        private func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?) {
+            guard let data = image.jpegData(compressionQuality: 0.6), let peerId = self.callState?.myPeerId else {
+                return
+            }
+            
+            let photoResource = LocalFileMediaResource(fileId: arc4random64())
+            self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
+            
+            self.currentUpdatingAvatar = representation
+            self.updateAvatarPromise.set(.single((representation, 0.0)))
+
+            var videoStartTimestamp: Double? = nil
+            if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+                videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+            }
+            
+            let account = self.context.account
+            let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { [weak self] subscriber in
+                let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                    if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                        return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                    } else {
+                        return nil
+                    }
+                }
+                let uploadInterface = LegacyLiveUploadInterface(account: account)
+                let signal: SSignal
+                if let asset = asset as? AVAsset {
+                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+                    let durationSignal: SSignal = SSignal(generator: { subscriber in
+                        let disposable = (entityRenderer.duration()).start(next: { duration in
+                            subscriber?.putNext(duration)
+                            subscriber?.putCompletion()
+                        })
+                        
+                        return SBlockDisposable(block: {
+                            disposable.dispose()
+                        })
+                    })
+                    signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                        if let duration = duration as? Double {
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                        } else {
+                            return SSignal.single(nil)
+                        }
+                    })
+                   
+                } else {
+                    signal = SSignal.complete()
+                }
+                
+                let signalDisposable = signal.start(next: { next in
+                    if let result = next as? TGMediaVideoConversionResult {
+                        if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
+                            account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                        }
+                        
+                        if let timestamp = videoStartTimestamp {
+                            videoStartTimestamp = max(0.0, min(timestamp, result.duration - 0.05))
+                        }
+                        
+                        var value = stat()
+                        if stat(result.fileURL.path, &value) == 0 {
+                            if let data = try? Data(contentsOf: result.fileURL) {
+                                let resource: TelegramMediaResource
+                                if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
+                                    resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                                } else {
+                                    resource = LocalFileMediaResource(fileId: arc4random64())
+                                }
+                                account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                subscriber.putNext(resource)
+                            }
+                        }
+                        subscriber.putCompletion()
+                    } else if let strongSelf = self, let progress = next as? NSNumber {
+                        Queue.mainQueue().async {
+                            strongSelf.updateAvatarPromise.set(.single((representation, Float(truncating: progress) * 0.25)))
+                        }
+                    }
+                }, error: { _ in
+                }, completed: nil)
+                
+                let disposable = ActionDisposable {
+                    signalDisposable?.dispose()
+                }
+                
+                return ActionDisposable {
+                    disposable.dispose()
+                }
+            }
+            
+            self.updateAvatarDisposable.set((signal
+            |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
+                if peerId.namespace == Namespaces.Peer.CloudUser {
+                    return updateAccountPhoto(account: account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    })
+                } else {
+                    return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: photoResource), video: uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    })
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch result {
+                    case .complete:
+                        strongSelf.updateAvatarPromise.set(.single(nil))
+                    case let .progress(value):
+                        strongSelf.updateAvatarPromise.set(.single((representation, 0.25 + value * 0.75)))
+                }
+            }))
         }
     }
     
