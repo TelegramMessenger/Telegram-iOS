@@ -316,7 +316,7 @@ private final class PinchControllerNode: ViewControllerTracingNode {
 
             self.sourceNode.contentNode.transform = CATransform3DIdentity
             self.sourceNode.contentNode.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration * 1.2, damping: 110.0)
-            self.sourceNode.contentNode.layer.animatePosition(from: CGPoint(x: offset.x / scale, y: offset.y / scale), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true, force: true, completion: { _ in
+            self.sourceNode.contentNode.layer.animatePosition(from: CGPoint(x: offset.x, y: offset.y), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true, force: true, completion: { _ in
                 performCompletion()
             })
 
