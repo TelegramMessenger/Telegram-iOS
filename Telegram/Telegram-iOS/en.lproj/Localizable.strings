@@ -6339,3 +6339,25 @@ Sorry for the inconvenience.";
 "VoiceChat.UnpinVideo" = "Unpin Video";
 
 "Notification.VoiceChatScheduled" = "Voice chat scheduled";
+
+"VoiceChat.EditStartTime" = "Edit Start Time";
+"VoiceChat.StartsIn" = "Starts in";
+
+"VoiceChat.SetReminder" = "Set Reminder";
+"VoiceChat.CancelReminder" = "Cancel Reminder";
+
+"VoiceChat.ShareShort" = "share";
+
+"ChannelInfo.ScheduleVoiceChat" = "Schedule Voice Chat";
+
+"ScheduleVoiceChat.Title" = "Schedule Voice Chat";
+"ScheduleVoiceChat.GroupText" = "The members of the group will be notified that the voice chat will start in %@.";
+"ScheduleVoiceChat.ChannelText" = "The members of the channel will be notified that the voice chat will start in %@.";
+
+"ScheduleVoiceChat.ScheduleToday" = "Remind today at %@";
+"ScheduleVoiceChat.ScheduleTomorrow" = "Remind tomorrow at %@";
+"ScheduleVoiceChat.ScheduleOn" = "Remind on %@ at %@";
+
+"Conversation.ScheduledVoiceChat" = "Scheduled Voice Chat";
+"Conversation.ScheduledVoiceChatStartsInShort" = "Voice chat starts %@";
+"Conversation.ScheduledVoiceChatStartsInShort" = "Starts %@";

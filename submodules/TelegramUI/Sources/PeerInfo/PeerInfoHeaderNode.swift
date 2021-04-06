@@ -54,7 +54,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let backgroundNode: ASImageNode
-    private let backgroundWithIconNode: ASImageNode
+    private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
     private var animationNode: AnimationNode?
     
@@ -73,11 +73,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.isHidden = true
         
-        self.backgroundWithIconNode = ASImageNode()
-        self.backgroundWithIconNode.displaysAsynchronously = false
-        self.backgroundWithIconNode.displayWithoutProcessing = true
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -88,7 +87,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         self.containerNode.addSubnode(self.referenceNode)
         self.referenceNode.addSubnode(self.backgroundNode)
-        self.referenceNode.addSubnode(self.backgroundWithIconNode)
+        self.referenceNode.addSubnode(self.iconNode)
         self.addSubnode(self.containerNode)
         self.addSubnode(self.textNode)
         
@@ -126,12 +125,11 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         let previousIcon = self.icon
         let iconUpdated = self.icon != icon
-        if self.theme != presentationData.theme || self.icon != icon || self.isActive != isActive {
+        let isActiveUpdated = self.isActive != isActive
+        self.isActive = isActive
+        if self.theme != presentationData.theme || self.icon != icon {
             self.theme = presentationData.theme
             self.icon = icon
-            
-            let isActiveUpdated = self.isActive != isActive
-            self.isActive = isActive
             
             var isGestureEnabled = false
             if [.mute, .voiceChat, .more].contains(icon) {
@@ -195,17 +193,13 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     }
                 } else {
                     animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
-                    self.addSubnode(animationNode)
+                    self.referenceNode.addSubnode(animationNode)
                     self.animationNode = animationNode
                 }
                 animationNode.frame = CGRect(origin: CGPoint(), size: size)
-                self.backgroundWithIconNode.isHidden = true
-                self.backgroundNode.isHidden = false
             } else if let animationNode = self.animationNode {
                 self.animationNode = nil
                 animationNode.removeFromSupernode()
-                self.backgroundWithIconNode.isHidden = false
-                self.backgroundNode.isHidden = true
             }
             
             if playOnce {
@@ -213,35 +207,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             } else if seekToEnd {
                 self.animationNode?.seekToEnd()
             }
-            
-            if isActiveUpdated, !self.containerNode.alpha.isZero {
-                let backgroundNode = !self.backgroundNode.isHidden ? self.backgroundNode : self.backgroundWithIconNode
-                if let snapshotView = backgroundNode.view.snapshotContentTree() {
-                    snapshotView.frame = backgroundNode.view.frame
-                    if let animationNode = self.animationNode {
-                        self.view.insertSubview(snapshotView, belowSubview: animationNode.view)
-                    } else {
-                        self.view.addSubview(snapshotView)
-                    }
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                }
-                if !isExpanded, let snapshotView = self.textNode.view.snapshotContentTree() {
-                    snapshotView.frame = self.textNode.view.frame
-                    self.view.addSubview(snapshotView)
-                    
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                }
-            }
-            
-            self.backgroundNode.image = generateFilledCircleImage(diameter: 40.0, color: isActive ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemDisabledTextColor)
-            self.backgroundWithIconNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+                        
+            self.backgroundNode.image = generateFilledCircleImage(diameter: 40.0, color: presentationData.theme.list.itemAccentColor)
+            self.iconNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(isActive ? presentationData.theme.list.itemAccentColor.cgColor : presentationData.theme.list.itemDisabledTextColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.normal)
                 context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
                 let imageName: String?
@@ -275,15 +244,22 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             })
         }
         
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: isActive ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemDisabledTextColor)
+        let alpha: CGFloat = isActive ? 1.0 : 0.3
+        if isActiveUpdated, !self.containerNode.alpha.isZero {
+            let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            alphaTransition.updateAlpha(node: self.backgroundNode, alpha: isActive ? 1.0 : 0.3)
+            alphaTransition.updateAlpha(node: self.textNode, alpha: isActive ? 1.0 : 0.3)
+        }
+        
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor)
         self.accessibilityLabel = text
         let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.backgroundWithIconNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height + 6.0), size: titleSize))
-        transition.updateAlpha(node: self.textNode, alpha: isExpanded ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.textNode, alpha: isExpanded ? 0.0 : alpha)
         
         self.referenceNode.frame = self.containerNode.bounds
     }

@@ -33,6 +33,7 @@ public enum RequestChangeAccountPhoneNumberVerificationError {
     case invalidPhoneNumber
     case limitExceeded
     case phoneNumberOccupied
+    case phoneBanned
     case generic
 }
 
@@ -45,6 +46,8 @@ public func requestChangeAccountPhoneNumberVerification(account: Account, phoneN
                 return .invalidPhoneNumber
             } else if error.errorDescription == "PHONE_NUMBER_OCCUPIED" {
                 return .phoneNumberOccupied
+            } else if error.errorDescription == "PHONE_NUMBER_BANNED" {
+                return .phoneBanned
             } else {
                 return .generic
             }
