@@ -398,6 +398,7 @@ public struct BotPaymentReceipt : Equatable {
     public let info: BotPaymentRequestedInfo?
     public let shippingOption: BotPaymentShippingOption?
     public let credentialsTitle: String
+    public let tipAmount: Int64?
 }
 
 public enum RequestBotPaymentReceiptError {
@@ -424,7 +425,7 @@ public func requestBotPaymentReceipt(account: Account, messageId: MessageId) -> 
                 let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                 let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
                 let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
-                return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
+                return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, tipAmount: tipAmount)
             }
         }
     }
