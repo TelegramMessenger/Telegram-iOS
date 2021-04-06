@@ -77,6 +77,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 clientParams: nil,
                 streamDcId: nil,
                 title: call.title,
+                scheduleTimestamp: nil,
                 recordingStartTimestamp: nil,
                 sortAscending: true
             ),
@@ -120,7 +121,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 }
                 return GroupCallPanelData(
                     peerId: peerId,
-                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, recordingStartTimestamp: nil, sortAscending: state.sortAscending),
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, scheduleTimestamp: nil, recordingStartTimestamp: nil, sortAscending: state.sortAscending),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
                     activeSpeakers: activeSpeakers,
@@ -761,7 +762,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         })
         
         if let initialCall = initialCall, let temporaryParticipantsContext = (self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl)?.impl.syncWith({ impl in
-            impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title))
+            impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: nil, subscribed: false))
         }) {
             self.switchToTemporaryParticipantsContext(sourceContext: temporaryParticipantsContext.context.participantsContext, oldMyPeerId: self.joinAsPeerId)
         } else {
@@ -1638,6 +1639,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         clientParams: nil,
                         streamDcId: nil,
                         title: state.title,
+                        scheduleTimestamp: nil,
                         recordingStartTimestamp: state.recordingStartTimestamp,
                         sortAscending: state.sortAscending
                     ))))
@@ -2207,7 +2209,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             
             if let value = value {
-                strongSelf.initialCall = CachedChannelData.ActiveCall(id: value.id, accessHash: value.accessHash, title: value.title)
+                strongSelf.initialCall = CachedChannelData.ActiveCall(id: value.id, accessHash: value.accessHash, title: value.title, scheduleTimestamp: nil, subscribed: false)
                 
                 strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
             } else {

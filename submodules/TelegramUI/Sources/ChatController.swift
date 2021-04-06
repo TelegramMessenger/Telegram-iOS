@@ -535,7 +535,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
                             if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
-                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title))
+                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: nil, subscribed: false))
                             } else {
                                 var canManageGroupCalls = false
                                 if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
@@ -564,12 +564,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 statusController?.dismiss()
                                             }
                                             strongSelf.present(statusController, in: .window(.root))
-                                            strongSelf.createVoiceChatDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: message.id.peerId)
+                                            strongSelf.createVoiceChatDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: message.id.peerId, title: nil, scheduleDate: nil)
                                             |> deliverOnMainQueue).start(next: { [weak self] info in
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
+                                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: nil, subscribed: false))
                                             }, error: { [weak self] error in
                                                 dismissStatus?()
                                                 

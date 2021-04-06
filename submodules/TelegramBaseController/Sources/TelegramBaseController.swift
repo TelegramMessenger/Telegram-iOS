@@ -406,7 +406,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
                         invite: nil,
-                        activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title)
+                        activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: nil, subscribed: false)
                     )
                 })
                 if let navigationBar = self.navigationBar {

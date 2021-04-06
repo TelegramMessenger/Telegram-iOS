@@ -4023,14 +4023,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     statusController?.dismiss()
                 }
                 strongSelf.controller?.present(statusController, in: .window(.root))
-                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId)
+                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId, title: nil, scheduleDate: nil)
                 |> deliverOnMainQueue).start(next: { [weak self] info in
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.context.joinGroupCall(peerId: peerId, invite: nil, requestJoinAsPeerId: { result in
                         result(joinAsPeerId)
-                    }, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title))
+                    }, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: nil, subscribed: false))
                 }, error: { [weak self] error in
                     dismissStatus?()
                     
