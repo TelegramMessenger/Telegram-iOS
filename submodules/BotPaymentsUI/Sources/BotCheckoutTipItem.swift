@@ -315,16 +315,15 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                         index += 1
                     }
 
-                    let sideInset: CGFloat = 16.0
+                    let sideInset: CGFloat = params.leftInset + 16.0
                     var scaleFactor: CGFloat = 1.0
                     let availableWidth = params.width - sideInset * 2.0 - CGFloat(max(0, item.availableVariants.count - 1)) * 12.0
                     if totalMinWidth < availableWidth {
                         scaleFactor = availableWidth / totalMinWidth
                     }
 
-                    index = 0
-                    var variantsOffset: CGFloat = 16.0
-                    for _ in item.availableVariants {
+                    var variantsOffset: CGFloat = sideInset
+                    for index in 0 ..< item.availableVariants.count {
                         if index != 0 {
                             variantsOffset += 12.0
                         }
@@ -334,10 +333,14 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
                         let nodeWidth = floor(scaleFactor * minWidth)
 
-                        valueNode.frame = CGRect(origin: CGPoint(x: variantsOffset, y: 0.0), size: CGSize(width: nodeWidth, height: valueHeight))
+                        var valueFrame = CGRect(origin: CGPoint(x: variantsOffset, y: 0.0), size: CGSize(width: nodeWidth, height: valueHeight))
+                        if scaleFactor > 1.0 && index == item.availableVariants.count - 1 {
+                            valueFrame.size.width = params.width - sideInset - valueFrame.minX
+                        }
+
+                        valueNode.frame = valueFrame
                         nodeApply(nodeWidth)
                         variantsOffset += nodeWidth
-                        index += 1
                     }
 
                     variantsOffset += 16.0
