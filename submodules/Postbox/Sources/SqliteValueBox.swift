@@ -549,7 +549,7 @@ public final class SqliteValueBox: ValueBox {
                 postboxLog("Timeout reached, discarding database")
                 try? FileManager.default.removeItem(atPath: databasePath)
 
-                preconditionFailure()
+                exit(0)
             }
         })
         let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
