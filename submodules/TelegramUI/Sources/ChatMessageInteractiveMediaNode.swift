@@ -79,7 +79,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     private let pinchContainerNode: PinchSourceContainerNode
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
-    private var currentHighQualityImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+    private var currentHighQualityImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
     private var highQualityImageNode: TransformImageNode?
 
     private var videoNode: UniversalVideoNode?
@@ -187,14 +187,43 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 var highQualityImageNode: TransformImageNode?
                 if let current = strongSelf.highQualityImageNode {
                     highQualityImageNode = current
-                } else if let currentHighQualityImageSignal = strongSelf.currentHighQualityImageSignal, let currentImageArguments = strongSelf.currentImageArguments {
+                } else if let (currentHighQualityImageSignal, nativeImageSize) = strongSelf.currentHighQualityImageSignal, let currentImageArguments = strongSelf.currentImageArguments {
                     let imageNode = TransformImageNode()
                     imageNode.frame = strongSelf.imageNode.frame
+
+                    let corners = currentImageArguments.corners
+                    if isRoundEqualCorners(corners) {
+                        imageNode.cornerRadius = corners.topLeft.radius
+                        imageNode.layer.mask = nil
+                    } else {
+                        imageNode.cornerRadius = 0
+
+                        let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
+                        let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
+                        let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+                        let context = DrawingContext(size: size, clear: true)
+                        context.withContext { ctx in
+                            ctx.setFillColor(UIColor.black.cgColor)
+                            ctx.fill(arguments.drawingRect)
+                        }
+                        addCorners(context, arguments: arguments)
+
+                        if let maskImage = context.generateImage() {
+                            let mask = CALayer()
+                            mask.contents = maskImage.cgImage
+                            mask.contentsScale = maskImage.scale
+                            mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
+
+                            imageNode.layer.mask = mask
+                            imageNode.layer.mask?.frame = imageNode.bounds
+                        }
+                    }
+
                     strongSelf.pinchContainerNode.contentNode.insertSubnode(imageNode, aboveSubnode: strongSelf.imageNode)
 
-                    var updatedArguments = currentImageArguments
-                    updatedArguments.scale = 3.0
-                    let apply = imageNode.asyncLayout()(updatedArguments)
+                    let scaleFactor = nativeImageSize.height / currentImageArguments.imageSize.height
+
+                    let apply = imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: currentImageArguments.imageSize.width * scaleFactor, height: currentImageArguments.imageSize.height * scaleFactor), boundingSize: CGSize(width: currentImageArguments.boundingSize.width * scaleFactor, height: currentImageArguments.boundingSize.height * scaleFactor), intrinsicInsets: UIEdgeInsets(top: currentImageArguments.intrinsicInsets.top * scaleFactor, left: currentImageArguments.intrinsicInsets.left * scaleFactor, bottom: currentImageArguments.intrinsicInsets.bottom * scaleFactor, right: currentImageArguments.intrinsicInsets.right * scaleFactor)))
                     let _ = apply()
                     imageNode.setSignal(currentHighQualityImageSignal, attemptSynchronously: false)
 
@@ -918,7 +947,19 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             if let updateImageSignal = updateImageSignal {
                                 strongSelf.imageNode.setSignal(updateImageSignal(synchronousLoads, false), attemptSynchronously: synchronousLoads)
-                                strongSelf.currentHighQualityImageSignal = updateImageSignal(false, true)
+
+                                var imageDimensions: CGSize?
+                                if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
+                                    imageDimensions = dimensions.cgSize
+                                } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
+                                    imageDimensions = dimensions.cgSize
+                                } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
+                                    imageDimensions = dimensions.cgSize
+                                }
+
+                                if let imageDimensions = imageDimensions {
+                                    strongSelf.currentHighQualityImageSignal = (updateImageSignal(false, true), imageDimensions)
+                                }
                             }
                             
                             if let _ = secretBeginTimeAndTimeout {
