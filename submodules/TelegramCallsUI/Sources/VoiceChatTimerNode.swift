@@ -136,7 +136,7 @@ final class VoiceChatTimerNode: ASDisplayNode {
         
         self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.with(size: 21.0, design: .round, weight: .semibold, traits: []), textColor: .white)
         let subtitleSize = self.subtitleNode.updateLayout(size)
-        self.subtitleNode.frame = CGRect(x: floor((size.width - subtitleSize.width) / 2.0), y: 164.0, width: timerSize.width, height: subtitleSize.height)
+        self.subtitleNode.frame = CGRect(x: floor((size.width - subtitleSize.width) / 2.0), y: 164.0, width: subtitleSize.width, height: subtitleSize.height)
         
         self.foregroundView.frame = CGRect(origin: CGPoint(), size: size)
     }

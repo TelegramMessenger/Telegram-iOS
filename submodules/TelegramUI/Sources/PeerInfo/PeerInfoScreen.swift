@@ -4020,7 +4020,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     strongSelf.context.joinGroupCall(peerId: peerId, invite: nil, requestJoinAsPeerId: { result in
                         result(joinAsPeerId)
-                    }, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: nil, subscribed: false))
+                    }, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: nil, subscribedToScheduled: false))
                 }, error: { [weak self] error in
                     guard let strongSelf = self else {
                         return
@@ -4199,7 +4199,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         |> deliverOnMainQueue).start(completed: { [weak self] in
                             if let strongSelf = self, let peer = strongSelf.data?.peer {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .info(text: presentationData.strings.Conversation_DeletedFromContacts(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                let controller = UndoOverlayController(presentationData: presentationData, content: .info(text: presentationData.strings.Conversation_DeletedFromContacts(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false })
+                                controller.keepOnParentDismissal = true
+                                strongSelf.controller?.present(controller, in: .window(.root))
                                 
                                 strongSelf.controller?.dismiss()
                             }
@@ -6642,12 +6644,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     
     private func dismissAllTooltips() {
         self.window?.forEachController({ controller in
-            if let controller = controller as? UndoOverlayController {
+            if let controller = controller as? UndoOverlayController, !controller.keepOnParentDismissal {
                 controller.dismissWithCommitAction()
             }
         })
         self.forEachController({ controller in
-            if let controller = controller as? UndoOverlayController {
+            if let controller = controller as? UndoOverlayController, !controller.keepOnParentDismissal {
                 controller.dismissWithCommitAction()
             }
             return true

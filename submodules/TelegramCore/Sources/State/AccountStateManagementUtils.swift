@@ -2982,9 +2982,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     if let info = GroupCallInfo(call) {
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                             if let current = current as? CachedChannelData {
-                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribed: false))
+                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled))
                             } else if let current = current as? CachedGroupData {
-                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribed: false))
+                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled))
                             } else {
                                 return current
                             }
@@ -2997,7 +2997,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                             let defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)
                             updatedGroupCallParticipants.append((
                                 info.id,
-                                .call(isTerminated: false, defaultParticipantsAreMuted: defaultParticipantsAreMuted, title: title, recordingStartTimestamp: recordStartDate)
+                                .call(isTerminated: false, defaultParticipantsAreMuted: defaultParticipantsAreMuted, title: title, recordingStartTimestamp: recordStartDate, scheduleTimestamp: scheduleDate)
                             ))
                         default:
                             break
@@ -3006,7 +3006,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 case let .groupCallDiscarded(callId, _, _):
                     updatedGroupCallParticipants.append((
                         callId,
-                        .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false), title: nil, recordingStartTimestamp: nil)
+                        .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false), title: nil, recordingStartTimestamp: nil, scheduleTimestamp: nil)
                     ))
                     
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
