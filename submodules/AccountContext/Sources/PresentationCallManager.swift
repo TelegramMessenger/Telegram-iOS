@@ -17,6 +17,11 @@ public enum JoinGroupCallManagerResult {
     case alreadyInProgress(PeerId?)
 }
 
+public enum RequestScheduleGroupCallResult {
+    case success
+    case alreadyInProgress(PeerId?)
+}
+
 public struct CallAuxiliaryServer {
     public enum Connection {
         case stun
@@ -181,6 +186,7 @@ public struct PresentationGroupCallState: Equatable {
     public var recordingStartTimestamp: Int32?
     public var title: String?
     public var raisedHand: Bool
+    public var scheduleTimestamp: Int32?
     
     public init(
         myPeerId: PeerId,
@@ -191,7 +197,8 @@ public struct PresentationGroupCallState: Equatable {
         defaultParticipantMuteState: DefaultParticipantMuteState?,
         recordingStartTimestamp: Int32?,
         title: String?,
-        raisedHand: Bool
+        raisedHand: Bool,
+        scheduleTimestamp: Int32?
     ) {
         self.myPeerId = myPeerId
         self.networkState = networkState
@@ -202,6 +209,7 @@ public struct PresentationGroupCallState: Equatable {
         self.recordingStartTimestamp = recordingStartTimestamp
         self.title = title
         self.raisedHand = raisedHand
+        self.scheduleTimestamp = scheduleTimestamp
     }
 }
 
@@ -299,6 +307,8 @@ public protocol PresentationGroupCall: class {
     
     var isVideo: Bool { get }
     
+    var schedulePending: Bool { get }
+    
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
     
     var canBeRemoved: Signal<Bool, NoError> { get }
@@ -312,6 +322,9 @@ public protocol PresentationGroupCall: class {
     
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     var reconnectedAsEvents: Signal<Peer, NoError> { get }
+    
+    func schedule(timestamp: Int32)
+    func startScheduled()
     
     func reconnect(with invite: String)
     func reconnect(as peerId: PeerId)
@@ -355,4 +368,5 @@ public protocol PresentationCallManager: class {
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
     func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
+    func scheduleGroupCall(context: AccountContext, peerId: PeerId, endCurrentIfAny: Bool) -> RequestScheduleGroupCallResult
 }

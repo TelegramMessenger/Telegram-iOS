@@ -259,9 +259,9 @@ public func startScheduledGroupCall(account: Account, peerId: PeerId, callId: In
         return account.postbox.transaction { transaction -> GroupCallInfo in
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                 if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribed: false))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribed: false))
                 } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribed: false))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribed: false))
                 } else {
                     return cachedData
                 }
@@ -331,15 +331,27 @@ public func updateGroupCallJoinAsPeer(account: Account, peerId: PeerId, joinAs: 
     }
     |> castError(UpdateGroupCallJoinAsPeerError.self)
     |> mapToSignal { result in
-        guard let (peer, joinAs) = result else {
+        guard let (inputPeer, joinInputPeer) = result else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.phone.saveDefaultGroupCallJoinAs(peer: peer, joinAs: joinAs))
+        return account.network.request(Api.functions.phone.saveDefaultGroupCallJoinAs(peer: inputPeer, joinAs: joinInputPeer))
         |> mapError { _ -> UpdateGroupCallJoinAsPeerError in
             return .generic
         }
         |> mapToSignal { result -> Signal<Never, UpdateGroupCallJoinAsPeerError> in
-            return .complete()
+            return account.postbox.transaction { transaction in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                    } else {
+                        return cachedData
+                    }
+                })
+            }
+            |> castError(UpdateGroupCallJoinAsPeerError.self)
+            |> ignoreValues
         }
     }
 }
@@ -644,9 +656,9 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 return account.postbox.transaction { transaction -> JoinGroupCallResult in
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                         if let cachedData = cachedData as? CachedChannelData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribed: false))
                         } else if let cachedData = cachedData as? CachedGroupData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribed: false))
                         } else {
                             return cachedData
                         }

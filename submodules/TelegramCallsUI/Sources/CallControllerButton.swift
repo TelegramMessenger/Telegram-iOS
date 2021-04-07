@@ -41,6 +41,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case accept
             case end
             case cancel
+            case share
         }
         
         var appearance: Appearance
@@ -254,6 +255,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         context.addLine(to: CGPoint(x: 2.0 + UIScreenPixel, y: 26.0 - UIScreenPixel))
                         context.strokePath()
                     })
+                case .share:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallShareButton"), color: imageColor)
                 }
             
                 if let image = image {

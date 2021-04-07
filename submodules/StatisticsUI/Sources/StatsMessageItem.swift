@@ -241,7 +241,8 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
-            let contentKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.message, strings: item.presentationData.strings, nameDisplayOrder: .firstLast, accountPeerId: item.context.account.peerId)
+            let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
+            let contentKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.message, strings: item.presentationData.strings, nameDisplayOrder: .firstLast,  dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId)
             var text = !item.message.text.isEmpty ? item.message.text : stringForMediaKind(contentKind, strings: item.presentationData.strings).0
             text = foldLineBreaks(text)
             
@@ -288,7 +289,6 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                         
             let labelFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
             
-            let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
             let label = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: label, font: labelFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - totalLeftInset - rightInset - additionalRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

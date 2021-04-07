@@ -177,14 +177,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             controller.inProgress = false
                             
                             let text: String
-                            var actions: [TextAlertAction] = [
-                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
-                            ]
+                            var actions: [TextAlertAction] = []
                             switch error {
                                 case .limitExceeded:
                                     text = strongSelf.presentationData.strings.Login_CodeFloodError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                 case .invalidPhoneNumber:
                                     text = strongSelf.presentationData.strings.Login_InvalidPhoneError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
@@ -200,8 +200,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     }))
                                 case .phoneLimitExceeded:
                                     text = strongSelf.presentationData.strings.Login_PhoneFloodError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                 case .phoneBanned:
                                     text = strongSelf.presentationData.strings.Login_PhoneBannedError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
@@ -217,6 +219,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     }))
                                 case let .generic(info):
                                     text = strongSelf.presentationData.strings.Login_UnknownError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
@@ -238,6 +241,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     }))
                                 case .timeout:
                                     text = strongSelf.presentationData.strings.Login_NetworkError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return

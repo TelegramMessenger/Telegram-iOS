@@ -27,11 +27,11 @@ private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, P
     return result
 }
 
-public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> String? {
-    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: forChatList)?.string
+public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId, forChatList: Bool) -> String? {
+    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: forChatList)?.string
 }
 
-public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> NSAttributedString? {
+public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId, forChatList: Bool) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
     let primaryTextColor: UIColor
@@ -448,7 +448,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .groupPhoneCall(_, _, scheduleDate, duration):
                 if let scheduleDate = scheduleDate {
-                    let titleString = strings.Notification_VoiceChatScheduled
+                    let timeString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate)
+                    let titleString = strings.Notification_VoiceChatScheduled(timeString).0
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 } else if let duration = duration {
                     let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0

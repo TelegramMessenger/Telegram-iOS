@@ -135,19 +135,21 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 
                     let text: String
-                    var actions: [TextAlertAction] = [
-                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
-                    ]
+                    var actions: [TextAlertAction] = []
                     switch error {
                         case .limitExceeded:
                             text = presentationData.strings.Login_CodeFloodError
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .invalidPhoneNumber:
                             text = presentationData.strings.Login_InvalidPhoneError
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneNumberOccupied:
                             text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).0
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneBanned:
                             text = presentationData.strings.Login_PhoneBannedError
-                            actions.append(TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_PhoneNumberHelp, action: { [weak self] in
+                            actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                            actions.append(TextAlertAction(type: .genericAction, title: presentationData.strings.Login_PhoneNumberHelp, action: { [weak self] in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -162,6 +164,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                             }))
                         case .generic:
                             text = presentationData.strings.Login_UnknownError
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                     }
                     
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: actions), in: .window(.root))

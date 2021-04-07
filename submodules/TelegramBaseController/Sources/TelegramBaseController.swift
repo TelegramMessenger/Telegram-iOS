@@ -333,7 +333,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     if previousCurrentGroupCall != nil && currentGroupCall == nil && availableState?.participantCount == 1 {
                         panelData = nil
                     } else {
-                        panelData = currentGroupCall != nil || availableState?.participantCount == 0 ? nil : availableState
+                        panelData = currentGroupCall != nil || (availableState?.participantCount == 0 && availableState?.info.scheduleTimestamp == nil) ? nil : availableState
                     }
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
@@ -406,7 +406,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
                         invite: nil,
-                        activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title)
+                        activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribed: false)
                     )
                 })
                 if let navigationBar = self.navigationBar {

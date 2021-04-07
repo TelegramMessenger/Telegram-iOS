@@ -29,7 +29,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     var theme: PresentationTheme
     
-    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat) {
         self.messageId = messageId
         
         self.theme = theme
@@ -86,7 +86,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {
-                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId)
+                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
                 }
                 
                 var updatedMediaReference: AnyMediaReference?
@@ -152,7 +152,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 let isMedia: Bool
                 if let message = message {
-                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId) {
+                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
                         case .text:
                             isMedia = false
                         default:
