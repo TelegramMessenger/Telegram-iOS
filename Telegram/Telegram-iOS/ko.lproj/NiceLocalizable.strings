@@ -86,7 +86,7 @@
 "Common.FAQ.Intro" = "Nicegram 지원은 유일한 개발자 및 커뮤니티에 의해 수행됩니다.\n\n먼저 Nicegram FAQ 를 살펴보세요. 대부분의 질문에 대한 중요한 문제 해결 팁과 답변이 있습니다.";
 "IAP.Premium.Title" = "프리미엄";
 "IAP.Premium.Subtitle" = "거부 할 수없는 독특한 기능!";
-"IAP.Premium.Features" = "메세지 빠른 번역\n\n더 많은 기능이 곧 제공될 예정 입니다...";
+"IAP.Premium.Features" = "빠른 메세지 번역기\n\n종료시 선택한 폴더 기억하기";
 "IAP.Premium.Activated" = "프리미엄 활성화!";
 "IAP.Common.Restore" = "구입 내역 복원";
 "IAP.Common.CantPay" = "죄송합니다. 기기 또는 계정 제한으로 인해 구매할 수 없습니다.";
@@ -141,5 +141,8 @@
 "Gmod.DisableBtn" = "경고 비활성화";
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "전화 번호는 UI에서만 숨겨집니다. 다른 사람에게 숨기려면 개인 정보 설정을 사용하세요.";
+"NicegramSettings.Other.showProfileId" = "프로필 ID 표시";
+"NicegramSettings.Other.showRegDate" = "가입 날짜 표시";
 "Premium.OnetapTranslate.LowPower" = "저전력 인식";
 "Premium.OnetapTranslate.LowPower.Notice" = "앱은 장치에서 각 메시지의 언어를 감지합니다. 배터리 수명에 영향을 미칠 수있는 고성능 작업입니다.";
+"Premium.rememberFolderOnExit" = "종료시 현재 폴더 기억하기";

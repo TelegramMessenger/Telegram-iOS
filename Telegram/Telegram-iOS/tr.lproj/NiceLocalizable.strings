@@ -86,7 +86,7 @@
 "Common.FAQ.Intro" = "Lütfen Nicegram Destek’in sadece geliştirici ve topluluktan ibaret olduğunu unutmayın.\n\nİlk olarak, Nicegram SSS’e göz atın: önemli çözüm ipuçları ve birçok soruya cevaplar var.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Reddedemeyeceğiniz benzersiz özellikler!";
-"IAP.Premium.Features" = "Hızlı Mesaj Çevirmeni\n\nYakında daha fazla özellik...";
+"IAP.Premium.Features" = "Hızlı Mesaj Çevirmeni\n\nÇıkışta seçili klasörü hatırla";
 "IAP.Premium.Activated" = "Premium Aktive Edildi!";
 "IAP.Common.Restore" = "Satın Alımları Geri Yükle";
 "IAP.Common.CantPay" = "Üzgünüz, ama cihaz veya hesap kısıtlamalarınız yüzünden satın alım yapamazsınız.";
@@ -145,3 +145,4 @@
 "NicegramSettings.Other.showRegDate" = "Kayıt Tarihini Göster";
 "Premium.OnetapTranslate.LowPower" = "Düşük Güçte Tanıma";
 "Premium.OnetapTranslate.LowPower.Notice" = "Uygulama, cihazınızdaki her mesajın dilini algılar. Bu, pil ömrünüzü etkileyebilecek yüksek öncelikli bir görevdir.";
+"Premium.rememberFolderOnExit" = "Çıkışta şu anki klasörü hatırla";

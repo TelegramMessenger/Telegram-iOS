@@ -86,7 +86,7 @@
 "Common.FAQ.Intro" = "注意：Nicegram 支援僅由開發人員和志願者提供。\n\n請先看一下 Nicegram 常見問題：它有故障排除指示和其他大多數問題的解答。";
 "IAP.Premium.Title" = "進階版功能";
 "IAP.Premium.Subtitle" = "您無法抗拒的獨特功能！";
-"IAP.Premium.Features" = "快速訊息翻譯\n\n更多功能即將推出！";
+"IAP.Premium.Features" = "訊息快速翻譯";
 "IAP.Premium.Activated" = "已升級進階版！";
 "IAP.Common.Restore" = "恢復購買";
 "IAP.Common.CantPay" = "抱歉，由於您的設備或帳戶限制，您無法購買。";
@@ -141,5 +141,8 @@
 "Gmod.DisableBtn" = "停用警告";
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "您的電話號碼只會在介面中隱藏。要完全隱藏起來，請使用「隱私設定」。";
+"NicegramSettings.Other.showProfileId" = "顯示用戶ID";
+"NicegramSettings.Other.showRegDate" = "顯示註冊日期";
 "Premium.OnetapTranslate.LowPower" = "低電量偵測";
 "Premium.OnetapTranslate.LowPower.Notice" = "App 會檢測您設備上每則訊息的語言。這是一項高耗電的功能，會影響您的電池壽命。";
+"Premium.rememberFolderOnExit" = "記下應用程式關閉時所在的資料夾";

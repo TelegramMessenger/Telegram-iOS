@@ -86,7 +86,7 @@
 "Common.FAQ.Intro" = "Por favor, note que o suporte do Nicegram é feito pelo desenvolvedor e comunidade.\n\nPrimeiramente, dê uma olhada no Nicegram FAQ: ele tem dicas e respostas importantes para a maioria das perguntas.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Recursos exclusivos que você não pode recusar!";
-"IAP.Premium.Features" = "Tradutor de mensagens rápidas \nEm breve mais recursos...";
+"IAP.Premium.Features" = "Lembre-se da pasta selecionada ao sair";
 "IAP.Premium.Activated" = "Premium ativado!";
 "IAP.Common.Restore" = "Restaurar Compras";
 "IAP.Common.CantPay" = "Desculpe, mas você não pode fazer compras devido a restrições no seu dispositivo ou conta.";
@@ -141,5 +141,6 @@
 "Gmod.DisableBtn" = "Desativar avisos";
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Seu número ficará oculto apenas na interface do usuário. Para ocultá-lo de outras pessoas, use as configurações de privacidade.";
+"NicegramSettings.Other.showProfileId" = "Mostrar perfil";
 "Premium.OnetapTranslate.LowPower" = "Reconhecimento em modo pouca energia";
 "Premium.OnetapTranslate.LowPower.Notice" = "O aplicativo detecta o idioma de cada mensagem em seu dispositivo. É uma tarefa de alto desempenho que pode afetar a vida útil da bateria.";

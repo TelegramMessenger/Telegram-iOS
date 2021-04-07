@@ -86,7 +86,7 @@
 "Common.FAQ.Intro" = "Wsparcie Nicegram jest wykonywane przez jednego programistę i społeczność.\n\nPo pierwsze, zajrzyj do FAQ: zawiera ważne wskazówki dotyczące rozwiązywania problemów i odpowiedzi na większość pytań.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Unikalne funkcje, których nie można odmówić!";
-"IAP.Premium.Features" = "Szybkie tłumaczenie wiadomości\n\nWięcej funkcji już wkrótce…";
+"IAP.Premium.Features" = "Szybkie tłumaczenie wiadomości\n\nZapamiętaj wybrany folder przy wyjściu";
 "IAP.Premium.Activated" = "Aktywowano wersję Premium!";
 "IAP.Common.Restore" = "Odtwórz zakupione";
 "IAP.Common.CantPay" = "Nie możesz dokonywać zakupów z powodu ograniczeń dotyczących twojego urządzenia lub konta.";
@@ -145,3 +145,4 @@
 "NicegramSettings.Other.showRegDate" = "Pokaż datę rejestracji";
 "Premium.OnetapTranslate.LowPower" = "Rozpoznawanie przy niskiej mocy";
 "Premium.OnetapTranslate.LowPower.Notice" = "Aplikacja wykrywa język każdej wiadomości na urządzeniu. Jest to zadanie o wysokim stopniu zaawansowania, które może mieć wpływ na żywotność baterii.";
+"Premium.rememberFolderOnExit" = "Zapamiętaj bieżący folder przy wyjściu";

@@ -86,6 +86,7 @@
 "Common.FAQ.Intro" = "请注意：Nicegram 的支持服务由开发者和社区提供。\n\n如用疑问，请前往“Nicegram 常见问题”，那里有常见问题和故障排除指南。";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "您无法拒绝的独特功能！";
+"IAP.Premium.Features" = "信息快速翻译";
 "IAP.Premium.Activated" = "Premium 已激活！";
 "IAP.Common.Restore" = "恢复购买";
 "IAP.Common.CantPay" = "抱歉，由于您的设备或帐户限制，您无法购买。";
@@ -95,6 +96,7 @@
 "IAP.Common.Connecting" = "正在连接到 AppStore...";
 "Premium.OnetapTranslate" = "快速翻译按钮";
 "Premium.IgnoreTranslate.Title" = "忽略的语言";
+"Premium.IgnoreTranslate.Header" = "对于您在下面选择的语言，快速翻译按钮将被禁用。";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "管理标签";
@@ -137,3 +139,10 @@
 "Gmod.OpenChatNotice" = "对话将被标记为“已读”，不过您可以长按（Force Touch）预览对话";
 "Gmod.OpenChatBtn" = "是的，打开此对话";
 "Gmod.DisableBtn" = "禁用告警提示";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "您的电話号码只会在设置介面中隐藏，要对其他使用者隐藏，请使用隐私设置。";
+"NicegramSettings.Other.showProfileId" = "显示 ID";
+"NicegramSettings.Other.showRegDate" = "显示注册日期";
+"Premium.OnetapTranslate.LowPower" = "低电量时禁用";
+"Premium.OnetapTranslate.LowPower.Notice" = "应用会检测您设备上每条消息的语言。这是一项耗能的任务，会影响您的电池寿命。";
+"Premium.rememberFolderOnExit" = "退出时记住当前分组";

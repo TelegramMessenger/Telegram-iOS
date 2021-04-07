@@ -112,7 +112,6 @@
 "NGLab.RegDate.Notice" = "This is an approximate date";
 "NGLab.RegDate.MenuItem" = "registered";
 "NGLab.RegDate.FetchError" = "Sorry, can't get registration date.";
-"NGLab.BadDeviceToken" = "[iOS 11+] Unable to verify device.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "Sync Settings & Folders with iCloud";
