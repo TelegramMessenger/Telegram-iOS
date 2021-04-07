@@ -153,6 +153,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     colors = ["Middle.Group 1.Fill 1": iconColor,
                               "Top.Group 1.Fill 1": iconColor,
                               "Bottom.Group 1.Fill 1": iconColor,
+                              "EXAMPLE.Group 1.Fill 1": iconColor,
                               "Line.Group 1.Stroke 1": iconColor]
                     if previousIcon == .unmute {
                         playOnce = true
@@ -164,6 +165,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     colors = ["Middle.Group 1.Fill 1": iconColor,
                               "Top.Group 1.Fill 1": iconColor,
                               "Bottom.Group 1.Fill 1": iconColor,
+                              "EXAMPLE.Group 1.Fill 1": iconColor,
                               "Line.Group 1.Stroke 1": iconColor]
                     if previousIcon == .mute {
                         playOnce = true
@@ -248,7 +250,9 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         if isActiveUpdated, !self.containerNode.alpha.isZero {
             let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
             alphaTransition.updateAlpha(node: self.backgroundNode, alpha: isActive ? 1.0 : 0.3)
-            alphaTransition.updateAlpha(node: self.textNode, alpha: isActive ? 1.0 : 0.3)
+            if !isExpanded {
+                alphaTransition.updateAlpha(node: self.textNode, alpha: isActive ? 1.0 : 0.3)
+            }
         }
         
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor)

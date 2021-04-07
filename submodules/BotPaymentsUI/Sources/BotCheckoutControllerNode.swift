@@ -595,7 +595,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                         }
                                     })]), nil)
                                 default:
-                                    break
+                                    applyPaymentMethod(method)
                             }
                         } else {
                             applyPaymentMethod(method)

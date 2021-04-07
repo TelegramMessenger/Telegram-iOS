@@ -271,9 +271,9 @@ public func startScheduledGroupCall(account: Account, peerId: PeerId, callId: In
         return account.postbox.transaction { transaction -> GroupCallInfo in
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                 if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribed: false))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribed: false))
                 } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribed: false))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribed: false))
                 } else {
                     return cachedData
                 }
@@ -343,15 +343,27 @@ public func updateGroupCallJoinAsPeer(account: Account, peerId: PeerId, joinAs: 
     }
     |> castError(UpdateGroupCallJoinAsPeerError.self)
     |> mapToSignal { result in
-        guard let (peer, joinAs) = result else {
+        guard let (inputPeer, joinInputPeer) = result else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.phone.saveDefaultGroupCallJoinAs(peer: peer, joinAs: joinAs))
+        return account.network.request(Api.functions.phone.saveDefaultGroupCallJoinAs(peer: inputPeer, joinAs: joinInputPeer))
         |> mapError { _ -> UpdateGroupCallJoinAsPeerError in
             return .generic
         }
         |> mapToSignal { result -> Signal<Never, UpdateGroupCallJoinAsPeerError> in
-            return .complete()
+            return account.postbox.transaction { transaction in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                    } else {
+                        return cachedData
+                    }
+                })
+            }
+            |> castError(UpdateGroupCallJoinAsPeerError.self)
+            |> ignoreValues
         }
     }
 }
@@ -656,9 +668,9 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 return account.postbox.transaction { transaction -> JoinGroupCallResult in
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                         if let cachedData = cachedData as? CachedChannelData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribed: false))
                         } else if let cachedData = cachedData as? CachedGroupData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribed: false))
                         } else {
                             return cachedData
                         }
@@ -1144,11 +1156,24 @@ public final class GroupCallParticipantsContext {
     
     public var state: Signal<State, NoError> {
         let accountPeerId = self.account.peerId
+        let myPeerId = self.myPeerId
         return self.statePromise.get()
         |> map { state -> State in
             var publicState = state.state
             var sortAgain = false
-            let canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
+            var canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
+            for participant in publicState.participants {
+                if participant.peer.id == myPeerId {
+                    if let muteState = participant.muteState {
+                        if muteState.canUnmute {
+                            canSeeHands = true
+                        }
+                    } else {
+                        canSeeHands = true
+                    }
+                    break
+                }
+            }
             for i in 0 ..< publicState.participants.count {
                 if let pendingMuteState = state.overlayState.pendingMuteStateChanges[publicState.participants[i].peer.id] {
                     publicState.participants[i].muteState = pendingMuteState.state

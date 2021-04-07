@@ -82,6 +82,10 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         self.validatedGesture = false
         self.currentAllowedDirections = []
     }
+
+    public func cancel() {
+        self.state = .cancelled
+    }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         let touch = touches.first!

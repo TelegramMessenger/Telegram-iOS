@@ -84,7 +84,7 @@ public func setupCurrencyNumberFormatter(currency: String) -> NumberFormatter {
     numberFormatter.positiveFormat = result
     numberFormatter.negativeFormat = "-\(result)"
 
-    numberFormatter.currencySymbol = entry.symbol
+    numberFormatter.currencySymbol = ""
     numberFormatter.currencyDecimalSeparator = entry.decimalSeparator
     numberFormatter.currencyGroupingSeparator = entry.thousandsSeparator
 
@@ -162,5 +162,44 @@ public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
         formatter.currencyCode = currency
         formatter.negativeFormat = "-¤#,##0.00"
         return formatter.string(from: (Float(amount) * 0.01) as NSNumber) ?? ""
+    }
+}
+
+public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (String, String) {
+    if let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
+        var result = ""
+        if amount < 0 {
+            result.append("-")
+        }
+        /*if entry.symbolOnLeft {
+            result.append(entry.symbol)
+            if entry.spaceBetweenAmountAndSymbol {
+                result.append(" ")
+            }
+        }*/
+        var integerPart = abs(amount)
+        var fractional: [Character] = []
+        for _ in 0 ..< entry.decimalDigits {
+            let part = integerPart % 10
+            integerPart /= 10
+            if let scalar = UnicodeScalar(UInt32(part + 48)) {
+                fractional.append(Character(scalar))
+            }
+        }
+        result.append("\(integerPart)")
+        result.append(entry.decimalSeparator)
+        for i in 0 ..< fractional.count {
+            result.append(fractional[fractional.count - i - 1])
+        }
+        /*if !entry.symbolOnLeft {
+            if entry.spaceBetweenAmountAndSymbol {
+                result.append(" ")
+            }
+            result.append(entry.symbol)
+        }*/
+
+        return (result, entry.symbol)
+    } else {
+        return ("", "")
     }
 }

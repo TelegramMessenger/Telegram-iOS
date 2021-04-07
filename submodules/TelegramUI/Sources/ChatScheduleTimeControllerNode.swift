@@ -262,12 +262,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         }
     }
     
+    private let calendar = Calendar(identifier: .gregorian)
     private func updateButtonTitle() {
         guard let date = self.pickerView?.date else {
             return
         }
         
-        let calendar = Calendar(identifier: .gregorian)
         let time = stringForMessageTimestamp(timestamp: Int32(date.timeIntervalSince1970), dateTimeFormat: self.presentationData.dateTimeFormat)
         switch mode {
             case .scheduledMessages:
