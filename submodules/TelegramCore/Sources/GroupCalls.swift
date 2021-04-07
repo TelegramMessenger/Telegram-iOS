@@ -1144,11 +1144,24 @@ public final class GroupCallParticipantsContext {
     
     public var state: Signal<State, NoError> {
         let accountPeerId = self.account.peerId
+        let myPeerId = self.myPeerId
         return self.statePromise.get()
         |> map { state -> State in
             var publicState = state.state
             var sortAgain = false
-            let canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
+            var canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
+            for participant in publicState.participants {
+                if participant.peer.id == myPeerId {
+                    if let muteState = participant.muteState {
+                        if muteState.canUnmute {
+                            canSeeHands = true
+                        }
+                    } else {
+                        canSeeHands = true
+                    }
+                    break
+                }
+            }
             for i in 0 ..< publicState.participants.count {
                 if let pendingMuteState = state.overlayState.pendingMuteStateChanges[publicState.participants[i].peer.id] {
                     publicState.participants[i].muteState = pendingMuteState.state

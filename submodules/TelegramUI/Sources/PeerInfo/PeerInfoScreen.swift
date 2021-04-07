@@ -1848,6 +1848,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(MessageContextExtractedContentSource(sourceNode: node)), items: .single(items), reactionItems: [], recognizer: nil, gesture: gesture)
                 strongSelf.controller?.window?.presentInGlobalOverlay(controller)
             })
+        }, activateMessagePinch: { _ in
         }, openMessageContextActions: { [weak self] message, node, rect, gesture in
             guard let strongSelf = self else {
                 gesture?.cancel()
@@ -4012,7 +4013,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 cancelImpl = { [weak self] in
                     self?.activeActionDisposable.set(nil)
                 }
-                
                 strongSelf.activeActionDisposable.set((createSignal
                 |> deliverOnMainQueue).start(next: { [weak self] info in
                     guard let strongSelf = self else {
@@ -4020,7 +4020,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     strongSelf.context.joinGroupCall(peerId: peerId, invite: nil, requestJoinAsPeerId: { result in
                         result(joinAsPeerId)
-                    }, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribed: false))
+                    }, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: nil, subscribed: false))
                 }, error: { [weak self] error in
                     guard let strongSelf = self else {
                         return

@@ -912,6 +912,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
+        }, activateMessagePinch: { [weak self] sourceNode in
+            guard let strongSelf = self else {
+                return
+            }
+            let pinchController = PinchController(sourceNode: sourceNode)
+            strongSelf.window?.presentInGlobalOverlay(pinchController)
         }, openMessageContextActions: { message, node, rect, gesture in
             gesture?.cancel()
         }, navigateToMessage: { [weak self] fromId, id in
