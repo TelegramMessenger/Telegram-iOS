@@ -1,8 +1,0 @@
-module TelegramCorePrivateModule {
-    header "../../third-party/libphonenumber-iOS/NBPhoneNumber.h"
-    header "../../third-party/libphonenumber-iOS/NBPhoneNumberUtil.h"
-    header "../../third-party/libphonenumber-iOS/NBAsYouTypeFormatter.h"
-    header "../NetworkLogging.h"
-    header "../MonotonicTime.h"
-    header "../TelegramCoreIncludes.h"
-}

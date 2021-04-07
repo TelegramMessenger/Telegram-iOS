@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+"CFBundleDisplayName" = "텔레그램";
+"NSContactsUsageDescription" = "Telegram will continuously upload your contacts to its heavily encrypted cloud servers to let you connect with your friends across all your devices.";
+"NSLocationWhenInUseUsageDescription" = "친구에게 회원님의 위치를 전송할 경우 위치를 지도에 표시하기 위해 텔레그램이 위치 정보에 접근할 수 있어야 합니다.";
+"NSLocationAlwaysUsageDescription" = "친구에게 회원님의 위치를 전송할 경우 위치를 지도에 표시하기 위해 텔레그램이 위치 정보에 접근할 수 있어야 합니다. 애플워치에 위치 전송을 위해서도 필요합니다.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "When you choose to share your Live Location with friends in a chat, Telegram needs background access to your location to keep them updated for the duration of the live sharing.";
+"NSCameraUsageDescription" = "사진과 비디오 촬영을 위하여 필요합니다.";
+"NSPhotoLibraryUsageDescription" = "촬영한 사진과 비디오를 공유하기 위하여 필요합니다.";
+"NSPhotoLibraryAddUsageDescription" = "사진과 동영상을 갤러리에 저장하기 위해 이 권한이 필요합니다.";
+"NSMicrophoneUsageDescription" = "음성메시지와 비디오 촬영시 음성 녹음을 위하여 필요합니다.";
+"NSSiriUsageDescription" = "시리를 통하여 메시지 전송이 가능합니다.";
+"NSFaceIDUsageDescription" = "Face ID 를 사용하여 앱 잠금을 해제할 수 있습니다";

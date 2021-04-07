@@ -1,18 +1,31 @@
 import Foundation
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Display
-
 import DeviceAccess
 import TelegramPresentationData
 import TelegramAudio
 import TelegramVoip
 import TelegramUIPreferences
+import AccountContext
+import CallKit
 
 private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, settings: VoiceCallSettings?) -> CallKitIntegration?  {
     let enabled = settings?.enableSystemIntegration ?? true
     return enabled ? integration : nil
+}
+
+private func shouldEnableStunMarking(appConfiguration: AppConfiguration) -> Bool {
+    guard let data = appConfiguration.data else {
+        return true
+    }
+    guard let enableStunMarking = data["voip_enable_stun_marking"] as? Bool else {
+        return true
+    }
+    return enableStunMarking
 }
 
 private enum CurrentCall {
@@ -32,32 +45,55 @@ private enum CurrentCall {
     }
 }
 
-public enum RequestCallResult {
-    case requested
-    case alreadyInProgress(PeerId)
-}
-
-public final class PresentationCallManager {
+public final class PresentationCallManagerImpl: PresentationCallManager {
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
+    private let isMediaPlaying: () -> Bool
+    private let resumeMediaPlayback: () -> Void
 
     private let accountManager: AccountManager
     private let audioSession: ManagedAudioSession
     private let callKitIntegration: CallKitIntegration?
     
-    private var currentCall: PresentationCall?
+    private var currentCallValue: PresentationCallImpl?
+    private var currentCall: PresentationCallImpl? {
+        return self.currentCallValue
+    }
     private var currentCallDisposable = MetaDisposable()
     private let removeCurrentCallDisposable = MetaDisposable()
+    private let removeCurrentGroupCallDisposable = MetaDisposable()
+    
+    private var currentGroupCallValue: PresentationGroupCallImpl?
+    private var currentGroupCall: PresentationGroupCallImpl? {
+        return self.currentGroupCallValue
+    }
     
     private var ringingStatesDisposable: Disposable?
     
-    private let hasActiveCallsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasActivePersonalCallsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasActiveGroupCallsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var hasActiveCalls: Signal<Bool, NoError> {
-        return self.hasActiveCallsPromise.get()
+        return combineLatest(queue: .mainQueue(),
+            self.hasActivePersonalCallsPromise.get(),
+            self.hasActiveGroupCallsPromise.get()
+        )
+        |> map { value1, value2 -> Bool in
+            return value1 || value2
+        }
+        |> distinctUntilChanged
+    }
+    
+    public var hasActiveCall: Bool {
+        return self.currentCall != nil || self.currentGroupCall != nil
     }
     
     private let currentCallPromise = Promise<PresentationCall?>(nil)
     public var currentCallSignal: Signal<PresentationCall?, NoError> {
         return self.currentCallPromise.get()
+    }
+    
+    private let currentGroupCallPromise = Promise<PresentationGroupCall?>(nil)
+    public var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> {
+        return self.currentGroupCallPromise.get()
     }
     
     private let startCallDisposable = MetaDisposable()
@@ -68,24 +104,33 @@ public final class PresentationCallManager {
     private var callSettings: VoiceCallSettings?
     private var callSettingsDisposable: Disposable?
     
+    private var resumeMedia: Bool = false
+    
     public static var voipMaxLayer: Int32 {
         return OngoingCallContext.maxLayer
     }
     
-    public init(accountManager: AccountManager, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
+    public static func voipVersions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
+        return OngoingCallContext.versions(includeExperimental: includeExperimental, includeReference: includeReference)
+    }
+    
+    public init(accountManager: AccountManager, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
         self.getDeviceAccessData = getDeviceAccessData
         self.accountManager = accountManager
         self.audioSession = audioSession
         
-        var startCallImpl: ((Account, UUID, String) -> Signal<Bool, NoError>)?
+        self.isMediaPlaying = isMediaPlaying
+        self.resumeMediaPlayback = resumeMediaPlayback
+        
+        var startCallImpl: ((Account, UUID, String, Bool) -> Signal<Bool, NoError>)?
         var answerCallImpl: ((UUID) -> Void)?
         var endCallImpl: ((UUID) -> Signal<Bool, NoError>)?
         var setCallMutedImpl: ((UUID, Bool) -> Void)?
         var audioSessionActivationChangedImpl: ((Bool) -> Void)?
         
-        self.callKitIntegration = CallKitIntegration(startCall: { account, uuid, handle in
+        self.callKitIntegration = CallKitIntegration(startCall: { account, uuid, handle, isVideo in
             if let startCallImpl = startCallImpl {
-                return startCallImpl(account, uuid, handle)
+                return startCallImpl(account, uuid, handle, isVideo)
             } else {
                 return .single(false)
             }
@@ -159,9 +204,9 @@ public final class PresentationCallManager {
             self?.ringingStatesUpdated(ringingStates, enableCallKit: enableCallKit)
         })
         
-        startCallImpl = { [weak self] account, uuid, handle in
+        startCallImpl = { [weak self] account, uuid, handle, isVideo in
             if let strongSelf = self, let userId = Int32(handle) {
-                return strongSelf.startCall(account: account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), internalId: uuid)
+                return strongSelf.startCall(account: account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), isVideo: isVideo, internalId: uuid)
                 |> take(1)
                 |> map { result -> Bool in
                     return result
@@ -222,6 +267,7 @@ public final class PresentationCallManager {
         self.currentCallDisposable.dispose()
         self.ringingStatesDisposable?.dispose()
         self.removeCurrentCallDisposable.dispose()
+        self.removeCurrentGroupCallDisposable.dispose()
         self.startCallDisposable.dispose()
         self.proxyServerDisposable?.dispose()
         self.callSettingsDisposable?.dispose()
@@ -229,8 +275,8 @@ public final class PresentationCallManager {
     
     private func ringingStatesUpdated(_ ringingStates: [(Account, Peer, CallSessionRingingState, Bool, NetworkType)], enableCallKit: Bool) {
         if let firstState = ringingStates.first {
-            if self.currentCall == nil {
-                self.currentCallDisposable.set((combineLatest(firstState.0.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
+            if self.currentCall == nil && self.currentGroupCall == nil {
+                self.currentCallDisposable.set((combineLatest(firstState.0.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1))
                 |> deliverOnMainQueue).start(next: { [weak self] preferences, sharedData in
                     guard let strongSelf = self else {
                         return
@@ -239,18 +285,43 @@ public final class PresentationCallManager {
                     let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
                     let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                    let experimentalSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings ?? .defaultSettings
+                    let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
                     
-                    let call = PresentationCall(account: firstState.0, audioSession: strongSelf.audioSession, callSessionManager: firstState.0.callSessionManager, callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil, serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: firstState.2.id, peerId: firstState.2.peerId, isOutgoing: false, peer: firstState.1, proxyServer: strongSelf.proxyServer, currentNetworkType: firstState.4, updatedNetworkType: firstState.0.networkType)
-                    strongSelf.currentCall = call
+                    let call = PresentationCallImpl(
+                        account: firstState.0,
+                        audioSession: strongSelf.audioSession,
+                        callSessionManager: firstState.0.callSessionManager,
+                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil,
+                        serializedData: configuration.serializedData,
+                        dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
+                        derivedState: derivedState,
+                        getDeviceAccessData: strongSelf.getDeviceAccessData,
+                        initialState: nil,
+                        internalId: firstState.2.id,
+                        peerId: firstState.2.peerId,
+                        isOutgoing: false,
+                        peer: firstState.1,
+                        proxyServer: strongSelf.proxyServer,
+                        auxiliaryServers: [],
+                        currentNetworkType: firstState.4,
+                        updatedNetworkType: firstState.0.networkType,
+                        startWithVideo: firstState.2.isVideo,
+                        isVideoPossible: firstState.2.isVideoPossible,
+                        enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
+                        enableTCP: experimentalSettings.enableVoipTcp,
+                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
+                    )
+                    strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
-                    strongSelf.hasActiveCallsPromise.set(true)
+                    strongSelf.hasActivePersonalCallsPromise.set(true)
                     strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
                     |> deliverOnMainQueue).start(next: { [weak self, weak call] value in
                         if value, let strongSelf = self, let call = call {
                             if strongSelf.currentCall === call {
-                                strongSelf.currentCall = nil
+                                strongSelf.updateCurrentCall(nil)
                                 strongSelf.currentCallPromise.set(.single(nil))
-                                strongSelf.hasActiveCallsPromise.set(false)
+                                strongSelf.hasActivePersonalCallsPromise.set(false)
                             }
                         }
                     }))
@@ -258,16 +329,35 @@ public final class PresentationCallManager {
             } else {
                 for (account, _, state, _, _) in ringingStates {
                     if state.id != self.currentCall?.internalId {
-                        account.callSessionManager.drop(internalId: state.id, reason: .missed)
+                        account.callSessionManager.drop(internalId: state.id, reason: .busy, debugLog: .single(nil))
                     }
                 }
             }
         }
     }
     
-    public func requestCall(account: Account, peerId: PeerId, endCurrentIfAny: Bool) -> RequestCallResult {
-        if let call = self.currentCall, !endCurrentIfAny {
-            return .alreadyInProgress(call.peerId)
+    public func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult {
+        let account = context.account
+
+        var alreadyInCall: Bool = false
+        var alreadyInCallWithPeerId: PeerId?
+        
+        if let call = self.currentCall {
+            alreadyInCall = true
+            alreadyInCallWithPeerId = call.peerId
+        } else if let currentGroupCall = self.currentGroupCallValue {
+            alreadyInCall = true
+            alreadyInCallWithPeerId = currentGroupCall.peerId
+        } else {
+            if #available(iOS 10.0, *) {
+                if CXCallObserver().calls.contains(where: { $0.hasEnded == false }) {
+                    alreadyInCall = true
+                }
+            }
+        }
+        
+        if alreadyInCall, !endCurrentIfAny {
+            return .alreadyInProgress(alreadyInCallWithPeerId)
         }
         if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings) {
             let begin: () -> Void = { [weak self] in
@@ -282,8 +372,19 @@ public final class PresentationCallManager {
                     }, openSettings: {
                         openSettings()
                     }, { value in
-                        subscriber.putNext(value)
-                        subscriber.putCompletion()
+                        if isVideo && value {
+                            DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
+                                present(c, a)
+                            }, openSettings: {
+                                openSettings()
+                            }, { value in
+                                subscriber.putNext(value)
+                                subscriber.putCompletion()
+                            })
+                        } else {
+                            subscriber.putNext(value)
+                            subscriber.putCompletion()
+                        }
                     })
                     return EmptyDisposable
                 }
@@ -302,12 +403,19 @@ public final class PresentationCallManager {
                     guard let strongSelf = self, let peer = peer else {
                         return
                     }
-                    strongSelf.callKitIntegration?.startCall(account: account, peerId: peerId, displayTitle: peer.displayTitle)
+                    strongSelf.callKitIntegration?.startCall(account: account, peerId: peerId, isVideo: isVideo, displayTitle: peer.debugDisplayTitle)
                 }))
             }
             if let currentCall = self.currentCall {
                 self.callKitIntegration?.dropCall(uuid: currentCall.internalId)
                 self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else if let currentGroupCall = self.currentGroupCallValue {
+                self.startCallDisposable.set((currentGroupCall.leave(terminateIfPossible: false)
+                |> filter { $0 }
+                |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     begin()
                 }))
@@ -319,10 +427,17 @@ public final class PresentationCallManager {
                 guard let strongSelf = self else {
                     return
                 }
-                let _ = strongSelf.startCall(account: account, peerId: peerId).start()
+                let _ = strongSelf.startCall(account: account, peerId: peerId, isVideo: isVideo).start()
             }
             if let currentCall = self.currentCall {
                 self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else if let currentGroupCall = self.currentGroupCallValue {
+                self.startCallDisposable.set((currentGroupCall.leave(terminateIfPossible: false)
+                |> filter { $0 }
+                |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     begin()
                 }))
@@ -333,7 +448,12 @@ public final class PresentationCallManager {
         return .requested
     }
     
-    private func startCall(account: Account, peerId: PeerId, internalId: CallSessionInternalId = CallSessionInternalId()) -> Signal<Bool, NoError> {
+    private func startCall(
+        account: Account,
+        peerId: PeerId,
+        isVideo: Bool,
+        internalId: CallSessionInternalId = CallSessionInternalId()
+    ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
         let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
@@ -342,8 +462,19 @@ public final class PresentationCallManager {
             }, openSettings: {
                 openSettings()
             }, { value in
-                subscriber.putNext(value)
-                subscriber.putCompletion()
+                if isVideo && value {
+                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
+                        present(c, a)
+                    }, openSettings: {
+                        openSettings()
+                    }, { value in
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    })
+                } else {
+                    subscriber.putNext(value)
+                    subscriber.putCompletion()
+                }
             })
             return EmptyDisposable
         }
@@ -356,11 +487,38 @@ public final class PresentationCallManager {
             if !accessEnabled {
                 return .single(false)
             }
-            return (combineLatest(queue: .mainQueue(), account.callSessionManager.request(peerId: peerId, internalId: internalId), networkType |> take(1), account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
+            
+            let request = account.postbox.transaction { transaction -> (VideoCallsConfiguration, CachedUserData?) in
+                let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+                return (VideoCallsConfiguration(appConfiguration: appConfiguration), transaction.getPeerCachedData(peerId: peerId) as? CachedUserData)
+            }
+            |> mapToSignal { callsConfiguration, cachedUserData -> Signal<CallSessionInternalId, NoError> in
+                var isVideoPossible: Bool
+                switch callsConfiguration.videoCallsSupport {
+                case .disabled:
+                    isVideoPossible = isVideo
+                case .full:
+                    isVideoPossible = true
+                case .onlyVideo:
+                    isVideoPossible = isVideo
+                }
+                if let cachedUserData = cachedUserData, cachedUserData.videoCallsAvailable {
+                } else {
+                    isVideoPossible = false
+                }
+                
+                return account.callSessionManager.request(peerId: peerId, isVideo: isVideo, enableVideo: isVideoPossible, internalId: internalId)
+            }
+            
+            let cachedUserData = account.postbox.transaction { transaction -> CachedUserData? in
+                return transaction.getPeerCachedData(peerId: peerId) as? CachedUserData
+            }
+            
+            return (combineLatest(queue: .mainQueue(), request, networkType |> take(1), account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
                 return peerView.peerIsContact
-            } |> take(1), account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
+            } |> take(1), account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1), cachedUserData)
             |> deliverOnMainQueue
-            |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData in
+            |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData, cachedUserData in
                 if let strongSelf = self, accessEnabled {
                     if let currentCall = strongSelf.currentCall {
                         currentCall.rejectBusy()
@@ -369,18 +527,62 @@ public final class PresentationCallManager {
                     let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
                     let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                    let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
                     
-                    let call = PresentationCall(account: account, audioSession: strongSelf.audioSession, callSessionManager: account.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings), serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: account.networkType)
-                    strongSelf.currentCall = call
+                    let callsConfiguration = VideoCallsConfiguration(appConfiguration: appConfiguration)
+                    var isVideoPossible: Bool
+                    switch callsConfiguration.videoCallsSupport {
+                    case .disabled:
+                        isVideoPossible = isVideo
+                    case .full:
+                        isVideoPossible = true
+                    case .onlyVideo:
+                        isVideoPossible = isVideo
+                    }
+                    if let cachedUserData = cachedUserData, cachedUserData.videoCallsAvailable {
+                    } else {
+                        isVideoPossible = false
+                    }
+                    
+                    let experimentalSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings ?? .defaultSettings
+                    
+                    let call = PresentationCallImpl(
+                        account: account,
+                        audioSession: strongSelf.audioSession,
+                        callSessionManager: account.callSessionManager,
+                        callKitIntegration: callKitIntegrationIfEnabled(
+                            strongSelf.callKitIntegration,
+                            settings: strongSelf.callSettings
+                        ),
+                        serializedData: configuration.serializedData,
+                        dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
+                        derivedState: derivedState,
+                        getDeviceAccessData: strongSelf.getDeviceAccessData,
+                        initialState: nil,
+                        internalId: internalId,
+                        peerId: peerId,
+                        isOutgoing: true,
+                        peer: nil,
+                        proxyServer: strongSelf.proxyServer,
+                        auxiliaryServers: [],
+                        currentNetworkType: currentNetworkType,
+                        updatedNetworkType: account.networkType,
+                        startWithVideo: isVideo,
+                        isVideoPossible: isVideoPossible,
+                        enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
+                        enableTCP: experimentalSettings.enableVoipTcp,
+                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
+                    )
+                    strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
-                    strongSelf.hasActiveCallsPromise.set(true)
+                    strongSelf.hasActivePersonalCallsPromise.set(true)
                     strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
                     |> deliverOnMainQueue).start(next: { [weak call] value in
                         if value, let strongSelf = self, let call = call {
                             if strongSelf.currentCall === call {
-                                strongSelf.currentCall = nil
+                                strongSelf.updateCurrentCall(nil)
                                 strongSelf.currentCallPromise.set(.single(nil))
-                                strongSelf.hasActiveCallsPromise.set(false)
+                                strongSelf.hasActivePersonalCallsPromise.set(false)
                             }
                         }
                     }))
@@ -389,6 +591,156 @@ public final class PresentationCallManager {
             |> mapToSignal { value -> Signal<Bool, NoError> in
                 return .single(true)
             }
+        }
+    }
+    
+    private func updateCurrentCall(_ value: PresentationCallImpl?) {
+        let wasEmpty = self.currentCallValue == nil
+        let isEmpty = value == nil
+        if wasEmpty && !isEmpty {
+            self.resumeMedia = self.isMediaPlaying()
+        }
+        
+        self.currentCallValue = value
+        
+        if !wasEmpty && isEmpty && self.resumeMedia {
+            self.resumeMedia = false
+            self.resumeMediaPlayback()
+        }
+    }
+    
+    private func updateCurrentGroupCall(_ value: PresentationGroupCallImpl?) {
+        let wasEmpty = self.currentGroupCallValue == nil
+        let isEmpty = value == nil
+        if wasEmpty && !isEmpty {
+            self.resumeMedia = self.isMediaPlaying()
+        }
+        
+        self.currentGroupCallValue = value
+        
+        if !wasEmpty && isEmpty && self.resumeMedia {
+            self.resumeMedia = false
+            self.resumeMediaPlayback()
+        }
+    }
+    
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
+        let begin: () -> Void = { [weak self] in
+            if let requestJoinAsPeerId = requestJoinAsPeerId {
+                requestJoinAsPeerId({ joinAsPeerId in
+                    let _ = self?.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: joinAsPeerId, initialCall: initialCall).start()
+                })
+            } else {
+                let _ = self?.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: nil, initialCall: initialCall).start()
+            }
+        }
+        
+        if let currentGroupCall = self.currentGroupCallValue {
+            if endCurrentIfAny {
+                let endSignal = currentGroupCall.leave(terminateIfPossible: false)
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue
+                self.startCallDisposable.set(endSignal.start(next: { _ in
+                    begin()
+                }))
+            } else {
+                return .alreadyInProgress(currentGroupCall.peerId)
+            }
+        } else if let currentCall = self.currentCall {
+            if endCurrentIfAny {
+                self.callKitIntegration?.dropCall(uuid: currentCall.internalId)
+                self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else {
+                return .alreadyInProgress(currentCall.peerId)
+            }
+        } else {
+            begin()
+        }
+        return .joined
+    }
+    
+    private func startGroupCall(
+        accountContext: AccountContext,
+        peerId: PeerId,
+        invite: String?,
+        joinAsPeerId: PeerId?,
+        initialCall: CachedChannelData.ActiveCall,
+        internalId: CallSessionInternalId = CallSessionInternalId()
+    ) -> Signal<Bool, NoError> {
+        let (presentationData, present, openSettings) = self.getDeviceAccessData()
+        
+        let isVideo = false
+        
+        let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+            DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                present(c, a)
+            }, openSettings: {
+                openSettings()
+            }, { value in
+                if isVideo && value {
+                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
+                        present(c, a)
+                    }, openSettings: {
+                        openSettings()
+                    }, { value in
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    })
+                } else {
+                    subscriber.putNext(value)
+                    subscriber.putCompletion()
+                }
+            })
+            return EmptyDisposable
+        }
+        |> runOn(Queue.mainQueue())
+        
+        return accessEnabledSignal
+        |> deliverOnMainQueue
+        |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
+            guard let strongSelf = self else {
+                return .single(false)
+            }
+            
+            if !accessEnabled {
+                return .single(false)
+            }
+                    
+            let call = PresentationGroupCallImpl(
+                accountContext: accountContext,
+                audioSession: strongSelf.audioSession,
+                callKitIntegration: nil,
+                getDeviceAccessData: strongSelf.getDeviceAccessData,
+                initialCall: initialCall,
+                internalId: internalId,
+                peerId: peerId,
+                invite: invite,
+                joinAsPeerId: joinAsPeerId
+            )
+            strongSelf.updateCurrentGroupCall(call)
+            strongSelf.currentGroupCallPromise.set(.single(call))
+            strongSelf.hasActiveGroupCallsPromise.set(true)
+            strongSelf.removeCurrentGroupCallDisposable.set((call.canBeRemoved
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak call] value in
+                guard let strongSelf = self, let call = call else {
+                    return
+                }
+                if value {
+                    if strongSelf.currentGroupCall === call {
+                        strongSelf.updateCurrentGroupCall(nil)
+                        strongSelf.currentGroupCallPromise.set(.single(nil))
+                        strongSelf.hasActiveGroupCallsPromise.set(false)
+                    }
+                }
+            }))
+        
+            return .single(true)
         }
     }
 }

@@ -1,0 +1,185 @@
+import Foundation
+import UIKit
+import SwiftSignalKit
+import Postbox
+import Display
+import ImageIO
+import TelegramCore
+import SyncCore
+
+private let roundCorners = { () -> UIImage in
+    let diameter: CGFloat = 60.0
+    UIGraphicsBeginImageContextWithOptions(CGSize(width: diameter, height: diameter), false, 0.0)
+    let context = UIGraphicsGetCurrentContext()!
+    context.setBlendMode(.copy)
+    context.setFillColor(UIColor.black.cgColor)
+    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: diameter, height: diameter)))
+    context.setFillColor(UIColor.clear.cgColor)
+    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: diameter, height: diameter)))
+    let image = UIGraphicsGetImageFromCurrentImageContext()!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
+    UIGraphicsEndImageContext()
+    return image
+}()
+
+public func peerAvatarImageData(account: Account, peerReference: PeerReference?, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, synchronousLoad: Bool) -> Signal<Data?, NoError>? {
+    if let smallProfileImage = representation {
+        let resourceData = account.postbox.mediaBox.resourceData(smallProfileImage.resource, attemptSynchronously: synchronousLoad)
+        let imageData = resourceData
+        |> take(1)
+        |> mapToSignal { maybeData -> Signal<Data?, NoError> in
+            if maybeData.complete {
+                return .single(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
+            } else {
+                return Signal { subscriber in
+                    let resourceDataDisposable = resourceData.start(next: { data in
+                        if data.complete {
+                            subscriber.putNext(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
+                            subscriber.putCompletion()
+                        } else {
+                            subscriber.putNext(nil)
+                        }
+                    }, error: { error in
+                        subscriber.putError(error)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    var fetchedDataDisposable: Disposable?
+                    if let peerReference = peerReference {
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .avatar(peer: peerReference, resource: smallProfileImage.resource), statsCategory: .generic).start()
+                    } else if let authorOfMessage = authorOfMessage {
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .messageAuthorAvatar(message: authorOfMessage, resource: smallProfileImage.resource), statsCategory: .generic).start()
+                    } else {
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: smallProfileImage.resource), statsCategory: .generic).start()
+                    }
+                    return ActionDisposable {
+                        resourceDataDisposable.dispose()
+                        fetchedDataDisposable?.dispose()
+                    }
+                }
+            }
+        }
+        return imageData
+    } else {
+        return nil
+    }
+}
+
+public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize) -> Signal<UIImage?, NoError> {
+    let iconSignal: Signal<UIImage?, NoError>
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, inset: 0.0, emptyColor: nil, synchronousLoad: false) {
+        iconSignal = signal
+            |> map { imageVersions -> UIImage? in
+                return imageVersions?.0
+        }
+    } else {
+        let peerId = peer.id
+        var displayLetters = peer.displayLetters
+        if displayLetters.count == 2 && displayLetters[0].isSingleEmoji && displayLetters[1].isSingleEmoji {
+            displayLetters = [displayLetters[0]]
+        }
+        iconSignal = Signal { subscriber in
+            let image = generateImage(size, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarPlaceholderFont(size: 13.0), letters: displayLetters, peerId: peerId)
+            })?.withRenderingMode(.alwaysOriginal)
+            
+            subscriber.putNext(image)
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+    }
+    return iconSignal
+}
+
+public func peerAvatarImage(account: Account, peerReference: PeerReference?, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), round: Bool = true, inset: CGFloat = 0.0, emptyColor: UIColor? = nil, synchronousLoad: Bool = false, provideUnrounded: Bool = false) -> Signal<(UIImage, UIImage)?, NoError>? {
+    if let imageData = peerAvatarImageData(account: account, peerReference: peerReference, authorOfMessage: authorOfMessage, representation: representation, synchronousLoad: synchronousLoad) {
+        return imageData
+        |> mapToSignal { data -> Signal<(UIImage, UIImage)?, NoError> in
+            let generate = deferred { () -> Signal<(UIImage, UIImage)?, NoError> in
+                if emptyColor == nil && data == nil {
+                    return .single(nil)
+                }
+                let roundedImage = generateImage(displayDimensions, contextGenerator: { size, context -> Void in
+                    if let data = data {
+                        if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                            context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                            context.setBlendMode(.copy)
+                            
+                            if round && displayDimensions.width != 60.0 {
+                                context.addEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                context.clip()
+                            }
+                            
+                            context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            if round {
+                                if displayDimensions.width == 60.0 {
+                                    context.setBlendMode(.destinationOut)
+                                    context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                }
+                            }
+                        } else {
+                            if let emptyColor = emptyColor {
+                                context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                                context.setFillColor(emptyColor.cgColor)
+                                  if round {
+                                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                } else {
+                                    context.fill(CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                }
+                            }
+                        }
+                    } else if let emptyColor = emptyColor {
+                        context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                        context.setFillColor(emptyColor.cgColor)
+                        if round {
+                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                        } else {
+                            context.fill(CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                        }
+                    }
+                })
+                let unroundedImage: UIImage?
+                if provideUnrounded {
+                    unroundedImage = generateImage(displayDimensions, contextGenerator: { size, context -> Void in
+                        if let data = data {
+                            if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                                context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                                context.setBlendMode(.copy)
+                                
+                                context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            } else {
+                                if let emptyColor = emptyColor {
+                                    context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                                    context.setFillColor(emptyColor.cgColor)
+                                    context.fill(CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                }
+                            }
+                        } else if let emptyColor = emptyColor {
+                            context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                            context.setFillColor(emptyColor.cgColor)
+                            if round {
+                                context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            } else {
+                                context.fill(CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            }
+                        }
+                    })
+                } else {
+                    unroundedImage = roundedImage
+                }
+                if let roundedImage = roundedImage, let unroundedImage = unroundedImage {
+                    return .single((roundedImage, unroundedImage))
+                } else {
+                    return .single(nil)
+                }
+            }
+            if synchronousLoad {
+                return generate
+            } else {
+                return generate |> runOn(Queue.concurrentDefaultQueue())
+            }
+        }
+    } else {
+        return nil
+    }
+}

@@ -15,7 +15,6 @@
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
 #import <AsyncDisplayKit/ASThread.h>
-#import <AsyncDisplayKit/ASDisplayNode+Yoga.h>
 
 @interface ASScrollView : UIScrollView
 @end
@@ -31,6 +30,13 @@
 - (ASScrollNode *)scrollNode
 {
   return (ASScrollNode *)ASViewToDisplayNode(self);
+}
+
+- (BOOL)touchesShouldCancelInContentView:(UIView *)view {
+  if ([[self scrollNode] canCancelAllTouchesInViews]) {
+    return true;
+  }
+  return [super touchesShouldCancelInContentView:view];
 }
 
 #pragma mark - _ASDisplayView behavior substitutions

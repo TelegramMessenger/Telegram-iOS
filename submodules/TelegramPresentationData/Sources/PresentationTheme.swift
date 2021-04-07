@@ -2,33 +2,60 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import SyncCore
 import TelegramUIPreferences
 
-public enum PresentationThemeParsingError: Error {
-    case generic
+public final class PresentationThemeGradientColors {
+    public let topColor: UIColor
+    public let bottomColor: UIColor
+    
+    public init(topColor: UIColor, bottomColor: UIColor) {
+        self.topColor = topColor
+        self.bottomColor = bottomColor
+    }
+    
+    public var colors: (UIColor, UIColor) {
+        return (self.topColor, self.bottomColor)
+    }
+    
+    public func withUpdated(topColor: UIColor? = nil, bottomColor: UIColor? = nil) -> PresentationThemeGradientColors {
+        return PresentationThemeGradientColors(topColor: topColor ?? self.topColor, bottomColor: bottomColor ?? self.bottomColor)
+    }
 }
 
-public final class PresentationThemeColorPlaceholder {
+public final class PresentationThemeIntro {
+    public let statusBarStyle: PresentationThemeStatusBarStyle
+    public let primaryTextColor: UIColor
+    public let accentTextColor: UIColor
+    public let disabledTextColor: UIColor
+    public let startButtonColor: UIColor
+    public let dotColor: UIColor
     
-}
-
-public final class PresentationThemeAuth {
-    public let introStartButton: UIColor
-    public let introDotColor: UIColor
+    public init(statusBarStyle: PresentationThemeStatusBarStyle, primaryTextColor: UIColor, accentTextColor: UIColor, disabledTextColor: UIColor, startButtonColor: UIColor, dotColor: UIColor) {
+        self.statusBarStyle = statusBarStyle
+        self.primaryTextColor = primaryTextColor
+        self.accentTextColor = accentTextColor
+        self.disabledTextColor = disabledTextColor
+        self.startButtonColor = startButtonColor
+        self.dotColor = dotColor
+    }
     
-    public init(introStartButton: UIColor, introDotColor: UIColor) {
-        self.introStartButton = introStartButton
-        self.introDotColor = introDotColor
+    public func withUpdated(statusBarStyle: PresentationThemeStatusBarStyle? = nil, primaryTextColor: UIColor? = nil, accentTextColor: UIColor? = nil, disabledTextColor: UIColor? = nil, startButtonColor: UIColor? = nil, dotColor: UIColor? = nil) -> PresentationThemeIntro {
+        return PresentationThemeIntro(statusBarStyle: statusBarStyle ?? self.statusBarStyle, primaryTextColor: primaryTextColor ?? self.primaryTextColor, accentTextColor: accentTextColor ?? self.accentTextColor, disabledTextColor: disabledTextColor ?? self.disabledTextColor, startButtonColor: startButtonColor ?? self.startButtonColor, dotColor: dotColor ?? self.dotColor)
     }
 }
 
 public final class PresentationThemePasscode {
-    public let backgroundColors: (UIColor, UIColor)
-    public let buttonColor: UIColor?
+    public let backgroundColors: PresentationThemeGradientColors
+    public let buttonColor: UIColor
     
-    public init(backgroundColors: (UIColor, UIColor), buttonColor: UIColor?) {
+    public init(backgroundColors: PresentationThemeGradientColors, buttonColor: UIColor) {
         self.backgroundColors = backgroundColors
         self.buttonColor = buttonColor
+    }
+    
+    public func withUpdated(backgroundColors: PresentationThemeGradientColors? = nil, buttonColor: UIColor? = nil) -> PresentationThemePasscode {
+        return PresentationThemePasscode(backgroundColors: backgroundColors ?? self.backgroundColors, buttonColor: buttonColor ?? self.buttonColor)
     }
 }
 
@@ -53,6 +80,10 @@ public final class PresentationThemeRootTabBar {
         self.badgeBackgroundColor = badgeBackgroundColor
         self.badgeStrokeColor = badgeStrokeColor
         self.badgeTextColor = badgeTextColor
+    }
+    
+    public func withUpdated(backgroundColor: UIColor? = nil, separatorColor: UIColor? = nil, iconColor: UIColor? = nil, selectedIconColor: UIColor? = nil, textColor: UIColor? = nil, selectedTextColor: UIColor? = nil, badgeBackgroundColor: UIColor? = nil, badgeStrokeColor: UIColor? = nil, badgeTextColor: UIColor? = nil) -> PresentationThemeRootTabBar {
+        return PresentationThemeRootTabBar(backgroundColor: backgroundColor ?? self.backgroundColor, separatorColor: separatorColor ?? self.separatorColor, iconColor: iconColor ?? self.iconColor, selectedIconColor: selectedIconColor ?? self.selectedIconColor, textColor: textColor ?? self.textColor, selectedTextColor: selectedTextColor ?? self.selectedTextColor, badgeBackgroundColor: badgeBackgroundColor ?? self.badgeBackgroundColor, badgeStrokeColor: badgeStrokeColor ?? self.badgeStrokeColor, badgeTextColor: badgeTextColor ?? self.badgeTextColor)
     }
 }
 
@@ -79,14 +110,6 @@ public enum PresentationThemeStatusBarStyle: Int32 {
     }
 }
 
-public final class PresentationThemeRootNavigationStatusBar {
-    public let style: PresentationThemeStatusBarStyle
-    
-    public init(style: PresentationThemeStatusBarStyle) {
-        self.style = style
-    }
-}
-
 public final class PresentationThemeRootNavigationBar {
     public let buttonColor: UIColor
     public let disabledButtonColor: UIColor
@@ -99,8 +122,14 @@ public final class PresentationThemeRootNavigationBar {
     public let badgeBackgroundColor: UIColor
     public let badgeStrokeColor: UIColor
     public let badgeTextColor: UIColor
+    public let segmentedBackgroundColor: UIColor
+    public let segmentedForegroundColor: UIColor
+    public let segmentedTextColor: UIColor
+    public let segmentedDividerColor: UIColor
+    public let clearButtonBackgroundColor: UIColor
+    public let clearButtonForegroundColor: UIColor
     
-    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
+    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor, segmentedBackgroundColor: UIColor, segmentedForegroundColor: UIColor, segmentedTextColor: UIColor, segmentedDividerColor: UIColor, clearButtonBackgroundColor: UIColor, clearButtonForegroundColor: UIColor) {
         self.buttonColor = buttonColor
         self.disabledButtonColor = disabledButtonColor
         self.primaryTextColor = primaryTextColor
@@ -112,24 +141,22 @@ public final class PresentationThemeRootNavigationBar {
         self.badgeBackgroundColor = badgeBackgroundColor
         self.badgeStrokeColor = badgeStrokeColor
         self.badgeTextColor = badgeTextColor
+        self.segmentedBackgroundColor = segmentedBackgroundColor
+        self.segmentedForegroundColor = segmentedForegroundColor
+        self.segmentedTextColor = segmentedTextColor
+        self.segmentedDividerColor = segmentedDividerColor
+        self.clearButtonBackgroundColor = clearButtonBackgroundColor
+        self.clearButtonForegroundColor = clearButtonForegroundColor
     }
-}
-
-public final class PresentationThemeExpandedNotificationNavigationBar {
-    public let backgroundColor: UIColor
-    public let primaryTextColor: UIColor
-    public let controlColor: UIColor
-    public let separatorColor: UIColor
     
-    init(backgroundColor: UIColor, primaryTextColor: UIColor, controlColor: UIColor, separatorColor: UIColor) {
-        self.backgroundColor = backgroundColor
-        self.primaryTextColor = primaryTextColor
-        self.controlColor = controlColor
-        self.separatorColor = separatorColor
+    public func withUpdated(buttonColor: UIColor? = nil, disabledButtonColor: UIColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, controlColor: UIColor? = nil, accentTextColor: UIColor? = nil, backgroundColor: UIColor? = nil, separatorColor: UIColor? = nil, badgeBackgroundColor: UIColor? = nil, badgeStrokeColor: UIColor? = nil, badgeTextColor: UIColor? = nil, segmentedBackgroundColor: UIColor? = nil, segmentedForegroundColor: UIColor? = nil, segmentedTextColor: UIColor? = nil, segmentedDividerColor: UIColor? = nil, clearButtonBackgroundColor: UIColor? = nil, clearButtonForegroundColor: UIColor? = nil) -> PresentationThemeRootNavigationBar {
+        let resolvedClearButtonBackgroundColor = clearButtonBackgroundColor ?? self.clearButtonBackgroundColor
+        let resolvedClearButtonForegroundColor = clearButtonForegroundColor ?? self.clearButtonForegroundColor
+        return PresentationThemeRootNavigationBar(buttonColor: buttonColor ?? self.buttonColor, disabledButtonColor: disabledButtonColor ?? self.disabledButtonColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, controlColor: controlColor ?? self.controlColor, accentTextColor: accentTextColor ?? self.accentTextColor, backgroundColor: backgroundColor ?? self.backgroundColor, separatorColor: separatorColor ?? self.separatorColor, badgeBackgroundColor: badgeBackgroundColor ?? self.badgeBackgroundColor, badgeStrokeColor: badgeStrokeColor ?? self.badgeStrokeColor, badgeTextColor: badgeTextColor ?? self.badgeTextColor, segmentedBackgroundColor: segmentedBackgroundColor ?? self.segmentedBackgroundColor, segmentedForegroundColor: segmentedForegroundColor ?? self.segmentedForegroundColor, segmentedTextColor: segmentedTextColor ?? self.segmentedTextColor, segmentedDividerColor: segmentedDividerColor ?? self.segmentedDividerColor, clearButtonBackgroundColor: resolvedClearButtonBackgroundColor, clearButtonForegroundColor: resolvedClearButtonForegroundColor)
     }
 }
 
-public final class PresentationThemeActiveNavigationSearchBar {
+public final class PresentationThemeNavigationSearchBar {
     public let backgroundColor: UIColor
     public let accentColor: UIColor
     public let inputFillColor: UIColor
@@ -149,34 +176,29 @@ public final class PresentationThemeActiveNavigationSearchBar {
         self.inputClearButtonColor = inputClearButtonColor
         self.separatorColor = separatorColor
     }
-}
-
-public final class PresentationThemeRootController {
-    public let statusBar: PresentationThemeRootNavigationStatusBar
-    public let tabBar: PresentationThemeRootTabBar
-    public let navigationBar: PresentationThemeRootNavigationBar
-    public let activeNavigationSearchBar: PresentationThemeActiveNavigationSearchBar
     
-    public init(statusBar: PresentationThemeRootNavigationStatusBar, tabBar: PresentationThemeRootTabBar, navigationBar: PresentationThemeRootNavigationBar, activeNavigationSearchBar: PresentationThemeActiveNavigationSearchBar) {
-        self.statusBar = statusBar
-        self.tabBar = tabBar
-        self.navigationBar = navigationBar
-        self.activeNavigationSearchBar = activeNavigationSearchBar
+    public func withUpdated(backgroundColor: UIColor? = nil, accentColor: UIColor? = nil, inputFillColor: UIColor? = nil, inputTextColor: UIColor? = nil, inputPlaceholderTextColor: UIColor? = nil, inputIconColor: UIColor? = nil, inputClearButtonColor: UIColor? = nil, separatorColor: UIColor? = nil) -> PresentationThemeNavigationSearchBar {
+        return PresentationThemeNavigationSearchBar(backgroundColor: backgroundColor ?? self.backgroundColor, accentColor: accentColor ?? self.accentColor, inputFillColor: inputFillColor ?? self.inputFillColor, inputTextColor: inputTextColor ?? self.inputTextColor, inputPlaceholderTextColor: inputPlaceholderTextColor ?? self.inputPlaceholderTextColor, inputIconColor: inputIconColor ?? self.inputIconColor, inputClearButtonColor: inputClearButtonColor ?? self.inputClearButtonColor, separatorColor: separatorColor ?? self.separatorColor)
     }
 }
 
-public enum PresentationThemeExpandedNotificationBackgroundType: Int32 {
-    case light
-    case dark
-}
-
-public final class PresentationThemeExpandedNotification {
-    public let backgroundType: PresentationThemeExpandedNotificationBackgroundType
-    public let navigationBar: PresentationThemeExpandedNotificationNavigationBar
+public final class PresentationThemeRootController {
+    public let statusBarStyle: PresentationThemeStatusBarStyle
+    public let tabBar: PresentationThemeRootTabBar
+    public let navigationBar: PresentationThemeRootNavigationBar
+    public let navigationSearchBar: PresentationThemeNavigationSearchBar
+    public let keyboardColor: PresentationThemeKeyboardColor
     
-    public init(backgroundType: PresentationThemeExpandedNotificationBackgroundType, navigationBar: PresentationThemeExpandedNotificationNavigationBar) {
-        self.backgroundType = backgroundType
+    public init(statusBarStyle: PresentationThemeStatusBarStyle, tabBar: PresentationThemeRootTabBar, navigationBar: PresentationThemeRootNavigationBar, navigationSearchBar: PresentationThemeNavigationSearchBar, keyboardColor: PresentationThemeKeyboardColor) {
+        self.statusBarStyle = statusBarStyle
+        self.tabBar = tabBar
         self.navigationBar = navigationBar
+        self.navigationSearchBar = navigationSearchBar
+        self.keyboardColor = keyboardColor
+    }
+    
+    public func withUpdated(statusBarStyle: PresentationThemeStatusBarStyle? = nil, tabBar: PresentationThemeRootTabBar? = nil, navigationBar: PresentationThemeRootNavigationBar? = nil, navigationSearchBar: PresentationThemeNavigationSearchBar? = nil, keyboardColor: PresentationThemeKeyboardColor? = nil) -> PresentationThemeRootController {
+        return PresentationThemeRootController(statusBarStyle: statusBarStyle ?? self.statusBarStyle, tabBar: tabBar ?? self.tabBar, navigationBar: navigationBar ?? self.navigationBar, navigationSearchBar: navigationSearchBar ?? self.navigationSearchBar, keyboardColor: keyboardColor ?? self.keyboardColor)
     }
 }
 
@@ -207,7 +229,7 @@ public final class PresentationThemeActionSheet {
     public let inputClearButtonColor: UIColor
     public let checkContentColor: UIColor
     
-    init(dimColor: UIColor, backgroundType: PresentationThemeActionSheetBackgroundType, opaqueItemBackgroundColor: UIColor, itemBackgroundColor: UIColor, opaqueItemHighlightedBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, opaqueItemSeparatorColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, inputBackgroundColor: UIColor, inputHollowBackgroundColor: UIColor, inputBorderColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputClearButtonColor: UIColor, checkContentColor: UIColor) {
+    init(dimColor: UIColor, backgroundType: PresentationThemeActionSheetBackgroundType, opaqueItemBackgroundColor: UIColor, itemBackgroundColor: UIColor, opaqueItemHighlightedBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, opaqueItemSeparatorColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, inputBackgroundColor: UIColor, inputHollowBackgroundColor: UIColor, inputBorderColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputClearButtonColor: UIColor, checkContentColor: UIColor) {
         self.dimColor = dimColor
         self.backgroundType = backgroundType
         self.opaqueItemBackgroundColor = opaqueItemBackgroundColor
@@ -229,6 +251,48 @@ public final class PresentationThemeActionSheet {
         self.inputClearButtonColor = inputClearButtonColor
         self.checkContentColor = checkContentColor
     }
+    
+    public func withUpdated(dimColor: UIColor? = nil, backgroundType: PresentationThemeActionSheetBackgroundType? = nil, opaqueItemBackgroundColor: UIColor? = nil, itemBackgroundColor: UIColor? = nil, opaqueItemHighlightedBackgroundColor: UIColor? = nil, itemHighlightedBackgroundColor: UIColor? = nil, opaqueItemSeparatorColor: UIColor? = nil, standardActionTextColor: UIColor? = nil, destructiveActionTextColor: UIColor? = nil, disabledActionTextColor: UIColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, controlAccentColor: UIColor? = nil, inputBackgroundColor: UIColor? = nil, inputHollowBackgroundColor: UIColor? = nil, inputBorderColor: UIColor? = nil, inputPlaceholderColor: UIColor? = nil, inputTextColor: UIColor? = nil, inputClearButtonColor: UIColor? = nil, checkContentColor: UIColor? = nil) -> PresentationThemeActionSheet {
+        return PresentationThemeActionSheet(dimColor: dimColor ?? self.dimColor, backgroundType: backgroundType ?? self.backgroundType, opaqueItemBackgroundColor: opaqueItemBackgroundColor ?? self.opaqueItemBackgroundColor, itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor, opaqueItemHighlightedBackgroundColor: opaqueItemHighlightedBackgroundColor ?? self.opaqueItemHighlightedBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, opaqueItemSeparatorColor: opaqueItemSeparatorColor ?? self.opaqueItemSeparatorColor, standardActionTextColor: standardActionTextColor ?? self.standardActionTextColor, destructiveActionTextColor: destructiveActionTextColor ?? self.destructiveActionTextColor, disabledActionTextColor: disabledActionTextColor ?? self.disabledActionTextColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, controlAccentColor: controlAccentColor ?? self.controlAccentColor, inputBackgroundColor: inputBackgroundColor ?? self.inputBackgroundColor, inputHollowBackgroundColor: inputHollowBackgroundColor ?? self.inputHollowBackgroundColor, inputBorderColor: inputBorderColor ?? self.inputBorderColor, inputPlaceholderColor: inputPlaceholderColor ?? self.inputPlaceholderColor, inputTextColor: inputTextColor ?? self.inputTextColor, inputClearButtonColor: inputClearButtonColor ?? self.inputClearButtonColor, checkContentColor: checkContentColor ?? self.checkContentColor)
+    }
+}
+
+public final class PresentationThemeContextMenu {
+    public let dimColor: UIColor
+    public let backgroundColor: UIColor
+    public let itemSeparatorColor: UIColor
+    public let sectionSeparatorColor: UIColor
+    public let itemBackgroundColor: UIColor
+    public let itemHighlightedBackgroundColor: UIColor
+    public let primaryColor: UIColor
+    public let secondaryColor: UIColor
+    public let destructiveColor: UIColor
+    public let badgeFillColor: UIColor
+    public let badgeForegroundColor: UIColor
+    public let badgeInactiveFillColor: UIColor
+    public let badgeInactiveForegroundColor: UIColor
+    public let extractedContentTintColor: UIColor
+    
+    init(dimColor: UIColor, backgroundColor: UIColor, itemSeparatorColor: UIColor, sectionSeparatorColor: UIColor, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, destructiveColor: UIColor, badgeFillColor: UIColor, badgeForegroundColor: UIColor, badgeInactiveFillColor: UIColor, badgeInactiveForegroundColor: UIColor, extractedContentTintColor: UIColor) {
+        self.dimColor = dimColor
+        self.backgroundColor = backgroundColor
+        self.itemSeparatorColor = itemSeparatorColor
+        self.sectionSeparatorColor = sectionSeparatorColor
+        self.itemBackgroundColor = itemBackgroundColor
+        self.itemHighlightedBackgroundColor = itemHighlightedBackgroundColor
+        self.primaryColor = primaryColor
+        self.secondaryColor = secondaryColor
+        self.destructiveColor = destructiveColor
+        self.badgeFillColor = badgeFillColor
+        self.badgeForegroundColor = badgeForegroundColor
+        self.badgeInactiveFillColor = badgeInactiveFillColor
+        self.badgeInactiveForegroundColor = badgeInactiveForegroundColor
+        self.extractedContentTintColor = extractedContentTintColor
+    }
+    
+    public func withUpdated(dimColor: UIColor? = nil, backgroundColor: UIColor? = nil, itemSeparatorColor: UIColor? = nil, sectionSeparatorColor: UIColor? = nil, itemBackgroundColor: UIColor? = nil, itemHighlightedBackgroundColor: UIColor? = nil, primaryColor: UIColor? = nil, secondaryColor: UIColor? = nil, destructiveColor: UIColor? = nil) -> PresentationThemeContextMenu {
+        return PresentationThemeContextMenu(dimColor: dimColor ?? self.dimColor, backgroundColor: backgroundColor ?? self.backgroundColor, itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor, sectionSeparatorColor: sectionSeparatorColor ?? self.sectionSeparatorColor, itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, primaryColor: primaryColor ?? self.primaryColor, secondaryColor: secondaryColor ?? self.secondaryColor, destructiveColor: destructiveColor ?? self.destructiveColor, badgeFillColor: self.badgeFillColor, badgeForegroundColor: self.badgeForegroundColor, badgeInactiveFillColor: self.badgeInactiveFillColor, badgeInactiveForegroundColor: self.badgeInactiveForegroundColor, extractedContentTintColor: self.extractedContentTintColor)
+    }
 }
 
 public final class PresentationThemeSwitch {
@@ -245,9 +309,13 @@ public final class PresentationThemeSwitch {
         self.positiveColor = positiveColor
         self.negativeColor = negativeColor
     }
+    
+    public func withUpdated(frameColor: UIColor? = nil, handleColor: UIColor? = nil, contentColor: UIColor? = nil, positiveColor: UIColor? = nil, negativeColor: UIColor? = nil) -> PresentationThemeSwitch {
+        return PresentationThemeSwitch(frameColor: frameColor ?? self.frameColor, handleColor: handleColor ?? self.handleColor, contentColor: contentColor ?? self.contentColor, positiveColor: positiveColor ?? self.positiveColor, negativeColor: negativeColor ?? self.negativeColor)
+    }
 }
 
-public final class PresentationThemeItemDisclosureAction {
+public final class PresentationThemeFillForeground {
     public let fillColor: UIColor
     public let foregroundColor: UIColor
     
@@ -255,30 +323,22 @@ public final class PresentationThemeItemDisclosureAction {
         self.fillColor = fillColor
         self.foregroundColor = foregroundColor
     }
-}
-
-public final class PresentationThemeCheck {
-    public let strokeColor: UIColor
-    public let fillColor: UIColor
-    public let foregroundColor: UIColor
     
-    init(strokeColor: UIColor, fillColor: UIColor, foregroundColor: UIColor) {
-        self.strokeColor = strokeColor
-        self.fillColor = fillColor
-        self.foregroundColor = foregroundColor
+    public func withUpdated(fillColor: UIColor? = nil, foregroundColor: UIColor? = nil) -> PresentationThemeFillForeground {
+        return PresentationThemeFillForeground(fillColor: fillColor ?? self.fillColor, foregroundColor: foregroundColor ?? self.foregroundColor)
     }
 }
 
 public final class PresentationThemeItemDisclosureActions {
-    public let neutral1: PresentationThemeItemDisclosureAction
-    public let neutral2: PresentationThemeItemDisclosureAction
-    public let destructive: PresentationThemeItemDisclosureAction
-    public let constructive: PresentationThemeItemDisclosureAction
-    public let accent: PresentationThemeItemDisclosureAction
-    public let warning: PresentationThemeItemDisclosureAction
-    public let inactive: PresentationThemeItemDisclosureAction
+    public let neutral1: PresentationThemeFillForeground
+    public let neutral2: PresentationThemeFillForeground
+    public let destructive: PresentationThemeFillForeground
+    public let constructive: PresentationThemeFillForeground
+    public let accent: PresentationThemeFillForeground
+    public let warning: PresentationThemeFillForeground
+    public let inactive: PresentationThemeFillForeground
     
-    public init(neutral1: PresentationThemeItemDisclosureAction, neutral2: PresentationThemeItemDisclosureAction, destructive: PresentationThemeItemDisclosureAction, constructive: PresentationThemeItemDisclosureAction, accent: PresentationThemeItemDisclosureAction, warning: PresentationThemeItemDisclosureAction, inactive: PresentationThemeItemDisclosureAction) {
+    public init(neutral1: PresentationThemeFillForeground, neutral2: PresentationThemeFillForeground, destructive: PresentationThemeFillForeground, constructive: PresentationThemeFillForeground, accent: PresentationThemeFillForeground, warning: PresentationThemeFillForeground, inactive: PresentationThemeFillForeground) {
         self.neutral1 = neutral1
         self.neutral2 = neutral2
         self.destructive = destructive
@@ -287,19 +347,61 @@ public final class PresentationThemeItemDisclosureActions {
         self.warning = warning
         self.inactive = inactive
     }
+    
+    public func withUpdated(neutral1: PresentationThemeFillForeground? = nil, neutral2: PresentationThemeFillForeground? = nil, destructive: PresentationThemeFillForeground? = nil, constructive: PresentationThemeFillForeground? = nil, accent: PresentationThemeFillForeground? = nil, warning: PresentationThemeFillForeground? = nil, inactive: PresentationThemeFillForeground? = nil) -> PresentationThemeItemDisclosureActions {
+        return PresentationThemeItemDisclosureActions(neutral1: neutral1 ?? self.neutral1, neutral2: neutral2 ?? self.neutral2, destructive: destructive ?? self.destructive, constructive: constructive ?? self.constructive, accent: accent ?? self.accent, warning: warning ?? self.warning, inactive: inactive ?? self.inactive)
+    }
+}
+
+public final class PresentationThemeItemBarChart {
+    public let color1: UIColor
+    public let color2: UIColor
+    public let color3: UIColor
+    
+    public init(color1: UIColor, color2: UIColor, color3: UIColor) {
+        self.color1 = color1
+        self.color2 = color2
+        self.color3 = color3
+    }
+    
+    public func withUpdated(color1: UIColor? = nil, color2: UIColor? = nil, color3: UIColor? = nil) -> PresentationThemeItemBarChart {
+        return PresentationThemeItemBarChart(color1: color1 ?? self.color1, color2: color2 ?? self.color2, color3: color3 ?? self.color3)
+    }
+}
+
+public final class PresentationThemeFillStrokeForeground {
+    public let fillColor: UIColor
+    public let strokeColor: UIColor
+    public let foregroundColor: UIColor
+    
+    init(fillColor: UIColor, strokeColor: UIColor, foregroundColor: UIColor) {
+        self.fillColor = fillColor
+        self.strokeColor = strokeColor
+        self.foregroundColor = foregroundColor
+    }
+    
+    public func withUpdated(fillColor: UIColor? = nil, strokeColor: UIColor? = nil, foregroundColor: UIColor? = nil) -> PresentationThemeFillStrokeForeground {
+        return PresentationThemeFillStrokeForeground(fillColor: fillColor ?? self.fillColor, strokeColor: strokeColor ?? self.strokeColor, foregroundColor: foregroundColor ?? self.foregroundColor)
+    }
 }
 
 public final class PresentationInputFieldTheme {
     public let backgroundColor: UIColor
+    public let strokeColor: UIColor
     public let placeholderColor: UIColor
     public let primaryColor: UIColor
     public let controlColor: UIColor
     
-    public init(backgroundColor: UIColor, placeholderColor: UIColor, primaryColor: UIColor, controlColor: UIColor) {
+    public init(backgroundColor: UIColor, strokeColor: UIColor, placeholderColor: UIColor, primaryColor: UIColor, controlColor: UIColor) {
         self.backgroundColor = backgroundColor
+        self.strokeColor = strokeColor
         self.placeholderColor = placeholderColor
         self.primaryColor = primaryColor
         self.controlColor = controlColor
+    }
+    
+    public func withUpdated(backgroundColor: UIColor? = nil, strokeColor: UIColor? = nil, placeholderColor: UIColor? = nil, primaryColor: UIColor? = nil, controlColor: UIColor? = nil) -> PresentationInputFieldTheme {
+        return PresentationInputFieldTheme(backgroundColor: backgroundColor ?? self.backgroundColor, strokeColor: strokeColor ?? self.strokeColor, placeholderColor: placeholderColor ?? self.placeholderColor, primaryColor: primaryColor ?? self.primaryColor, controlColor: controlColor ?? self.controlColor)
     }
 }
 
@@ -322,17 +424,21 @@ public final class PresentationThemeList {
     public let freeTextColor: UIColor
     public let freeTextErrorColor: UIColor
     public let freeTextSuccessColor: UIColor
-    public let freeMonoIcon: UIColor
+    public let freeMonoIconColor: UIColor
     public let itemSwitchColors: PresentationThemeSwitch
     public let itemDisclosureActions: PresentationThemeItemDisclosureActions
-    public let itemCheckColors: PresentationThemeCheck
+    public let itemCheckColors: PresentationThemeFillStrokeForeground
     public let controlSecondaryColor: UIColor
     public let freeInputField: PresentationInputFieldTheme
+    public let freePlainInputField: PresentationInputFieldTheme
     public let mediaPlaceholderColor: UIColor
     public let scrollIndicatorColor: UIColor
     public let pageIndicatorInactiveColor: UIColor
+    public let inputClearButtonColor: UIColor
+    public let itemBarChart: PresentationThemeItemBarChart
+    public let itemInputField: PresentationInputFieldTheme
     
-    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIcon: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeCheck, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor) {
+    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIconColor: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeFillStrokeForeground, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, freePlainInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor, inputClearButtonColor: UIColor, itemBarChart: PresentationThemeItemBarChart, itemInputField: PresentationInputFieldTheme) {
         self.blocksBackgroundColor = blocksBackgroundColor
         self.plainBackgroundColor = plainBackgroundColor
         self.itemPrimaryTextColor = itemPrimaryTextColor
@@ -351,25 +457,37 @@ public final class PresentationThemeList {
         self.freeTextColor = freeTextColor
         self.freeTextErrorColor = freeTextErrorColor
         self.freeTextSuccessColor = freeTextSuccessColor
-        self.freeMonoIcon = freeMonoIcon
+        self.freeMonoIconColor = freeMonoIconColor
         self.itemSwitchColors = itemSwitchColors
         self.itemDisclosureActions = itemDisclosureActions
         self.itemCheckColors = itemCheckColors
         self.controlSecondaryColor = controlSecondaryColor
         self.freeInputField = freeInputField
+        self.freePlainInputField = freePlainInputField
         self.mediaPlaceholderColor = mediaPlaceholderColor
         self.scrollIndicatorColor = scrollIndicatorColor
         self.pageIndicatorInactiveColor = pageIndicatorInactiveColor
+        self.inputClearButtonColor = inputClearButtonColor
+        self.itemBarChart = itemBarChart
+        self.itemInputField = itemInputField
+    }
+    
+    public func withUpdated(blocksBackgroundColor: UIColor? = nil, plainBackgroundColor: UIColor? = nil, itemPrimaryTextColor: UIColor? = nil, itemSecondaryTextColor: UIColor? = nil, itemDisabledTextColor: UIColor? = nil, itemAccentColor: UIColor? = nil, itemHighlightedColor: UIColor? = nil, itemDestructiveColor: UIColor? = nil, itemPlaceholderTextColor: UIColor? = nil, itemBlocksBackgroundColor: UIColor? = nil, itemHighlightedBackgroundColor: UIColor? = nil, itemBlocksSeparatorColor: UIColor? = nil, itemPlainSeparatorColor: UIColor? = nil, disclosureArrowColor: UIColor? = nil, sectionHeaderTextColor: UIColor? = nil, freeTextColor: UIColor? = nil, freeTextErrorColor: UIColor? = nil, freeTextSuccessColor: UIColor? = nil, freeMonoIconColor: UIColor? = nil, itemSwitchColors: PresentationThemeSwitch? = nil, itemDisclosureActions: PresentationThemeItemDisclosureActions? = nil, itemCheckColors: PresentationThemeFillStrokeForeground? = nil, controlSecondaryColor: UIColor? = nil, freeInputField: PresentationInputFieldTheme? = nil, freePlainInputField: PresentationInputFieldTheme? = nil, mediaPlaceholderColor: UIColor? = nil, scrollIndicatorColor: UIColor? = nil, pageIndicatorInactiveColor: UIColor? = nil, inputClearButtonColor: UIColor? = nil, itemBarChart: PresentationThemeItemBarChart? = nil, itemInputField: PresentationInputFieldTheme? = nil) -> PresentationThemeList {
+        return PresentationThemeList(blocksBackgroundColor: blocksBackgroundColor ?? self.blocksBackgroundColor, plainBackgroundColor: plainBackgroundColor ?? self.plainBackgroundColor, itemPrimaryTextColor: itemPrimaryTextColor ?? self.itemPrimaryTextColor, itemSecondaryTextColor: itemSecondaryTextColor ?? self.itemSecondaryTextColor, itemDisabledTextColor: itemDisabledTextColor ?? self.itemDisabledTextColor, itemAccentColor: itemAccentColor ?? self.itemAccentColor, itemHighlightedColor: itemHighlightedColor ?? self.itemHighlightedColor, itemDestructiveColor: itemDestructiveColor ?? self.itemDestructiveColor, itemPlaceholderTextColor: itemPlaceholderTextColor ?? self.itemPlaceholderTextColor, itemBlocksBackgroundColor: itemBlocksBackgroundColor ?? self.itemBlocksBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, itemBlocksSeparatorColor: itemBlocksSeparatorColor ?? self.itemBlocksSeparatorColor, itemPlainSeparatorColor: itemPlainSeparatorColor ?? self.itemPlainSeparatorColor, disclosureArrowColor: disclosureArrowColor ?? self.disclosureArrowColor, sectionHeaderTextColor: sectionHeaderTextColor ?? self.sectionHeaderTextColor, freeTextColor: freeTextColor ?? self.freeTextColor, freeTextErrorColor: freeTextErrorColor ?? self.freeTextErrorColor, freeTextSuccessColor: freeTextSuccessColor ?? self.freeTextSuccessColor, freeMonoIconColor: freeMonoIconColor ?? self.freeMonoIconColor, itemSwitchColors: itemSwitchColors ?? self.itemSwitchColors, itemDisclosureActions: itemDisclosureActions ?? self.itemDisclosureActions, itemCheckColors: itemCheckColors ?? self.itemCheckColors, controlSecondaryColor: controlSecondaryColor ?? self.controlSecondaryColor, freeInputField: freeInputField ?? self.freeInputField, freePlainInputField: freePlainInputField ?? self.freePlainInputField, mediaPlaceholderColor: mediaPlaceholderColor ?? self.mediaPlaceholderColor, scrollIndicatorColor: scrollIndicatorColor ?? self.scrollIndicatorColor, pageIndicatorInactiveColor: pageIndicatorInactiveColor ?? self.pageIndicatorInactiveColor, inputClearButtonColor: inputClearButtonColor ?? self.inputClearButtonColor, itemBarChart: itemBarChart ?? self.itemBarChart, itemInputField: itemInputField ?? self.itemInputField)
     }
 }
 
 public final class PresentationThemeArchiveAvatarColors {
-    public let backgroundColors: (UIColor, UIColor)
+    public let backgroundColors: PresentationThemeGradientColors
     public let foregroundColor: UIColor
     
-    public init(backgroundColors: (UIColor, UIColor), foregroundColor: UIColor) {
+    public init(backgroundColors: PresentationThemeGradientColors, foregroundColor: UIColor) {
         self.backgroundColors = backgroundColors
         self.foregroundColor = foregroundColor
+    }
+    
+    public func withUpdated(backgroundColors: PresentationThemeGradientColors? = nil, foregroundColor: UIColor? = nil) -> PresentationThemeArchiveAvatarColors {
+        return PresentationThemeArchiveAvatarColors(backgroundColors: backgroundColors ?? self.backgroundColors, foregroundColor: foregroundColor ?? self.foregroundColor)
     }
 }
 
@@ -385,6 +503,7 @@ public final class PresentationThemeChatList {
     public let dateTextColor: UIColor
     public let authorNameColor: UIColor
     public let messageTextColor: UIColor
+    public let messageHighlightedTextColor: UIColor
     public let messageDraftTextColor: UIColor
     public let checkmarkColor: UIColor
     public let pendingIndicatorColor: UIColor
@@ -400,7 +519,6 @@ public final class PresentationThemeChatList {
     public let regularSearchBarColor: UIColor
     public let sectionHeaderFillColor: UIColor
     public let sectionHeaderTextColor: UIColor
-    public let searchBarKeyboardColor: PresentationThemeKeyboardColor
     public let verifiedIconFillColor: UIColor
     public let verifiedIconForegroundColor: UIColor
     public let secretIconColor: UIColor
@@ -408,7 +526,7 @@ public final class PresentationThemeChatList {
     public let unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors
     public let onlineDotColor: UIColor
     
-    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, failedFillColor: UIColor, failedForegroundColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, onlineDotColor: UIColor) {
+    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageHighlightedTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, failedFillColor: UIColor, failedForegroundColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, onlineDotColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
         self.itemBackgroundColor = itemBackgroundColor
@@ -420,6 +538,7 @@ public final class PresentationThemeChatList {
         self.dateTextColor = dateTextColor
         self.authorNameColor = authorNameColor
         self.messageTextColor = messageTextColor
+        self.messageHighlightedTextColor = messageHighlightedTextColor
         self.messageDraftTextColor = messageDraftTextColor
         self.checkmarkColor = checkmarkColor
         self.pendingIndicatorColor = pendingIndicatorColor
@@ -435,7 +554,6 @@ public final class PresentationThemeChatList {
         self.regularSearchBarColor = regularSearchBarColor
         self.sectionHeaderFillColor = sectionHeaderFillColor
         self.sectionHeaderTextColor = sectionHeaderTextColor
-        self.searchBarKeyboardColor = searchBarKeyboardColor
         self.verifiedIconFillColor = verifiedIconFillColor
         self.verifiedIconForegroundColor = verifiedIconForegroundColor
         self.secretIconColor = secretIconColor
@@ -443,17 +561,41 @@ public final class PresentationThemeChatList {
         self.unpinnedArchiveAvatarColor = unpinnedArchiveAvatarColor
         self.onlineDotColor = onlineDotColor
     }
+    
+    public func withUpdated(backgroundColor: UIColor? = nil, itemSeparatorColor: UIColor? = nil, itemBackgroundColor: UIColor? = nil, pinnedItemBackgroundColor: UIColor? = nil, itemHighlightedBackgroundColor: UIColor? = nil, itemSelectedBackgroundColor: UIColor? = nil, titleColor: UIColor? = nil, secretTitleColor: UIColor? = nil, dateTextColor: UIColor? = nil, authorNameColor: UIColor? = nil, messageTextColor: UIColor? = nil, messageHighlightedTextColor: UIColor? = nil, messageDraftTextColor: UIColor? = nil, checkmarkColor: UIColor? = nil, pendingIndicatorColor: UIColor? = nil, failedFillColor: UIColor? = nil, failedForegroundColor: UIColor? = nil, muteIconColor: UIColor? = nil, unreadBadgeActiveBackgroundColor: UIColor? = nil, unreadBadgeActiveTextColor: UIColor? = nil, unreadBadgeInactiveBackgroundColor: UIColor? = nil, unreadBadgeInactiveTextColor: UIColor? = nil, pinnedBadgeColor: UIColor? = nil, pinnedSearchBarColor: UIColor? = nil, regularSearchBarColor: UIColor? = nil, sectionHeaderFillColor: UIColor? = nil, sectionHeaderTextColor: UIColor? = nil, verifiedIconFillColor: UIColor? = nil, verifiedIconForegroundColor: UIColor? = nil, secretIconColor: UIColor? = nil, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil, onlineDotColor: UIColor? = nil) -> PresentationThemeChatList {
+        return PresentationThemeChatList(backgroundColor: backgroundColor ?? self.backgroundColor, itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor, itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor, pinnedItemBackgroundColor: pinnedItemBackgroundColor ?? self.pinnedItemBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, itemSelectedBackgroundColor: itemSelectedBackgroundColor ?? self.itemSelectedBackgroundColor, titleColor: titleColor ?? self.titleColor, secretTitleColor: secretTitleColor ?? self.secretTitleColor, dateTextColor: dateTextColor ?? self.dateTextColor, authorNameColor: authorNameColor ?? self.authorNameColor, messageTextColor: messageTextColor ?? self.messageTextColor, messageHighlightedTextColor: messageHighlightedTextColor ?? self.messageHighlightedTextColor, messageDraftTextColor: messageDraftTextColor ?? self.messageDraftTextColor, checkmarkColor: checkmarkColor ?? self.checkmarkColor, pendingIndicatorColor: pendingIndicatorColor ?? self.pendingIndicatorColor, failedFillColor: failedFillColor ?? self.failedFillColor, failedForegroundColor: failedForegroundColor ?? self.failedForegroundColor, muteIconColor: muteIconColor ?? self.muteIconColor, unreadBadgeActiveBackgroundColor: unreadBadgeActiveBackgroundColor ?? self.unreadBadgeActiveBackgroundColor, unreadBadgeActiveTextColor: unreadBadgeActiveTextColor ?? self.unreadBadgeActiveTextColor, unreadBadgeInactiveBackgroundColor: unreadBadgeInactiveBackgroundColor ?? self.unreadBadgeInactiveBackgroundColor, unreadBadgeInactiveTextColor: unreadBadgeInactiveTextColor ?? self.unreadBadgeInactiveTextColor, pinnedBadgeColor: pinnedBadgeColor ?? self.pinnedBadgeColor, pinnedSearchBarColor: pinnedSearchBarColor ?? self.pinnedSearchBarColor, regularSearchBarColor: regularSearchBarColor ?? self.regularSearchBarColor, sectionHeaderFillColor: sectionHeaderFillColor ?? self.sectionHeaderFillColor, sectionHeaderTextColor: sectionHeaderTextColor ?? self.sectionHeaderTextColor, verifiedIconFillColor: verifiedIconFillColor ?? self.verifiedIconFillColor, verifiedIconForegroundColor: verifiedIconForegroundColor ?? self.verifiedIconForegroundColor, secretIconColor: secretIconColor ?? self.secretIconColor, pinnedArchiveAvatarColor: pinnedArchiveAvatarColor ?? self.pinnedArchiveAvatarColor, unpinnedArchiveAvatarColor: unpinnedArchiveAvatarColor ?? self.unpinnedArchiveAvatarColor, onlineDotColor: onlineDotColor ?? self.onlineDotColor)
+    }
+}
+
+public struct PresentationThemeBubbleShadow {
+    public var color: UIColor
+    public var radius: CGFloat
+    public var verticalOffset: CGFloat
+    
+    public init(color: UIColor, radius: CGFloat, verticalOffset: CGFloat) {
+        self.color = color
+        self.radius = radius
+        self.verticalOffset = verticalOffset
+    }
 }
 
 public final class PresentationThemeBubbleColorComponents {
     public let fill: UIColor
+    public let gradientFill: UIColor
     public let highlightedFill: UIColor
     public let stroke: UIColor
+    public let shadow: PresentationThemeBubbleShadow?
     
-    public init(fill: UIColor, highlightedFill: UIColor, stroke: UIColor) {
+    public init(fill: UIColor, gradientFill: UIColor? = nil, highlightedFill: UIColor, stroke: UIColor, shadow: PresentationThemeBubbleShadow?) {
         self.fill = fill
+        self.gradientFill = gradientFill ?? fill
         self.highlightedFill = highlightedFill
         self.stroke = stroke
+        self.shadow = shadow
+    }
+    
+    public func withUpdated(fill: UIColor? = nil, gradientFill: UIColor? = nil, highlightedFill: UIColor? = nil, stroke: UIColor? = nil) -> PresentationThemeBubbleColorComponents {
+        return PresentationThemeBubbleColorComponents(fill: fill ?? self.fill, gradientFill: gradientFill ?? self.gradientFill, highlightedFill: highlightedFill ?? self.highlightedFill, stroke: stroke ?? self.stroke, shadow: self.shadow)
     }
 }
 
@@ -464,6 +606,10 @@ public final class PresentationThemeBubbleColor {
     public init(withWallpaper: PresentationThemeBubbleColorComponents, withoutWallpaper: PresentationThemeBubbleColorComponents) {
         self.withWallpaper = withWallpaper
         self.withoutWallpaper = withoutWallpaper
+    }
+    
+    public func withUpdated(withWallpaper: PresentationThemeBubbleColorComponents? = nil, withoutWallpaper: PresentationThemeBubbleColorComponents? = nil) -> PresentationThemeBubbleColor {
+        return PresentationThemeBubbleColor(withWallpaper: withWallpaper ?? self.withWallpaper, withoutWallpaper: withoutWallpaper ?? self.withoutWallpaper)
     }
 }
 
@@ -480,27 +626,31 @@ public final class PresentationThemeVariableColor {
         self.withWallpaper = color
         self.withoutWallpaper = color
     }
+    
+    public func withUpdated(withWallpaper: UIColor? = nil, withoutWallpaper: UIColor? = nil) -> PresentationThemeVariableColor {
+        return PresentationThemeVariableColor(withWallpaper: withWallpaper ?? self.withWallpaper, withoutWallpaper: withoutWallpaper ?? self.withoutWallpaper)
+    }
 }
 
 public func bubbleColorComponents(theme: PresentationTheme, incoming: Bool, wallpaper: Bool) -> PresentationThemeBubbleColorComponents {
     if incoming {
         if wallpaper {
-            return theme.chat.bubble.incoming.withWallpaper
+            return theme.chat.message.incoming.bubble.withWallpaper
         } else {
-            return theme.chat.bubble.incoming.withoutWallpaper
+            return theme.chat.message.incoming.bubble.withoutWallpaper
         }
     } else {
         if wallpaper {
-            return theme.chat.bubble.outgoing.withWallpaper
+            return theme.chat.message.outgoing.bubble.withWallpaper
         } else {
-            return theme.chat.bubble.outgoing.withoutWallpaper
+            return theme.chat.message.outgoing.bubble.withoutWallpaper
         }
     }
 }
 
 public func bubbleVariableColor(variableColor: PresentationThemeVariableColor, wallpaper: TelegramWallpaper) -> UIColor {
     switch wallpaper {
-        case .builtin, .color(0xffffff):
+        case .color(0xffffff):
             return variableColor.withoutWallpaper
         default:
             return variableColor.withWallpaper
@@ -513,163 +663,125 @@ public final class PresentationThemeChatBubblePolls {
     public let highlight: UIColor
     public let separator: UIColor
     public let bar: UIColor
+    public let barIconForeground: UIColor
+    public let barPositive: UIColor
+    public let barNegative: UIColor
     
-    public init(radioButton: UIColor, radioProgress: UIColor, highlight: UIColor, separator: UIColor, bar: UIColor) {
+    public init(radioButton: UIColor, radioProgress: UIColor, highlight: UIColor, separator: UIColor, bar: UIColor, barIconForeground: UIColor, barPositive: UIColor, barNegative: UIColor) {
         self.radioButton = radioButton
         self.radioProgress = radioProgress
         self.highlight = highlight
         self.separator = separator
         self.bar = bar
+        self.barIconForeground = barIconForeground
+        self.barPositive = barPositive
+        self.barNegative = barNegative
+    }
+    
+    public func withUpdated(radioButton: UIColor? = nil, radioProgress: UIColor? = nil, highlight: UIColor? = nil, separator: UIColor? = nil, bar: UIColor? = nil, barIconForeground: UIColor? = nil, barPositive: UIColor? = nil, barNegative: UIColor? = nil) -> PresentationThemeChatBubblePolls {
+        return PresentationThemeChatBubblePolls(radioButton: radioButton ?? self.radioButton, radioProgress: radioProgress ?? self.radioProgress, highlight: highlight ?? self.highlight, separator: separator ?? self.separator, bar: bar ?? self.bar, barIconForeground: barIconForeground ?? self.barIconForeground, barPositive: barPositive ?? self.barPositive, barNegative: barNegative ?? self.barNegative)
     }
 }
 
-public final class PresentationThemeChatBubble {
-    public let incoming: PresentationThemeBubbleColor
-    public let outgoing: PresentationThemeBubbleColor
+public final class PresentationThemePartedColors {
+    public let bubble: PresentationThemeBubbleColor
+    public let primaryTextColor: UIColor
+    public let secondaryTextColor: UIColor
+    public let linkTextColor: UIColor
+    public let linkHighlightColor: UIColor
+    public let scamColor: UIColor
+    public let textHighlightColor: UIColor
+    public let accentTextColor: UIColor
+    public let accentControlColor: UIColor
+    public let accentControlDisabledColor: UIColor
+    public let mediaActiveControlColor: UIColor
+    public let mediaInactiveControlColor: UIColor
+    public let mediaControlInnerBackgroundColor: UIColor
+    public let pendingActivityColor: UIColor
+    public let fileTitleColor: UIColor
+    public let fileDescriptionColor: UIColor
+    public let fileDurationColor: UIColor
+    public let mediaPlaceholderColor: UIColor
+    public let polls: PresentationThemeChatBubblePolls
+    public let actionButtonsFillColor: PresentationThemeVariableColor
+    public let actionButtonsStrokeColor: PresentationThemeVariableColor
+    public let actionButtonsTextColor: PresentationThemeVariableColor
+    public let textSelectionColor: UIColor
+    public let textSelectionKnobColor: UIColor
     
+    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, accentControlDisabledColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, mediaControlInnerBackgroundColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
+        self.bubble = bubble
+        self.primaryTextColor = primaryTextColor
+        self.secondaryTextColor = secondaryTextColor
+        self.linkTextColor = linkTextColor
+        self.linkHighlightColor = linkHighlightColor
+        self.scamColor = scamColor
+        self.textHighlightColor = textHighlightColor
+        self.accentTextColor = accentTextColor
+        self.accentControlColor = accentControlColor
+        self.accentControlDisabledColor = accentControlDisabledColor
+        self.mediaActiveControlColor = mediaActiveControlColor
+        self.mediaInactiveControlColor = mediaInactiveControlColor
+        self.mediaControlInnerBackgroundColor = mediaControlInnerBackgroundColor
+        self.pendingActivityColor = pendingActivityColor
+        self.fileTitleColor = fileTitleColor
+        self.fileDescriptionColor = fileDescriptionColor
+        self.fileDurationColor = fileDurationColor
+        self.mediaPlaceholderColor = mediaPlaceholderColor
+        self.polls = polls
+        self.actionButtonsFillColor = actionButtonsFillColor
+        self.actionButtonsStrokeColor = actionButtonsStrokeColor
+        self.actionButtonsTextColor = actionButtonsTextColor
+        self.textSelectionColor = textSelectionColor
+        self.textSelectionKnobColor = textSelectionKnobColor
+    }
+    
+    public func withUpdated(bubble: PresentationThemeBubbleColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, linkTextColor: UIColor? = nil, linkHighlightColor: UIColor? = nil, scamColor: UIColor? = nil, textHighlightColor: UIColor? = nil, accentTextColor: UIColor? = nil, accentControlColor: UIColor? = nil, accentControlDisabledColor: UIColor? = nil, mediaActiveControlColor: UIColor? = nil, mediaInactiveControlColor: UIColor? = nil, mediaControlInnerBackgroundColor: UIColor? = nil, pendingActivityColor: UIColor? = nil, fileTitleColor: UIColor? = nil, fileDescriptionColor: UIColor? = nil, fileDurationColor: UIColor? = nil, mediaPlaceholderColor: UIColor? = nil, polls: PresentationThemeChatBubblePolls? = nil, actionButtonsFillColor: PresentationThemeVariableColor? = nil, actionButtonsStrokeColor: PresentationThemeVariableColor? = nil, actionButtonsTextColor: PresentationThemeVariableColor? = nil, textSelectionColor: UIColor? = nil, textSelectionKnobColor: UIColor? = nil) -> PresentationThemePartedColors {
+        return PresentationThemePartedColors(bubble: bubble ?? self.bubble, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, linkTextColor: linkTextColor ?? self.linkTextColor, linkHighlightColor: linkHighlightColor ?? self.linkHighlightColor, scamColor: scamColor ?? self.scamColor, textHighlightColor: textHighlightColor ?? self.textHighlightColor, accentTextColor: accentTextColor ?? self.accentTextColor, accentControlColor: accentControlColor ?? self.accentControlColor, accentControlDisabledColor: accentControlDisabledColor ?? self.accentControlDisabledColor, mediaActiveControlColor: mediaActiveControlColor ?? self.mediaActiveControlColor, mediaInactiveControlColor: mediaInactiveControlColor ?? self.mediaInactiveControlColor, mediaControlInnerBackgroundColor: mediaControlInnerBackgroundColor ?? self.mediaControlInnerBackgroundColor, pendingActivityColor: pendingActivityColor ?? self.pendingActivityColor, fileTitleColor: fileTitleColor ?? self.fileTitleColor, fileDescriptionColor: fileDescriptionColor ?? self.fileDescriptionColor, fileDurationColor: fileDurationColor ?? self.fileDurationColor, mediaPlaceholderColor: mediaPlaceholderColor ?? self.mediaPlaceholderColor, polls: polls ?? self.polls, actionButtonsFillColor: actionButtonsFillColor ?? self.actionButtonsFillColor, actionButtonsStrokeColor: actionButtonsStrokeColor ?? self.actionButtonsStrokeColor, actionButtonsTextColor: actionButtonsTextColor ?? self.actionButtonsTextColor, textSelectionColor: textSelectionColor ?? self.textSelectionColor, textSelectionKnobColor: textSelectionKnobColor ?? self.textSelectionKnobColor)
+    }
+}
+
+public final class PresentationThemeChatMessage {
+    public let incoming: PresentationThemePartedColors
+    public let outgoing: PresentationThemePartedColors
     public let freeform: PresentationThemeBubbleColor
-    
-    public let incomingPrimaryTextColor: UIColor
-    public let incomingSecondaryTextColor: UIColor
-    public let incomingLinkTextColor: UIColor
-    public let incomingLinkHighlightColor: UIColor
-    public let incomingScamColor: UIColor
-    public let outgoingPrimaryTextColor: UIColor
-    public let outgoingSecondaryTextColor: UIColor
-    public let outgoingLinkTextColor: UIColor
-    public let outgoingLinkHighlightColor: UIColor
-    public let outgoingScamColor: UIColor
     public let infoPrimaryTextColor: UIColor
     public let infoLinkTextColor: UIColor
-    public let incomingTextHighlightColor: UIColor
-    public let outgoingTextHighlightColor: UIColor
-    
-    public let incomingAccentTextColor: UIColor
-    public let outgoingAccentTextColor: UIColor
-    
-    public let incomingAccentControlColor: UIColor
-    public let outgoingAccentControlColor: UIColor
-    public let incomingMediaActiveControlColor: UIColor
-    public let outgoingMediaActiveControlColor: UIColor
-    public let incomingMediaInactiveControlColor: UIColor
-    public let outgoingMediaInactiveControlColor: UIColor
-    
     public let outgoingCheckColor: UIColor
-    public let incomingPendingActivityColor: UIColor
-    public let outgoingPendingActivityColor: UIColor
-    
     public let mediaDateAndStatusFillColor: UIColor
     public let mediaDateAndStatusTextColor: UIColor
-    
-    public let incomingFileTitleColor: UIColor
-    public let outgoingFileTitleColor: UIColor
-    public let incomingFileDescriptionColor: UIColor
-    public let outgoingFileDescriptionColor: UIColor
-    public let incomingFileDurationColor: UIColor
-    public let outgoingFileDurationColor: UIColor
-    
     public let shareButtonFillColor: PresentationThemeVariableColor
     public let shareButtonStrokeColor: PresentationThemeVariableColor
     public let shareButtonForegroundColor: PresentationThemeVariableColor
-    
-    public let mediaOverlayControlBackgroundColor: UIColor
-    public let mediaOverlayControlForegroundColor: UIColor
-    
-    public let actionButtonsIncomingFillColor: PresentationThemeVariableColor
-    public let actionButtonsIncomingStrokeColor: PresentationThemeVariableColor
-    public let actionButtonsIncomingTextColor: PresentationThemeVariableColor
-    
-    public let actionButtonsOutgoingFillColor: PresentationThemeVariableColor
-    public let actionButtonsOutgoingStrokeColor: PresentationThemeVariableColor
-    public let actionButtonsOutgoingTextColor: PresentationThemeVariableColor
-    
-    public let selectionControlBorderColor: UIColor
-    public let selectionControlFillColor: UIColor
-    public let selectionControlForegroundColor: UIColor
-    
+    public let mediaOverlayControlColors: PresentationThemeFillForeground
+    public let selectionControlColors: PresentationThemeFillStrokeForeground
+    public let deliveryFailedColors: PresentationThemeFillForeground
     public let mediaHighlightOverlayColor: UIColor
+    public let stickerPlaceholderColor: PresentationThemeVariableColor
+    public let stickerPlaceholderShimmerColor: PresentationThemeVariableColor
     
-    public let deliveryFailedFillColor: UIColor
-    public let deliveryFailedForegroundColor: UIColor
-    
-    public let incomingMediaPlaceholderColor: UIColor
-    public let outgoingMediaPlaceholderColor: UIColor
-    
-    public let incomingPolls: PresentationThemeChatBubblePolls
-    public let outgoingPolls: PresentationThemeChatBubblePolls
-    
-    public init(incoming: PresentationThemeBubbleColor, outgoing: PresentationThemeBubbleColor, freeform: PresentationThemeBubbleColor, incomingPrimaryTextColor: UIColor, incomingSecondaryTextColor: UIColor, incomingLinkTextColor: UIColor, incomingLinkHighlightColor: UIColor, incomingScamColor: UIColor, outgoingPrimaryTextColor: UIColor, outgoingSecondaryTextColor: UIColor, outgoingLinkTextColor: UIColor, outgoingLinkHighlightColor: UIColor, outgoingScamColor: UIColor, infoPrimaryTextColor: UIColor, infoLinkTextColor: UIColor, incomingTextHighlightColor: UIColor, outgoingTextHighlightColor: UIColor, incomingAccentTextColor: UIColor, outgoingAccentTextColor: UIColor, incomingAccentControlColor: UIColor, outgoingAccentControlColor: UIColor, incomingMediaActiveControlColor: UIColor, outgoingMediaActiveControlColor: UIColor, incomingMediaInactiveControlColor: UIColor, outgoingMediaInactiveControlColor: UIColor, outgoingCheckColor: UIColor, incomingPendingActivityColor: UIColor, outgoingPendingActivityColor: UIColor, mediaDateAndStatusFillColor: UIColor, mediaDateAndStatusTextColor: UIColor, incomingFileTitleColor: UIColor, outgoingFileTitleColor: UIColor, incomingFileDescriptionColor: UIColor, outgoingFileDescriptionColor: UIColor, incomingFileDurationColor: UIColor, outgoingFileDurationColor: UIColor, shareButtonFillColor: PresentationThemeVariableColor, shareButtonStrokeColor: PresentationThemeVariableColor, shareButtonForegroundColor: PresentationThemeVariableColor, mediaOverlayControlBackgroundColor: UIColor, mediaOverlayControlForegroundColor: UIColor, actionButtonsIncomingFillColor: PresentationThemeVariableColor, actionButtonsIncomingStrokeColor: PresentationThemeVariableColor, actionButtonsIncomingTextColor: PresentationThemeVariableColor, actionButtonsOutgoingFillColor: PresentationThemeVariableColor, actionButtonsOutgoingStrokeColor: PresentationThemeVariableColor, actionButtonsOutgoingTextColor: PresentationThemeVariableColor, selectionControlBorderColor: UIColor, selectionControlFillColor: UIColor, selectionControlForegroundColor: UIColor, mediaHighlightOverlayColor: UIColor, deliveryFailedFillColor: UIColor, deliveryFailedForegroundColor: UIColor, incomingMediaPlaceholderColor: UIColor, outgoingMediaPlaceholderColor: UIColor, incomingPolls: PresentationThemeChatBubblePolls, outgoingPolls: PresentationThemeChatBubblePolls) {
+    public init(incoming: PresentationThemePartedColors, outgoing: PresentationThemePartedColors, freeform: PresentationThemeBubbleColor, infoPrimaryTextColor: UIColor, infoLinkTextColor: UIColor, outgoingCheckColor: UIColor, mediaDateAndStatusFillColor: UIColor, mediaDateAndStatusTextColor: UIColor, shareButtonFillColor: PresentationThemeVariableColor, shareButtonStrokeColor: PresentationThemeVariableColor, shareButtonForegroundColor: PresentationThemeVariableColor, mediaOverlayControlColors: PresentationThemeFillForeground, selectionControlColors: PresentationThemeFillStrokeForeground, deliveryFailedColors: PresentationThemeFillForeground, mediaHighlightOverlayColor: UIColor, stickerPlaceholderColor: PresentationThemeVariableColor, stickerPlaceholderShimmerColor: PresentationThemeVariableColor) {
         self.incoming = incoming
         self.outgoing = outgoing
         self.freeform = freeform
-        
-        self.incomingPrimaryTextColor = incomingPrimaryTextColor
-        self.incomingSecondaryTextColor = incomingSecondaryTextColor
-        self.incomingLinkTextColor = incomingLinkTextColor
-        self.incomingLinkHighlightColor = incomingLinkHighlightColor
-        self.incomingScamColor = incomingScamColor
-        self.outgoingPrimaryTextColor = outgoingPrimaryTextColor
-        self.outgoingSecondaryTextColor = outgoingSecondaryTextColor
-        self.outgoingLinkTextColor = outgoingLinkTextColor
-        self.outgoingLinkHighlightColor = outgoingLinkHighlightColor
-        self.outgoingScamColor = outgoingScamColor
         self.infoPrimaryTextColor = infoPrimaryTextColor
         self.infoLinkTextColor = infoLinkTextColor
-        self.incomingTextHighlightColor = incomingTextHighlightColor
-        self.outgoingTextHighlightColor = outgoingTextHighlightColor
-        
-        self.incomingAccentTextColor = incomingAccentTextColor
-        self.outgoingAccentTextColor = outgoingAccentTextColor
-        self.incomingAccentControlColor = incomingAccentControlColor
-        self.outgoingAccentControlColor = outgoingAccentControlColor
-        
-        self.incomingMediaActiveControlColor = incomingMediaActiveControlColor
-        self.outgoingMediaActiveControlColor = outgoingMediaActiveControlColor
-        self.incomingMediaInactiveControlColor = incomingMediaInactiveControlColor
-        self.outgoingMediaInactiveControlColor = outgoingMediaInactiveControlColor
-        
         self.outgoingCheckColor = outgoingCheckColor
-        self.incomingPendingActivityColor = incomingPendingActivityColor
-        self.outgoingPendingActivityColor = outgoingPendingActivityColor
         self.mediaDateAndStatusFillColor = mediaDateAndStatusFillColor
         self.mediaDateAndStatusTextColor = mediaDateAndStatusTextColor
-        
-        self.incomingFileTitleColor = incomingFileTitleColor
-        self.outgoingFileTitleColor = outgoingFileTitleColor
-        self.incomingFileDescriptionColor = incomingFileDescriptionColor
-        self.outgoingFileDescriptionColor = outgoingFileDescriptionColor
-        self.incomingFileDurationColor = incomingFileDurationColor
-        self.outgoingFileDurationColor = outgoingFileDurationColor
-        
         self.shareButtonFillColor = shareButtonFillColor
         self.shareButtonStrokeColor = shareButtonStrokeColor
         self.shareButtonForegroundColor = shareButtonForegroundColor
-        
-        self.mediaOverlayControlBackgroundColor = mediaOverlayControlBackgroundColor
-        self.mediaOverlayControlForegroundColor = mediaOverlayControlForegroundColor
-        
-        self.actionButtonsIncomingFillColor = actionButtonsIncomingFillColor
-        self.actionButtonsIncomingStrokeColor = actionButtonsIncomingStrokeColor
-        self.actionButtonsIncomingTextColor = actionButtonsIncomingTextColor
-        
-        self.actionButtonsOutgoingFillColor = actionButtonsOutgoingFillColor
-        self.actionButtonsOutgoingStrokeColor = actionButtonsOutgoingStrokeColor
-        self.actionButtonsOutgoingTextColor = actionButtonsOutgoingTextColor
-        
-        self.selectionControlBorderColor = selectionControlBorderColor
-        self.selectionControlFillColor = selectionControlFillColor
-        self.selectionControlForegroundColor = selectionControlForegroundColor
-        
+        self.mediaOverlayControlColors = mediaOverlayControlColors
+        self.selectionControlColors = selectionControlColors
+        self.deliveryFailedColors = deliveryFailedColors
         self.mediaHighlightOverlayColor = mediaHighlightOverlayColor
-        
-        self.deliveryFailedFillColor = deliveryFailedFillColor
-        self.deliveryFailedForegroundColor = deliveryFailedForegroundColor
-        
-        self.incomingMediaPlaceholderColor = incomingMediaPlaceholderColor
-        self.outgoingMediaPlaceholderColor = outgoingMediaPlaceholderColor
-        
-        self.incomingPolls = incomingPolls
-        self.outgoingPolls = outgoingPolls
+        self.stickerPlaceholderColor = stickerPlaceholderColor
+        self.stickerPlaceholderShimmerColor = stickerPlaceholderShimmerColor
+    }
+    
+    public func withUpdated(incoming: PresentationThemePartedColors? = nil, outgoing: PresentationThemePartedColors? = nil, freeform: PresentationThemeBubbleColor? = nil, infoPrimaryTextColor: UIColor? = nil, infoLinkTextColor: UIColor? = nil, outgoingCheckColor: UIColor? = nil, mediaDateAndStatusFillColor: UIColor? = nil, mediaDateAndStatusTextColor: UIColor? = nil, shareButtonFillColor: PresentationThemeVariableColor? = nil, shareButtonStrokeColor: PresentationThemeVariableColor? = nil, shareButtonForegroundColor: PresentationThemeVariableColor? = nil, mediaOverlayControlColors: PresentationThemeFillForeground? = nil, selectionControlColors: PresentationThemeFillStrokeForeground? = nil, deliveryFailedColors: PresentationThemeFillForeground? = nil, mediaHighlightOverlayColor: UIColor? = nil, stickerPlaceholderColor: PresentationThemeVariableColor? = nil, stickerPlaceholderShimmerColor: PresentationThemeVariableColor? = nil) -> PresentationThemeChatMessage {
+        return PresentationThemeChatMessage(incoming: incoming ?? self.incoming, outgoing: outgoing ?? self.outgoing, freeform: freeform ?? self.freeform, infoPrimaryTextColor: infoPrimaryTextColor ?? self.infoPrimaryTextColor, infoLinkTextColor: infoLinkTextColor ?? self.infoLinkTextColor, outgoingCheckColor: outgoingCheckColor ?? self.outgoingCheckColor, mediaDateAndStatusFillColor: mediaDateAndStatusFillColor ?? self.mediaDateAndStatusFillColor, mediaDateAndStatusTextColor: mediaDateAndStatusTextColor ?? self.mediaDateAndStatusTextColor, shareButtonFillColor: shareButtonFillColor ?? self.shareButtonFillColor, shareButtonStrokeColor: shareButtonStrokeColor ?? self.shareButtonStrokeColor, shareButtonForegroundColor: shareButtonForegroundColor ?? self.shareButtonForegroundColor, mediaOverlayControlColors: mediaOverlayControlColors ?? self.mediaOverlayControlColors, selectionControlColors: selectionControlColors ?? self.selectionControlColors, deliveryFailedColors: deliveryFailedColors ?? self.deliveryFailedColors, mediaHighlightOverlayColor: mediaHighlightOverlayColor ?? self.mediaHighlightOverlayColor, stickerPlaceholderColor: stickerPlaceholderColor ?? self.stickerPlaceholderColor, stickerPlaceholderShimmerColor: stickerPlaceholderShimmerColor ?? self.stickerPlaceholderShimmerColor)
     }
 }
 
@@ -690,6 +802,27 @@ public final class PresentationThemeServiceMessageColorComponents {
         self.dateFillStatic = dateFillStatic
         self.dateFillFloating = dateFillFloating
     }
+    
+    public func withUpdated(fill: UIColor? = nil, primaryText: UIColor? = nil, linkHighlight: UIColor? = nil, scam: UIColor? = nil, dateFillStatic: UIColor? = nil, dateFillFloating: UIColor? = nil) -> PresentationThemeServiceMessageColorComponents {
+        return PresentationThemeServiceMessageColorComponents(fill: fill ?? self.fill, primaryText: primaryText ?? self.primaryText, linkHighlight: linkHighlight ?? self.linkHighlight, scam: scam ?? self.scam, dateFillStatic: dateFillStatic ?? self.dateFillStatic, dateFillFloating: dateFillFloating ?? self.dateFillFloating)
+    }
+}
+
+public func serviceMessageColorComponents(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
+    return serviceMessageColorComponents(chatTheme: theme.chat, wallpaper: wallpaper)
+}
+
+public func serviceMessageColorHasDefaultWallpaper(_ wallpaper: TelegramWallpaper) -> Bool {
+    switch wallpaper {
+        case .color(0xffffff):
+            return true
+        default:
+            return false
+    }
+}
+
+public func serviceMessageColorComponents(chatTheme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
+    return serviceMessageColorHasDefaultWallpaper(wallpaper) ? chatTheme.serviceMessage.components.withDefaultWallpaper : chatTheme.serviceMessage.components.withCustomWallpaper
 }
 
 public final class PresentationThemeServiceMessageColor {
@@ -700,28 +833,17 @@ public final class PresentationThemeServiceMessageColor {
         self.withDefaultWallpaper = withDefaultWallpaper
         self.withCustomWallpaper = withCustomWallpaper
     }
-}
-
-public func serviceMessageColorComponents(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
-    return serviceMessageColorComponents(chatTheme: theme.chat, wallpaper: wallpaper)
-}
-
-public func serviceMessageColorComponents(chatTheme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
-    switch wallpaper {
-        case .builtin, .color(0xffffff):
-            return chatTheme.serviceMessage.components.withDefaultWallpaper
-        default:
-            return chatTheme.serviceMessage.components.withCustomWallpaper
+    
+    public func withUpdated(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents? = nil, withCustomWallpaper: PresentationThemeServiceMessageColorComponents? = nil) -> PresentationThemeServiceMessageColor {
+        return PresentationThemeServiceMessageColor(withDefaultWallpaper: withDefaultWallpaper ?? self.withDefaultWallpaper, withCustomWallpaper: withCustomWallpaper ?? self.withCustomWallpaper)
     }
 }
 
 public final class PresentationThemeServiceMessage {
     public let components: PresentationThemeServiceMessageColor
-
     public let unreadBarFillColor: UIColor
     public let unreadBarStrokeColor: UIColor
     public let unreadBarTextColor: UIColor
-    
     public let dateTextColor: PresentationThemeVariableColor
     
     public init(components: PresentationThemeServiceMessageColor, unreadBarFillColor: UIColor, unreadBarStrokeColor: UIColor, unreadBarTextColor: UIColor, dateTextColor: PresentationThemeVariableColor) {
@@ -731,6 +853,10 @@ public final class PresentationThemeServiceMessage {
         self.unreadBarTextColor = unreadBarTextColor
         self.dateTextColor = dateTextColor
     }
+    
+    public func withUpdated(components: PresentationThemeServiceMessageColor? = nil, unreadBarFillColor: UIColor? = nil, unreadBarStrokeColor: UIColor? = nil, unreadBarTextColor: UIColor? = nil, dateTextColor: PresentationThemeVariableColor? = nil) -> PresentationThemeServiceMessage {
+        return PresentationThemeServiceMessage(components: components ?? self.components, unreadBarFillColor: unreadBarFillColor ?? self.unreadBarFillColor, unreadBarStrokeColor: unreadBarStrokeColor ?? self.unreadBarStrokeColor, unreadBarTextColor: unreadBarTextColor ?? self.unreadBarTextColor, dateTextColor: dateTextColor ?? self.dateTextColor)
+    }
 }
 
 public enum PresentationThemeKeyboardColor: Int32 {
@@ -739,10 +865,10 @@ public enum PresentationThemeKeyboardColor: Int32 {
     
     public var keyboardAppearance: UIKeyboardAppearance {
         switch self {
-            case .light:
-                return .default
-            case .dark:
-                return .dark
+        case .light:
+            return .light
+        case .dark:
+            return .dark
         }
     }
 }
@@ -751,25 +877,22 @@ public final class PresentationThemeChatInputPanelMediaRecordingControl {
     public let buttonColor: UIColor
     public let micLevelColor: UIColor
     public let activeIconColor: UIColor
-    public let panelControlFillColor: UIColor
-    public let panelControlStrokeColor: UIColor
-    public let panelControlContentPrimaryColor: UIColor
-    public let panelControlContentAccentColor: UIColor
     
-    init(buttonColor: UIColor, micLevelColor: UIColor, activeIconColor: UIColor, panelControlFillColor: UIColor, panelControlStrokeColor: UIColor, panelControlContentPrimaryColor: UIColor, panelControlContentAccentColor: UIColor) {
+    init(buttonColor: UIColor, micLevelColor: UIColor, activeIconColor: UIColor) {
         self.buttonColor = buttonColor
         self.micLevelColor = micLevelColor
         self.activeIconColor = activeIconColor
-        self.panelControlFillColor = panelControlFillColor
-        self.panelControlStrokeColor = panelControlStrokeColor
-        self.panelControlContentPrimaryColor = panelControlContentPrimaryColor
-        self.panelControlContentAccentColor = panelControlContentAccentColor
+    }
+    
+    public func withUpdated(buttonColor: UIColor? = nil, micLevelColor: UIColor? = nil, activeIconColor: UIColor? = nil) -> PresentationThemeChatInputPanelMediaRecordingControl {
+        return PresentationThemeChatInputPanelMediaRecordingControl(buttonColor: buttonColor ?? self.buttonColor, micLevelColor: micLevelColor ?? self.micLevelColor, activeIconColor: activeIconColor ?? self.activeIconColor)
     }
 }
 
 public final class PresentationThemeChatInputPanel {
     public let panelBackgroundColor: UIColor
-    public let panelStrokeColor: UIColor
+    public let panelBackgroundColorNoWallpaper: UIColor
+    public let panelSeparatorColor: UIColor
     public let panelControlAccentColor: UIColor
     public let panelControlColor: UIColor
     public let panelControlDisabledColor: UIColor
@@ -784,12 +907,12 @@ public final class PresentationThemeChatInputPanel {
     public let primaryTextColor: UIColor
     public let secondaryTextColor: UIColor
     public let mediaRecordingDotColor: UIColor
-    public let keyboardColor: PresentationThemeKeyboardColor
     public let mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl
     
-    public init(panelBackgroundColor: UIColor, panelStrokeColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, keyboardColor: PresentationThemeKeyboardColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
+    public init(panelBackgroundColor: UIColor, panelBackgroundColorNoWallpaper: UIColor, panelSeparatorColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
         self.panelBackgroundColor = panelBackgroundColor
-        self.panelStrokeColor = panelStrokeColor
+        self.panelBackgroundColorNoWallpaper = panelBackgroundColorNoWallpaper
+        self.panelSeparatorColor = panelSeparatorColor
         self.panelControlAccentColor = panelControlAccentColor
         self.panelControlColor = panelControlColor
         self.panelControlDisabledColor = panelControlDisabledColor
@@ -804,8 +927,11 @@ public final class PresentationThemeChatInputPanel {
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
         self.mediaRecordingDotColor = mediaRecordingDotColor
-        self.keyboardColor = keyboardColor
         self.mediaRecordingControl = mediaRecordingControl
+    }
+    
+    public func withUpdated(panelBackgroundColor: UIColor? = nil, panelBackgroundColorNoWallpaper: UIColor? = nil, panelSeparatorColor: UIColor? = nil, panelControlAccentColor: UIColor? = nil, panelControlColor: UIColor? = nil, panelControlDisabledColor: UIColor? = nil, panelControlDestructiveColor: UIColor? = nil, inputBackgroundColor: UIColor? = nil, inputStrokeColor: UIColor? = nil, inputPlaceholderColor: UIColor? = nil, inputTextColor: UIColor? = nil, inputControlColor: UIColor? = nil, actionControlFillColor: UIColor? = nil, actionControlForegroundColor: UIColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, mediaRecordingDotColor: UIColor? = nil, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl? = nil) -> PresentationThemeChatInputPanel {
+        return PresentationThemeChatInputPanel(panelBackgroundColor: panelBackgroundColor ?? self.panelBackgroundColor, panelBackgroundColorNoWallpaper: panelBackgroundColorNoWallpaper ?? self.panelBackgroundColorNoWallpaper, panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelControlAccentColor: panelControlAccentColor ?? self.panelControlAccentColor, panelControlColor: panelControlColor ?? self.panelControlColor, panelControlDisabledColor: panelControlDisabledColor ?? self.panelControlDisabledColor, panelControlDestructiveColor: panelControlDestructiveColor ?? self.panelControlDestructiveColor, inputBackgroundColor: inputBackgroundColor ?? self.inputBackgroundColor, inputStrokeColor: inputStrokeColor ?? self.inputStrokeColor, inputPlaceholderColor: inputPlaceholderColor ?? self.inputPlaceholderColor, inputTextColor: inputTextColor ?? self.inputTextColor, inputControlColor: inputControlColor ?? self.inputControlColor, actionControlFillColor: actionControlFillColor ?? self.actionControlFillColor, actionControlForegroundColor: actionControlForegroundColor ?? self.actionControlForegroundColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, mediaRecordingDotColor: mediaRecordingDotColor ?? self.mediaRecordingDotColor, mediaRecordingControl: mediaRecordingControl ?? self.mediaRecordingControl)
     }
 }
 
@@ -833,6 +959,10 @@ public final class PresentationThemeInputMediaPanel {
         self.stickersSearchControlColor = stickersSearchControlColor
         self.gifsBackgroundColor = gifsBackgroundColor
     }
+    
+    public func withUpdated(panelSeparatorColor: UIColor? = nil, panelIconColor: UIColor? = nil, panelHighlightedIconBackgroundColor: UIColor? = nil, stickersBackgroundColor: UIColor? = nil, stickersSectionTextColor: UIColor? = nil, stickersSearchBackgroundColor: UIColor? = nil, stickersSearchPlaceholderColor: UIColor? = nil, stickersSearchPrimaryColor: UIColor? = nil, stickersSearchControlColor: UIColor? = nil, gifsBackgroundColor: UIColor? = nil) -> PresentationThemeInputMediaPanel {
+        return PresentationThemeInputMediaPanel(panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelIconColor: panelIconColor ?? self.panelIconColor, panelHighlightedIconBackgroundColor: panelHighlightedIconBackgroundColor ?? self.panelHighlightedIconBackgroundColor, stickersBackgroundColor: stickersBackgroundColor ?? self.stickersBackgroundColor, stickersSectionTextColor: stickersSectionTextColor ?? self.stickersSectionTextColor, stickersSearchBackgroundColor: stickersSearchBackgroundColor ?? self.stickersSearchBackgroundColor, stickersSearchPlaceholderColor: stickersSearchPlaceholderColor ?? self.stickersSearchPlaceholderColor, stickersSearchPrimaryColor: stickersSearchPrimaryColor ?? self.stickersSearchPrimaryColor, stickersSearchControlColor: stickersSearchControlColor ?? self.stickersSearchControlColor, gifsBackgroundColor: gifsBackgroundColor ?? self.gifsBackgroundColor)
+    }
 }
 
 public final class PresentationThemeInputButtonPanel {
@@ -853,6 +983,10 @@ public final class PresentationThemeInputButtonPanel {
         self.buttonHighlightedStrokeColor = buttonHighlightedStrokeColor
         self.buttonTextColor = buttonTextColor
     }
+    
+    public func withUpdated(panelSeparatorColor: UIColor? = nil, panelBackgroundColor: UIColor? = nil, buttonFillColor: UIColor? = nil, buttonStrokeColor: UIColor? = nil, buttonHighlightedFillColor: UIColor? = nil, buttonHighlightedStrokeColor: UIColor? = nil, buttonTextColor: UIColor? = nil) -> PresentationThemeInputButtonPanel {
+        return PresentationThemeInputButtonPanel(panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelBackgroundColor: panelBackgroundColor ?? self.panelBackgroundColor, buttonFillColor: buttonFillColor ?? self.buttonFillColor, buttonStrokeColor: buttonStrokeColor ?? self.buttonStrokeColor, buttonHighlightedFillColor: buttonHighlightedFillColor ?? self.buttonHighlightedFillColor, buttonHighlightedStrokeColor: buttonHighlightedStrokeColor ?? self.buttonHighlightedStrokeColor, buttonTextColor: buttonTextColor ?? self.buttonTextColor)
+    }
 }
 
 public final class PresentationThemeChatHistoryNavigation {
@@ -871,23 +1005,70 @@ public final class PresentationThemeChatHistoryNavigation {
         self.badgeStrokeColor = badgeStrokeColor
         self.badgeTextColor = badgeTextColor
     }
+    
+    public func withUpdated(fillColor: UIColor? = nil, strokeColor: UIColor? = nil, foregroundColor: UIColor? = nil, badgeBackgroundColor: UIColor? = nil, badgeStrokeColor: UIColor? = nil, badgeTextColor: UIColor? = nil) -> PresentationThemeChatHistoryNavigation {
+        return PresentationThemeChatHistoryNavigation(fillColor: fillColor ?? self.fillColor, strokeColor: strokeColor ?? self.strokeColor, foregroundColor: foregroundColor ?? self.foregroundColor, badgeBackgroundColor: badgeBackgroundColor ?? self.badgeBackgroundColor, badgeStrokeColor: badgeStrokeColor ?? self.badgeStrokeColor, badgeTextColor: badgeTextColor ?? self.badgeTextColor)
+    }
 }
 
 public final class PresentationThemeChat {
-    public let bubble: PresentationThemeChatBubble
+    public let defaultWallpaper: TelegramWallpaper
+    public let message: PresentationThemeChatMessage
     public let serviceMessage: PresentationThemeServiceMessage
     public let inputPanel: PresentationThemeChatInputPanel
     public let inputMediaPanel: PresentationThemeInputMediaPanel
     public let inputButtonPanel: PresentationThemeInputButtonPanel
     public let historyNavigation: PresentationThemeChatHistoryNavigation
     
-    public init(bubble: PresentationThemeChatBubble, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
-        self.bubble = bubble
+    public init(defaultWallpaper: TelegramWallpaper, message: PresentationThemeChatMessage, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
+        self.defaultWallpaper = defaultWallpaper
+        self.message = message
         self.serviceMessage = serviceMessage
         self.inputPanel = inputPanel
         self.inputMediaPanel = inputMediaPanel
         self.inputButtonPanel = inputButtonPanel
         self.historyNavigation = historyNavigation
+    }
+    
+    public func withUpdated(defaultWallpaper: TelegramWallpaper? = nil, message: PresentationThemeChatMessage? = nil, serviceMessage: PresentationThemeServiceMessage? = nil, inputPanel: PresentationThemeChatInputPanel? = nil, inputMediaPanel: PresentationThemeInputMediaPanel? = nil, inputButtonPanel: PresentationThemeInputButtonPanel? = nil, historyNavigation: PresentationThemeChatHistoryNavigation? = nil) -> PresentationThemeChat {
+        return PresentationThemeChat(defaultWallpaper: defaultWallpaper ?? self.defaultWallpaper, message: message ?? self.message, serviceMessage: serviceMessage ?? self.serviceMessage, inputPanel: inputPanel ?? self.inputPanel, inputMediaPanel: inputMediaPanel ?? self.inputMediaPanel, inputButtonPanel: inputButtonPanel ?? self.inputButtonPanel, historyNavigation: historyNavigation ?? self.historyNavigation)
+    }
+}
+
+public enum PresentationThemeExpandedNotificationBackgroundType: Int32 {
+    case light
+    case dark
+}
+
+public final class PresentationThemeExpandedNotificationNavigationBar {
+    public let backgroundColor: UIColor
+    public let primaryTextColor: UIColor
+    public let controlColor: UIColor
+    public let separatorColor: UIColor
+    
+    init(backgroundColor: UIColor, primaryTextColor: UIColor, controlColor: UIColor, separatorColor: UIColor) {
+        self.backgroundColor = backgroundColor
+        self.primaryTextColor = primaryTextColor
+        self.controlColor = controlColor
+        self.separatorColor = separatorColor
+    }
+    
+    public func withUpdated(backgroundColor: UIColor? = nil, primaryTextColor: UIColor? = nil, controlColor: UIColor? = nil, separatorColor: UIColor? = nil) -> PresentationThemeExpandedNotificationNavigationBar {
+        return PresentationThemeExpandedNotificationNavigationBar(backgroundColor: backgroundColor ?? self.backgroundColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, controlColor: controlColor ?? self.controlColor, separatorColor: separatorColor ?? self.separatorColor)
+    }
+}
+
+public final class PresentationThemeExpandedNotification {
+    public let backgroundType: PresentationThemeExpandedNotificationBackgroundType
+    public let navigationBar: PresentationThemeExpandedNotificationNavigationBar
+    
+    public init(backgroundType: PresentationThemeExpandedNotificationBackgroundType, navigationBar: PresentationThemeExpandedNotificationNavigationBar) {
+        self.backgroundType = backgroundType
+        self.navigationBar = navigationBar
+    }
+    
+    public func withUpdated(backgroundType: PresentationThemeExpandedNotificationBackgroundType? = nil, navigationBar: PresentationThemeExpandedNotificationNavigationBar? = nil) -> PresentationThemeExpandedNotification {
+        return PresentationThemeExpandedNotification(backgroundType: backgroundType ?? self.backgroundType, navigationBar: navigationBar ?? self.navigationBar)
     }
 }
 
@@ -902,12 +1083,44 @@ public final class PresentationThemeInAppNotification {
         self.primaryTextColor = primaryTextColor
         self.expandedNotification = expandedNotification
     }
+    
+    public func withUpdated(fillColor: UIColor? = nil, primaryTextColor: UIColor? = nil, expandedNotification: PresentationThemeExpandedNotification? = nil) -> PresentationThemeInAppNotification {
+        return PresentationThemeInAppNotification(fillColor: fillColor ?? self.fillColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, expandedNotification: expandedNotification ?? self.expandedNotification)
+    }
+}
+
+public final class PresentationThemeChart {
+    public let labelsColor: UIColor
+    public let helperLinesColor: UIColor
+    public let strongLinesColor: UIColor
+    public let barStrongLinesColor: UIColor
+    public let detailsTextColor: UIColor
+    public let detailsArrowColor: UIColor
+    public let detailsViewColor: UIColor
+    public let rangeViewFrameColor: UIColor
+    public let rangeViewMarkerColor: UIColor
+    
+    public init(labelsColor: UIColor, helperLinesColor: UIColor, strongLinesColor: UIColor, barStrongLinesColor: UIColor, detailsTextColor: UIColor, detailsArrowColor: UIColor, detailsViewColor: UIColor, rangeViewFrameColor: UIColor, rangeViewMarkerColor: UIColor) {
+        self.labelsColor = labelsColor
+        self.helperLinesColor = helperLinesColor
+        self.strongLinesColor = strongLinesColor
+        self.barStrongLinesColor = barStrongLinesColor
+        self.detailsTextColor = detailsTextColor
+        self.detailsArrowColor = detailsArrowColor
+        self.detailsViewColor = detailsViewColor
+        self.rangeViewFrameColor = rangeViewFrameColor
+        self.rangeViewMarkerColor = rangeViewMarkerColor
+    }
+    
+    public func withUpdated(labelsColor: UIColor? = nil, helperLinesColor: UIColor? = nil, strongLinesColor: UIColor? = nil, barStrongLinesColor: UIColor? = nil, detailsTextColor: UIColor? = nil, detailsArrowColor: UIColor? = nil, detailsViewColor: UIColor? = nil, rangeViewFrameColor: UIColor? = nil, rangeViewMarkerColor: UIColor? = nil) -> PresentationThemeChart {
+        return PresentationThemeChart(labelsColor: labelsColor ?? self.labelsColor, helperLinesColor: helperLinesColor ?? self.helperLinesColor, strongLinesColor: strongLinesColor ?? self.strongLinesColor, barStrongLinesColor: barStrongLinesColor ?? self.barStrongLinesColor, detailsTextColor: detailsTextColor ?? self.detailsTextColor, detailsArrowColor: detailsArrowColor ?? self.detailsArrowColor, detailsViewColor: detailsViewColor ?? self.detailsViewColor, rangeViewFrameColor: rangeViewFrameColor ?? self.rangeViewFrameColor, rangeViewMarkerColor: rangeViewMarkerColor ?? self.rangeViewMarkerColor)
+    }
 }
 
 public enum PresentationThemeBuiltinName {
     case dayClassic
     case day
-    case nightGrayscale
+    case night
     case nightAccent
     
     public var reference: PresentationBuiltinThemeReference {
@@ -916,8 +1129,8 @@ public enum PresentationThemeBuiltinName {
                 return .dayClassic
             case .day:
                 return .day
-            case .nightGrayscale:
-                return .nightGrayscale
+            case .night:
+                return .night
             case .nightAccent:
                 return .nightAccent
         }
@@ -944,46 +1157,119 @@ public enum PresentationThemeName: Equatable {
                 }
         }
     }
+    
+    public var string: String {
+        switch self {
+            case let .builtin(name):
+                switch name {
+                    case .day:
+                        return "Day"
+                    case .dayClassic:
+                        return "Classic"
+                    case .night:
+                        return "Night"
+                    case .nightAccent:
+                        return "Tinted Night"
+                }
+            case let .custom(name):
+                return name
+        }
+    }
+}
+
+public extension PresentationThemeReference {
+    var name: PresentationThemeName {
+        switch self {
+            case let .builtin(theme):
+                switch theme {
+                    case .day:
+                        return .builtin(.day)
+                    case .dayClassic:
+                        return .builtin(.dayClassic)
+                    case .night:
+                        return .builtin(.night)
+                    case .nightAccent:
+                        return .builtin(.nightAccent)
+                }
+            case let .cloud(info):
+                return .custom(info.theme.title)
+            default:
+                return .custom("")
+        }
+    }
 }
 
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
+    public let index: Int64
+    public let referenceTheme: PresentationBuiltinThemeReference
     public let overallDarkAppearance: Bool
-    public let allowsCustomWallpapers: Bool
-    public let auth: PresentationThemeAuth
+    public let intro: PresentationThemeIntro
     public let passcode: PresentationThemePasscode
     public let rootController: PresentationThemeRootController
     public let list: PresentationThemeList
     public let chatList: PresentationThemeChatList
     public let chat: PresentationThemeChat
     public let actionSheet: PresentationThemeActionSheet
+    public let contextMenu: PresentationThemeContextMenu
     public let inAppNotification: PresentationThemeInAppNotification
+    public let chart: PresentationThemeChart
+    public let preview: Bool
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, overallDarkAppearance: Bool, allowsCustomWallpapers: Bool, auth: PresentationThemeAuth, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
+    public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, chart: PresentationThemeChart, preview: Bool = false) {
         self.name = name
+        self.index = index
+        self.referenceTheme = referenceTheme
         self.overallDarkAppearance = overallDarkAppearance
-        self.allowsCustomWallpapers = allowsCustomWallpapers
-        self.auth = auth
+        self.intro = intro
         self.passcode = passcode
         self.rootController = rootController
         self.list = list
         self.chatList = chatList
         self.chat = chat
         self.actionSheet = actionSheet
+        self.contextMenu = contextMenu
         self.inAppNotification = inAppNotification
+        self.chart = chart
+        self.preview = preview
     }
     
     public func image(_ key: Int32, _ generate: (PresentationTheme) -> UIImage?) -> UIImage? {
         return self.resourceCache.image(key, self, generate)
     }
     
+    public func image(_ key: PresentationResourceParameterKey, _ generate: (PresentationTheme) -> UIImage?) -> UIImage? {
+        return self.resourceCache.parameterImage(key, self, generate)
+    }
+    
     public func object(_ key: Int32, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
         return self.resourceCache.object(key, self, generate)
     }
     
+    public func object(_ key: PresentationResourceParameterKey, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
+        return self.resourceCache.parameterObject(key, self, generate)
+    }
+    
     public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {
         return lhs === rhs
+    }
+    
+    public func withUpdated(name: String?, defaultWallpaper: TelegramWallpaper?) -> PresentationTheme {
+        var defaultWallpaper = defaultWallpaper
+        if let wallpaper = defaultWallpaper {
+            switch wallpaper {
+                case .image:
+                    defaultWallpaper = nil
+                default:
+                    break
+            }
+        }
+        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
+    }
+    
+    public func withUpdated(preview: Bool) -> PresentationTheme {
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: preview)
     }
 }

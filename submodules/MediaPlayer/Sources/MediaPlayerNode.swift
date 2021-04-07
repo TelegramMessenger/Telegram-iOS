@@ -74,6 +74,8 @@ public final class MediaPlayerNode: ASDisplayNode {
         }
     }
     
+    public var hasSentFramesToDisplay: (() -> Void)?
+    
     var takeFrameAndQueue: (Queue, () -> MediaTrackFrameResult)?
     var timer: SwiftSignalKit.Timer?
     var polling = false
@@ -101,7 +103,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     self.currentRotationAngle = rotationAngle
                     self.currentAspect = aspect
                     var transform = CGAffineTransform(rotationAngle: CGFloat(rotationAngle))
-                    if !rotationAngle.isZero {
+                    if abs(rotationAngle).remainder(dividingBy: Double.pi) > 0.1 {
                         transform = transform.scaledBy(x: CGFloat(aspect), y: CGFloat(1.0 / aspect))
                     }
                     videoLayer.setAffineTransform(transform)
@@ -146,14 +148,119 @@ public final class MediaPlayerNode: ASDisplayNode {
     
     private func poll(completion: @escaping (PollStatus) -> Void) {
         if let (takeFrameQueue, takeFrame) = self.takeFrameAndQueue, let videoLayer = self.videoLayer, let (timebase, _, _, _) = self.state {
-            let layerRef = Unmanaged.passRetained(videoLayer)
+            let layerTime = CMTimeGetSeconds(CMTimebaseGetTime(timebase))
+            let rate = CMTimebaseGetRate(timebase)
+            
+            struct PollState {
+                var numFrames: Int
+                var maxTakenTime: Double
+            }
+            
+            var loop: ((PollState) -> Void)?
+            let loopImpl: (PollState) -> Void = { [weak self] state in
+                assert(Queue.mainQueue().isCurrent())
+                
+                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                    return
+                }
+                if !videoLayer.isReadyForMoreMediaData {
+                    completion(.delay(max(1.0 / 30.0, state.maxTakenTime - layerTime)))
+                    return
+                }
+                
+                var state = state
+                
+                takeFrameQueue.async {
+                    switch takeFrame() {
+                    case let .restoreState(frames, atTime):
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                                return
+                            }
+                            videoLayer.flush()
+                        }
+                        for i in 0 ..< frames.count {
+                            let frame = frames[i]
+                            let frameTime = CMTimeGetSeconds(frame.position)
+                            state.maxTakenTime = frameTime
+                            let attachments = CMSampleBufferGetSampleAttachmentsArray(frame.sampleBuffer, createIfNecessary: true)! as NSArray
+                            let dict = attachments[0] as! NSMutableDictionary
+                            if i == 0 {
+                                CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_ResetDecoderBeforeDecoding as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
+                                CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
+                            }
+                            if CMTimeCompare(frame.position, atTime) < 0 {
+                                dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DoNotDisplay as NSString as String)
+                            } else if CMTimeCompare(frame.position, atTime) == 0 {
+                                dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DisplayImmediately as NSString as String)
+                                dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString as String)
+                            }
+                            Queue.mainQueue().async {
+                                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                                    return
+                                }
+                                videoLayer.enqueue(frame.sampleBuffer)
+                                strongSelf.hasSentFramesToDisplay?()
+                            }
+                        }
+                        Queue.mainQueue().async {
+                            loop?(state)
+                        }
+                    case let .frame(frame):
+                        state.numFrames += 1
+                        let frameTime = CMTimeGetSeconds(frame.position)
+                        if frame.resetDecoder {
+                            Queue.mainQueue().async {
+                                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                                    return
+                                }
+                                videoLayer.flush()
+                            }
+                        }
+                        
+                        if frame.decoded && frameTime < layerTime {
+                            Queue.mainQueue().async {
+                                loop?(state)
+                            }
+                        } else {
+                            state.maxTakenTime = frameTime
+                            Queue.mainQueue().async {
+                                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                                    return
+                                }
+                                videoLayer.enqueue(frame.sampleBuffer)
+                                strongSelf.hasSentFramesToDisplay?()
+                            }
+                            
+                            Queue.mainQueue().async {
+                                loop?(state)
+                            }
+                        }
+                    case .skipFrame:
+                        Queue.mainQueue().async {
+                            loop?(state)
+                        }
+                    case .noFrames:
+                        DispatchQueue.main.async {
+                            completion(.finished)
+                        }
+                    case .finished:
+                        DispatchQueue.main.async {
+                            completion(.finished)
+                        }
+                    }
+                }
+            }
+            loop = loopImpl
+            loop?(PollState(numFrames: 0, maxTakenTime: layerTime + 0.1))
+            
+            /*let layerRef = Unmanaged.passRetained(videoLayer)
             takeFrameQueue.async {
                 let status: PollStatus
                 do {
                     var numFrames = 0
                     let layer = layerRef.takeUnretainedValue()
-                    let layerTime = CMTimeGetSeconds(CMTimebaseGetTime(timebase))
-                    let rate = CMTimebaseGetRate(timebase)
+                    
                     var maxTakenTime = layerTime + 0.1
                     var finised = false
                     loop: while true {
@@ -230,7 +337,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     
                     completion(status)
                 }
-            }
+            }*/
         }
     }
     
@@ -285,6 +392,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     strongSelf.updateLayout()
                     
                     strongSelf.layer.addSublayer(videoLayer)
+                    
                     strongSelf.updateState()
                 }
             }
@@ -297,13 +405,11 @@ public final class MediaPlayerNode: ASDisplayNode {
         
         if let (takeFrameQueue, _) = self.takeFrameAndQueue {
             if let videoLayer = self.videoLayer {
-                takeFrameQueue.async {
+                videoLayer.flushAndRemoveImage()
+                
+                Queue.mainQueue().after(1.0, {
                     videoLayer.flushAndRemoveImage()
-                    
-                    takeFrameQueue.after(1.0, {
-                        videoLayer.flushAndRemoveImage()
-                    })
-                }
+                })
             }
         }
     }

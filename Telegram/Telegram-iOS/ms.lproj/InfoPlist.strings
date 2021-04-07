@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram akan sentiasa muat naik kenalan anda ke pelayan awan yang berenkripsi tinggi agar anda boleh berhubung dengan rakan anda di semua peranti anda.";
+"NSLocationWhenInUseUsageDescription" = "Bila anda hantar lokasi anda kepada rakan anda, Telegram perlukan akses untuk tunjuk peta.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Bila anda pilih untuk kongsi Lokasi Langsung anda dengan rakan dalam chat, Telegram perlu akses latar belakang ke lokasi anda agar lokasi anda sentiasa dikemaskini ketika perkongsian.";
+"NSLocationAlwaysUsageDescription" = "Bila anda pilih untuk kongsi lokasi langsung anda dengan rakan dalam chat, Telegram perlu akses latar belakang agar lokasi anda sentiasa dikemaskini. Anda juga harus hantar lokasi anda ke Jam Apple.";
+"NSCameraUsageDescription" = "Kita perlukan ini agar anda boleh ambil dan kongsi foto dan video, dan juga buat panggilan video.";
+"NSPhotoLibraryUsageDescription" = "Kita perlu ini agar anda boleh kongsi foto dan video dari librari foto anda.";
+"NSPhotoLibraryAddUsageDescription" = "Kita perlu ini agar anda boleh simpan foto dan video ke librari foto anda.";
+"NSMicrophoneUsageDescription" = "Kita perlu ini agar anda boleh rekod dan kongsi mesej suara dan video dengan suara.";
+"NSSiriUsageDescription" = "Anda boleh guna Siri untuk kirim mesej.";
+"NSFaceIDUsageDescription" = "Anda boleh guna ID Muka untuk guna aplikasi.";

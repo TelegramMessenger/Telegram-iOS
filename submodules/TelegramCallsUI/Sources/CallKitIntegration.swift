@@ -1,10 +1,13 @@
 import Foundation
 import UIKit
 import CallKit
+import Intents
 import AVFoundation
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
+import AppBundle
 
 private var sharedProviderDelegate: AnyObject?
 
@@ -12,13 +15,13 @@ public final class CallKitIntegration {
     public static var isAvailable: Bool {
         #if targetEnvironment(simulator)
         return false
-        #endif
-        
+        #else
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             return Locale.current.regionCode?.lowercased() != "cn"
         } else {
             return false
         }
+        #endif
     }
     
     private let audioSessionActivePromise = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -26,7 +29,7 @@ public final class CallKitIntegration {
         return self.audioSessionActivePromise.get()
     }
     
-    init?(startCall: @escaping (Account, UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    init?(startCall: @escaping (Account, UUID, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         if !CallKitIntegration.isAvailable {
             return nil
         }
@@ -46,9 +49,10 @@ public final class CallKitIntegration {
         #endif
     }
     
-    func startCall(account: Account, peerId: PeerId, displayTitle: String) {
+    func startCall(account: Account, peerId: PeerId, isVideo: Bool, displayTitle: String) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(account: account, peerId: peerId, displayTitle: displayTitle)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(account: account, peerId: peerId, isVideo: isVideo, displayTitle: displayTitle)
+            self.donateIntent(peerId: peerId, displayTitle: displayTitle)
         }
     }
     
@@ -64,15 +68,29 @@ public final class CallKitIntegration {
         }
     }
     
-    func reportIncomingCall(uuid: UUID, handle: String, displayTitle: String, completion: ((NSError?) -> Void)?) {
+    func reportIncomingCall(uuid: UUID, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, handle: handle, displayTitle: displayTitle, completion: completion)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, handle: handle, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
         }
     }
     
     func reportOutgoingCallConnected(uuid: UUID, at date: Date) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.reportOutgoingCallConnected(uuid: uuid, at: date)
+        }
+    }
+    
+    private func donateIntent(peerId: PeerId, displayTitle: String) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            let handle = INPersonHandle(value: "tg\(peerId.id)", type: .unknown)
+            let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peerId.id)")
+        
+            let intent = INStartAudioCallIntent(contacts: [contact])
+            
+            let interaction = INInteraction(intent: intent, response: nil)
+            interaction.direction = .outgoing
+            interaction.donate { _ in
+            }
         }
     }
 }
@@ -84,7 +102,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     
     private var currentStartCallAccount: (UUID, Account)?
     
-    private var startCall: ((Account, UUID, String) -> Signal<Bool, NoError>)?
+    private var startCall: ((Account, UUID, String, Bool) -> Signal<Bool, NoError>)?
     private var answerCall: ((UUID) -> Void)?
     private var endCall: ((UUID) -> Signal<Bool, NoError>)?
     private var setCallMuted: ((UUID, Bool) -> Void)?
@@ -95,14 +113,14 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     fileprivate var audioSessionActivePromise: ValuePromise<Bool>?
     
     override init() {
-        self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration)
+        self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration())
         
         super.init()
         
         self.provider.setDelegate(self, queue: nil)
     }
     
-    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (Account, UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (Account, UUID, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         self.audioSessionActivePromise = audioSessionActivePromise
         self.startCall = startCall
         self.answerCall = answerCall
@@ -111,14 +129,14 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.audioSessionActivationChanged = audioSessionActivationChanged
     }
     
-    static var providerConfiguration: CXProviderConfiguration {
+    private static func providerConfiguration() -> CXProviderConfiguration {
         let providerConfiguration = CXProviderConfiguration(localizedName: "Telegram")
         
-        providerConfiguration.supportsVideo = false
+        providerConfiguration.supportsVideo = true
         providerConfiguration.maximumCallsPerCallGroup = 1
         providerConfiguration.maximumCallGroups = 1
         providerConfiguration.supportedHandleTypes = [.phoneNumber, .generic]
-        if let image = UIImage(named: "Call/CallKitLogo", in: Bundle(for: CallKitIntegration.self), compatibleWith: nil) {
+        if let image = UIImage(named: "Call/CallKitLogo", in: getAppBundle(), compatibleWith: nil) {
             providerConfiguration.iconTemplateImageData = image.pngData()
         }
         
@@ -148,14 +166,14 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         
     }
     
-    func startCall(account: Account, peerId: PeerId, displayTitle: String) {
+    func startCall(account: Account, peerId: PeerId, isVideo: Bool, displayTitle: String) {
         let uuid = UUID()
         self.currentStartCallAccount = (uuid, account)
         let handle = CXHandle(type: .generic, value: "\(peerId.id)")
         let startCallAction = CXStartCallAction(call: uuid, handle: handle)
         startCallAction.contactIdentifier = displayTitle
 
-        startCallAction.isVideo = false
+        startCallAction.isVideo = isVideo
         let transaction = CXTransaction(action: startCallAction)
         
         self.requestTransaction(transaction, completion: { _ in
@@ -171,7 +189,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         })
     }
     
-    func reportIncomingCall(uuid: UUID, handle: String, displayTitle: String, completion: ((NSError?) -> Void)?) {
+    func reportIncomingCall(uuid: UUID, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
         let update = CXCallUpdate()
         update.remoteHandle = CXHandle(type: .generic, value: handle)
         update.localizedCallerName = displayTitle
@@ -179,6 +197,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         update.supportsGrouping = false
         update.supportsUngrouping = false
         update.supportsDTMF = false
+        update.hasVideo = isVideo
         
         self.provider.reportNewIncomingCall(with: uuid, update: update, completion: { error in
             completion?(error as NSError?)
@@ -204,7 +223,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.currentStartCallAccount = nil
         let disposable = MetaDisposable()
         self.disposableSet.add(disposable)
-        disposable.set((startCall(account, action.callUUID, action.handle.value)
+        disposable.set((startCall(account, action.callUUID, action.handle.value, action.isVideo)
         |> deliverOnMainQueue
         |> afterDisposed { [weak self, weak disposable] in
             if let strongSelf = self, let disposable = disposable {

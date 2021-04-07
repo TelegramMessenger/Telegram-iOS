@@ -1,3 +1,4 @@
 #!/bin/sh
 
-swift tools/GenerateLocalization.swift Telegram-iOS/en.lproj/Localizable.strings submodules/TelegramPresentationData/Sources/PresentationStrings.swift submodules/TelegramUI/TelegramUI/Resources/PresentationStrings.mapping
+swift -swift-version 5 tools/GenerateLocalization.swift Telegram/Telegram-iOS/en.lproj/Localizable.strings submodules/TelegramPresentationData/Sources/PresentationStrings.swift submodules/TelegramUI/Resources/PresentationStrings.mapping
+

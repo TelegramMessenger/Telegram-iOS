@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import FFMpeg
+import FFMpegBinding
 
 final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     private let codecContext: FFMpegAVCodecContext
@@ -9,26 +9,93 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     private let audioFrame: FFMpegAVFrame
     private var resetDecoderOnNextFrame = true
     
-    init(codecContext: FFMpegAVCodecContext) {
+    private var delayedFrames: [MediaTrackFrame] = []
+    
+    init(codecContext: FFMpegAVCodecContext, sampleRate: Int = 44100, channelCount: Int = 2) {
         self.codecContext = codecContext
         self.audioFrame = FFMpegAVFrame()
         
-        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: 2, destinationSampleRate: 44100, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: channelCount, destinationSampleRate: sampleRate, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+    }
+    
+    func decodeRaw(frame: MediaTrackDecodableFrame) -> Data? {
+        let status = frame.packet.send(toDecoder: self.codecContext)
+        if status == 0 {
+            let result = self.codecContext.receive(into: self.audioFrame)
+            if case .success = result {
+                guard let data = self.swrContext.resample(self.audioFrame) else {
+                    return nil
+                }
+                
+                return data
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
     }
     
     func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
         let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
-            if self.codecContext.receive(into: self.audioFrame) {
-                return convertAudioFrame(self.audioFrame, pts: frame.pts, duration: frame.duration)
+            while true {
+                let result = self.codecContext.receive(into: self.audioFrame)
+                if case .success = result {
+                    if let convertedFrame = convertAudioFrame(self.audioFrame, pts: frame.pts, duration: frame.duration) {
+                        self.delayedFrames.append(convertedFrame)
+                    }
+                } else {
+                    break
+                }
+            }
+            
+            if self.delayedFrames.count >= 1 {
+                var minFrameIndex = 0
+                var minPosition = self.delayedFrames[0].position
+                for i in 1 ..< self.delayedFrames.count {
+                    if CMTimeCompare(self.delayedFrames[i].position, minPosition) < 0 {
+                        minFrameIndex = i
+                        minPosition = self.delayedFrames[i].position
+                    }
+                }
+                return self.delayedFrames.remove(at: minFrameIndex)
             }
         }
         
         return nil
     }
     
+    func takeQueuedFrame() -> MediaTrackFrame? {
+        if self.delayedFrames.count >= 1 {
+            var minFrameIndex = 0
+            var minPosition = self.delayedFrames[0].position
+            for i in 1 ..< self.delayedFrames.count {
+                if CMTimeCompare(self.delayedFrames[i].position, minPosition) < 0 {
+                    minFrameIndex = i
+                    minPosition = self.delayedFrames[i].position
+                }
+            }
+            return self.delayedFrames.remove(at: minFrameIndex)
+        } else {
+            return nil
+        }
+    }
+    
     func takeRemainingFrame() -> MediaTrackFrame? {
-        return nil
+        if !self.delayedFrames.isEmpty {
+            var minFrameIndex = 0
+            var minPosition = self.delayedFrames[0].position
+            for i in 1 ..< self.delayedFrames.count {
+                if CMTimeCompare(self.delayedFrames[i].position, minPosition) < 0 {
+                    minFrameIndex = i
+                    minPosition = self.delayedFrames[i].position
+                }
+            }
+            return self.delayedFrames.remove(at: minFrameIndex)
+        } else {
+            return nil
+        }
     }
     
     private func convertAudioFrame(_ frame: FFMpegAVFrame, pts: CMTime, duration: CMTime) -> MediaTrackFrame? {

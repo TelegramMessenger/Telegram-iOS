@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 
 public struct AutomaticMediaDownloadCategory: PostboxCoding, Equatable {
     public var cellular: Bool

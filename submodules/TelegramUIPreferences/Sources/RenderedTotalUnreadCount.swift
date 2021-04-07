@@ -8,15 +8,13 @@ public enum RenderedTotalUnreadCountType {
 }
 
 public func renderedTotalUnreadCount(inAppNotificationSettings: InAppNotificationSettings, transaction: Transaction) -> (Int32, RenderedTotalUnreadCountType) {
-    let totalUnreadState = transaction.getTotalUnreadState()
+    let totalUnreadState = transaction.getTotalUnreadState(groupId: .root)
     return renderedTotalUnreadCount(inAppSettings: inAppNotificationSettings, totalUnreadState: totalUnreadState)
 }
 
 public func renderedTotalUnreadCount(inAppSettings: InAppNotificationSettings, totalUnreadState: ChatListTotalUnreadState) -> (Int32, RenderedTotalUnreadCountType) {
     let type: RenderedTotalUnreadCountType
     switch inAppSettings.totalUnreadCountDisplayStyle {
-        case .raw:
-            type = .raw
         case .filtered:
             type = .filtered
     }
@@ -42,8 +40,6 @@ public func renderedTotalUnreadCount(accountManager: AccountManager, postbox: Po
         }
         let type: RenderedTotalUnreadCountType
         switch inAppSettings.totalUnreadCountDisplayStyle {
-            case .raw:
-                type = .raw
             case .filtered:
                 type = .filtered
         }

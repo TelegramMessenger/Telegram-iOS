@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 
 private final class ThreadTaskQueue: NSObject {
     private var mutex: pthread_mutex_t
@@ -282,6 +283,9 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                 let _ = currentSemaphore.swap(nil)
                                 subscriber.putError(.generic)
                             }
+                        } else {
+                            let _ = currentSemaphore.swap(nil)
+                            subscriber.putError(.generic)
                         }
                     }
                 })

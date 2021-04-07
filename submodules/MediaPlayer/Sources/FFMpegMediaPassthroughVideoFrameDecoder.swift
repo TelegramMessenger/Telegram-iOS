@@ -39,6 +39,10 @@ final class FFMpegMediaPassthroughVideoFrameDecoder: MediaTrackFrameDecoder {
         return MediaTrackFrame(type: .video, sampleBuffer: sampleBuffer!, resetDecoder: resetDecoder, decoded: false, rotationAngle: self.rotationAngle)
     }
     
+    func takeQueuedFrame() -> MediaTrackFrame? {
+        return nil
+    }
+    
     func takeRemainingFrame() -> MediaTrackFrame? {
         return nil
     }

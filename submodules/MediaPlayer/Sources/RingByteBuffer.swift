@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import RingBuffer
 
 public final class RingByteBuffer {
     public let size: Int

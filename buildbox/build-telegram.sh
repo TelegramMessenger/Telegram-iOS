@@ -1,112 +1,205 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
 BUILD_TELEGRAM_VERSION="1"
 
+MACOS_VERSION="10.15"
+XCODE_VERSION="12.4"
+GUEST_SHELL="bash"
+
+VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
+echo "Base VM: \"$VM_BASE_NAME\""
+
+case "$(uname -s)" in
+    Linux*)     BUILD_MACHINE=linux;;
+    Darwin*)    BUILD_MACHINE=macOS;;
+    *)          BUILD_MACHINE=""
+esac
+
+if [ "$BUILD_MACHINE" == "linux" ]; then
+	for MACHINE in $(virsh list --all --name); do
+		if [ "$MACHINE" == "$VM_BASE_NAME" ]; then
+			FOUND_BASE_MACHINE="1"
+			break
+		fi
+	done
+	if [ -z "$FOUND_BASE_MACHINE" ]; then
+		echo "Virtual machine $VM_BASE_NAME not found"
+		exit 1
+	fi
+elif [ "$BUILD_MACHINE" == "macOS" ]; then
+	echo "Building on macOS"
+else
+	echo "Unknown build machine $(uname -s)"
+fi
+
 if [ `which cleanup-telegram-build-vms.sh` ]; then
 	cleanup-telegram-build-vms.sh
+fi
+
+if [ -z "$BAZEL" ]; then
+	echo "BAZEL is not defined"
+	exit 1
+fi
+
+if [ ! -f "$BAZEL" ]; then
+	echo "bazel not found at $BAZEL"
+	exit 1
 fi
 
 BUILDBOX_DIR="buildbox"
 
 mkdir -p "$BUILDBOX_DIR/transient-data"
 
+rm -f "tools/bazel"
+cp "$BAZEL" "tools/bazel"
+
 BUILD_CONFIGURATION="$1"
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ]; then
-	CODESIGNING_SUBPATH="transient-data/codesigning"
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
+	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	CODESIGNING_SUBPATH="transient-data/codesigning"
+	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
-	CODESIGNING_SUBPATH="fake-codesigning"
+	CODESIGNING_SUBPATH="build-system/fake-codesigning"
 else
 	echo "Unknown configuration $1"
 	exit 1
 fi
 
-BASE_DIR=$(pwd)
+COMMIT_COMMENT="$(git log -1 --pretty=%B)"
+case "$COMMIT_COMMENT" in 
+  *"[nocache]"*)
+	export BAZEL_HTTP_CACHE_URL=""
+    ;;
+esac
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	if [ ! `which setup-telegram-build.sh` ]; then
-		echo "setup-telegram-build.sh not found in PATH $PATH"
-		exit 1
-	fi
-	source `which setup-telegram-build.sh`
-	setup_telegram_build "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
-	if [ "$SETUP_TELEGRAM_BUILD_VERSION" != "$BUILD_TELEGRAM_VERSION" ]; then
-		echo "setup-telegram-build.sh script version doesn't match"
-		exit 1
-	fi
-	if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-		if [ -z "$TELEGRAM_BUILD_APPSTORE_PASSWORD" ]; then
-			echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
-			exit 1
-		fi
-		if [ -z "$TELEGRAM_BUILD_APPSTORE_TEAM_NAME" ]; then
-			echo "TELEGRAM_BUILD_APPSTORE_TEAM_NAME is not set"
-			exit 1
-		fi
-	fi
+COMMIT_ID="$(git rev-parse HEAD)"
+COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+if [ -z "$2" ]; then
+	COMMIT_COUNT=$(git rev-list --count HEAD)
+	BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
+	COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
+	BUILD_NUMBER="$COMMIT_COUNT"
+else
+	BUILD_NUMBER="$2"
 fi
 
-if [ ! -d "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" ]; then
-	echo "$BUILDBOX_DIR/$CODESIGNING_SUBPATH does not exist"
+BASE_DIR=$(pwd)
+
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+	if [ ! `which generate-configuration.sh` ]; then
+		echo "generate-configuration.sh not found in PATH $PATH"
+		exit 1
+	fi
+
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning"
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+
+	case "$BUILD_CONFIGURATION" in
+		"hockeyapp"|"appcenter-experimental"|"appcenter-experimental-2")
+			generate-configuration.sh internal release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+			;;
+
+		"appstore")
+			generate-configuration.sh appstore release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+			;;
+
+		*)
+			echo "Unknown build configuration $BUILD_CONFIGURATION"
+			exit 1
+			;;
+	esac
+elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning"
+	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+
+	cp -R build-system/fake-codesigning/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning/"
+	cp -R build-system/example-configuration/* "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration/"
+fi
+
+if [ ! -d "$CODESIGNING_SUBPATH" ]; then
+	echo "$CODESIGNING_SUBPATH does not exist"
 	exit 1
 fi
 
 SOURCE_DIR=$(basename "$BASE_DIR")
-cd ..
-rm -f "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar"
-tar cf "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar" --exclude "$SOURCE_DIR/$BUILDBOX_DIR" "$SOURCE_DIR"
-cd "$BASE_DIR"
-
-VM_BASE_NAME="macos10_14_3_Xcode10_1"
-
-SNAPSHOT_ID=$(prlctl snapshot-list "$VM_BASE_NAME" | grep -Eo '\{(\d|[a-f]|-)*\}' | tr '\n' '\0')
-
-if [ -z "$SNAPSHOT_ID" ]; then
-	echo "$VM_BASE_NAME is required to have one snapshot"
-	exit 1
-fi
+rm -f "$BUILDBOX_DIR/transient-data/source.tar"
+set -x
+find . -type f -a -not -regex "\\." -a -not -regex ".*\\./git" -a -not -regex ".*\\./git/.*" -a -not -regex "\\./bazel-bin" -a -not -regex "\\./bazel-bin/.*" -a -not -regex "\\./bazel-out" -a -not -regex "\\./bazel-out/.*" -a -not -regex "\\./bazel-testlogs" -a -not -regex "\\./bazel-testlogs/.*" -a -not -regex "\\./bazel-telegram-ios" -a -not -regex "\\./bazel-telegram-ios/.*" -a -not -regex "\\./buildbox" -a -not -regex "\\./buildbox/.*" -a -not -regex "\\./buck-out" -a -not -regex "\\./buck-out/.*" -a -not -regex "\\./\\.buckd" -a -not -regex "\\./\\.buckd/.*" -a -not -regex "\\./build" -a -not -regex "\\./build/.*" -print0 | tar cf "$BUILDBOX_DIR/transient-data/source.tar" --null -T -
 
 PROCESS_ID="$$"
-VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
 
-prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
-prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
-
-VM_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'")
-
-scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
-
-if [ "$BUILD_CONFIGURATION" == "verify" ]; then
-	ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "mkdir -p telegram-ios-shared/fastlane; echo '' > telegram-ios-shared/fastlane/Fastfile"
+if [ -z "$RUNNING_VM" ]; then
+	VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
 else
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/transient-data/telegram-ios-shared" telegram@"$VM_IP":telegram-ios-shared
+	VM_NAME="$RUNNING_VM"
 fi
+
+if [ "$BUILD_MACHINE" == "linux" ]; then
+	virt-clone --original "$VM_BASE_NAME" --name "$VM_NAME" --auto-clone
+	virsh start "$VM_NAME"
+
+	echo "Getting VM IP"
+
+	while [ 1 ]; do
+		TEST_IP=$(virsh domifaddr "$VM_NAME" 2>/dev/null | egrep -o 'ipv4.*' | sed -e 's/ipv4\s*//g' | sed -e 's|/.*||g')
+		if [ ! -z "$TEST_IP" ]; then
+			RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
+			if [ "$RESPONSE" == "1" ]; then
+				VM_IP="$TEST_IP"
+				break
+			fi
+		fi
+		sleep 1
+	done
+elif [ "$BUILD_MACHINE" == "macOS" ]; then
+	if [ -z "$RUNNING_VM" ]; then
+		prlctl clone "$VM_BASE_NAME" --linked --name "$VM_NAME"
+		prlctl start "$VM_NAME"
+
+		echo "Getting VM IP"
+
+		while [ 1 ]; do
+			TEST_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'" 2>/dev/null || echo "")
+			if [ ! -z "$TEST_IP" ]; then
+				RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
+				if [ "$RESPONSE" == "1" ]; then
+					VM_IP="$TEST_IP"
+					break
+				fi
+			fi
+			sleep 1
+		done
+	fi
+	echo "VM_IP=$VM_IP"
+fi
+
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration" telegram@"$VM_IP":telegram-configuration
+
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export BUILD_NUMBER=\"$BUILD_NUMBER\"; export BAZEL_HTTP_CACHE_URL=\"$BAZEL_HTTP_CACHE_URL\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
-if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	ARCHIVE_PATH="$HOME/telegram-builds-archive"
-	DATE_PATH=$(date +%Y-%m-%d_%H-%M-%S)
-	ARCHIVE_BUILD_PATH="$ARCHIVE_PATH/$DATE_PATH"
-	mkdir -p "$ARCHIVE_PATH"
-	mkdir -p "$ARCHIVE_BUILD_PATH"
-	APPSTORE_IPA="Telegram-iOS-AppStoreLLC.ipa"
-	APPSTORE_DSYM_ZIP="Telegram-iOS-AppStoreLLC.app.dSYM.zip"
-	APPSTORE_TARGET_IPA="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.ipa"
-	APPSTORE_TARGET_DSYM_ZIP="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.app.dSYM.zip"
+OUTPUT_PATH="build/artifacts"
+rm -rf "$OUTPUT_PATH"
+mkdir -p "$OUTPUT_PATH"
 
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.ipa" "$ARCHIVE_BUILD_PATH/"
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.zip" "$ARCHIVE_BUILD_PATH/"
-elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
-	VERIFY_IPA="Telegram-Verify-Build.ipa"
-	rm -f "$VERIFY_IPA"
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa "./$VERIFY_IPA"
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/build/artifacts/*" "$OUTPUT_PATH/"
+
+if [ -z "$RUNNING_VM" ]; then
+	if [ "$BUILD_MACHINE" == "linux" ]; then
+		virsh destroy "$VM_NAME"
+		virsh undefine "$VM_NAME" --remove-all-storage --nvram
+	elif [ "$BUILD_MACHINE" == "macOS" ]; then
+		echo "Deleting VM..."
+		#prlctl stop "$VM_NAME" --kill
+		#prlctl delete "$VM_NAME"
+	fi
 fi
 
-prlctl stop "$VM_NAME" --kill
-prlctl delete "$VM_NAME"
+if [ ! -f "$OUTPUT_PATH/Telegram.ipa" ]; then
+	exit 1
+fi

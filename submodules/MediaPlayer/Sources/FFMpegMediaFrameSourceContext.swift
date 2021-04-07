@@ -3,7 +3,8 @@ import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
-import FFMpeg
+import SyncCore
+import FFMpegBinding
 
 private struct StreamContext {
     let index: Int
@@ -72,8 +73,10 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     #endif*/
     
     let resourceSize: Int = resourceReference.resource.size ?? Int(Int32.max - 1)
-    let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
+    let readCount = max(0, min(resourceSize - context.readingOffset, Int(bufferSize)))
     let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
+    
+    assert(readCount < 16 * 1024 * 1024)
     
     if let maximumFetchSize = context.maximumFetchSize {
         context.touchedRanges.insert(integersIn: requestRange)
@@ -88,7 +91,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     }
     
     if streamable {
-        let data: Signal<Data, NoError>
+        let data: Signal<(Data, Bool), NoError>
         data = postbox.mediaBox.resourceData(resourceReference.resource, size: resourceSize, in: requestRange, mode: .complete)
         if readCount == 0 {
             fetchedData = Data()
@@ -99,8 +102,10 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 let semaphore = DispatchSemaphore(value: 0)
                 let _ = context.currentSemaphore.swap(semaphore)
                 var completedRequest = false
-                let disposable = data.start(next: { data in
-                    if data.count == readCount {
+                let disposable = data.start(next: { result in
+                    let (data, isComplete) = result
+                    if data.count == readCount || isComplete {
+                        precondition(data.count <= readCount)
                         fetchedData = data
                         completedRequest = true
                         semaphore.signal()
@@ -122,12 +127,14 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 let readingOffset = context.readingOffset
                 let readCount = max(0, min(fileSize - readingOffset, Int(bufferSize)))
                 let range = readingOffset ..< (readingOffset + readCount)
+                assert(readCount < 16 * 1024 * 1024)
                 
                 lseek(fd, off_t(range.lowerBound), SEEK_SET)
                 var data = Data(count: readCount)
-                data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                    let readBytes = read(fd, bytes, readCount)
-                    assert(readBytes <= readCount)
+                data.withUnsafeMutableBytes { bytes -> Void in
+                    precondition(bytes.baseAddress != nil)
+                    let readBytes = read(fd, bytes.baseAddress, readCount)
+                    precondition(readBytes <= readCount)
                 }
                 fetchedData = data
                 close(fd)
@@ -143,13 +150,17 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                     let readCount = max(0, min(next.size - readingOffset, Int(bufferSize)))
                     let range = readingOffset ..< (readingOffset + readCount)
                     
+                    assert(readCount < 16 * 1024 * 1024)
+                    
                     let fd = open(next.path, O_RDONLY, S_IRUSR)
                     if fd >= 0 {
                         lseek(fd, off_t(range.lowerBound), SEEK_SET)
                         var data = Data(count: readCount)
-                        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                            let readBytes = read(fd, bytes, readCount)
+                        data.withUnsafeMutableBytes { bytes -> Void in
+                            precondition(bytes.baseAddress != nil)
+                            let readBytes = read(fd, bytes.baseAddress, readCount)
                             assert(readBytes <= readCount)
+                            precondition(readBytes <= readCount)
                         }
                         fetchedData = data
                         close(fd)
@@ -168,8 +179,10 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
     }
     if let fetchedData = fetchedData {
-        fetchedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-            memcpy(buffer, bytes, fetchedData.count)
+        assert(fetchedData.count <= readCount)
+        fetchedData.withUnsafeBytes { bytes -> Void in
+            precondition(bytes.baseAddress != nil)
+            memcpy(buffer, bytes.baseAddress, min(fetchedData.count, readCount))
         }
         fetchedCount = Int32(fetchedData.count)
         context.readingOffset += Int(fetchedCount)
@@ -238,12 +251,12 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 if streamable {
                     if context.tempFilePath == nil {
                         let fetchRange: Range<Int> = context.readingOffset ..< Int(Int32.max)
-                        context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: (fetchRange, .elevated), statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
+                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (fetchRange, .elevated), statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
                     }
                 } else if !context.requestedCompleteFetch && context.fetchAutomatically {
                     context.requestedCompleteFetch = true
                     if context.tempFilePath == nil {
-                        context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
+                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
                     }
                 }
             }
@@ -274,6 +287,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     
     fileprivate var requestedDataOffset: Int?
     fileprivate let fetchedDataDisposable = MetaDisposable()
+    fileprivate let keepDataDisposable = MetaDisposable()
     fileprivate let fetchedFullDataDisposable = MetaDisposable()
     fileprivate var requestedCompleteFetch = false
     
@@ -281,6 +295,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         didSet {
             self.fetchedDataDisposable.dispose()
             self.fetchedFullDataDisposable.dispose()
+            self.keepDataDisposable.dispose()
         }
     }
     
@@ -303,6 +318,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         self.fetchedDataDisposable.dispose()
         self.fetchedFullDataDisposable.dispose()
+        self.keepDataDisposable.dispose()
     }
     
     func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?) {
@@ -328,20 +344,24 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             }
         }
         
+        if self.tempFilePath == nil {
+            self.keepDataDisposable.set(postbox.mediaBox.keepResource(id: resourceReference.resource.id).start())
+        }
+        
         if streamable {
             if self.tempFilePath == nil {
-                self.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: (0 ..< Int(Int32.max), .elevated), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (0 ..< Int(Int32.max), .elevated), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
         } else if !self.requestedCompleteFetch && self.fetchAutomatically {
             self.requestedCompleteFetch = true
             if self.tempFilePath == nil {
-                self.fetchedFullDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
         }
         
         let avFormatContext = FFMpegAVFormatContext()
         
-        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(self.ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, seek: seekCallback) else {
+        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(self.ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback) else {
             self.readingError = true
             return
         }
@@ -437,7 +457,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         if streamable {
             if self.tempFilePath == nil {
-                self.fetchedFullDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: (0 ..< Int(Int32.max), .default), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (0 ..< Int(Int32.max), .default), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
             self.requestedCompleteFetch = true
         }
@@ -551,7 +571,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             for stream in [initializedState.videoStream, initializedState.audioStream] {
                 if let stream = stream {
                     let pts = CMTimeMakeWithSeconds(timestamp, preferredTimescale: stream.timebase.timescale)
-                    initializedState.avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value)
+                    initializedState.avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value, positionOnKeyframe: true)
                     break
                 }
             }
@@ -622,6 +642,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     }
                     if let closestFrame = closestFrame {
                         actualPts = closestFrame.pts
+                    } else {
+                        if let videoStream = initializedState.videoStream {
+                            actualPts = videoStream.duration
+                        } else {
+                            actualPts = extraVideoFrames.last!.pts
+                        }
                     }
                 }
                 if let audioStream = initializedState.audioStream {

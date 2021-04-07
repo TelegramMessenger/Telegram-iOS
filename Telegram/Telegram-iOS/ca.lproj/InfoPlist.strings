@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram pujarà automàticament els vostres contactes als seus servidors xifrats, perquè pugueu connectar-vos amb els amics des de qualsevol dispositiu.";
+"NSLocationWhenInUseUsageDescription" = "Si envieu la vostra ubicació als amics, Telegram requereix accés per a mostra-los un mapa.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Si trieu de compartir la vostra ubicació en directe amb amics en un xat, Telegram requereix accés en segon pla a la vostra ubicació per a actualitzar-la durant la compartició en directe.";
+"NSLocationAlwaysUsageDescription" = "Si trieu de compartir la vostra ubicació en directe amb amics en un xat, Telegram requereix de tenir accés en segon pla a la vostra ubicació per a actualitzar-la durant la compartició en directe. També necessiteu això per a enviar ubicacions des d'un Apple Watch.";
+"NSCameraUsageDescription" = "Ens cal això perquè pugueu fer i compartir fotos i vídeos, així com fer videotrucades.";
+"NSPhotoLibraryUsageDescription" = "Ens cal això perquè pugueu compartir fotos i vídeos de la biblioteca de fotos.";
+"NSPhotoLibraryAddUsageDescription" = "Ens cal això perquè així pugueu desar fotos i vídeos a la biblioteca de fotos.";
+"NSMicrophoneUsageDescription" = "Ens cal això perquè pugueu enregistrar i compartir missatges de veu i vídeos amb so.";
+"NSSiriUsageDescription" = "Podeu usar Siri per a enviar missatges.";
+"NSFaceIDUsageDescription" = "Podeu emprar Face ID per a desblocar l'aplicació.";
