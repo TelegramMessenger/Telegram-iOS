@@ -78,6 +78,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 streamDcId: nil,
                 title: call.title,
                 scheduleTimestamp: call.scheduleTimestamp,
+                subscribedToScheduled: call.subscribedToScheduled,
                 recordingStartTimestamp: nil,
                 sortAscending: true
             ),
@@ -121,7 +122,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 }
                 return GroupCallPanelData(
                     peerId: peerId,
-                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, recordingStartTimestamp: nil, sortAscending: state.sortAscending),
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
                     activeSpeakers: activeSpeakers,
@@ -206,7 +207,7 @@ public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCach
 }
 
 private extension PresentationGroupCallState {
-    static func initialValue(myPeerId: PeerId, title: String?, scheduleTimestamp: Int32?) -> PresentationGroupCallState {
+    static func initialValue(myPeerId: PeerId, title: String?, scheduleTimestamp: Int32?, subscribedToScheduled: Bool) -> PresentationGroupCallState {
         return PresentationGroupCallState(
             myPeerId: myPeerId,
             networkState: .connecting,
@@ -217,7 +218,8 @@ private extension PresentationGroupCallState {
             recordingStartTimestamp: nil,
             title: title,
             raisedHand: false,
-            scheduleTimestamp: scheduleTimestamp
+            scheduleTimestamp: scheduleTimestamp,
+            subscribedToScheduled: subscribedToScheduled
         )
     }
 }
@@ -511,6 +513,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let joinDisposable = MetaDisposable()
     private let requestDisposable = MetaDisposable()
     private let startDisposable = MetaDisposable()
+    private let subscribeDisposable = MetaDisposable()
     private var groupCallParticipantUpdatesDisposable: Disposable?
     
     private let networkStateDisposable = MetaDisposable()
@@ -579,7 +582,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.joinAsPeerId = joinAsPeerId ?? accountContext.account.peerId
         self.schedulePending = initialCall == nil
         
-        self.stateValue = PresentationGroupCallState.initialValue(myPeerId: self.joinAsPeerId, title: initialCall?.title, scheduleTimestamp: initialCall?.scheduleTimestamp)
+        self.stateValue = PresentationGroupCallState.initialValue(myPeerId: self.joinAsPeerId, title: initialCall?.title, scheduleTimestamp: initialCall?.scheduleTimestamp, subscribedToScheduled: initialCall?.subscribedToScheduled ?? false)
         self.statePromise = ValuePromise(self.stateValue)
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -734,7 +737,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     addedParticipants.append((ssrc, participantUpdate.jsonParams))
                                 }
                             }
-                        case let .call(isTerminated, _, _, _):
+                        case let .call(isTerminated, _, _, _, _):
                             if isTerminated {
                                 strongSelf.markAsCanBeRemoved()
                             }
@@ -767,7 +770,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         })
         
         if let initialCall = initialCall, let temporaryParticipantsContext = (self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl)?.impl.syncWith({ impl in
-            impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribed: initialCall.subscribed))
+            impl.get(account: accountContext.account, peerId: peerId, call: CachedChannelData.ActiveCall(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribedToScheduled: initialCall.subscribedToScheduled))
         }) {
             self.switchToTemporaryParticipantsContext(sourceContext: temporaryParticipantsContext.context.participantsContext, oldMyPeerId: self.joinAsPeerId)
         } else {
@@ -824,6 +827,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.joinDisposable.dispose()
         self.requestDisposable.dispose()
         self.startDisposable.dispose()
+        self.subscribeDisposable.dispose()
         self.groupCallParticipantUpdatesDisposable?.dispose()
         self.leaveDisposable.dispose()
         self.isMutedDisposable.dispose()
@@ -1666,6 +1670,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         streamDcId: nil,
                         title: state.title,
                         scheduleTimestamp: state.scheduleTimestamp,
+                        subscribedToScheduled: false,
                         recordingStartTimestamp: state.recordingStartTimestamp,
                         sortAscending: state.sortAscending
                     ))))
@@ -1987,6 +1992,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.callContext?.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
     }
     
+    public func toggleScheduledSubscription(_ subscribe: Bool) {
+        guard case let .active(callInfo) = self.internalState, callInfo.scheduleTimestamp != nil else {
+            return
+        }
+        
+        self.stateValue.subscribedToScheduled = subscribe
+        
+        self.subscribeDisposable.set((toggleScheduledGroupCallSubscription(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash, subscribe: subscribe)
+        |> deliverOnMainQueue).start())
+    }
+    
     public func schedule(timestamp: Int32) {
         guard self.schedulePending else {
             return
@@ -2270,7 +2286,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             
             if let value = value {
-                strongSelf.initialCall = CachedChannelData.ActiveCall(id: value.id, accessHash: value.accessHash, title: value.title, scheduleTimestamp: nil, subscribed: false)
+                strongSelf.initialCall = CachedChannelData.ActiveCall(id: value.id, accessHash: value.accessHash, title: value.title, scheduleTimestamp: nil, subscribedToScheduled: false)
                 
                 strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
             } else {
