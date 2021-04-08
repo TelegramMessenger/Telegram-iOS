@@ -1799,21 +1799,65 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.temporaryParticipantsContext = nil
                 self.participantsContext = participantsContext
                 
+                let myPeerId = self.joinAsPeerId
+                let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
+                    if let peer = transaction.getPeer(myPeerId) {
+                        return (peer, transaction.getPeerCachedData(peerId: myPeerId))
+                    } else {
+                        return nil
+                    }
+                }
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
                     adminIds,
+                    myPeer,
                     accountContext.account.postbox.peerView(id: peerId)
-                ).start(next: { [weak self] state, adminIds, view in
+                ).start(next: { [weak self] state, adminIds, myPeerAndCachedData, view in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    let members = PresentationGroupCallMembers(
+                    var members = PresentationGroupCallMembers(
                         participants: [],
                         speakingParticipants: Set(),
                         totalCount: state.totalCount,
                         loadMoreToken: state.nextParticipantsFetchOffset
                     )
+                    
+                    var participants: [GroupCallParticipantsContext.Participant] = []
+                    var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                    if let (myPeer, cachedData) = myPeerAndCachedData {
+                        let about: String?
+                        if let cachedData = cachedData as? CachedUserData {
+                            about = cachedData.about
+                        } else if let cachedData = cachedData as? CachedUserData {
+                            about = cachedData.about
+                        } else {
+                            about = nil
+                        }
+                        participants.append(GroupCallParticipantsContext.Participant(
+                            peer: myPeer,
+                            ssrc: nil,
+                            jsonParams: nil,
+                            joinTimestamp: strongSelf.temporaryJoinTimestamp,
+                            raiseHandRating: strongSelf.temporaryRaiseHandRating,
+                            hasRaiseHand: strongSelf.temporaryHasRaiseHand,
+                            activityTimestamp: strongSelf.temporaryActivityTimestamp,
+                            activityRank: strongSelf.temporaryActivityRank,
+                            muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                            volume: nil,
+                            about: about
+                        ))
+                    }
+
+                    for participant in participants {
+                        members.participants.append(participant)
+
+                        if topParticipants.count < 3 {
+                            topParticipants.append(participant)
+                        }
+                    }
+                    
                     strongSelf.membersValue = members
                     strongSelf.stateValue.adminIds = adminIds
                     strongSelf.stateValue.canManageCall = state.isCreator || adminIds.contains(strongSelf.accountContext.account.peerId)
@@ -1842,7 +1886,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         
                         strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
                             participantCount: state.totalCount,
-                            topParticipants: [],
+                            topParticipants: topParticipants,
                             activeSpeakers: Set()
                         )))
                     }
@@ -2178,6 +2222,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.isScheduledStarted = true
         self.stateValue.scheduleTimestamp = nil
+        self.switchToTemporaryParticipantsContext(sourceContext: nil, oldMyPeerId: self.joinAsPeerId)
         
         self.startDisposable.set((startScheduledGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)
         |> deliverOnMainQueue).start(next: { [weak self] callInfo in
