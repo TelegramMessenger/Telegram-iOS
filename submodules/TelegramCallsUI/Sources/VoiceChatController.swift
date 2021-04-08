@@ -2378,7 +2378,7 @@ public final class VoiceChatController: ViewController {
                 pickerView.isUserInteractionEnabled = false
             }
             
-            self.timerNode.alpha = 1.0
+            self.timerNode.isHidden = false
             self.timerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             self.timerNode.animateIn()
             
@@ -2638,7 +2638,6 @@ public final class VoiceChatController: ViewController {
                                 self.schedule()
                             } else if callState.canManageCall {
                                 self.call.startScheduled()
-                                self.transitionToCall()
                             } else {
                                 self.call.toggleScheduledSubscription(!callState.subscribedToScheduled)
                             }
@@ -3443,7 +3442,7 @@ public final class VoiceChatController: ViewController {
                 self.listNode.isUserInteractionEnabled = false
                 self.backgroundNode.backgroundColor = panelBackgroundColor
                 self.updateIsFullscreen(false)
-            } else if self.callState?.scheduleTimestamp == nil && self.listNode.alpha == 0.0 {
+            } else if self.callState?.scheduleTimestamp == nil && !self.isScheduling && self.listNode.alpha == 0.0 {
                 self.transitionToCall()
             }
             

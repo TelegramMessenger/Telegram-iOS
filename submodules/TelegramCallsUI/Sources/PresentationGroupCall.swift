@@ -558,6 +558,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public private(set) var schedulePending = false
     private var isScheduled = false
+    private var isScheduledStarted = false
     
     init(
         accountContext: AccountContext,
@@ -1822,11 +1823,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.stateValue.recordingStartTimestamp = state.recordingStartTimestamp
                     strongSelf.stateValue.title = state.title
                     
-                    if state.scheduleTimestamp == nil {
+                    strongSelf.stateValue.scheduleTimestamp = strongSelf.isScheduledStarted ? nil : state.scheduleTimestamp
+                    if state.scheduleTimestamp == nil && !strongSelf.isScheduledStarted {
                         strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, clientParams: callInfo.clientParams, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true)), audioSessionControl: strongSelf.audioSessionControl)
                     } else {
-                        strongSelf.stateValue.scheduleTimestamp = state.scheduleTimestamp
-                                            
                         strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
                             id: callInfo.id,
                             accessHash: callInfo.accessHash,
@@ -2170,11 +2170,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }))
     }
     
+    
     public func startScheduled() {
         guard case let .active(callInfo) = self.internalState else {
             return
         }
         
+        self.isScheduledStarted = true
         self.stateValue.scheduleTimestamp = nil
         
         self.startDisposable.set((startScheduledGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)
