@@ -300,8 +300,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     
     private func updateJoinButton() {
         if self.isScheduled {
-            let purple = UIColor(rgb: 0x3252ef)
-            let pink = UIColor(rgb: 0xef436c)
+            let purple = UIColor(rgb: 0x5d4ed1)
+            let pink = UIColor(rgb: 0xea436f)
             self.joinButtonBackgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 1.0), colors: [purple, pink], locations: [0.0, 1.0], direction: .horizontal)
             self.joinButtonBackgroundNode.backgroundColor = nil
         } else {
