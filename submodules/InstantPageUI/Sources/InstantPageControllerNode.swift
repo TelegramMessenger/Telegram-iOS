@@ -563,7 +563,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         guard let strongSelf = self, let controller = strongSelf.controller else {
                             return
                         }
-                        let pinchController = PinchController(sourceNode: sourceNode)
+                        let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                            guard let strongSelf = self, let controller = strongSelf.controller else {
+                                return CGRect()
+                            }
+
+                            return controller.view.convert(controller.view.bounds, to: nil)
+                        })
                         controller.window?.presentInGlobalOverlay(pinchController)
                     }, openPeer: { [weak self] peerId in
                         self?.openPeer(peerId)

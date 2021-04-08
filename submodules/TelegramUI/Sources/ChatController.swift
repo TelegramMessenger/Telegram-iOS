@@ -916,7 +916,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let pinchController = PinchController(sourceNode: sourceNode)
+            let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                guard let strongSelf = self else {
+                    return CGRect()
+                }
+
+                return strongSelf.chatDisplayNode.view.convert(strongSelf.chatDisplayNode.frameForVisibleArea(), to: nil)
+            })
             strongSelf.window?.presentInGlobalOverlay(pinchController)
         }, openMessageContextActions: { message, node, rect, gesture in
             gesture?.cancel()
