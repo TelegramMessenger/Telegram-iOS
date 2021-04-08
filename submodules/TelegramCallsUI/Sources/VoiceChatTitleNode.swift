@@ -65,7 +65,7 @@ final class VoiceChatTitleNode: ASDisplayNode {
         self.tapped?()
     }
     
-    func update(size: CGSize, title: String, subtitle: String, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, title: String, subtitle: String, slide: Bool, transition: ContainedViewLayoutTransition) {
         var titleUpdated = false
         if let previousTitle = self.titleNode.attributedText?.string {
             titleUpdated = previousTitle != title
@@ -80,6 +80,14 @@ final class VoiceChatTitleNode: ASDisplayNode {
             })
             
             self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            
+            if slide {
+                self.infoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                let offset: CGFloat = 16.0
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -offset), duration: 0.2, removeOnCompletion: false, additive: true)
+                self.titleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.2, additive: true)
+                self.infoNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.2, additive: true)
+            }
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: UIColor(rgb: 0xffffff))

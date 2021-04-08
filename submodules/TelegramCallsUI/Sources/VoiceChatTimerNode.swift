@@ -26,9 +26,17 @@ final class VoiceChatTimerNode: ASDisplayNode {
     
     private var updateTimer: SwiftSignalKit.Timer?
     
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = false
+    
     init(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
+        
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
         self.titleNode = ImmediateTextNode()
         self.subtitleNode = ImmediateTextNode()
@@ -37,7 +45,10 @@ final class VoiceChatTimerNode: ASDisplayNode {
         
         super.init()
         
+        self.addSubnode(self.hierarchyTrackingNode)
+        
         self.allowsGroupOpacity = true
+        self.isUserInteractionEnabled = false
         
         self.foregroundGradientLayer.type = .radial
         self.foregroundGradientLayer.colors = [pink.cgColor, purple.cgColor, purple.cgColor]
@@ -53,6 +64,13 @@ final class VoiceChatTimerNode: ASDisplayNode {
         self.addSubnode(self.subtitleNode)
         
         self.maskView.addSubnode(self.timerNode)
+        
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                strongSelf.updateAnimations()
+            }
+        }
     }
     
     deinit {
@@ -60,7 +78,15 @@ final class VoiceChatTimerNode: ASDisplayNode {
     }
     
     func animateIn() {
-        self.foregroundView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
+        self.foregroundView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, damping: 100.0)
+    }
+    
+    private func updateAnimations() {
+        if self.isInHierarchy {
+            self.setupGradientAnimations()
+        } else {
+            self.foregroundGradientLayer.removeAllAnimations()
+        }
     }
     
     private func setupGradientAnimations() {
@@ -78,9 +104,9 @@ final class VoiceChatTimerNode: ASDisplayNode {
             animation.toValue = newValue
             
             CATransaction.setCompletionBlock { [weak self] in
-//                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
+                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
                     self?.setupGradientAnimations()
-//                }
+                }
             }
             
             self.foregroundGradientLayer.add(animation, forKey: "movement")
@@ -90,7 +116,7 @@ final class VoiceChatTimerNode: ASDisplayNode {
     
     func update(size: CGSize, scheduleTime: Int32?, transition: ContainedViewLayoutTransition) {
         if self.validLayout == nil {
-            self.setupGradientAnimations()
+            self.updateAnimations()
         }
         self.validLayout = size
                 
@@ -136,7 +162,7 @@ final class VoiceChatTimerNode: ASDisplayNode {
         
         self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.with(size: 21.0, design: .round, weight: .semibold, traits: []), textColor: .white)
         let subtitleSize = self.subtitleNode.updateLayout(size)
-        self.subtitleNode.frame = CGRect(x: floor((size.width - subtitleSize.width) / 2.0), y: 164.0, width: timerSize.width, height: subtitleSize.height)
+        self.subtitleNode.frame = CGRect(x: floor((size.width - subtitleSize.width) / 2.0), y: 164.0, width: subtitleSize.width, height: subtitleSize.height)
         
         self.foregroundView.frame = CGRect(origin: CGPoint(), size: size)
     }

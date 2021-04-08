@@ -187,6 +187,7 @@ public struct PresentationGroupCallState: Equatable {
     public var title: String?
     public var raisedHand: Bool
     public var scheduleTimestamp: Int32?
+    public var subscribedToScheduled: Bool
     
     public init(
         myPeerId: PeerId,
@@ -198,7 +199,8 @@ public struct PresentationGroupCallState: Equatable {
         recordingStartTimestamp: Int32?,
         title: String?,
         raisedHand: Bool,
-        scheduleTimestamp: Int32?
+        scheduleTimestamp: Int32?,
+        subscribedToScheduled: Bool
     ) {
         self.myPeerId = myPeerId
         self.networkState = networkState
@@ -210,6 +212,7 @@ public struct PresentationGroupCallState: Equatable {
         self.title = title
         self.raisedHand = raisedHand
         self.scheduleTimestamp = scheduleTimestamp
+        self.subscribedToScheduled = subscribedToScheduled
     }
 }
 
@@ -323,6 +326,7 @@ public protocol PresentationGroupCall: class {
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     var reconnectedAsEvents: Signal<Peer, NoError> { get }
     
+    func toggleScheduledSubscription(_ subscribe: Bool)
     func schedule(timestamp: Int32)
     func startScheduled()
     

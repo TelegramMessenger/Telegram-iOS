@@ -300,8 +300,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     
     private func updateJoinButton() {
         if self.isScheduled {
-            let purple = UIColor(rgb: 0x3252ef)
-            let pink = UIColor(rgb: 0xef436c)
+            let purple = UIColor(rgb: 0x5d4ed1)
+            let pink = UIColor(rgb: 0xea436f)
             self.joinButtonBackgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 1.0), colors: [purple, pink], locations: [0.0, 1.0], direction: .horizontal)
             self.joinButtonBackgroundNode.backgroundColor = nil
         } else {
@@ -505,7 +505,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             transition.updateFrame(node: self.avatarsNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarsSize.width) / 2.0), y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize))
         }
         
-        var joinText = self.strings.VoiceChat_PanelJoin.uppercased()
+        var joinText = self.strings.VoiceChat_PanelJoin
         var title = self.strings.VoiceChat_Title
         var text = self.currentText
         var isScheduled = false
@@ -554,7 +554,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self.updateJoinButton()
         }
         
-        self.joinButtonTitleNode.attributedText = NSAttributedString(string: joinText, font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.theme.chat.inputPanel.actionControlForegroundColor)
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: joinText.uppercased(), font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.theme.chat.inputPanel.actionControlForegroundColor)
         
         let joinButtonTitleSize = self.joinButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
         let joinButtonSize = CGSize(width: joinButtonTitleSize.width + 20.0, height: 28.0)

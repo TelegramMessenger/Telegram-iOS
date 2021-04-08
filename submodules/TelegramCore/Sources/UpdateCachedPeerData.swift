@@ -306,7 +306,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                     if let inputCall = chatFull.call {
                                         switch inputCall {
                                         case let .inputGroupCall(id, accessHash):
-                                            updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribed: previous.activeCall?.subscribed ?? false)
+                                            updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false)
                                         }
                                     }
                                     
@@ -516,7 +516,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
                                                 if let inputCall = inputCall {
                                                     switch inputCall {
                                                     case let .inputGroupCall(id, accessHash):
-                                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribed: previous.activeCall?.subscribed ?? false)
+                                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false)
                                                     }
                                                 }
                                                 

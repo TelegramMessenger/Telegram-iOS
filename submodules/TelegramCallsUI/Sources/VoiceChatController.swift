@@ -2311,42 +2311,47 @@ public final class VoiceChatController: ViewController {
         }
         
         private func transitionToScheduled() {
+            let springDuration: Double = 0.6
+            let springDamping: CGFloat = 100.0
+            
             self.optionsButton.alpha = 1.0
             self.optionsButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.optionsButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
+            self.optionsButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
             self.optionsButton.isUserInteractionEnabled = true
             
             self.closeButton.alpha = 1.0
             self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.closeButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
+            self.closeButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
             self.closeButton.isUserInteractionEnabled = true
             
             self.audioButton.alpha = 1.0
             self.audioButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.audioButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
+            self.audioButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
             self.audioButton.isUserInteractionEnabled = true
             
             self.leaveButton.alpha = 1.0
             self.leaveButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.leaveButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
+            self.leaveButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
             self.leaveButton.isUserInteractionEnabled = true
             
             self.scheduleCancelButton.alpha = 0.0
-            self.scheduleCancelButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+            self.scheduleCancelButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
             self.scheduleCancelButton.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 26.0), duration: 0.2, removeOnCompletion: false, additive: true)
+            
+            self.actionButton.titleLabel.layer.animatePosition(from: CGPoint(x: 0.0, y: -26.0), to: CGPoint(), duration: 0.2, additive: true)
             
             if let pickerView = self.pickerView {
                 pickerView.alpha = 0.0
-                pickerView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
+                pickerView.layer.animateScale(from: 1.0, to: 0.25, duration: 0.15, removeOnCompletion: false)
+                pickerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 pickerView.isUserInteractionEnabled = false
             }
             
             self.timerNode.alpha = 1.0
-            self.timerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.timerNode.layer.animateSpring(from: 0.4 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.3, damping: 104.0)
+            self.timerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             self.timerNode.animateIn()
             
-            self.updateTitle(transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.updateTitle(slide: true, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
         private func transitionToCall() {
@@ -2354,6 +2359,7 @@ public final class VoiceChatController: ViewController {
             
             self.listNode.alpha = 1.0
             self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.listNode.isUserInteractionEnabled = true
             
             self.timerNode.alpha = 0.0
             self.timerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
@@ -2438,8 +2444,12 @@ public final class VoiceChatController: ViewController {
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                self.controller?.dismiss(closing: false)
-                self.controller?.dismissAllTooltips()
+                if self.isScheduling {
+                    self.dismissScheduled()
+                } else {
+                    self.controller?.dismiss(closing: false)
+                    self.controller?.dismissAllTooltips()
+                }
             }
         }
         
@@ -2594,7 +2604,7 @@ public final class VoiceChatController: ViewController {
                                 self.call.startScheduled()
                                 self.transitionToCall()
                             } else {
-                                
+                                self.call.toggleScheduledSubscription(!callState.subscribedToScheduled)
                             }
                         }
                     default:
@@ -2670,8 +2680,6 @@ public final class VoiceChatController: ViewController {
                 |> deliverOnMainQueue).start(next: { [weak self] inviteLinks in
                     if let inviteLinks = inviteLinks {
                         self?.presentShare(inviteLinks)
-                    } else {
-                        self?.presentShare(GroupCallInviteLinks(listenerLink: "a", speakerLink: nil))
                     }
                 })
                 return
@@ -2937,7 +2945,7 @@ public final class VoiceChatController: ViewController {
             self.updateTitle(transition: transition)
         }
         
-        private func updateTitle(transition: ContainedViewLayoutTransition) {
+        private func updateTitle(slide: Bool = false, transition: ContainedViewLayoutTransition) {
             guard let (layout, _) = self.validLayout else {
                 return
             }
@@ -2974,7 +2982,7 @@ public final class VoiceChatController: ViewController {
                 size.width = floor(min(size.width, size.height) * 0.5)
             }
             
-            self.titleNode.update(size: CGSize(width: size.width, height: 44.0), title: title, subtitle: subtitle, transition: transition)
+            self.titleNode.update(size: CGSize(width: size.width, height: 44.0), title: title, subtitle: subtitle, slide: slide, transition: transition)
         }
         
         private func updateButtons(animated: Bool) {
@@ -3199,16 +3207,20 @@ public final class VoiceChatController: ViewController {
             let actionButtonSubtitle: String
             var actionButtonEnabled = true
             if let callState = self.callState, !self.isScheduling {
-                var isScheduled = callState.scheduleTimestamp != nil
-                if isScheduled {
+                if callState.scheduleTimestamp != nil {
                     self.ignoreNextConnecting = true
                     if callState.canManageCall {
                         actionButtonState = .scheduled(state: .start)
                         actionButtonTitle = self.presentationData.strings.VoiceChat_StartNow
                         actionButtonSubtitle = ""
                     } else {
-                        actionButtonState = .scheduled(state: .subscribe)
-                        actionButtonTitle = self.presentationData.strings.VoiceChat_SetReminder
+                        if callState.subscribedToScheduled {
+                            actionButtonState = .scheduled(state: .unsubscribe)
+                            actionButtonTitle = self.presentationData.strings.VoiceChat_CancelReminder
+                        } else {
+                            actionButtonState = .scheduled(state: .subscribe)
+                            actionButtonTitle = self.presentationData.strings.VoiceChat_SetReminder
+                        }
                         actionButtonSubtitle = ""
                     }
                 } else {
@@ -3387,6 +3399,7 @@ public final class VoiceChatController: ViewController {
             
             if self.callState?.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
                 self.listNode.alpha = 0.0
+                self.listNode.isUserInteractionEnabled = false
                 self.backgroundNode.backgroundColor = panelBackgroundColor
                 self.updateIsFullscreen(false)
             }
@@ -3681,6 +3694,7 @@ public final class VoiceChatController: ViewController {
         
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
             let contentOffset = self.listNode.visibleContentOffset()
+            let isScheduling = self.isScheduling || self.callState?.scheduleTimestamp != nil
             switch recognizer.state {
                 case .began:
                     let topInset: CGFloat
@@ -3696,7 +3710,7 @@ public final class VoiceChatController: ViewController {
                     self.controller?.dismissAllTooltips()
                 case .changed:
                     var translation = recognizer.translation(in: self.contentContainer.view).y
-                    if (self.isScheduling || self.callState?.scheduleTimestamp != nil) && translation < 0.0 {
+                    if isScheduling && translation < 0.0 {
                         return
                     }
                     var topInset: CGFloat = 0.0
@@ -3802,7 +3816,7 @@ public final class VoiceChatController: ViewController {
                                 self.controller?.dismiss(closing: false, manual: true)
                             }
                             dismissing = true
-                        } else if !self.isScheduling && (velocity.y < -300.0 || offset < topInset / 2.0) {
+                        } else if !isScheduling && (velocity.y < -300.0 || offset < topInset / 2.0) {
                             if velocity.y > -1500.0 && !self.isFullscreen {
                                 DispatchQueue.main.async {
                                     self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
@@ -3819,7 +3833,7 @@ public final class VoiceChatController: ViewController {
                             self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                                 self.animatingExpansion = false
                             })
-                        } else if !self.isScheduling {
+                        } else if !isScheduling {
                             self.updateIsFullscreen(false)
                             self.animatingExpansion = true
                             self.listNode.scroller.setContentOffset(CGPoint(), animated: false)

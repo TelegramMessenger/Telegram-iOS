@@ -61,7 +61,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatActionButtonIconNode
-    private let titleLabel: ImmediateTextNode
+    let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     private let buttonTitleLabel: ImmediateTextNode
     
@@ -607,11 +607,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskProgressLayer.lineCap = .round
         self.maskProgressLayer.path = path
         
-        let circleFrame = CGRect(origin: CGPoint(x: (358 - buttonSize.width) / 2.0, y: (358 - buttonSize.height) / 2.0), size: buttonSize).insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+        let circleFrame = CGRect(origin: CGPoint(x: (areaSize.width - buttonSize.width) / 2.0, y: (areaSize.height - buttonSize.height) / 2.0), size: buttonSize).insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
         let largerCirclePath = UIBezierPath(roundedRect: CGRect(x: circleFrame.minX, y: circleFrame.minY, width: circleFrame.width, height: circleFrame.height), cornerRadius: circleFrame.width / 2.0).cgPath
         
-        self.maskCircleLayer.fillColor = white.cgColor
         self.maskCircleLayer.path = largerCirclePath
+        self.maskCircleLayer.fillColor = white.cgColor
         self.maskCircleLayer.isHidden = true
         
         updateInHierarchy = { [weak self] value in
@@ -971,6 +971,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         CATransaction.commit()
     }
     
+    private var maskIsCircle = true
     private func setupButtonAnimation() {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -982,6 +983,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: floor((self.bounds.height - buttonHeight) / 2.0), width: self.bounds.width, height: buttonHeight), cornerRadius: 10.0).cgPath
         self.maskCircleLayer.path = path
+        self.maskIsCircle = false
         
         CATransaction.commit()
         
@@ -1001,15 +1003,19 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         let previousPath = self.maskCircleLayer.path
         self.maskCircleLayer.path = largerCirclePath
+        self.maskIsCircle = true
         
-        self.maskCircleLayer.animateSpring(from: previousPath as AnyObject, to: largerCirclePath as AnyObject, keyPath: "path", duration: 0.42, initialVelocity: 0.0, damping: 104.0)
+        self.maskCircleLayer.animateSpring(from: previousPath as AnyObject, to: largerCirclePath as AnyObject, keyPath: "path", duration: 0.6, initialVelocity: 0.0, damping: 100.0)
         
         self.maskBlobView.isHidden = false
         self.maskBlobView.startAnimating()
-        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, damping: 100.0)
         
-        let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? 0.8)
-        self.maskGradientLayer.animateSpring(from: initialScale as NSNumber, to: 0.85 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+        self.disableGlowAnimations = true
+        self.maskGradientLayer.removeAllAnimations()
+        self.maskGradientLayer.animateSpring(from: 0.3 as NSNumber, to: 0.85 as NSNumber, keyPath: "transform.scale", duration: 0.45, completion: { [weak self] _ in
+            self?.disableGlowAnimations = false
+        })
     }
     
     var isActive = false
@@ -1144,8 +1150,12 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.updateAnimations()
     }
     
+    var previousSize: CGSize?
     override func layout() {
         super.layout()
+        
+        let sizeUpdated = self.previousSize != self.bounds.size
+        self.previousSize = self.bounds.size
         
         let bounds = CGRect(x: (self.bounds.width - areaSize.width) / 2.0, y: (self.bounds.height - areaSize.height) / 2.0, width: areaSize.width, height: areaSize.height)
         let center = bounds.center
@@ -1159,7 +1169,17 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.growingForegroundCircleLayer.position = center
         self.growingForegroundCircleLayer.bounds = self.foregroundCircleLayer.bounds
         self.maskCircleLayer.frame = self.bounds
-//            circleFrame.insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+
+        if sizeUpdated && self.maskIsCircle {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let circleFrame = CGRect(origin: CGPoint(x: (self.bounds.width - buttonSize.width) / 2.0, y: (self.bounds.height - buttonSize.height) / 2.0), size: buttonSize).insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+            let largerCirclePath = UIBezierPath(roundedRect: CGRect(x: circleFrame.minX, y: circleFrame.minY, width: circleFrame.width, height: circleFrame.height), cornerRadius: circleFrame.width / 2.0).cgPath
+            
+            self.maskCircleLayer.path = largerCirclePath
+            CATransaction.commit()
+        }
+        
         self.maskProgressLayer.frame = circleFrame.insetBy(dx: -3.0, dy: -3.0)
         self.foregroundView.frame = self.bounds
         self.foregroundGradientLayer.frame = self.bounds
@@ -1543,22 +1563,22 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
             case .subscribe:
                 switch state {
                     case .unsubscribe:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminder")))
                     case .mute:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminderToMute")))
                     case .hand:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminderToRaiseHand")))
                     default:
                         break
                 }
             case .unsubscribe:
                 switch state {
                     case .subscribe:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminder")))
                     case .mute:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminderToMute")))
                     case .hand:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminderToRaiseHand")))
                     default:
                         break
                 }
@@ -1574,7 +1594,7 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
                     case .mute:
                         self.trackTo(item: ManagedAnimationItem(source: .local("VoiceMute")))
                     case .hand:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandOff2")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmuteToRaiseHand")))
                     default:
                         break
                 }
@@ -1585,7 +1605,11 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
                     case .unmute:
                         self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute")))
                     case .hand:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandOff")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceMuteToRaiseHand")))
+                    case .subscribe:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminderToRaiseHand"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
+                    case .unsubscribe:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminderToRaiseHand"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
                     case .empty:
                         self.alpha = 0.0
                     default:
@@ -1594,7 +1618,7 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
             case .hand:
                 switch state {
                     case .mute, .unmute:
-                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceHandOn")))
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceRaiseHandToMute")))
                     default:
                         break
                 }
