@@ -61,7 +61,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatActionButtonIconNode
-    private let titleLabel: ImmediateTextNode
+    let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     private let buttonTitleLabel: ImmediateTextNode
     
@@ -1005,14 +1005,17 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskCircleLayer.path = largerCirclePath
         self.maskIsCircle = true
         
-        self.maskCircleLayer.animateSpring(from: previousPath as AnyObject, to: largerCirclePath as AnyObject, keyPath: "path", duration: 0.42, initialVelocity: 0.0, damping: 104.0)
+        self.maskCircleLayer.animateSpring(from: previousPath as AnyObject, to: largerCirclePath as AnyObject, keyPath: "path", duration: 0.6, initialVelocity: 0.0, damping: 100.0)
         
         self.maskBlobView.isHidden = false
         self.maskBlobView.startAnimating()
-        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, damping: 100.0)
         
-        let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? 0.8)
-        self.maskGradientLayer.animateSpring(from: initialScale as NSNumber, to: 0.85 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+        self.disableGlowAnimations = true
+        self.maskGradientLayer.removeAllAnimations()
+        self.maskGradientLayer.animateSpring(from: 0.3 as NSNumber, to: 0.85 as NSNumber, keyPath: "transform.scale", duration: 0.45, completion: { [weak self] _ in
+            self?.disableGlowAnimations = false
+        })
     }
     
     var isActive = false

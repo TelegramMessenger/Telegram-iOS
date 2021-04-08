@@ -5774,6 +5774,8 @@ Sorry for the inconvenience.";
 
 "VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";
 "VoiceChat.CreateNewVoiceChatStart" = "Start";
+"VoiceChat.CreateNewVoiceChatStartNow" = "Start Now";
+"VoiceChat.CreateNewVoiceChatSchedule" = "Schedule";
 
 "PUSH_CHAT_VOICECHAT_START" = "%2$@|%1$@ started a voice chat";
 "PUSH_CHAT_VOICECHAT_INVITE" = "%2$@|%1$@ invited %3$@ to the voice chat";

@@ -553,7 +553,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 
                                 if canManageGroupCalls {
-                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatStart, action: {
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatStartNow, action: {
                                         if let strongSelf = self {
                                             var dismissStatus: (() -> Void)?
                                             let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
@@ -589,7 +589,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 dismissStatus?()
                                             }))
                                         }
-                                    })]), in: .window(.root))
+                                    }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatSchedule, action: {
+                                        if let strongSelf = self {
+                                            strongSelf.context.scheduleGroupCall(peerId: message.id.peerId)
+                                        }
+                                    }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                                 }
                             }
                             return true
