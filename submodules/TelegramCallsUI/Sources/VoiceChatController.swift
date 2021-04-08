@@ -2879,6 +2879,10 @@ public final class VoiceChatController: ViewController {
                 completion?()
             }
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: 24.0)
+            
+            guard self.panGestureArguments == nil else {
+                return
+            }
                         
             var bottomEdge: CGFloat = 0.0
             self.listNode.forEachItemNode { itemNode in
@@ -2889,17 +2893,21 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }
-                        
-            let listMaxY = listTopInset + listSize.height
-            if bottomEdge.isZero {
-                bottomEdge = listMaxY
-            }
             
-            var bottomOffset: CGFloat = bottomEdge - listMaxY
-//            if bottomEdge < listMaxY && (self.panGestureArguments != nil || self.isExpanded) {
+            let listMaxY = listTopInset + listSize.height
+            var bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
+                //min(bottomEdge, listMaxY)
+                        
+//
+//            if bottomEdge.isZero {
+//                bottomEdge = listMaxY
+//            }
+//
+//            var bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
+//            if bottomEdge < listMaxY && self.isExpanded {
 //                bottomOffset = bottomEdge - listMaxY
 //            }
-        
+//
             let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
