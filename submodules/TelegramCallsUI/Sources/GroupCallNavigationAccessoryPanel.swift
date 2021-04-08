@@ -7,11 +7,28 @@ import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 import AccountContext
 import AppBundle
 import SwiftSignalKit
 import AnimatedAvatarSetNode
 import AudioBlob
+
+func textForTimeout(value: Int32) -> String {
+    if value < 3600 {
+        let minutes = value / 60
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(minutes):\(secondsPadding)\(seconds)"
+    } else {
+        let hours = value / 3600
+        let minutes = (value % 3600) / 60
+        let minutesPadding = minutes < 10 ? "0" : ""
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(hours):\(minutesPadding)\(minutes):\(secondsPadding)\(seconds)"
+    }
+}
 
 private let titleFont = Font.semibold(15.0)
 private let subtitleFont = Font.regular(13.0)
@@ -79,6 +96,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var dateTimeFormat: PresentationDateTimeFormat
     
     private let tapAction: () -> Void
     
@@ -101,6 +119,10 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     let textNode: ImmediateTextNode
     private var textIsActive = false
     private let muteIconNode: ASImageNode
+    
+    private var isScheduled = false
+    private var currentText: String = ""
+    private var updateTimer: SwiftSignalKit.Timer?
     
     private let avatarsContext: AnimatedAvatarSetContext
     private var avatarsContent: AnimatedAvatarSetContext.Content?
@@ -125,6 +147,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
+        self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.tapAction = tapAction
         
@@ -135,6 +158,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButton = HighlightableButtonNode()
         self.joinButtonTitleNode = ImmediateTextNode()
         self.joinButtonBackgroundNode = ASImageNode()
+        self.joinButtonBackgroundNode.clipsToBounds = true
+        self.joinButtonBackgroundNode.displaysAsynchronously = false
+        self.joinButtonBackgroundNode.cornerRadius = 14.0
         
         self.micButton = HighlightTrackingButtonNode()
         self.micButtonForegroundNode = VoiceChatMicrophoneNode()
@@ -198,6 +224,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.membersDisposable.dispose()
         self.isMutedDisposable.dispose()
         self.audioLevelGeneratorTimer?.invalidate()
+        self.updateTimer?.invalidate()
     }
     
     public override func didLoad() {
@@ -250,6 +277,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     public func updatePresentationData(_ presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
+        self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
         
@@ -257,15 +285,28 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
-        self.joinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_PanelJoin.uppercased(), font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
-        self.joinButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: presentationData.theme.chat.inputPanel.actionControlFillColor)
-        
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: self.joinButtonTitleNode.attributedText?.string ?? "", font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
+                
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: presentationData.theme.chat.inputPanel.secondaryTextColor)
         
         self.muteIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(presentationData.theme)
         
+        self.updateJoinButton()
+        
         if let (size, leftInset, rightInset) = self.validLayout {
             self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+        }
+    }
+    
+    private func updateJoinButton() {
+        if self.isScheduled {
+            let purple = UIColor(rgb: 0x5d4ed1)
+            let pink = UIColor(rgb: 0xea436f)
+            self.joinButtonBackgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 1.0), colors: [purple, pink], locations: [0.0, 1.0], direction: .horizontal)
+            self.joinButtonBackgroundNode.backgroundColor = nil
+        } else {
+            self.joinButtonBackgroundNode.image = nil
+            self.joinButtonBackgroundNode.backgroundColor = self.theme.chat.inputPanel.actionControlFillColor
         }
     }
     
@@ -298,6 +339,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             } else {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
+            self.currentText = membersText
             
             self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
             
@@ -321,9 +363,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     } else {
                         membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                     }
-                                        
-                    strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
-                    
+                    strongSelf.currentText = membersText
+                                                            
                     strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }, animated: false)
                     
                     if let (size, leftInset, rightInset) = strongSelf.validLayout {
@@ -382,7 +423,6 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         strongSelf.micButton.view.insertSubview(audioLevelView, at: 0)
                     }
                     
-                    let level = min(1.0, max(0.0, CGFloat(value)))
                     strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
                     if value > 0.0 {
                         strongSelf.audioLevelView?.startAnimating()
@@ -400,9 +440,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             } else {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
+            self.currentText = membersText
             
-            self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
-
             self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
             
             updateAudioLevels = true
@@ -466,6 +505,57 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             transition.updateFrame(node: self.avatarsNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarsSize.width) / 2.0), y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize))
         }
         
+        var joinText = self.strings.VoiceChat_PanelJoin
+        var title = self.strings.VoiceChat_Title
+        var text = self.currentText
+        var isScheduled = false
+        if let scheduleTime = self.currentData?.info.scheduleTimestamp {
+            isScheduled = true
+            let timeString = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime)
+            if let voiceChatTitle = self.currentData?.info.title {
+                title = voiceChatTitle
+                text = self.strings.Conversation_ScheduledVoiceChatStartsOn(timeString).0
+            } else {
+                title = self.strings.Conversation_ScheduledVoiceChat
+                text = self.strings.Conversation_ScheduledVoiceChatStartsOnShort(timeString).0
+            }
+            
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            let elapsedTime = scheduleTime - currentTime
+            if elapsedTime >= 86400 {
+                joinText = timeIntervalString(strings: strings, value: elapsedTime)
+            } else if elapsedTime < 0 {
+                joinText = "-\(textForTimeout(value: abs(elapsedTime)))"
+            } else {
+                joinText = textForTimeout(value: elapsedTime)
+            }
+            
+            if self.updateTimer == nil {
+                let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                    if let strongSelf = self, let (size, leftInset, rightInset) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                    }
+                }, queue: Queue.mainQueue())
+                self.updateTimer = timer
+                timer.start()
+            }
+        } else {
+            if let timer = self.updateTimer {
+                self.updateTimer = nil
+                timer.invalidate()
+            }
+            if let voiceChatTitle = self.currentData?.info.title, voiceChatTitle.count < 15 {
+                title = voiceChatTitle
+            }
+        }
+        
+        if self.isScheduled != isScheduled {
+            self.isScheduled = isScheduled
+            self.updateJoinButton()
+        }
+        
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: joinText.uppercased(), font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.theme.chat.inputPanel.actionControlForegroundColor)
+        
         let joinButtonTitleSize = self.joinButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
         let joinButtonSize = CGSize(width: joinButtonTitleSize.width + 20.0, height: 28.0)
         let joinButtonFrame = CGRect(origin: CGPoint(x: size.width - rightInset - 7.0 - joinButtonSize.width, y: floor((panelHeight - joinButtonSize.height) / 2.0)), size: joinButtonSize)
@@ -500,15 +590,17 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 self.micButtonBackgroundNode.image = updatedImage
             }
         }
-        
-        var title = self.strings.VoiceChat_Title
-        if let voiceChatTitle = self.currentData?.info.title, voiceChatTitle.count < 15 {
-            title = voiceChatTitle
-        }
-        
+                
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width / 2.0 - 56.0, height: .greatestFiniteMagnitude))
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
+        
+        var constrainedWidth = size.width / 2.0 - 56.0
+        if isScheduled {
+            constrainedWidth = size.width - 100.0
+        }
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: constrainedWidth, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         
         let titleFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 9.0), size: titleSize)

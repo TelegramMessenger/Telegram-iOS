@@ -85,7 +85,7 @@ public enum MessageContentKind: Equatable {
     }
 }
 
-public func messageContentKind(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> MessageContentKind {
+public func messageContentKind(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: PeerId) -> MessageContentKind {
     for attribute in message.attributes {
         if let attribute = attribute as? RestrictedContentMessageAttribute {
             if let text = attribute.platformText(platform: "ios", contentSettings: contentSettings) {
@@ -95,14 +95,14 @@ public func messageContentKind(contentSettings: ContentSettings, message: Messag
         }
     }
     for media in message.media {
-        if let kind = mediaContentKind(media, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId) {
+        if let kind = mediaContentKind(media, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId) {
             return kind
         }
     }
     return .text(message.text)
 }
 
-public func mediaContentKind(_ media: Media, message: Message? = nil, strings: PresentationStrings? = nil, nameDisplayOrder: PresentationPersonNameOrder? = nil, accountPeerId: PeerId? = nil) -> MessageContentKind? {
+public func mediaContentKind(_ media: Media, message: Message? = nil, strings: PresentationStrings? = nil, nameDisplayOrder: PresentationPersonNameOrder? = nil, dateTimeFormat: PresentationDateTimeFormat? = nil, accountPeerId: PeerId? = nil) -> MessageContentKind? {
     switch media {
     case let expiredMedia as TelegramMediaExpiredContent:
         switch expiredMedia.data {
@@ -163,7 +163,7 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
         }
     case _ as TelegramMediaAction:
         if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
-            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: false) ?? "")
+            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false) ?? "")
         } else {
             return nil
         }
@@ -223,8 +223,8 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     }
 }
 
-public func descriptionStringForMessage(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> (String, Bool) {
-    let contentKind = messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId)
+public func descriptionStringForMessage(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: PeerId) -> (String, Bool) {
+    let contentKind = messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
     if !message.text.isEmpty && ![.expiredImage, .expiredVideo].contains(contentKind.key) {
         return (foldLineBreaks(message.text), false)
     }

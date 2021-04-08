@@ -73,6 +73,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case demoVideoChats(Bool)
+    case experimentalCompatibility(Bool)
+    case enableNoiseSuppression(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -155,14 +157,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 23
         case .demoVideoChats:
             return 24
-        case .playerEmbedding:
+        case .experimentalCompatibility:
+            return 25
+        case .enableNoiseSuppression:
             return 26
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 27
-        case .voiceConference:
+        case .playlistPlayback:
             return 28
+        case .voiceConference:
+            return 29
         case let .preferredVideoCodec(index, _, _, _):
-            return 29 + index
+            return 30 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -701,6 +707,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .experimentalCompatibility(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Compatibility", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.experimentalCompatibility = value
+                        return settings
+                    })
+                }).start()
+            })
+        case let .enableNoiseSuppression(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Noise Suppression", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.enableNoiseSuppression = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .playerEmbedding(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -810,6 +836,8 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if isMainApp {
         entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
         entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
+        entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
+        entries.append(.enableNoiseSuppression(experimentalSettings.enableNoiseSuppression))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

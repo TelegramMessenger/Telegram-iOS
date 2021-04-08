@@ -1561,11 +1561,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 }
             }
         }
-        
-    
+            
         if let previousActionsContainerNode = previousActionsContainerNode {
             if transition.isAnimated {
-                if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions {
+                if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions && self.getController()?.useComplexItemsTransitionAnimation == true {
                     var initialFrame = self.actionsContainerNode.frame
                     let delta = (previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height)
                     initialFrame.origin.y = self.actionsContainerNode.frame.minY + previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height
@@ -1772,6 +1771,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((ReactionContextItem.Reaction) -> Void)?
     public var dismissed: (() -> Void)?
+    
+    public var useComplexItemsTransitionAnimation = false
     
     private var shouldBeDismissedDisposable: Disposable?
     

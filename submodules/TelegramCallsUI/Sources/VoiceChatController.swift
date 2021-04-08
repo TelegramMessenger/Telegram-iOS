@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 import TelegramVoip
 import TelegramAudio
 import AccountContext
@@ -29,6 +30,7 @@ import LegacyComponents
 import LegacyMediaPickerUI
 import WebSearchUI
 import MapResourceToAvatarSizes
+import SolidRoundedButtonNode
 
 private let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 private let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
@@ -63,105 +65,6 @@ private func cornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
         context.addPath(path.cgPath)
         context.fillPath()
     })?.stretchableImage(withLeftCapWidth: 25, topCapHeight: 25)
-}
-
-
-private final class VoiceChatControllerTitleNode: ASDisplayNode {
-    private var theme: PresentationTheme
-    
-    private let titleNode: ASTextNode
-    private let infoNode: ASTextNode
-    fileprivate let recordingIconNode: VoiceChatRecordingIconNode
-    
-    public var isRecording: Bool = false {
-        didSet {
-            self.recordingIconNode.isHidden = !self.isRecording
-        }
-    }
-    
-    var tapped: (() -> Void)?
-    
-    init(theme: PresentationTheme) {
-        self.theme = theme
-        
-        self.titleNode = ASTextNode()
-        self.titleNode.displaysAsynchronously = false
-        self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.truncationMode = .byTruncatingTail
-        self.titleNode.isOpaque = false
-        
-        self.infoNode = ASTextNode()
-        self.infoNode.displaysAsynchronously = false
-        self.infoNode.maximumNumberOfLines = 1
-        self.infoNode.truncationMode = .byTruncatingTail
-        self.infoNode.isOpaque = false
-        
-        self.recordingIconNode = VoiceChatRecordingIconNode(hasBackground: false)
-        
-        super.init()
-        
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.infoNode)
-        self.addSubnode(self.recordingIconNode)
-    }
-        
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
-    }
-    
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if point.y > 0.0 && point.y < self.frame.size.height && point.x > min(self.titleNode.frame.minX, self.infoNode.frame.minX) && point.x < max(self.recordingIconNode.frame.maxX, self.infoNode.frame.maxX) {
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    @objc private func tap() {
-        self.tapped?()
-    }
-    
-    func update(size: CGSize, title: String, subtitle: String, transition: ContainedViewLayoutTransition) {
-        var titleUpdated = false
-        if let previousTitle = self.titleNode.attributedText?.string {
-            titleUpdated = previousTitle != title
-        }
-        
-        if titleUpdated, let snapshotView = self.titleNode.view.snapshotContentTree() {
-            snapshotView.frame = self.titleNode.frame
-            self.view.addSubview(snapshotView)
-            
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                snapshotView?.removeFromSuperview()
-            })
-            
-            self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        }
-        
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: UIColor(rgb: 0xffffff))
-        self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.5))
-        
-        let constrainedSize = CGSize(width: size.width - 140.0, height: size.height)
-        let titleSize = self.titleNode.measure(constrainedSize)
-        let infoSize = self.infoNode.measure(constrainedSize)
-        let titleInfoSpacing: CGFloat = 0.0
-        
-        let combinedHeight = titleSize.height + infoSize.height + titleInfoSpacing
-        
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
-        self.titleNode.frame = titleFrame
-        self.infoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - infoSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: infoSize)
-        
-        let iconSide = 16.0 + (1.0 + UIScreenPixel) * 2.0
-        let iconSize: CGSize = CGSize(width: iconSide, height: iconSide)
-        self.recordingIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 1.0, y: titleFrame.minY + 1.0), size: iconSize)
-    }
 }
 
 final class GroupVideoNode: ASDisplayNode {
@@ -730,7 +633,15 @@ public final class VoiceChatController: ViewController {
         private let leftBorderNode: ASDisplayNode
         private let rightBorderNode: ASDisplayNode
         
-        private let titleNode: VoiceChatControllerTitleNode
+        private var isScheduling = false
+        private let timerNode: VoiceChatTimerNode
+        private var pickerView: UIDatePicker?
+        private let dateFormatter: DateFormatter
+        private let scheduleTextNode: ImmediateTextNode
+        private let scheduleCancelButton: SolidRoundedButtonNode
+        private var scheduleButtonTitle = ""
+        
+        private let titleNode: VoiceChatTitleNode
         
         private var enqueuedTransitions: [ListTransition] = []
         private var floatingHeaderOffset: CGFloat?
@@ -823,6 +734,8 @@ public final class VoiceChatController: ViewController {
             self.context = call.accountContext
             self.call = call
             
+            self.isScheduling = call.schedulePending
+                        
             let presentationData = sharedContext.currentPresentationData.with { $0 }
             self.presentationData = presentationData
             
@@ -836,7 +749,7 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.isHidden = true
             
             self.backgroundNode = ASDisplayNode()
-            self.backgroundNode.backgroundColor = secondaryPanelBackgroundColor
+            self.backgroundNode.backgroundColor = self.isScheduling ? panelBackgroundColor : secondaryPanelBackgroundColor
             self.backgroundNode.clipsToBounds = false
             
             if sharedContext.immediateExperimentalUISettings.demoVideoChats {
@@ -844,6 +757,8 @@ public final class VoiceChatController: ViewController {
             }
             
             self.listNode = ListView()
+            self.listNode.alpha = self.isScheduling ? 0.0 : 1.0
+            self.listNode.isUserInteractionEnabled = !self.isScheduling
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
             self.listNode.clipsToBounds = true
             self.listNode.scroller.bounces = false
@@ -870,7 +785,7 @@ public final class VoiceChatController: ViewController {
             self.closeButton = VoiceChatHeaderButton(context: self.context)
             self.closeButton.setContent(.image(closeButtonImage(dark: false)))
             
-            self.titleNode = VoiceChatControllerTitleNode(theme: self.presentationData.theme)
+            self.titleNode = VoiceChatTitleNode(theme: self.presentationData.theme)
             
             self.topCornersNode = ASImageNode()
             self.topCornersNode.displaysAsynchronously = false
@@ -895,6 +810,13 @@ public final class VoiceChatController: ViewController {
             self.switchCameraButton.isUserInteractionEnabled = false
             self.leaveButton = CallControllerButtonItemNode()
             self.actionButton = VoiceChatActionButton()
+            
+            if self.isScheduling {
+                self.audioButton.alpha = 0.0
+                self.audioButton.isUserInteractionEnabled = false
+                self.leaveButton.alpha = 0.0
+                self.leaveButton.isUserInteractionEnabled = false
+            }
 
             self.leftBorderNode = ASDisplayNode()
             self.leftBorderNode.backgroundColor = panelBackgroundColor
@@ -905,6 +827,23 @@ public final class VoiceChatController: ViewController {
             self.rightBorderNode.backgroundColor = panelBackgroundColor
             self.rightBorderNode.isUserInteractionEnabled = false
             self.rightBorderNode.clipsToBounds = false
+            
+            self.scheduleTextNode = ImmediateTextNode()
+            self.scheduleTextNode.isHidden = !self.isScheduling
+            self.scheduleTextNode.isUserInteractionEnabled = false
+            self.scheduleTextNode.textAlignment = .center
+            self.scheduleTextNode.maximumNumberOfLines = 4
+            
+            self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor:  UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
+            self.scheduleCancelButton.isHidden = !self.isScheduling
+            
+            self.dateFormatter = DateFormatter()
+            self.dateFormatter.timeStyle = .none
+            self.dateFormatter.dateStyle = .short
+            self.dateFormatter.timeZone = TimeZone.current
+            
+            self.timerNode = VoiceChatTimerNode(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
+            self.timerNode.isHidden = true
             
             super.init()
             
@@ -1322,11 +1261,18 @@ public final class VoiceChatController: ViewController {
                                     maxBioLength = 100
                                 }
                                 let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, maxLength: maxBioLength, apply: { bio in
-                                    if let strongSelf = self {
-                                        let _ = (updateAbout(account: strongSelf.context.account, about: bio)
-                                        |> `catch` { _ -> Signal<Void, NoError> in
-                                            return .complete()
-                                        }).start()
+                                    if let strongSelf = self, let bio = bio {
+                                        if peer.id.namespace == Namespaces.Peer.CloudUser {
+                                            let _ = (updateAbout(account: strongSelf.context.account, about: bio)
+                                            |> `catch` { _ -> Signal<Void, NoError> in
+                                                return .complete()
+                                            }).start()
+                                        } else {
+                                            let _ = (updatePeerTitle(account: strongSelf.context.account, peerId: peer.id, title: bio)
+                                            |> `catch` { _ -> Signal<Void, NoError> in
+                                                return .complete()
+                                            }).start()
+                                        }
                                         
                                         strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditBioSuccess), action: { _ in return false })
                                     }
@@ -1345,8 +1291,8 @@ public final class VoiceChatController: ViewController {
                                 f(.default)
                                    
                                 Queue.mainQueue().after(0.1) {
-                                    let controller = voiceChatUserNameController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_ChangeNameTitle, firstNamePlaceholder: presentationData.strings.UserInfo_FirstNamePlaceholder, lastNamePlaceholder: presentationData.strings.UserInfo_LastNamePlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, firstName: peer.firstName, lastName: peer.lastName, maxLength: 128, apply: { firstName, lastName in
-                                        if let strongSelf = self {
+                                    let controller = voiceChatUserNameController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_ChangeNameTitle, firstNamePlaceholder: presentationData.strings.UserInfo_FirstNamePlaceholder, lastNamePlaceholder: presentationData.strings.UserInfo_LastNamePlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, firstName: peer.firstName, lastName: peer.lastName, maxLength: 128, apply: { firstAndLastName in
+                                        if let strongSelf = self, let (firstName, lastName) = firstAndLastName {
                                             let _ = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName).start()
                                             
                                             strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditNameSuccess), action: { _ in return false })
@@ -1514,6 +1460,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(source), items: items, reactionItems: [], gesture: gesture)
+                contextController.useComplexItemsTransitionAnimation = true
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }, setPeerIdWithRevealedOptions: { peerId, _ in
                 updateState { state in
@@ -1550,6 +1497,7 @@ public final class VoiceChatController: ViewController {
             }
             self.bottomPanelNode.addSubnode(self.leaveButton)
             self.bottomPanelNode.addSubnode(self.actionButton)
+            self.bottomPanelNode.addSubnode(self.scheduleCancelButton)
             
             self.addSubnode(self.dimNode)
             self.addSubnode(self.contentContainer)
@@ -1563,6 +1511,8 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.leftBorderNode)
             self.contentContainer.addSubnode(self.rightBorderNode)
             self.contentContainer.addSubnode(self.bottomPanelNode)
+            self.contentContainer.addSubnode(self.timerNode)
+            self.contentContainer.addSubnode(self.scheduleTextNode)
             
             let invitedPeers: Signal<[Peer], NoError> = self.call.invitedPeers
             |> mapToSignal { ids -> Signal<[Peer], NoError> in
@@ -1619,7 +1569,13 @@ public final class VoiceChatController: ViewController {
                 let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers?.totalCount ?? 0)))
                 strongSelf.currentSubtitle = subtitle
                 
-                if let callState = strongSelf.callState, callState.canManageCall {
+                if strongSelf.isScheduling {
+                    strongSelf.optionsButtonIsAvatar = false
+                    strongSelf.optionsButton.isUserInteractionEnabled = false
+                    strongSelf.optionsButton.alpha = 0.0
+                    strongSelf.closeButton.isUserInteractionEnabled = false
+                    strongSelf.closeButton.alpha = 0.0
+                } else if let callState = strongSelf.callState, callState.canManageCall {
                     strongSelf.optionsButtonIsAvatar = false
                     strongSelf.optionsButton.isUserInteractionEnabled = true
                     strongSelf.optionsButton.alpha = 1.0
@@ -1756,7 +1712,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
                 if let strongSelf = self {
                     strongSelf.currentContentOffset = offset
-                    if strongSelf.animation == nil && !strongSelf.animatingExpansion {
+                    if !strongSelf.animatingExpansion && !strongSelf.animatingInsertion && strongSelf.panGestureArguments == nil {
                         strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
                     }
                 }
@@ -1774,16 +1730,6 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-//            self.memberEventsDisposable.set((self.call.memberEvents
-//            |> deliverOnMainQueue).start(next: { [weak self] event in
-//                guard let strongSelf = self else {
-//                    return
-//                }
-//                if event.joined {
-//                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
-//                }
-//            }))
-
             self.reconnectedAsEventsDisposable.set((self.call.reconnectedAsEvents
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 guard let strongSelf = self else {
@@ -1874,20 +1820,30 @@ public final class VoiceChatController: ViewController {
             }))
             
             self.titleNode.tapped = { [weak self] in
-                if let strongSelf = self, !strongSelf.titleNode.recordingIconNode.isHidden {
-                    var hasTooltipAlready = false
-                    strongSelf.controller?.forEachController { controller -> Bool in
-                        if controller is TooltipScreen {
-                            hasTooltipAlready = true
+                if let strongSelf = self {
+                    if strongSelf.callState?.canManageCall ?? false {
+                        strongSelf.openTitleEditing()
+                    } else if !strongSelf.titleNode.recordingIconNode.isHidden {
+                        var hasTooltipAlready = false
+                        strongSelf.controller?.forEachController { controller -> Bool in
+                            if controller is TooltipScreen {
+                                hasTooltipAlready = true
+                            }
+                            return true
                         }
-                        return true
+                        if !hasTooltipAlready {
+                            let location = strongSelf.titleNode.recordingIconNode.convert(strongSelf.titleNode.recordingIconNode.bounds, to: nil)
+                            strongSelf.controller?.present(TooltipScreen(text: presentationData.strings.VoiceChat_RecordingInProgress, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                                return .dismiss(consume: true)
+                            }), in: .window(.root))
+                        }
                     }
-                    if !hasTooltipAlready {
-                        let location = strongSelf.titleNode.recordingIconNode.convert(strongSelf.titleNode.recordingIconNode.bounds, to: nil)
-                        strongSelf.controller?.present(TooltipScreen(text: presentationData.strings.VoiceChat_RecordingInProgress, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
-                            return .dismiss(consume: true)
-                        }), in: .window(.root))
-                    }
+                }
+            }
+            
+            self.scheduleCancelButton.pressed = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.dismissScheduled()
                 }
             }
         }
@@ -1931,7 +1887,7 @@ public final class VoiceChatController: ViewController {
 
             let avatarSize = CGSize(width: 28.0, height: 28.0)
 
-            return combineLatest(self.displayAsPeersPromise.get(), self.context.account.postbox.loadedPeerWithId(call.peerId), self.inviteLinksPromise.get())
+            return combineLatest(self.displayAsPeersPromise.get(), self.context.account.postbox.loadedPeerWithId(self.call.peerId), self.inviteLinksPromise.get())
             |> take(1)
             |> deliverOnMainQueue
             |> map { [weak self] peers, chatPeer, inviteLinks -> [ContextMenuItem] in
@@ -1965,15 +1921,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-
-                    let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditTitleTitle, text: presentationData.strings.VoiceChat_EditTitleText, placeholder: chatPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), value: strongSelf.callState?.title, maxLength: 40, apply: { title in
-                        if let strongSelf = self, let title = title {
-                            strongSelf.call.updateTitle(title)
-
-                            strongSelf.presentUndoOverlay(content: .voiceChatFlag(text: title.isEmpty ? strongSelf.presentationData.strings.VoiceChat_EditTitleRemoveSuccess : strongSelf.presentationData.strings.VoiceChat_EditTitleSuccess(title).0), action: { _ in return false })
-                        }
-                    })
-                    self?.controller?.present(controller, in: .window(.root))
+                    strongSelf.openTitleEditing()
                 })))
 
                 var hasPermissions = true
@@ -1994,7 +1942,7 @@ public final class VoiceChatController: ViewController {
                         c.setItems(strongSelf.contextMenuPermissionItems())
                     })))
                 }
-
+            
                 if let inviteLinks = inviteLinks {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
@@ -2035,28 +1983,30 @@ public final class VoiceChatController: ViewController {
                         self?.controller?.present(alertController, in: .window(.root))
                     }), false))
                 } else {
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StartRecording, icon: { theme -> UIImage? in
-                        return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, f in
-                        f(.dismissWithoutContent)
+                    if strongSelf.callState?.scheduleTimestamp == nil {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StartRecording, icon: { theme -> UIImage? in
+                            return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            f(.dismissWithoutContent)
 
-                        guard let strongSelf = self else {
-                            return
-                        }
-
-                        let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-                            if let strongSelf = self, let title = title {
-                                strongSelf.call.setShouldBeRecording(true, title: title)
-
-                                strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
-                                strongSelf.call.playTone(.recordingStarted)
+                            guard let strongSelf = self else {
+                                return
                             }
-                        })
-                        self?.controller?.present(controller, in: .window(.root))
-                    })))
+
+                            let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
+                                if let strongSelf = self, let title = title {
+                                    strongSelf.call.setShouldBeRecording(true, title: title)
+
+                                    strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+                                    strongSelf.call.playTone(.recordingStarted)
+                                }
+                            })
+                            self?.controller?.present(controller, in: .window(.root))
+                        })))
+                    }
                 }
 
-                items.append(.action(ContextMenuActionItem(text: strongSelf.isNoiseSuppressionEnabled ? "Disable Noise Suppression" : "Enable Noise Suppression", textColor: .primary, icon: { theme in
+                /*items.append(.action(ContextMenuActionItem(text: strongSelf.isNoiseSuppressionEnabled ? "Disable Noise Suppression" : "Enable Noise Suppression", textColor: .primary, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     f(.dismissWithoutContent)
@@ -2066,7 +2016,7 @@ public final class VoiceChatController: ViewController {
                     }
 
                     strongSelf.call.setIsNoiseSuppressionEnabled(!strongSelf.isNoiseSuppressionEnabled)
-                })))
+                })))*/
 
                 if let callState = strongSelf.callState, callState.canManageCall {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
@@ -2266,6 +2216,191 @@ public final class VoiceChatController: ViewController {
             panRecognizer.delaysTouchesBegan = false
             panRecognizer.cancelsTouchesInView = true
             self.view.addGestureRecognizer(panRecognizer)
+            
+            if self.isScheduling {
+                self.setupSchedulePickerView()
+                self.updateScheduleButtonTitle()
+            }
+        }
+        
+        private func updateMinimumDate() {
+            let timeZone = TimeZone(secondsFromGMT: 0)!
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            let currentDate = Date()
+            var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: currentDate)
+            components.second = 0
+            
+            let roundedDate = calendar.date(from: components)!
+            let next1MinDate = calendar.date(byAdding: .minute, value: 1, to: roundedDate)
+            
+            components.minute = 0
+            let roundedToHourDate = calendar.date(from: components)!
+            let nextTwoHourDate = calendar.date(byAdding: .hour, value: 2, to: roundedToHourDate)
+            let maxDate = calendar.date(byAdding: .day, value: 7, to: currentDate)
+            
+            if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
+                self.pickerView?.maximumDate = date
+            }
+            
+            if let next1MinDate = next1MinDate, let nextTwoHourDate = nextTwoHourDate {
+                self.pickerView?.minimumDate = next1MinDate
+                self.pickerView?.maximumDate = maxDate
+                self.pickerView?.date = nextTwoHourDate
+            }
+        }
+        
+        private func setupSchedulePickerView() {
+            var currentDate: Date?
+            if let pickerView = self.pickerView {
+                currentDate = pickerView.date
+                pickerView.removeFromSuperview()
+            }
+            
+            let textColor = UIColor.white
+            UILabel.setDateLabel(textColor)
+            
+            let pickerView = UIDatePicker()
+            pickerView.timeZone = TimeZone(secondsFromGMT: 0)
+            pickerView.datePickerMode = .countDownTimer
+            pickerView.datePickerMode = .dateAndTime
+            pickerView.locale = Locale.current
+            pickerView.timeZone = TimeZone.current
+            pickerView.minuteInterval = 1
+            self.contentContainer.view.addSubview(pickerView)
+            pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
+            if #available(iOS 13.4, *) {
+                pickerView.preferredDatePickerStyle = .wheels
+            }
+            pickerView.setValue(textColor, forKey: "textColor")
+            self.pickerView = pickerView
+            
+            self.updateMinimumDate()
+            if let currentDate = currentDate {
+                pickerView.date = currentDate
+            }
+        }
+        
+        private let calendar = Calendar(identifier: .gregorian)
+        private func updateScheduleButtonTitle() {
+            guard let date = self.pickerView?.date else {
+                return
+            }
+            
+            let calendar = Calendar(identifier: .gregorian)
+            let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            let timestamp = Int32(date.timeIntervalSince1970)
+            let time = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: self.presentationData.dateTimeFormat)
+            let buttonTitle: String
+            if calendar.isDateInToday(date) {
+                buttonTitle = self.presentationData.strings.ScheduleVoiceChat_ScheduleToday(time).0
+            } else if calendar.isDateInTomorrow(date) {
+                buttonTitle = self.presentationData.strings.ScheduleVoiceChat_ScheduleTomorrow(time).0
+            } else {
+                buttonTitle = self.presentationData.strings.ScheduleVoiceChat_ScheduleOn(self.dateFormatter.string(from: date), time).0
+            }
+            self.scheduleButtonTitle = buttonTitle
+            
+            let delta = timestamp - currentTimestamp
+            
+            var isGroup = true
+            if let peer = self.peer as? TelegramChannel, case .broadcast = peer.info {
+                isGroup = false
+            }
+            let intervalString = timeIntervalString(strings: self.presentationData.strings, value: max(60, delta))
+            self.scheduleTextNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.ScheduleVoiceChat_GroupText(intervalString).0 : self.presentationData.strings.ScheduleVoiceChat_ChannelText(intervalString).0, font: Font.regular(14.0), textColor: UIColor(rgb: 0x8e8e93))
+            
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
+            }
+        }
+        
+        @objc private func datePickerUpdated() {
+            self.updateScheduleButtonTitle()
+        }
+        
+        private func schedule() {
+            if let date = self.pickerView?.date, date > Date() {
+                self.call.schedule(timestamp: Int32(date.timeIntervalSince1970))
+                                   
+                self.isScheduling = false
+                self.transitionToScheduled()
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
+                }
+            }
+        }
+        
+        private func dismissScheduled() {
+            self.leaveDisposable.set((self.call.leave(terminateIfPossible: true)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                self?.controller?.dismiss(closing: true)
+            }))
+        }
+        
+        private func transitionToScheduled() {
+            let springDuration: Double = 0.6
+            let springDamping: CGFloat = 100.0
+            
+            self.optionsButton.alpha = 1.0
+            self.optionsButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.optionsButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
+            self.optionsButton.isUserInteractionEnabled = true
+            
+            self.closeButton.alpha = 1.0
+            self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.closeButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
+            self.closeButton.isUserInteractionEnabled = true
+            
+            self.audioButton.alpha = 1.0
+            self.audioButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.audioButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
+            self.audioButton.isUserInteractionEnabled = true
+            
+            self.leaveButton.alpha = 1.0
+            self.leaveButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.leaveButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, damping: springDamping)
+            self.leaveButton.isUserInteractionEnabled = true
+            
+            self.scheduleCancelButton.alpha = 0.0
+            self.scheduleCancelButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+            self.scheduleCancelButton.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 26.0), duration: 0.2, removeOnCompletion: false, additive: true)
+            
+            self.actionButton.titleLabel.layer.animatePosition(from: CGPoint(x: 0.0, y: -26.0), to: CGPoint(), duration: 0.2, additive: true)
+            
+            if let pickerView = self.pickerView {
+                self.pickerView = nil
+                pickerView.alpha = 0.0
+                pickerView.layer.animateScale(from: 1.0, to: 0.25, duration: 0.15, removeOnCompletion: false)
+                pickerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak pickerView] _ in
+                    pickerView?.removeFromSuperview()
+                })
+                pickerView.isUserInteractionEnabled = false
+            }
+            
+            self.timerNode.isHidden = false
+            self.timerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            self.timerNode.animateIn()
+            
+            self.scheduleTextNode.alpha = 0.0
+            self.scheduleTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+            
+            self.updateTitle(slide: true, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+        
+        private func transitionToCall() {
+            self.updateIsFullscreen(false, force: true)
+            
+            self.listNode.alpha = 1.0
+            self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.listNode.isUserInteractionEnabled = true
+            
+            self.timerNode.alpha = 0.0
+            self.timerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.timerNode.isHidden = true
+            })
+            
+            self.updateTitle(transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
         @objc private func optionsPressed() {
@@ -2345,8 +2480,12 @@ public final class VoiceChatController: ViewController {
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                self.controller?.dismiss(closing: false)
-                self.controller?.dismissAllTooltips()
+                if self.isScheduling {
+                    self.dismissScheduled()
+                } else {
+                    self.controller?.dismiss(closing: false)
+                    self.controller?.dismissAllTooltips()
+                }
             }
         }
         
@@ -2482,7 +2621,30 @@ public final class VoiceChatController: ViewController {
             guard let callState = self.callState else {
                 return
             }
-            if case .connecting = callState.networkState {
+            if case .connecting = callState.networkState, callState.scheduleTimestamp == nil && !self.isScheduling {
+                return
+            }
+            if callState.scheduleTimestamp != nil || self.isScheduling {
+                switch gestureRecognizer.state {
+                    case .began:
+                        self.actionButton.pressing = true
+                        self.hapticFeedback.impact(.light)
+                    case .ended, .cancelled:
+                        self.actionButton.pressing = false
+                        
+                        let location = gestureRecognizer.location(in: self.actionButton.view)
+                        if self.actionButton.hitTest(location, with: nil) != nil {
+                            if self.isScheduling {
+                                self.schedule()
+                            } else if callState.canManageCall {
+                                self.call.startScheduled()
+                            } else {
+                                self.call.toggleScheduledSubscription(!callState.subscribedToScheduled)
+                            }
+                        }
+                    default:
+                        break
+                }
                 return
             }
             if let muteState = callState.muteState {
@@ -2539,10 +2701,29 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func actionButtonPressed() {
+            if self.isScheduling {
+                self.schedule()
+            }
         }
         
         @objc private func audioOutputPressed() {
             self.hapticFeedback.impact(.light)
+            
+            if let _ = self.callState?.scheduleTimestamp {
+                let _ = (self.inviteLinksPromise.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] inviteLinks in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let inviteLinks = inviteLinks {
+                        strongSelf.presentShare(inviteLinks)
+                    } else if let addressName = strongSelf.peer?.addressName, !addressName.isEmpty {
+                        strongSelf.presentShare(GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)?voicechat", speakerLink: nil))
+                    }
+                })
+                return
+            }
             
             guard let (availableOutputs, currentOutput) = self.audioOutputState else {
                 return
@@ -2649,8 +2830,6 @@ public final class VoiceChatController: ViewController {
                 } else {
                     topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
                 }
-            } else if let _ = self.animation {
-                topInset = self.listNode.frame.minY - listTopInset
             } else if let currentTopInset = self.topInset {
                 topInset = self.isExpanded ? 0.0 : currentTopInset
             } else {
@@ -2700,27 +2879,20 @@ public final class VoiceChatController: ViewController {
                 completion?()
             }
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: 24.0)
-                        
+            
             var bottomEdge: CGFloat = 0.0
             self.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ListViewItemNode {
-                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.view)
+                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.contentContainer.view)
                     if convertedFrame.maxY > bottomEdge {
                         bottomEdge = convertedFrame.maxY
                     }
                 }
             }
-                        
+
             let listMaxY = listTopInset + listSize.height
-            if bottomEdge.isZero {
-                bottomEdge = listMaxY
-            }
-            
-            var bottomOffset: CGFloat = 0.0
-            if bottomEdge < listMaxY && (self.panGestureArguments != nil || self.isExpanded) {
-                bottomOffset = bottomEdge - listMaxY
-            }
-        
+            let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
+
             let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
@@ -2734,8 +2906,8 @@ public final class VoiceChatController: ViewController {
         }
         
         var isFullscreen = false
-        func updateIsFullscreen(_ isFullscreen: Bool) {
-            guard self.isFullscreen != isFullscreen, let (layout, _) = self.validLayout else {
+        func updateIsFullscreen(_ isFullscreen: Bool, force: Bool = false) {
+            guard self.isFullscreen != isFullscreen || force, let (layout, _) = self.validLayout else {
                 return
             }
             self.isFullscreen = isFullscreen
@@ -2761,15 +2933,19 @@ public final class VoiceChatController: ViewController {
                 topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: topPanelHeight)
             }
             
+            var isScheduled = false
+            if self.isScheduling || self.callState?.scheduleTimestamp != nil {
+                isScheduled = true
+            }
+            
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .linear)
             transition.updateFrame(node: self.topPanelEdgeNode, frame: topEdgeFrame)
             transition.updateCornerRadius(node: self.topPanelEdgeNode, cornerRadius: isFullscreen ? layout.deviceMetrics.screenCornerRadius - 0.5 : 12.0)
             transition.updateBackgroundColor(node: self.topPanelBackgroundNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
             transition.updateBackgroundColor(node: self.topPanelEdgeNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
-            transition.updateBackgroundColor(node: self.backgroundNode, color: isFullscreen ? panelBackgroundColor : secondaryPanelBackgroundColor)
+            transition.updateBackgroundColor(node: self.backgroundNode, color: isFullscreen || isScheduled ? panelBackgroundColor : secondaryPanelBackgroundColor)
             transition.updateBackgroundColor(node: self.bottomPanelBackgroundNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
             transition.updateBackgroundColor(node: self.leftBorderNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
-            transition.updateBackgroundColor(node: self.rightBorderNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
             transition.updateBackgroundColor(node: self.rightBorderNode, color: isFullscreen ? fullscreenBackgroundColor : panelBackgroundColor)
             
             if let snapshotView = self.topCornersNode.view.snapshotContentTree() {
@@ -2800,18 +2976,35 @@ public final class VoiceChatController: ViewController {
             self.updateTitle(transition: transition)
         }
         
-        private func updateTitle(transition: ContainedViewLayoutTransition) {
+        private func updateTitle(slide: Bool = false, transition: ContainedViewLayoutTransition) {
             guard let (layout, _) = self.validLayout else {
                 return
             }
             var title = self.currentTitle
-            if !self.isFullscreen && !self.currentTitleIsCustom {
+            if self.isScheduling {
+                title = self.presentationData.strings.ScheduleVoiceChat_Title
+            } else if !self.isFullscreen && !self.currentTitleIsCustom {
                 if let navigationController = self.controller?.navigationController as? NavigationController {
                     for controller in navigationController.viewControllers.reversed() {
                         if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation, peerId == self.call.peerId {
-                            title = self.presentationData.strings.VoiceChat_Title
+                            if self.callState?.scheduleTimestamp != nil {
+                                title = self.presentationData.strings.VoiceChat_ScheduledTitle
+                            } else {
+                                title = self.presentationData.strings.VoiceChat_Title
+                            }
                         }
                     }
+                }
+            }
+            
+            var subtitle = self.currentSubtitle
+            if self.isScheduling {
+                subtitle = ""
+            } else if self.callState?.scheduleTimestamp != nil {
+                if self.callState?.canManageCall ?? false {
+                    subtitle = self.presentationData.strings.VoiceChat_TapToEditTitle
+                } else {
+                    subtitle = ""
                 }
             }
             
@@ -2820,7 +3013,7 @@ public final class VoiceChatController: ViewController {
                 size.width = floor(min(size.width, size.height) * 0.5)
             }
             
-            self.titleNode.update(size: CGSize(width: size.width, height: 44.0), title: title, subtitle: self.currentSubtitle, transition: transition)
+            self.titleNode.update(size: CGSize(width: size.width, height: 44.0), title: title, subtitle: subtitle, slide: slide, transition: transition)
         }
         
         private func updateButtons(animated: Bool) {
@@ -2857,7 +3050,7 @@ public final class VoiceChatController: ViewController {
                 coloredButtonAppearance = .color(.custom(self.isFullscreen ? 0x1c1c1e : 0x2c2c2e, 1.0))
             }
             
-            let soundImage: CallControllerButtonItemNode.Content.Image
+            var soundImage: CallControllerButtonItemNode.Content.Image
             var soundAppearance: CallControllerButtonItemNode.Content.Appearance = coloredButtonAppearance
             var soundTitle: String = self.presentationData.strings.Call_Speaker
             switch audioMode {
@@ -2879,6 +3072,12 @@ public final class VoiceChatController: ViewController {
                     soundImage = .airpodsPro
                 }
                 soundTitle = self.presentationData.strings.Call_Audio
+            }
+            
+            if self.isScheduling || self.callState?.scheduleTimestamp != nil {
+                soundImage = .share
+                soundTitle = self.presentationData.strings.VoiceChat_ShareShort
+                soundAppearance = coloredButtonAppearance
             }
             
             let videoButtonSize: CGSize
@@ -2907,6 +3106,7 @@ public final class VoiceChatController: ViewController {
             transition.updateAlpha(node: self.leaveButton.textNode, alpha: buttonsTitleAlpha)
         }
         
+        private var ignoreNextConnecting = false
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let isFirstTime = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
@@ -2970,9 +3170,7 @@ public final class VoiceChatController: ViewController {
                 topInset = listSize.height
             }
             
-            if self.animation == nil {
-                transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + topInset), size: listSize))
-            }
+            transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + topInset), size: listSize))
             
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve)
@@ -2984,7 +3182,19 @@ public final class VoiceChatController: ViewController {
             let bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: size.width, height: bottomPanelHeight))
             transition.updateFrame(node: self.bottomPanelNode, frame: bottomPanelFrame)
             
-            let centralButtonSize = CGSize(width: 300.0, height: 300.0)
+            if let pickerView = self.pickerView {
+                transition.updateFrame(view: pickerView, frame: CGRect(x: 0.0, y: layout.size.height - bottomPanelHeight - 216.0, width: size.width, height: 216.0))
+            }
+            
+            let timerFrame = CGRect(x: 0.0, y: layout.size.height - bottomPanelHeight - 216.0, width: size.width, height: 216.0)
+            transition.updateFrame(node: self.timerNode, frame: timerFrame)
+            self.timerNode.update(size: timerFrame.size, scheduleTime: self.callState?.scheduleTimestamp, transition: .immediate)
+            
+            let scheduleTextSize = self.scheduleTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            self.scheduleTextNode.frame = CGRect(origin: CGPoint(x: floor((size.width - scheduleTextSize.width) / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - scheduleTextSize.height - 145.0), size: scheduleTextSize)
+            
+            let centralButtonSide = min(size.width, size.height) - 32.0
+            let centralButtonSize = CGSize(width: centralButtonSide, height: centralButtonSide)
             let cameraButtonSize = CGSize(width: 36.0, height: 36.0)
             let sideButtonMinimalInset: CGFloat = 16.0
             let sideButtonOffset = min(42.0, floor((((size.width - 112.0) / 2.0) - sideButtonSize.width) / 2.0))
@@ -3028,47 +3238,79 @@ public final class VoiceChatController: ViewController {
             let actionButtonTitle: String
             let actionButtonSubtitle: String
             var actionButtonEnabled = true
-            if let callState = self.callState {
-                switch callState.networkState {
-                case .connecting:
+            if let callState = self.callState, !self.isScheduling {
+                if callState.scheduleTimestamp != nil {
+                    self.ignoreNextConnecting = true
+                    if callState.canManageCall {
+                        actionButtonState = .scheduled(state: .start)
+                        actionButtonTitle = self.presentationData.strings.VoiceChat_StartNow
+                        actionButtonSubtitle = ""
+                    } else {
+                        if callState.subscribedToScheduled {
+                            actionButtonState = .scheduled(state: .unsubscribe)
+                            actionButtonTitle = self.presentationData.strings.VoiceChat_CancelReminder
+                        } else {
+                            actionButtonState = .scheduled(state: .subscribe)
+                            actionButtonTitle = self.presentationData.strings.VoiceChat_SetReminder
+                        }
+                        actionButtonSubtitle = ""
+                    }
+                } else {
+                    let connected = self.ignoreNextConnecting || callState.networkState == .connected
+                    if case .connected = callState.networkState {
+                        self.ignoreNextConnecting = false
+                    }
+
+                    if connected {
+                        if let muteState = callState.muteState, !self.pushingToTalk {
+                            if muteState.canUnmute {
+                                actionButtonState = .active(state: .muted)
+                                
+                                actionButtonTitle = self.presentationData.strings.VoiceChat_Unmute
+                                actionButtonSubtitle = ""
+                            } else {
+                                actionButtonState = .active(state: .cantSpeak)
+                                
+                                if callState.raisedHand {
+                                    actionButtonTitle = self.presentationData.strings.VoiceChat_AskedToSpeak
+                                    actionButtonSubtitle = self.presentationData.strings.VoiceChat_AskedToSpeakHelp
+                                } else {
+                                    actionButtonTitle = self.presentationData.strings.VoiceChat_MutedByAdmin
+                                    actionButtonSubtitle = self.presentationData.strings.VoiceChat_MutedByAdminHelp
+                                }
+                            }
+                        } else {
+                            actionButtonState = .active(state: .on)
+                            
+                            actionButtonTitle = self.pushingToTalk ? self.presentationData.strings.VoiceChat_Live : self.presentationData.strings.VoiceChat_Mute
+                            actionButtonSubtitle = ""
+                        }
+                    } else {
+                        actionButtonState = .connecting
+                        actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
+                        actionButtonSubtitle = ""
+                        actionButtonEnabled = false
+                    }
+                }
+            } else {
+                if self.isScheduling {
+                    actionButtonState = .button(text: self.scheduleButtonTitle)
+                    actionButtonTitle = ""
+                    actionButtonSubtitle = ""
+                    actionButtonEnabled = true
+                } else {
                     actionButtonState = .connecting
                     actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
                     actionButtonSubtitle = ""
                     actionButtonEnabled = false
-                case .connected:
-                    if let muteState = callState.muteState, !self.pushingToTalk {
-                        if muteState.canUnmute {
-                            actionButtonState = .active(state: .muted)
-                            
-                            actionButtonTitle = self.presentationData.strings.VoiceChat_Unmute
-                            actionButtonSubtitle = ""
-                        } else {
-                            actionButtonState = .active(state: .cantSpeak)
-                            
-                            if callState.raisedHand {
-                                actionButtonTitle = self.presentationData.strings.VoiceChat_AskedToSpeak
-                                actionButtonSubtitle = self.presentationData.strings.VoiceChat_AskedToSpeakHelp
-                            } else {
-                                actionButtonTitle = self.presentationData.strings.VoiceChat_MutedByAdmin
-                                actionButtonSubtitle = self.presentationData.strings.VoiceChat_MutedByAdminHelp
-                            }
-                        }
-                    } else {
-                        actionButtonState = .active(state: .on)
-                        
-                        actionButtonTitle = self.pushingToTalk ? self.presentationData.strings.VoiceChat_Live : self.presentationData.strings.VoiceChat_Mute
-                        actionButtonSubtitle = ""
-                    }
                 }
-            } else {
-                actionButtonState = .connecting
-                actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
-                actionButtonSubtitle = ""
-                actionButtonEnabled = false
             }
             
             self.actionButton.isDisabled = !actionButtonEnabled
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: smallButtons, animated: true)
+            
+            let buttonHeight = self.scheduleCancelButton.updateLayout(width: size.width - 32.0, transition: .immediate)
+            self.scheduleCancelButton.frame = CGRect(x: 16.0, y: 137.0, width: size.width - 32.0, height: buttonHeight)
             
             if self.actionButton.supernode === self.bottomPanelNode {
                 transition.updateFrame(node: self.actionButton, frame: thirdButtonFrame)
@@ -3187,6 +3429,16 @@ public final class VoiceChatController: ViewController {
             }
             self.enqueuedTransitions.remove(at: 0)
             
+            if self.callState?.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
+                self.timerNode.isHidden = false
+                self.listNode.alpha = 0.0
+                self.listNode.isUserInteractionEnabled = false
+                self.backgroundNode.backgroundColor = panelBackgroundColor
+                self.updateIsFullscreen(false)
+            } else if self.callState?.scheduleTimestamp == nil && !self.isScheduling && self.listNode.alpha == 0.0 {
+                self.transitionToCall()
+            }
+            
             var options = ListViewDeleteAndInsertOptions()
             let isFirstTime = self.isFirstTime
             if isFirstTime {
@@ -3195,7 +3447,7 @@ public final class VoiceChatController: ViewController {
                 if transition.crossFade {
                     options.insert(.AnimateCrossfade)
                 }
-                if transition.animated && self.animation == nil {
+                if transition.animated {
                     options.insert(.AnimateInsertion)
                 }
             }
@@ -3226,7 +3478,7 @@ public final class VoiceChatController: ViewController {
             let listTopInset = layoutTopInset + 63.0
             let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             
-            self.topInset = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
+            self.topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
             
             let targetY = listTopInset + (self.topInset ?? listSize.height)
             
@@ -3234,62 +3486,25 @@ public final class VoiceChatController: ViewController {
                 var frame = self.listNode.frame
                 frame.origin.y = targetY
                 self.listNode.frame = frame
-            } else if !self.isExpanded {
-                if self.listNode.frame.minY != targetY && !self.animatingExpansion && self.panGestureArguments == nil {
-                    self.animation = ListViewAnimation(from: self.listNode.frame.minY, to: targetY, duration: 0.4, curve: listViewAnimationCurveSystem, beginAt: CACurrentMediaTime(), update: { [weak self] _, currentValue in
-                        if let strongSelf = self {
-                            var frame = strongSelf.listNode.frame
-                            frame.origin.y = currentValue
-                            strongSelf.listNode.frame = frame
-                            strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .immediate)
-                        }
-                    })
-                    self.updateAnimation()
-                }
             }
-                        
+                
+            
+            if transition.animated {
+                self.animatingInsertion = true
+            }
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: nil, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
+                }
+                if strongSelf.animatingInsertion {
+                    strongSelf.updateFloatingHeaderOffset(offset: self?.currentContentOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    strongSelf.animatingInsertion = false
                 }
                 if !strongSelf.didSetContentsReady {
                     strongSelf.didSetContentsReady = true
                     strongSelf.controller?.contentsReady.set(true)
                 }
             })
-        }
-        
-        
-        private var animator: ConstantDisplayLinkAnimator?
-        private var animation: ListViewAnimation?
-        private func updateAnimation() {
-            var animate = false
-            let timestamp = CACurrentMediaTime()
-            
-            if let animation = self.animation {
-                animation.applyAt(timestamp)
-            
-                if animation.completeAt(timestamp) {
-                    self.animation = nil
-                } else {
-                    animate = true
-                }
-            }
-            
-            if animate {
-                let animator: ConstantDisplayLinkAnimator
-                if let current = self.animator {
-                    animator = current
-                } else {
-                    animator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                        self?.updateAnimation()
-                    })
-                    self.animator = animator
-                }
-                animator.isPaused = false
-            } else {
-                self.animator?.isPaused = true
-            }
         }
         
         private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
@@ -3444,9 +3659,12 @@ public final class VoiceChatController: ViewController {
         }
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            if gestureRecognizer is DirectionalPanGestureRecognizer {
+            if gestureRecognizer is UILongPressGestureRecognizer {
+                return !self.isScheduling
+            } else if gestureRecognizer is DirectionalPanGestureRecognizer {
                 let location = gestureRecognizer.location(in: self.bottomPanelNode.view)
-                if self.audioButton.frame.contains(location) || (!self.cameraButton.isHidden && self.cameraButton.frame.contains(location)) || self.leaveButton.frame.contains(location) {
+                let containerLocation = gestureRecognizer.location(in: self.contentContainer.view)
+                if self.audioButton.frame.contains(location) || (!self.cameraButton.isHidden && self.cameraButton.frame.contains(location)) || self.leaveButton.frame.contains(location) || self.pickerView?.frame.contains(containerLocation) == true {
                     return false
                 }
             }
@@ -3465,11 +3683,14 @@ public final class VoiceChatController: ViewController {
                 self.itemInteraction?.isExpanded = self.isExpanded
             }
         }
+        
+        private var animatingInsertion = false
         private var animatingExpansion = false
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
         
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
             let contentOffset = self.listNode.visibleContentOffset()
+            let isScheduling = self.isScheduling || self.callState?.scheduleTimestamp != nil
             switch recognizer.state {
                 case .began:
                     let topInset: CGFloat
@@ -3485,6 +3706,9 @@ public final class VoiceChatController: ViewController {
                     self.controller?.dismissAllTooltips()
                 case .changed:
                     var translation = recognizer.translation(in: self.contentContainer.view).y
+                    if isScheduling && translation < 0.0 {
+                        return
+                    }
                     var topInset: CGFloat = 0.0
                     if let (currentTopInset, currentPanOffset) = self.panGestureArguments {
                         topInset = currentTopInset
@@ -3582,9 +3806,13 @@ public final class VoiceChatController: ViewController {
                         self.panGestureArguments = nil
                         var dismissing = false
                         if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
-                            self.controller?.dismiss(closing: false, manual: true)
+                            if self.isScheduling {
+                                self.dismissScheduled()
+                            } else {
+                                self.controller?.dismiss(closing: false, manual: true)
+                            }
                             dismissing = true
-                        } else if velocity.y < -300.0 || offset < topInset / 2.0 {
+                        } else if !isScheduling && (velocity.y < -300.0 || offset < topInset / 2.0) {
                             if velocity.y > -1500.0 && !self.isFullscreen {
                                 DispatchQueue.main.async {
                                     self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
@@ -3601,7 +3829,7 @@ public final class VoiceChatController: ViewController {
                             self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                                 self.animatingExpansion = false
                             })
-                        } else {
+                        } else if !isScheduling {
                             self.updateIsFullscreen(false)
                             self.animatingExpansion = true
                             self.listNode.scroller.setContentOffset(CGPoint(), animated: false)
@@ -3673,6 +3901,24 @@ public final class VoiceChatController: ViewController {
             if self.isExpanded {
                 self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             }
+        }
+        
+        private func openTitleEditing() {
+            let _ = (self.context.account.postbox.loadedPeerWithId(self.call.peerId)
+            |> deliverOnMainQueue).start(next: { [weak self] chatPeer in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EditTitleTitle, text: strongSelf.presentationData.strings.VoiceChat_EditTitleText, placeholder: chatPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), value: strongSelf.callState?.title, maxLength: 40, apply: { title in
+                    if let strongSelf = self, let title = title {
+                        strongSelf.call.updateTitle(title)
+
+                        strongSelf.presentUndoOverlay(content: .voiceChatFlag(text: title.isEmpty ? strongSelf.presentationData.strings.VoiceChat_EditTitleRemoveSuccess : strongSelf.presentationData.strings.VoiceChat_EditTitleSuccess(title).0), action: { _ in return false })
+                    }
+                })
+                strongSelf.controller?.present(controller, in: .window(.root))
+            })
         }
         
         private func openAvatarForEditing(fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
@@ -3748,7 +3994,7 @@ public final class VoiceChatController: ViewController {
                 mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
                     if let image = image, let asset = asset {
                         completion()
-//                        self?.updateProfileVideo(image, asset: asset, adjustments: adjustments)
+                        self?.updateProfileVideo(image, asset: asset, adjustments: adjustments)
                     }
                 }
                 mixin.didFinishWithDelete = {
@@ -3756,55 +4002,42 @@ public final class VoiceChatController: ViewController {
                         return
                     }
                     
-//                    let proceed = {
-//                        if let item = item {
-//                            strongSelf.deleteAvatar(item, remove: false)
-//                        }
-//                        
-//                        let _ = strongSelf.currentAvatarMixin.swap(nil)
-//                        if let _ = peer.smallProfileImage {
-//                            strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-//                            if let (layout, navigationHeight) = strongSelf.validLayout {
-//                                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-//                            }
-//                        }
-//                        let postbox = strongSelf.context.account.postbox
-//                        strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
-//                            return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
-//                        })
-//                        |> deliverOnMainQueue).start(next: { result in
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//                            switch result {
-//                            case .complete:
-//                                strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-//                                if let (layout, navigationHeight) = strongSelf.validLayout {
-//                                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-//                                }
-//                            case .progress:
-//                                break
-//                            }
-//                        }))
-//                    }
-//                    
-//                    let actionSheet = ActionSheetController(presentationData: presentationData)
-//                    let items: [ActionSheetItem] = [
-//                        ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
-//                            actionSheet?.dismissAnimated()
-//                            proceed()
-//                        })
-//                    ]
-//                    
-//                    actionSheet.setItemGroups([
-//                        ActionSheetItemGroup(items: items),
-//                        ActionSheetItemGroup(items: [
-//                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-//                                actionSheet?.dismissAnimated()
-//                            })
-//                        ])
-//                    ])
-//                    strongSelf.controller?.present(actionSheet, in: .window(.root))
+                    let proceed = {
+                        let _ = strongSelf.currentAvatarMixin.swap(nil)
+                        let postbox = strongSelf.context.account.postbox
+                        strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+                        })
+                        |> deliverOnMainQueue).start(next: { result in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            switch result {
+                            case .complete:
+                                break
+                            case .progress:
+                                break
+                            }
+                        }))
+                    }
+                    
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    let items: [ActionSheetItem] = [
+                        ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            proceed()
+                        })
+                    ]
+                    
+                    actionSheet.setItemGroups([
+                        ActionSheetItemGroup(items: items),
+                        ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])
+                    ])
+                    strongSelf.controller?.present(actionSheet, in: .window(.root))
                 }
                 mixin.didDismiss = { [weak legacyController] in
                     guard let strongSelf = self else {
@@ -3855,6 +4088,125 @@ public final class VoiceChatController: ViewController {
             }))
             
             self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+        }
+        
+        private func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?) {
+            guard let data = image.jpegData(compressionQuality: 0.6), let peerId = self.callState?.myPeerId else {
+                return
+            }
+            
+            let photoResource = LocalFileMediaResource(fileId: arc4random64())
+            self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
+            
+            self.currentUpdatingAvatar = representation
+            self.updateAvatarPromise.set(.single((representation, 0.0)))
+
+            var videoStartTimestamp: Double? = nil
+            if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+                videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+            }
+            
+            let account = self.context.account
+            let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { [weak self] subscriber in
+                let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                    if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                        return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                    } else {
+                        return nil
+                    }
+                }
+                let uploadInterface = LegacyLiveUploadInterface(account: account)
+                let signal: SSignal
+                if let asset = asset as? AVAsset {
+                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+                    let durationSignal: SSignal = SSignal(generator: { subscriber in
+                        let disposable = (entityRenderer.duration()).start(next: { duration in
+                            subscriber?.putNext(duration)
+                            subscriber?.putCompletion()
+                        })
+                        
+                        return SBlockDisposable(block: {
+                            disposable.dispose()
+                        })
+                    })
+                    signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                        if let duration = duration as? Double {
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                        } else {
+                            return SSignal.single(nil)
+                        }
+                    })
+                   
+                } else {
+                    signal = SSignal.complete()
+                }
+                
+                let signalDisposable = signal.start(next: { next in
+                    if let result = next as? TGMediaVideoConversionResult {
+                        if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
+                            account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                        }
+                        
+                        if let timestamp = videoStartTimestamp {
+                            videoStartTimestamp = max(0.0, min(timestamp, result.duration - 0.05))
+                        }
+                        
+                        var value = stat()
+                        if stat(result.fileURL.path, &value) == 0 {
+                            if let data = try? Data(contentsOf: result.fileURL) {
+                                let resource: TelegramMediaResource
+                                if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
+                                    resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                                } else {
+                                    resource = LocalFileMediaResource(fileId: arc4random64())
+                                }
+                                account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                subscriber.putNext(resource)
+                            }
+                        }
+                        subscriber.putCompletion()
+                    } else if let strongSelf = self, let progress = next as? NSNumber {
+                        Queue.mainQueue().async {
+                            strongSelf.updateAvatarPromise.set(.single((representation, Float(truncating: progress) * 0.25)))
+                        }
+                    }
+                }, error: { _ in
+                }, completed: nil)
+                
+                let disposable = ActionDisposable {
+                    signalDisposable?.dispose()
+                }
+                
+                return ActionDisposable {
+                    disposable.dispose()
+                }
+            }
+            
+            self.updateAvatarDisposable.set((signal
+            |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
+                if peerId.namespace == Namespaces.Peer.CloudUser {
+                    return updateAccountPhoto(account: account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    })
+                } else {
+                    return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: photoResource), video: uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    })
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch result {
+                    case .complete:
+                        strongSelf.updateAvatarPromise.set(.single(nil))
+                    case let .progress(value):
+                        strongSelf.updateAvatarPromise.set(.single((representation, 0.25 + value * 0.75)))
+                }
+            }))
         }
     }
     
@@ -3981,6 +4333,8 @@ public final class VoiceChatController: ViewController {
                 let count = navigationController.viewControllers.count
                 if count == 2 || navigationController.viewControllers[count - 2] is ChatController {
                     if case .active(.cantSpeak) = self.controllerNode.actionButton.stateValue {
+                    } else if case .button = self.controllerNode.actionButton.stateValue {
+                    } else if case .scheduled = self.controllerNode.actionButton.stateValue {
                     } else if let chatController = navigationController.viewControllers[count - 2] as? ChatController, chatController.isSendButtonVisible {
                     } else if let tabBarController = navigationController.viewControllers[count - 2] as? TabBarController, let chatListController = tabBarController.controllers[tabBarController.selectedIndex] as? ChatListController, chatListController.isSearchActive {
                     } else {

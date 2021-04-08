@@ -15,11 +15,20 @@ private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
+private let purple = UIColor(rgb: 0x3252ef)
+private let pink = UIColor(rgb: 0xef436c)
 
 private class CallStatusBarBackgroundNode: ASDisplayNode {
+    enum State {
+        case connecting
+        case cantSpeak
+        case active
+        case speaking
+    }
     private let foregroundView: UIView
     private let foregroundGradientLayer: CAGradientLayer
     private let maskCurveView: VoiceCurveView
+    private let initialTimestamp = CACurrentMediaTime()
     
     var audioLevel: Float = 0.0  {
         didSet {
@@ -35,9 +44,9 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         }
     }
     
-    var speaking: Bool? = nil {
+    var state: State = .connecting {
         didSet {
-            if self.speaking != oldValue {
+            if self.state != oldValue {
                 self.updateGradientColors()
             }
         }
@@ -46,13 +55,26 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     private func updateGradientColors() {
         let initialColors = self.foregroundGradientLayer.colors
         let targetColors: [CGColor]
-        if let speaking = self.speaking {
-            targetColors = speaking ? [green.cgColor, activeBlue.cgColor] : [blue.cgColor, lightBlue.cgColor]
-        } else {
-            targetColors = [connectingColor.cgColor, connectingColor.cgColor]
+        switch self.state {
+            case .connecting:
+                targetColors = [connectingColor.cgColor, connectingColor.cgColor]
+            case .active:
+                targetColors = [blue.cgColor, lightBlue.cgColor]
+            case .speaking:
+                targetColors = [green.cgColor, activeBlue.cgColor]
+            case .cantSpeak:
+                targetColors = [purple.cgColor, pink.cgColor]
         }
-        self.foregroundGradientLayer.colors = targetColors
-        self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+
+        if CACurrentMediaTime() - self.initialTimestamp > 0.1 {
+            self.foregroundGradientLayer.colors = targetColors
+            self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        } else {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.foregroundGradientLayer.colors = targetColors
+            CATransaction.commit()
+        }
     }
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
@@ -177,6 +199,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentCallState: PresentationCallState?
     private var currentGroupCallState: PresentationGroupCallSummaryState?
     private var currentIsMuted = true
+    private var currentCantSpeak = false
     private var currentMembers: PresentationGroupCallMembers?
     private var currentIsConnected = true
     
@@ -279,15 +302,23 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.currentMembers = members
                                 
                             var isMuted = isMuted
+                            var cantSpeak = false
                             if let state = state, let muteState = state.callState.muteState {
                                 if !muteState.canUnmute {
                                     isMuted = true
+                                    cantSpeak = true
                                 }
                             }
+                            if state?.callState.scheduleTimestamp != nil {
+                                cantSpeak = true
+                            }
                             strongSelf.currentIsMuted = isMuted
+                            strongSelf.currentCantSpeak = cantSpeak
                             
                             let currentIsConnected: Bool
                             if let state = state, case .connected = state.callState.networkState {
+                                currentIsConnected = true
+                            } else if state?.callState.scheduleTimestamp != nil {
                                 currentIsConnected = true
                             } else {
                                 currentIsConnected = false
@@ -439,7 +470,19 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             self.speakerNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - speakerSize.height) / 2.0)), size: speakerSize)
         }
         
-        self.backgroundNode.speaking = self.currentIsConnected ? !self.currentIsMuted : nil
+        let state: CallStatusBarBackgroundNode.State
+        if self.currentIsConnected {
+            if self.currentCantSpeak {
+                state = .cantSpeak
+            } else if self.currentIsMuted {
+                state = .active
+            } else {
+                state = .speaking
+            }
+        } else {
+            state = .connecting
+        }
+        self.backgroundNode.state = state
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
     }
 }

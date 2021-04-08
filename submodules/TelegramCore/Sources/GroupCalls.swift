@@ -11,6 +11,8 @@ public struct GroupCallInfo: Equatable {
     public var clientParams: String?
     public var streamDcId: Int32?
     public var title: String?
+    public var scheduleTimestamp: Int32?
+    public var subscribedToScheduled: Bool
     public var recordingStartTimestamp: Int32?
     public var sortAscending: Bool
     
@@ -21,6 +23,8 @@ public struct GroupCallInfo: Equatable {
         clientParams: String?,
         streamDcId: Int32?,
         title: String?,
+        scheduleTimestamp: Int32?,
+        subscribedToScheduled: Bool,
         recordingStartTimestamp: Int32?,
         sortAscending: Bool
     ) {
@@ -30,6 +34,8 @@ public struct GroupCallInfo: Equatable {
         self.clientParams = clientParams
         self.streamDcId = streamDcId
         self.title = title
+        self.scheduleTimestamp = scheduleTimestamp
+        self.subscribedToScheduled = subscribedToScheduled
         self.recordingStartTimestamp = recordingStartTimestamp
         self.sortAscending = sortAscending
     }
@@ -58,6 +64,8 @@ extension GroupCallInfo {
                 clientParams: clientParams,
                 streamDcId: streamDcId,
                 title: title,
+                scheduleTimestamp: scheduleDate,
+                subscribedToScheduled: (flags & (1 << 8)) != 0,
                 recordingStartTimestamp: recordStartDate,
                 sortAscending: (flags & (1 << 6)) != 0
             )
@@ -164,9 +172,10 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
 public enum CreateGroupCallError {
     case generic
     case anonymousNotAllowed
+    case scheduledTooLate
 }
 
-public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCallInfo, CreateGroupCallError> {
+public func createGroupCall(account: Account, peerId: PeerId, title: String?, scheduleDate: Int32?) -> Signal<GroupCallInfo, CreateGroupCallError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         let callPeer = transaction.getPeer(peerId).flatMap(apiInputPeer)
         return callPeer
@@ -177,10 +186,19 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
             return .fail(.generic)
         }
         
-        return account.network.request(Api.functions.phone.createGroupCall(flags: 0, peer: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max), title: nil, scheduleDate: nil))
+        var flags: Int32 = 0
+        if let _ = title {
+            flags |= (1 << 0)
+        }
+        if let _ = scheduleDate {
+            flags |= (1 << 1)
+        }
+        return account.network.request(Api.functions.phone.createGroupCall(flags: flags, peer: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max), title: title, scheduleDate: scheduleDate))
         |> mapError { error -> CreateGroupCallError in
             if error.errorDescription == "ANONYMOUS_CALLS_DISABLED" {
                 return .anonymousNotAllowed
+            } else if error.errorDescription == "SCHEDULE_DATE_TOO_LATE" {
+                return .scheduledTooLate
             }
             return .generic
         }
@@ -203,9 +221,9 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
             return account.postbox.transaction { transaction -> GroupCallInfo in
                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                     if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title))
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
                     } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title))
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
                     } else {
                         return cachedData
                     }
@@ -220,24 +238,149 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
     }
 }
 
+public enum StartScheduledGroupCallError {
+    case generic
+}
+
+public func startScheduledGroupCall(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64) -> Signal<GroupCallInfo, StartScheduledGroupCallError> {
+    return account.network.request(Api.functions.phone.startScheduledGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    |> mapError { error -> StartScheduledGroupCallError in
+        return .generic
+    }
+    |> mapToSignal { result -> Signal<GroupCallInfo, StartScheduledGroupCallError> in
+        var parsedCall: GroupCallInfo?
+        loop: for update in result.allUpdates {
+            switch update {
+            case let .updateGroupCall(_, call):
+                parsedCall = GroupCallInfo(call)
+                break loop
+            default:
+                break
+            }
+        }
+        
+        guard let callInfo = parsedCall else {
+            return .fail(.generic)
+        }
+        
+        return account.postbox.transaction { transaction -> GroupCallInfo in
+            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                if let cachedData = cachedData as? CachedChannelData {
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribedToScheduled: false))
+                } else if let cachedData = cachedData as? CachedGroupData {
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribedToScheduled: false))
+                } else {
+                    return cachedData
+                }
+            })
+            
+            account.stateManager.addUpdates(result)
+            
+            return callInfo
+        }
+        |> castError(StartScheduledGroupCallError.self)
+    }
+}
+
+public enum ToggleScheduledGroupCallSubscriptionError {
+    case generic
+}
+
+public func toggleScheduledGroupCallSubscription(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64, subscribe: Bool) -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> {
+    return account.network.request(Api.functions.phone.toggleGroupCallStartSubscription(call: .inputGroupCall(id: callId, accessHash: accessHash), subscribed: subscribe ? .boolTrue : .boolFalse))
+    |> mapError { error -> ToggleScheduledGroupCallSubscriptionError in
+        return .generic
+    }
+    |> mapToSignal { result -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> in
+        var parsedCall: GroupCallInfo?
+        loop: for update in result.allUpdates {
+            switch update {
+            case let .updateGroupCall(_, call):
+                parsedCall = GroupCallInfo(call)
+                break loop
+            default:
+                break
+            }
+        }
+        
+        guard let callInfo = parsedCall else {
+            return .fail(.generic)
+        }
+        
+        return account.postbox.transaction { transaction in
+            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                if let cachedData = cachedData as? CachedChannelData {
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
+                } else if let cachedData = cachedData as? CachedGroupData {
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
+                } else {
+                    return cachedData
+                }
+            })
+            
+            account.stateManager.addUpdates(result)
+        }
+        |> castError(ToggleScheduledGroupCallSubscriptionError.self)
+    }
+}
+
+public enum UpdateGroupCallJoinAsPeerError {
+    case generic
+}
+
+public func updateGroupCallJoinAsPeer(account: Account, peerId: PeerId, joinAs: PeerId) -> Signal<Never, UpdateGroupCallJoinAsPeerError> {
+    return account.postbox.transaction { transaction -> (Api.InputPeer, Api.InputPeer)? in
+        if let peer = transaction.getPeer(peerId), let joinAsPeer = transaction.getPeer(joinAs), let inputPeer = apiInputPeer(peer), let joinInputPeer = apiInputPeer(joinAsPeer) {
+            return (inputPeer, joinInputPeer)
+        } else {
+            return nil
+        }
+    }
+    |> castError(UpdateGroupCallJoinAsPeerError.self)
+    |> mapToSignal { result in
+        guard let (inputPeer, joinInputPeer) = result else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.phone.saveDefaultGroupCallJoinAs(peer: inputPeer, joinAs: joinInputPeer))
+        |> mapError { _ -> UpdateGroupCallJoinAsPeerError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, UpdateGroupCallJoinAsPeerError> in
+            return account.postbox.transaction { transaction in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                    } else {
+                        return cachedData
+                    }
+                })
+            }
+            |> castError(UpdateGroupCallJoinAsPeerError.self)
+            |> ignoreValues
+        }
+    }
+}
+
 public enum GetGroupCallParticipantsError {
     case generic
 }
 
 public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
-    let sortAscendingValue: Signal<Bool, GetGroupCallParticipantsError>
+    let sortAscendingValue: Signal<(Bool, Int32?, Bool), GetGroupCallParticipantsError>
     if let sortAscending = sortAscending {
-        sortAscendingValue = .single(sortAscending)
+        sortAscendingValue = .single((sortAscending, nil, false))
     } else {
         sortAscendingValue = getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
         |> mapError { _ -> GetGroupCallParticipantsError in
             return .generic
         }
-        |> mapToSignal { result -> Signal<Bool, GetGroupCallParticipantsError> in
+        |> mapToSignal { result -> Signal<(Bool, Int32?, Bool), GetGroupCallParticipantsError> in
             guard let result = result else {
                 return .fail(.generic)
             }
-            return .single(result.info.sortAscending)
+            return .single((result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled))
         }
     }
 
@@ -248,12 +391,14 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
         },
         sortAscendingValue
     )
-    |> mapToSignal { result, sortAscendingValue -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> in
+    |> mapToSignal { result, sortAscendingAndScheduleTimestamp -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> in
         return account.postbox.transaction { transaction -> GroupCallParticipantsContext.State in
             var parsedParticipants: [GroupCallParticipantsContext.Participant] = []
             let totalCount: Int
             let version: Int32
             let nextParticipantsFetchOffset: String?
+            
+            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled) = sortAscendingAndScheduleTimestamp
             
             switch result {
             case let .groupParticipants(count, participants, nextOffset, chats, users, apiVersion):
@@ -341,6 +486,8 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 sortAscending: sortAscendingValue,
                 recordingStartTimestamp: nil,
                 title: nil,
+                scheduleTimestamp: scheduleTimestamp,
+                subscribedToScheduled: subscribedToScheduled,
                 totalCount: totalCount,
                 version: version
             )
@@ -471,6 +618,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                             state.defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)
                             state.title = title
                             state.recordingStartTimestamp = recordStartDate
+                            state.scheduleTimestamp = scheduleDate
                         default:
                             break
                         }
@@ -516,9 +664,9 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                 return account.postbox.transaction { transaction -> JoinGroupCallResult in
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                         if let cachedData = cachedData as? CachedChannelData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false))
                         } else if let cachedData = cachedData as? CachedGroupData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs)
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false))
                         } else {
                             return cachedData
                         }
@@ -848,6 +996,11 @@ public final class GroupCallParticipantsContext {
         public struct DefaultParticipantsAreMuted: Equatable {
             public var isMuted: Bool
             public var canChange: Bool
+            
+            public init(isMuted: Bool, canChange: Bool) {
+                self.isMuted = isMuted
+                self.canChange = canChange
+            }
         }
         
         public var participants: [Participant]
@@ -858,6 +1011,8 @@ public final class GroupCallParticipantsContext {
         public var sortAscending: Bool
         public var recordingStartTimestamp: Int32?
         public var title: String?
+        public var scheduleTimestamp: Int32?
+        public var subscribedToScheduled: Bool
         public var totalCount: Int
         public var version: Int32
         
@@ -877,6 +1032,34 @@ public final class GroupCallParticipantsContext {
             }
             
             self.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: self.sortAscending) })
+        }
+        
+        public init(
+            participants: [Participant],
+            nextParticipantsFetchOffset: String?,
+            adminIds: Set<PeerId>,
+            isCreator: Bool,
+            defaultParticipantsAreMuted: DefaultParticipantsAreMuted,
+            sortAscending: Bool,
+            recordingStartTimestamp: Int32?,
+            title: String?,
+            scheduleTimestamp: Int32?,
+            subscribedToScheduled: Bool,
+            totalCount: Int,
+            version: Int32
+        ) {
+            self.participants = participants
+            self.nextParticipantsFetchOffset = nextParticipantsFetchOffset
+            self.adminIds = adminIds
+            self.isCreator = isCreator
+            self.defaultParticipantsAreMuted = defaultParticipantsAreMuted
+            self.sortAscending = sortAscending
+            self.recordingStartTimestamp = recordingStartTimestamp
+            self.title = title
+            self.scheduleTimestamp = scheduleTimestamp
+            self.subscribedToScheduled = subscribedToScheduled
+            self.totalCount = totalCount
+            self.version = version
         }
     }
     
@@ -970,7 +1153,7 @@ public final class GroupCallParticipantsContext {
         }
         
         case state(update: StateUpdate)
-        case call(isTerminated: Bool, defaultParticipantsAreMuted: State.DefaultParticipantsAreMuted, title: String?, recordingStartTimestamp: Int32?)
+        case call(isTerminated: Bool, defaultParticipantsAreMuted: State.DefaultParticipantsAreMuted, title: String?, recordingStartTimestamp: Int32?, scheduleTimestamp: Int32?)
     }
     
     public final class MemberEvent {
@@ -1003,11 +1186,24 @@ public final class GroupCallParticipantsContext {
     
     public var state: Signal<State, NoError> {
         let accountPeerId = self.account.peerId
+        let myPeerId = self.myPeerId
         return self.statePromise.get()
         |> map { state -> State in
             var publicState = state.state
             var sortAgain = false
-            let canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
+            var canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
+            for participant in publicState.participants {
+                if participant.peer.id == myPeerId {
+                    if let muteState = participant.muteState {
+                        if muteState.canUnmute {
+                            canSeeHands = true
+                        }
+                    } else {
+                        canSeeHands = true
+                    }
+                    break
+                }
+            }
             for i in 0 ..< publicState.participants.count {
                 if let pendingMuteState = state.overlayState.pendingMuteStateChanges[publicState.participants[i].peer.id] {
                     publicState.participants[i].muteState = pendingMuteState.state
@@ -1146,6 +1342,8 @@ public final class GroupCallParticipantsContext {
                             sortAscending: strongSelf.stateValue.state.sortAscending,
                             recordingStartTimestamp: strongSelf.stateValue.state.recordingStartTimestamp,
                             title: strongSelf.stateValue.state.title,
+                            scheduleTimestamp: strongSelf.stateValue.state.scheduleTimestamp,
+                            subscribedToScheduled: strongSelf.stateValue.state.subscribedToScheduled,
                             totalCount: strongSelf.stateValue.state.totalCount,
                             version: strongSelf.stateValue.state.version
                         ),
@@ -1201,11 +1399,12 @@ public final class GroupCallParticipantsContext {
         for update in updates {
             if case let .state(update) = update {
                 stateUpdates.append(update)
-            } else if case let .call(_, defaultParticipantsAreMuted, title, recordingStartTimestamp) = update {
+            } else if case let .call(_, defaultParticipantsAreMuted, title, recordingStartTimestamp, scheduleTimestamp) = update {
                 var state = self.stateValue.state
                 state.defaultParticipantsAreMuted = defaultParticipantsAreMuted
                 state.recordingStartTimestamp = recordingStartTimestamp
                 state.title = title
+                state.scheduleTimestamp = scheduleTimestamp
                 
                 self.stateValue.state = state
             }
@@ -1278,6 +1477,8 @@ public final class GroupCallParticipantsContext {
                     sortAscending: strongSelf.stateValue.state.sortAscending,
                     recordingStartTimestamp: strongSelf.stateValue.state.recordingStartTimestamp,
                     title: strongSelf.stateValue.state.title,
+                    scheduleTimestamp: strongSelf.stateValue.state.scheduleTimestamp,
+                    subscribedToScheduled: strongSelf.stateValue.state.subscribedToScheduled,
                     totalCount: strongSelf.stateValue.state.totalCount,
                     version: strongSelf.stateValue.state.version
                 ),
@@ -1493,6 +1694,8 @@ public final class GroupCallParticipantsContext {
             let defaultParticipantsAreMuted = strongSelf.stateValue.state.defaultParticipantsAreMuted
             let recordingStartTimestamp = strongSelf.stateValue.state.recordingStartTimestamp
             let title = strongSelf.stateValue.state.title
+            let scheduleTimestamp = strongSelf.stateValue.state.scheduleTimestamp
+            let subscribedToScheduled = strongSelf.stateValue.state.subscribedToScheduled
             
             updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
             
@@ -1506,6 +1709,8 @@ public final class GroupCallParticipantsContext {
                     sortAscending: strongSelf.stateValue.state.sortAscending,
                     recordingStartTimestamp: recordingStartTimestamp,
                     title: title,
+                    scheduleTimestamp: scheduleTimestamp,
+                    subscribedToScheduled: subscribedToScheduled,
                     totalCount: updatedTotalCount,
                     version: update.version
                 ),
@@ -1539,6 +1744,7 @@ public final class GroupCallParticipantsContext {
             state.defaultParticipantsAreMuted = strongSelf.stateValue.state.defaultParticipantsAreMuted
             state.title = strongSelf.stateValue.state.title
             state.recordingStartTimestamp = strongSelf.stateValue.state.recordingStartTimestamp
+            state.scheduleTimestamp = strongSelf.stateValue.state.scheduleTimestamp
             state.mergeActivity(from: strongSelf.stateValue.state, myPeerId: nil, previousMyPeerId: nil, mergeActivityTimestamps: false)
             strongSelf.stateValue.state = state
             strongSelf.endedProcessingUpdate()

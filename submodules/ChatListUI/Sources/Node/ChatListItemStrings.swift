@@ -46,7 +46,7 @@ private func messageGroupType(messages: [Message]) -> MessageGroupType {
     return currentType
 }
 
-public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
+public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
     let peer: Peer?
     
     let message = messages.last
@@ -262,12 +262,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 }
                             default:
                                 hideAuthor = true
-                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
                                     messageText = text
                                 }
                         }
                     case _ as TelegramMediaExpiredContent:
-                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:
