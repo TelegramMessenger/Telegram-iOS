@@ -30,14 +30,17 @@ final class PinchSourceGesture: UIPinchGestureRecognizer {
 
     private let target: Target
 
-    private(set) var currentTransform: (CGFloat, CGPoint)?
+    private(set) var currentTransform: (CGFloat, CGPoint, CGPoint)?
 
     var began: (() -> Void)?
-    var updated: ((CGFloat, CGPoint) -> Void)?
+    var updated: ((CGFloat, CGPoint, CGPoint) -> Void)?
     var ended: (() -> Void)?
 
-    private var lastLocation: CGPoint?
+    private var initialLocation: CGPoint?
+    private var pinchLocation = CGPoint()
     private var currentOffset = CGPoint()
+
+    private var currentNumberOfTouches = 0
 
     init() {
         self.target = Target()
@@ -52,11 +55,14 @@ final class PinchSourceGesture: UIPinchGestureRecognizer {
     override func reset() {
         super.reset()
 
-        self.lastLocation = nil
+        self.currentNumberOfTouches = 0
+        self.initialLocation = nil
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
+
+        //self.currentTouches.formUnion(touches)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -69,40 +75,41 @@ final class PinchSourceGesture: UIPinchGestureRecognizer {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
-
-        if touches.count >= 2 {
-            var locationSum = CGPoint()
-            for touch in touches {
-                let point = touch.location(in: self.view)
-                locationSum.x += point.x
-                locationSum.y += point.y
-            }
-            locationSum.x /= CGFloat(touches.count)
-            locationSum.y /= CGFloat(touches.count)
-            if let lastLocation = self.lastLocation {
-                self.currentOffset = CGPoint(x: locationSum.x - lastLocation.x, y: locationSum.y - lastLocation.y)
-            } else {
-                self.lastLocation = locationSum
-                self.currentOffset = CGPoint()
-            }
-            if let (scale, _) = self.currentTransform {
-                self.currentTransform = (scale, self.currentOffset)
-                self.updated?(scale, self.currentOffset)
-            }
-        }
     }
 
     private func gestureUpdated() {
         switch self.state {
         case .began:
-            self.lastLocation = nil
             self.currentOffset = CGPoint()
-            self.currentTransform = nil
+
+            let pinchLocation = self.location(in: self.view)
+            self.pinchLocation = pinchLocation
+            self.initialLocation = pinchLocation
+            let scale = max(1.0, self.scale)
+            self.currentTransform = (scale, self.pinchLocation, self.currentOffset)
+
+            self.currentNumberOfTouches = self.numberOfTouches
+
             self.began?()
         case .changed:
+            let locationSum = self.location(in: self.view)
+
+            if self.numberOfTouches < 2 && self.currentNumberOfTouches >= 2 {
+                self.initialLocation = CGPoint(x: locationSum.x - self.currentOffset.x, y: locationSum.y - self.currentOffset.y)
+            }
+            self.currentNumberOfTouches = self.numberOfTouches
+
+            if let initialLocation = self.initialLocation {
+                self.currentOffset = CGPoint(x: locationSum.x - initialLocation.x, y: locationSum.y - initialLocation.y)
+            }
+            if let (scale, pinchLocation, _) = self.currentTransform {
+                self.currentTransform = (scale, pinchLocation, self.currentOffset)
+                self.updated?(scale, pinchLocation, self.currentOffset)
+            }
+
             let scale = max(1.0, self.scale)
-            self.currentTransform = (scale, self.currentOffset)
-            self.updated?(scale, self.currentOffset)
+            self.currentTransform = (scale, self.pinchLocation, self.currentOffset)
+            self.updated?(scale, self.pinchLocation, self.currentOffset)
         case .ended, .cancelled:
             self.ended?()
         default:
@@ -152,12 +159,14 @@ public final class PinchSourceContainerNode: ASDisplayNode {
         }
     }
 
+    public var maxPinchScale: CGFloat = 10.0
+
     private var isActive: Bool = false
 
     public var activate: ((PinchSourceContainerNode) -> Void)?
     public var scaleUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     var deactivate: (() -> Void)?
-    var updated: ((CGFloat, CGPoint) -> Void)?
+    var updated: ((CGFloat, CGPoint, CGPoint) -> Void)?
 
     override public init() {
         self.gesture = PinchSourceGesture()
@@ -187,12 +196,12 @@ public final class PinchSourceContainerNode: ASDisplayNode {
             strongSelf.deactivate?()
         }
 
-        self.gesture.updated = { [weak self] scale, offset in
+        self.gesture.updated = { [weak self] scale, pinchLocation, offset in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.updated?(scale, offset)
-            strongSelf.scaleUpdated?(scale, .immediate)
+            strongSelf.updated?(min(scale, strongSelf.maxPinchScale), pinchLocation, offset)
+            strongSelf.scaleUpdated?(min(scale, strongSelf.maxPinchScale), .immediate)
         }
     }
 
@@ -226,7 +235,14 @@ public final class PinchSourceContainerNode: ASDisplayNode {
 
 private final class PinchControllerNode: ViewControllerTracingNode {
     private weak var controller: PinchController?
+
+    private var initialSourceFrame: CGRect?
+
+    private let clippingNode: ASDisplayNode
+    private let scrollingContainer: ASDisplayNode
+
     private let sourceNode: PinchSourceContainerNode
+    private let getContentAreaInScreenSpace: () -> CGRect
 
     private let dimNode: ASDisplayNode
 
@@ -235,17 +251,25 @@ private final class PinchControllerNode: ViewControllerTracingNode {
 
     private var hapticFeedback: HapticFeedback?
 
-    init(controller: PinchController, sourceNode: PinchSourceContainerNode) {
+    init(controller: PinchController, sourceNode: PinchSourceContainerNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
         self.controller = controller
         self.sourceNode = sourceNode
+        self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
 
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         self.dimNode.alpha = 0.0
 
+        self.clippingNode = ASDisplayNode()
+        self.clippingNode.clipsToBounds = true
+
+        self.scrollingContainer = ASDisplayNode()
+
         super.init()
 
         self.addSubnode(self.dimNode)
+        self.addSubnode(self.clippingNode)
+        self.clippingNode.addSubnode(self.scrollingContainer)
 
         self.sourceNode.deactivate = { [weak self] in
             guard let strongSelf = self else {
@@ -254,12 +278,22 @@ private final class PinchControllerNode: ViewControllerTracingNode {
             strongSelf.controller?.dismiss()
         }
 
-        self.sourceNode.updated = { [weak self] scale, offset in
-            guard let strongSelf = self else {
+        self.sourceNode.updated = { [weak self] scale, pinchLocation, offset in
+            guard let strongSelf = self, let initialSourceFrame = strongSelf.initialSourceFrame else {
                 return
             }
             strongSelf.dimNode.alpha = max(0.0, min(1.0, scale - 1.0))
-            strongSelf.sourceNode.contentNode.transform = CATransform3DTranslate(CATransform3DMakeScale(scale, scale, 1.0), offset.x / scale, offset.y / scale, 0.0)
+
+            let pinchOffset = CGPoint(
+                x: pinchLocation.x - initialSourceFrame.width / 2.0,
+                y: pinchLocation.y - initialSourceFrame.height / 2.0
+            )
+
+            var transform = CATransform3DIdentity
+            transform = CATransform3DScale(transform, scale, scale, 0.0)
+
+            strongSelf.sourceNode.contentNode.transform = transform
+            strongSelf.sourceNode.contentNode.position = CGPoint(x: initialSourceFrame.midX + offset.x - pinchOffset.x * (scale - 1.0), y: initialSourceFrame.midY + offset.y - pinchOffset.y * (scale - 1.0))
         }
     }
 
@@ -278,19 +312,32 @@ private final class PinchControllerNode: ViewControllerTracingNode {
         self.validLayout = layout
 
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
     }
 
     func animateIn() {
-        let convertedFrame = convertFrame(self.sourceNode.contentNode.frame, from: self.sourceNode.view, to: self.view)
+        let convertedFrame = convertFrame(self.sourceNode.bounds, from: self.sourceNode.view, to: self.view)
         self.sourceNode.contentNode.frame = convertedFrame
-        self.addSubnode(self.sourceNode.contentNode)
+        self.initialSourceFrame = convertedFrame
+        self.scrollingContainer.addSubnode(self.sourceNode.contentNode)
+
+        var updatedContentAreaInScreenSpace = self.getContentAreaInScreenSpace()
+        updatedContentAreaInScreenSpace.origin.x = 0.0
+        updatedContentAreaInScreenSpace.size.width = self.bounds.width
+
+        self.clippingNode.layer.animateFrame(from: updatedContentAreaInScreenSpace, to: self.clippingNode.frame, duration: 0.18 * 1.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+        self.clippingNode.layer.animateBoundsOriginYAdditive(from: updatedContentAreaInScreenSpace.minY, to: 0.0, duration: 0.18 * 1.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
     }
 
     func animateOut(completion: @escaping () -> Void) {
+        self.isAnimatingOut = true
+
         let performCompletion: () -> Void = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
+
+            strongSelf.isAnimatingOut = false
 
             strongSelf.sourceNode.restoreToNaturalSize()
             strongSelf.sourceNode.addSubnode(strongSelf.sourceNode.contentNode)
@@ -298,33 +345,61 @@ private final class PinchControllerNode: ViewControllerTracingNode {
             completion()
         }
 
-        if let (scale, offset) = self.sourceNode.gesture.currentTransform {
-            let duration = 0.4
+        let convertedFrame = convertFrame(self.sourceNode.bounds, from: self.sourceNode.view, to: self.view)
+        self.sourceNode.contentNode.frame = convertedFrame
+        self.initialSourceFrame = convertedFrame
+
+        if let (scale, pinchLocation, offset) = self.sourceNode.gesture.currentTransform, let initialSourceFrame = self.initialSourceFrame {
+            let duration = 0.3
+            let transitionCurve: ContainedViewLayoutTransitionCurve = .easeInOut
+
+            var updatedContentAreaInScreenSpace = self.getContentAreaInScreenSpace()
+            updatedContentAreaInScreenSpace.origin.x = 0.0
+            updatedContentAreaInScreenSpace.size.width = self.bounds.width
+
+            self.clippingNode.layer.animateFrame(from: self.clippingNode.frame, to: updatedContentAreaInScreenSpace, duration: duration * 1.0, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
+            self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: duration * 1.0, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
+
             let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: .spring)
             if self.hapticFeedback == nil {
                 self.hapticFeedback = HapticFeedback()
             }
             self.hapticFeedback?.prepareImpact(.light)
-            Queue.mainQueue().after(0.2, { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.hapticFeedback?.impact(.light)
-            })
+            self.hapticFeedback?.impact(.light)
 
             self.sourceNode.scaleUpdated?(1.0, transition)
 
+            let pinchOffset = CGPoint(
+                x: pinchLocation.x - initialSourceFrame.width / 2.0,
+                y: pinchLocation.y - initialSourceFrame.height / 2.0
+            )
+
+            var transform = CATransform3DIdentity
+            transform = CATransform3DScale(transform, scale, scale, 0.0)
+
             self.sourceNode.contentNode.transform = CATransform3DIdentity
+            self.sourceNode.contentNode.position = CGPoint(x: initialSourceFrame.midX, y: initialSourceFrame.midY)
             self.sourceNode.contentNode.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration * 1.2, damping: 110.0)
-            self.sourceNode.contentNode.layer.animatePosition(from: CGPoint(x: offset.x, y: offset.y), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true, force: true, completion: { _ in
+            self.sourceNode.contentNode.layer.animatePosition(from: CGPoint(x: offset.x - pinchOffset.x * (scale - 1.0), y: offset.y - pinchOffset.y * (scale - 1.0)), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true, force: true, completion: { _ in
                 performCompletion()
             })
 
-            let dimNodeTransition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            let dimNodeTransition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: transitionCurve)
             dimNodeTransition.updateAlpha(node: self.dimNode, alpha: 0.0)
         } else {
             performCompletion()
         }
+    }
+
+    func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        if self.isAnimatingOut {
+            self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: offset.y)
+            transition.animateOffsetAdditive(node: self.scrollingContainer, offset: -offset.y)
+        }
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        return nil
     }
 }
 
@@ -335,6 +410,7 @@ public final class PinchController: ViewController, StandalonePresentableControl
     }
 
     private let sourceNode: PinchSourceContainerNode
+    private let getContentAreaInScreenSpace: () -> CGRect
 
     private var wasDismissed = false
 
@@ -342,8 +418,9 @@ public final class PinchController: ViewController, StandalonePresentableControl
         return self.displayNode as! PinchControllerNode
     }
 
-    public init(sourceNode: PinchSourceContainerNode) {
+    public init(sourceNode: PinchSourceContainerNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
         self.sourceNode = sourceNode
+        self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
 
         super.init(navigationBarPresentationData: nil)
 
@@ -361,7 +438,7 @@ public final class PinchController: ViewController, StandalonePresentableControl
     }
 
     override public func loadDisplayNode() {
-        self.displayNode = PinchControllerNode(controller: self, sourceNode: self.sourceNode)
+        self.displayNode = PinchControllerNode(controller: self, sourceNode: self.sourceNode, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
 
         self.displayNodeDidLoad()
 
@@ -391,5 +468,9 @@ public final class PinchController: ViewController, StandalonePresentableControl
                 completion?()
             })
         }
+    }
+
+    public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        self.controllerNode.addRelativeContentOffset(offset, transition: transition)
     }
 }

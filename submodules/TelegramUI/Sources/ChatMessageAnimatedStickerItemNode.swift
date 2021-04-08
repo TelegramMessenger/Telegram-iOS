@@ -143,7 +143,6 @@ class ChatMessageShareButton: HighlightableButtonNode {
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
-    private let pinchContainerNode: PinchSourceContainerNode
     let imageNode: TransformImageNode
     private var placeholderNode: StickerShimmerEffectNode
     private var animationNode: GenericAnimatedStickerNode?
@@ -196,7 +195,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
-        self.pinchContainerNode = PinchSourceContainerNode()
         self.imageNode = TransformImageNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
@@ -264,8 +262,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.imageNode.displaysAsynchronously = false
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
-        self.pinchContainerNode.contentNode.addSubnode(self.containerNode)
-        self.addSubnode(self.pinchContainerNode)
+        self.addSubnode(self.containerNode)
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
         self.contextSourceNode.contentNode.addSubnode(self.placeholderNode)
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
@@ -280,23 +277,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 return
             }
             item.controllerInteraction.openMessageReactions(item.message.id)
-        }
-
-        self.pinchContainerNode.activate = { [weak self] sourceNode in
-            guard let strongSelf = self, let item = strongSelf.item else {
-                return
-            }
-            item.controllerInteraction.activateMessagePinch(sourceNode)
-        }
-
-        self.pinchContainerNode.scaleUpdated = { [weak self] scale, transition in
-            guard let strongSelf = self else {
-                return
-            }
-
-            let factor: CGFloat = max(0.0, min(1.0, (scale - 1.0) * 8.0))
-
-            transition.updateAlpha(node: strongSelf.dateAndStatusNode, alpha: 1.0 - factor)
         }
     }
     
@@ -996,8 +976,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
-                    strongSelf.pinchContainerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
-                    strongSelf.pinchContainerNode.update(size: layoutSize, transition: .immediate)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     
@@ -1085,7 +1063,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     imageApply()
                     
                     strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
-                    strongSelf.pinchContainerNode.contentRect = strongSelf.imageNode.frame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {

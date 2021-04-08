@@ -356,6 +356,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private weak var sendMessageActionsController: ChatSendMessageActionSheetController?
     private var searchResultsController: ChatSearchResultsController?
+
+    private weak var currentPinchController: PinchController?
+    private weak var currentPinchSourceItemNode: ListViewItemNode?
     
     private var screenCaptureManager: ScreenCaptureDetectionManager?
     private let chatAdditionalDataDisposable = MetaDisposable()
@@ -920,7 +923,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let pinchController = PinchController(sourceNode: sourceNode)
+
+            var sourceItemNode: ListViewItemNode?
+            strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                guard let itemNode = itemNode as? ListViewItemNode else {
+                    return
+                }
+                if sourceNode.view.isDescendant(of: itemNode.view) {
+                    sourceItemNode = itemNode
+                }
+            }
+
+            let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                guard let strongSelf = self else {
+                    return CGRect()
+                }
+
+                return strongSelf.chatDisplayNode.view.convert(strongSelf.chatDisplayNode.frameForVisibleArea(), to: nil)
+            })
+            strongSelf.currentPinchController = pinchController
+            strongSelf.currentPinchSourceItemNode = sourceItemNode
             strongSelf.window?.presentInGlobalOverlay(pinchController)
         }, openMessageContextActions: { message, node, rect, gesture in
             gesture?.cancel()
@@ -4011,21 +4033,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            for (tooltipScreen, tooltipItemNode) in strongSelf.currentMessageTooltipScreens {
-                if let itemNode = itemNode {
-                    if itemNode === tooltipItemNode {
-                        tooltipScreen.addRelativeScrollingOffset(-offset, transition: transition)
-                    }
-                } else {
-                    tooltipScreen.addRelativeScrollingOffset(-offset, transition: transition)
-                }
-            }
-        }
-        
-        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, _, _ in
-            guard let strongSelf = self else {
-                return
-            }
             
             if offset > 0.0 {
                 if var scrolledToMessageIdValue = strongSelf.scrolledToMessageIdValue {
@@ -4034,6 +4041,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             } else if offset < 0.0 {
                 strongSelf.scrolledToMessageIdValue = nil
+            }
+
+            if let currentPinchSourceItemNode = strongSelf.currentPinchSourceItemNode {
+                if let itemNode = itemNode {
+                    if itemNode === currentPinchSourceItemNode {
+                        strongSelf.currentPinchController?.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
+                    }
+                } else {
+                    strongSelf.currentPinchController?.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
+                }
             }
         }
         
