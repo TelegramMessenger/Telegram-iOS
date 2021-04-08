@@ -561,7 +561,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     
                     var dismissImpl: (() -> Void)?
                     let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
-                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, additionalFields: additionalFields, publishableKey: publishableKey, completion: { method in
+                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .stripe(additionalFields: additionalFields, publishableKey: publishableKey), completion: { method in
                         guard let strongSelf = self else {
                             return
                         }
@@ -584,6 +584,74 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                             updatedToken.saveOnServer = false
                                             applyPaymentMethod(.webToken(updatedToken))
                                             
+                                            let controller = SetupTwoStepVerificationController(context: strongSelf.context, initialState: .automatic, stateUpdated: { update, shouldDismiss, controller in
+                                                if shouldDismiss {
+                                                    controller.dismiss()
+                                                }
+                                                switch update {
+                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                        break
+                                                    case .passwordSet:
+                                                        var updatedToken = webToken
+                                                        updatedToken.saveOnServer = true
+                                                        applyPaymentMethod(.webToken(updatedToken))
+                                                }
+                                            })
+                                            strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        } else {
+                                            var updatedToken = webToken
+                                            updatedToken.saveOnServer = true
+                                            applyPaymentMethod(.webToken(updatedToken))
+                                        }
+                                    })]), nil)
+                                default:
+                                    applyPaymentMethod(method)
+                            }
+                        } else {
+                            applyPaymentMethod(method)
+                        }
+                        dismissImpl?()
+                    })
+                    dismissImpl = { [weak controller] in
+                        controller?.dismiss()
+                    }
+                    strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                } else if let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "smartglocal" {
+                    guard let paramsData = nativeProvider.params.data(using: .utf8) else {
+                        return
+                    }
+                    guard let nativeParams = (try? JSONSerialization.jsonObject(with: paramsData)) as? [String: Any] else {
+                        return
+                    }
+                    guard let publicToken = nativeParams["public_token"] as? String else {
+                        return
+                    }
+
+                    var dismissImpl: (() -> Void)?
+                    let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
+                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .smartglobal(isTesting: paymentForm.invoice.isTest, publicToken: publicToken), completion: { method in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if canSave && paymentForm.passwordMissing {
+                            switch method {
+                                case let .webToken(webToken) where webToken.saveOnServer:
+                                    var text = strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoEnableHelp
+                                    text = text.replacingOccurrences(of: "[", with: "")
+                                    text = text.replacingOccurrences(of: "]", with: "")
+                                    present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {
+                                        var updatedToken = webToken
+                                        updatedToken.saveOnServer = false
+                                        applyPaymentMethod(.webToken(updatedToken))
+                                    }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        if paymentForm.passwordMissing {
+                                            var updatedToken = webToken
+                                            updatedToken.saveOnServer = false
+                                            applyPaymentMethod(.webToken(updatedToken))
+
                                             let controller = SetupTwoStepVerificationController(context: strongSelf.context, initialState: .automatic, stateUpdated: { update, shouldDismiss, controller in
                                                 if shouldDismiss {
                                                     controller.dismiss()
