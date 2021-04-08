@@ -449,8 +449,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .groupPhoneCall(_, _, scheduleDate, duration):
                 if let scheduleDate = scheduleDate {
                     let timeString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate)
-                    let titleString = strings.Notification_VoiceChatScheduled(timeString).0
-                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                        let titleString = strings.Notification_VoiceChatScheduledChannel(timeString).0
+                        attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        let titleString = strings.Notification_VoiceChatScheduled(authorName, timeString)
+                        attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
                 } else if let duration = duration {
                     let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)

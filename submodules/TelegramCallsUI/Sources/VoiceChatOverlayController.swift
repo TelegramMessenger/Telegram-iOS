@@ -169,7 +169,7 @@ public final class VoiceChatOverlayController: ViewController {
             
             if reclaim {
                 self.dismissed = true
-                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 205.0 / 2.0)
+                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 205.0 / 2.0 - 2.0)
                 if self.isSlidOffscreen {
                     self.isSlidOffscreen = false
                     self.isButtonHidden = true

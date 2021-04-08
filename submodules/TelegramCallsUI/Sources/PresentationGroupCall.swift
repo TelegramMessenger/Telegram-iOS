@@ -2066,7 +2066,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return transaction.getPeer(peerId)
         }
         |> deliverOnMainQueue).start(next: { [weak self] myPeer in
-            guard let strongSelf = self, let _ = myPeer else {
+            guard let strongSelf = self, let myPeer = myPeer else {
                 return
             }
             
@@ -2076,7 +2076,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             strongSelf.joinAsPeerId = peerId
             
-            if strongSelf.stateValue.scheduleTimestamp == nil {
+            if strongSelf.stateValue.scheduleTimestamp != nil {
+                strongSelf.stateValue.myPeerId = peerId
+                strongSelf.reconnectedAsEventsPipe.putNext(myPeer)
+            } else {
                 strongSelf.reconnectingAsPeer = myPeer
                 
                 if let participantsContext = strongSelf.participantsContext, let immediateState = participantsContext.immediateState {
@@ -2096,8 +2099,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 
                 strongSelf.requestCall(movingFromBroadcastToRtc: false)
-            } else {
-                strongSelf.stateValue.myPeerId = peerId
             }
         })
     }
@@ -2222,7 +2223,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.isScheduledStarted = true
         self.stateValue.scheduleTimestamp = nil
-        self.switchToTemporaryParticipantsContext(sourceContext: nil, oldMyPeerId: self.joinAsPeerId)
         
         self.startDisposable.set((startScheduledGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)
         |> deliverOnMainQueue).start(next: { [weak self] callInfo in
@@ -2445,10 +2445,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         let account = self.account
-        
         let currentCall: Signal<GroupCallInfo?, CallError>
         if let initialCall = self.initialCall {
             currentCall = getCurrentGroupCall(account: account, callId: initialCall.id, accessHash: initialCall.accessHash)
+            |> mapError { _ -> CallError in
+                return .generic
+            }
+            |> map { summary -> GroupCallInfo? in
+                return summary?.info
+            }
+        } else if case let .active(callInfo) = self.internalState {
+            currentCall = getCurrentGroupCall(account: account, callId: callInfo.id, accessHash: callInfo.accessHash)
             |> mapError { _ -> CallError in
                 return .generic
             }
