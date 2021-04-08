@@ -112,9 +112,9 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 if let peerId = peerId {
                     transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                         if let cachedData = current as? CachedChannelData {
-                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall.init(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribed: cachedData.activeCall?.subscribed ?? false))
+                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall.init(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false))
                         } else if let cachedData = current as? CachedGroupData {
-                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribed: cachedData.activeCall?.subscribed ?? false))
+                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false))
                         } else {
                             return current
                         }
