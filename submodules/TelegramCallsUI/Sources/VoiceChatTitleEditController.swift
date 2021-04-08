@@ -551,6 +551,10 @@ private final class VoiceChatUserNameEditAlertContentNode: AlertContentNode {
         }
         
         self.updateTheme(theme)
+        
+        self.firstNameInputFieldNode.complete = { [weak self] in
+            self?.lastNameInputFieldNode.activateInput()
+        }
     }
     
     deinit {

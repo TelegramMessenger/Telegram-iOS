@@ -830,6 +830,9 @@ public final class VoiceChatController: ViewController {
             
             self.scheduleTextNode = ImmediateTextNode()
             self.scheduleTextNode.isHidden = !self.isScheduling
+            self.scheduleTextNode.isUserInteractionEnabled = false
+            self.scheduleTextNode.textAlignment = .center
+            self.scheduleTextNode.maximumNumberOfLines = 4
             
             self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor:  UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
             self.scheduleCancelButton.isHidden = !self.isScheduling
@@ -840,6 +843,7 @@ public final class VoiceChatController: ViewController {
             self.dateFormatter.timeZone = TimeZone.current
             
             self.timerNode = VoiceChatTimerNode(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
+            self.timerNode.isHidden = true
             
             super.init()
             
@@ -1258,10 +1262,17 @@ public final class VoiceChatController: ViewController {
                                 }
                                 let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, maxLength: maxBioLength, apply: { bio in
                                     if let strongSelf = self, let bio = bio {
-                                        let _ = (updateAbout(account: strongSelf.context.account, about: bio)
-                                        |> `catch` { _ -> Signal<Void, NoError> in
-                                            return .complete()
-                                        }).start()
+                                        if peer.id.namespace == Namespaces.Peer.CloudUser {
+                                            let _ = (updateAbout(account: strongSelf.context.account, about: bio)
+                                            |> `catch` { _ -> Signal<Void, NoError> in
+                                                return .complete()
+                                            }).start()
+                                        } else {
+                                            let _ = (updatePeerTitle(account: strongSelf.context.account, peerId: peer.id, title: bio)
+                                            |> `catch` { _ -> Signal<Void, NoError> in
+                                                return .complete()
+                                            }).start()
+                                        }
                                         
                                         strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditBioSuccess), action: { _ in return false })
                                     }
@@ -1501,6 +1512,7 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.rightBorderNode)
             self.contentContainer.addSubnode(self.bottomPanelNode)
             self.contentContainer.addSubnode(self.timerNode)
+            self.contentContainer.addSubnode(self.scheduleTextNode)
             
             let invitedPeers: Signal<[Peer], NoError> = self.call.invitedPeers
             |> mapToSignal { ids -> Signal<[Peer], NoError> in
@@ -1700,7 +1712,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
                 if let strongSelf = self {
                     strongSelf.currentContentOffset = offset
-                    if strongSelf.animation == nil && !strongSelf.animatingExpansion {
+                    if !strongSelf.animatingExpansion && !strongSelf.animatingInsertion && strongSelf.panGestureArguments == nil {
                         strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
                     }
                 }
@@ -2206,7 +2218,7 @@ public final class VoiceChatController: ViewController {
             self.view.addGestureRecognizer(panRecognizer)
             
             if self.isScheduling {
-                self.setupPickerView()
+                self.setupSchedulePickerView()
                 self.updateScheduleButtonTitle()
             }
         }
@@ -2218,22 +2230,27 @@ public final class VoiceChatController: ViewController {
             let currentDate = Date()
             var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: currentDate)
             components.second = 0
-            let minute = (components.minute ?? 0) % 5
             
-            let next1MinDate = calendar.date(byAdding: .minute, value: 1, to: calendar.date(from: components)!)
-            let next5MinDate = calendar.date(byAdding: .minute, value: 5 - minute, to: calendar.date(from: components)!)
+            let roundedDate = calendar.date(from: components)!
+            let next1MinDate = calendar.date(byAdding: .minute, value: 1, to: roundedDate)
+            
+            components.minute = 0
+            let roundedToHourDate = calendar.date(from: components)!
+            let nextTwoHourDate = calendar.date(byAdding: .hour, value: 2, to: roundedToHourDate)
+            let maxDate = calendar.date(byAdding: .day, value: 7, to: currentDate)
             
             if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
                 self.pickerView?.maximumDate = date
             }
             
-            if let next1MinDate = next1MinDate, let next5MinDate = next5MinDate {
+            if let next1MinDate = next1MinDate, let nextTwoHourDate = nextTwoHourDate {
                 self.pickerView?.minimumDate = next1MinDate
-                self.pickerView?.date = next5MinDate
+                self.pickerView?.maximumDate = maxDate
+                self.pickerView?.date = nextTwoHourDate
             }
         }
         
-        private func setupPickerView() {
+        private func setupSchedulePickerView() {
             var currentDate: Date?
             if let pickerView = self.pickerView {
                 currentDate = pickerView.date
@@ -2271,7 +2288,9 @@ public final class VoiceChatController: ViewController {
             }
             
             let calendar = Calendar(identifier: .gregorian)
-            let time = stringForMessageTimestamp(timestamp: Int32(date.timeIntervalSince1970), dateTimeFormat: self.presentationData.dateTimeFormat)
+            let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            let timestamp = Int32(date.timeIntervalSince1970)
+            let time = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: self.presentationData.dateTimeFormat)
             let buttonTitle: String
             if calendar.isDateInToday(date) {
                 buttonTitle = self.presentationData.strings.ScheduleVoiceChat_ScheduleToday(time).0
@@ -2281,6 +2300,15 @@ public final class VoiceChatController: ViewController {
                 buttonTitle = self.presentationData.strings.ScheduleVoiceChat_ScheduleOn(self.dateFormatter.string(from: date), time).0
             }
             self.scheduleButtonTitle = buttonTitle
+            
+            let delta = timestamp - currentTimestamp
+            
+            var isGroup = true
+            if let peer = self.peer as? TelegramChannel, case .broadcast = peer.info {
+                isGroup = false
+            }
+            let intervalString = timeIntervalString(strings: self.presentationData.strings, value: max(60, delta))
+            self.scheduleTextNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.ScheduleVoiceChat_GroupText(intervalString).0 : self.presentationData.strings.ScheduleVoiceChat_ChannelText(intervalString).0, font: Font.regular(14.0), textColor: UIColor(rgb: 0x8e8e93))
             
             if let (layout, navigationHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
@@ -2341,15 +2369,21 @@ public final class VoiceChatController: ViewController {
             self.actionButton.titleLabel.layer.animatePosition(from: CGPoint(x: 0.0, y: -26.0), to: CGPoint(), duration: 0.2, additive: true)
             
             if let pickerView = self.pickerView {
+                self.pickerView = nil
                 pickerView.alpha = 0.0
                 pickerView.layer.animateScale(from: 1.0, to: 0.25, duration: 0.15, removeOnCompletion: false)
-                pickerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                pickerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak pickerView] _ in
+                    pickerView?.removeFromSuperview()
+                })
                 pickerView.isUserInteractionEnabled = false
             }
             
-            self.timerNode.alpha = 1.0
+            self.timerNode.isHidden = false
             self.timerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             self.timerNode.animateIn()
+            
+            self.scheduleTextNode.alpha = 0.0
+            self.scheduleTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
             
             self.updateTitle(slide: true, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
@@ -2362,7 +2396,9 @@ public final class VoiceChatController: ViewController {
             self.listNode.isUserInteractionEnabled = true
             
             self.timerNode.alpha = 0.0
-            self.timerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+            self.timerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.timerNode.isHidden = true
+            })
             
             self.updateTitle(transition: .animated(duration: 0.2, curve: .easeInOut))
         }
@@ -2602,7 +2638,6 @@ public final class VoiceChatController: ViewController {
                                 self.schedule()
                             } else if callState.canManageCall {
                                 self.call.startScheduled()
-                                self.transitionToCall()
                             } else {
                                 self.call.toggleScheduledSubscription(!callState.subscribedToScheduled)
                             }
@@ -2678,8 +2713,13 @@ public final class VoiceChatController: ViewController {
                 let _ = (self.inviteLinksPromise.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] inviteLinks in
+                    guard let strongSelf = self else {
+                        return
+                    }
                     if let inviteLinks = inviteLinks {
-                        self?.presentShare(inviteLinks)
+                        strongSelf.presentShare(inviteLinks)
+                    } else if let addressName = strongSelf.peer?.addressName, !addressName.isEmpty {
+                        strongSelf.presentShare(GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)?voicechat", speakerLink: nil))
                     }
                 })
                 return
@@ -2790,8 +2830,6 @@ public final class VoiceChatController: ViewController {
                 } else {
                     topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
                 }
-            } else if let _ = self.animation {
-                topInset = self.listNode.frame.minY - listTopInset
             } else if let currentTopInset = self.topInset {
                 topInset = self.isExpanded ? 0.0 : currentTopInset
             } else {
@@ -2841,27 +2879,20 @@ public final class VoiceChatController: ViewController {
                 completion?()
             }
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: 24.0)
-                        
+            
             var bottomEdge: CGFloat = 0.0
             self.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ListViewItemNode {
-                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.view)
+                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.contentContainer.view)
                     if convertedFrame.maxY > bottomEdge {
                         bottomEdge = convertedFrame.maxY
                     }
                 }
             }
-                        
+
             let listMaxY = listTopInset + listSize.height
-            if bottomEdge.isZero {
-                bottomEdge = listMaxY
-            }
-            
-            var bottomOffset: CGFloat = 0.0
-            if bottomEdge < listMaxY && (self.panGestureArguments != nil || self.isExpanded) {
-                bottomOffset = bottomEdge - listMaxY
-            }
-        
+            let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
+
             let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
@@ -3139,9 +3170,7 @@ public final class VoiceChatController: ViewController {
                 topInset = listSize.height
             }
             
-            if self.animation == nil {
-                transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + topInset), size: listSize))
-            }
+            transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + topInset), size: listSize))
             
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve)
@@ -3160,6 +3189,9 @@ public final class VoiceChatController: ViewController {
             let timerFrame = CGRect(x: 0.0, y: layout.size.height - bottomPanelHeight - 216.0, width: size.width, height: 216.0)
             transition.updateFrame(node: self.timerNode, frame: timerFrame)
             self.timerNode.update(size: timerFrame.size, scheduleTime: self.callState?.scheduleTimestamp, transition: .immediate)
+            
+            let scheduleTextSize = self.scheduleTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            self.scheduleTextNode.frame = CGRect(origin: CGPoint(x: floor((size.width - scheduleTextSize.width) / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - scheduleTextSize.height - 145.0), size: scheduleTextSize)
             
             let centralButtonSide = min(size.width, size.height) - 32.0
             let centralButtonSize = CGSize(width: centralButtonSide, height: centralButtonSide)
@@ -3398,10 +3430,13 @@ public final class VoiceChatController: ViewController {
             self.enqueuedTransitions.remove(at: 0)
             
             if self.callState?.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
+                self.timerNode.isHidden = false
                 self.listNode.alpha = 0.0
                 self.listNode.isUserInteractionEnabled = false
                 self.backgroundNode.backgroundColor = panelBackgroundColor
                 self.updateIsFullscreen(false)
+            } else if self.callState?.scheduleTimestamp == nil && !self.isScheduling && self.listNode.alpha == 0.0 {
+                self.transitionToCall()
             }
             
             var options = ListViewDeleteAndInsertOptions()
@@ -3412,7 +3447,7 @@ public final class VoiceChatController: ViewController {
                 if transition.crossFade {
                     options.insert(.AnimateCrossfade)
                 }
-                if transition.animated && self.animation == nil {
+                if transition.animated {
                     options.insert(.AnimateInsertion)
                 }
             }
@@ -3443,11 +3478,7 @@ public final class VoiceChatController: ViewController {
             let listTopInset = layoutTopInset + 63.0
             let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             
-            if self.isScheduling || self.callState?.scheduleTimestamp != nil {
-                self.topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
-            } else {
-                self.topInset = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
-            }
+            self.topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
             
             let targetY = listTopInset + (self.topInset ?? listSize.height)
             
@@ -3455,62 +3486,25 @@ public final class VoiceChatController: ViewController {
                 var frame = self.listNode.frame
                 frame.origin.y = targetY
                 self.listNode.frame = frame
-            } else if !self.isExpanded {
-                if self.listNode.frame.minY != targetY && !self.animatingExpansion && self.panGestureArguments == nil {
-                    self.animation = ListViewAnimation(from: self.listNode.frame.minY, to: targetY, duration: 0.4, curve: listViewAnimationCurveSystem, beginAt: CACurrentMediaTime(), update: { [weak self] _, currentValue in
-                        if let strongSelf = self {
-                            var frame = strongSelf.listNode.frame
-                            frame.origin.y = currentValue
-                            strongSelf.listNode.frame = frame
-                            strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .immediate)
-                        }
-                    })
-                    self.updateAnimation()
-                }
             }
-                        
+                
+            
+            if transition.animated {
+                self.animatingInsertion = true
+            }
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: nil, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
+                }
+                if strongSelf.animatingInsertion {
+                    strongSelf.updateFloatingHeaderOffset(offset: self?.currentContentOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    strongSelf.animatingInsertion = false
                 }
                 if !strongSelf.didSetContentsReady {
                     strongSelf.didSetContentsReady = true
                     strongSelf.controller?.contentsReady.set(true)
                 }
             })
-        }
-        
-        
-        private var animator: ConstantDisplayLinkAnimator?
-        private var animation: ListViewAnimation?
-        private func updateAnimation() {
-            var animate = false
-            let timestamp = CACurrentMediaTime()
-            
-            if let animation = self.animation {
-                animation.applyAt(timestamp)
-            
-                if animation.completeAt(timestamp) {
-                    self.animation = nil
-                } else {
-                    animate = true
-                }
-            }
-            
-            if animate {
-                let animator: ConstantDisplayLinkAnimator
-                if let current = self.animator {
-                    animator = current
-                } else {
-                    animator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                        self?.updateAnimation()
-                    })
-                    self.animator = animator
-                }
-                animator.isPaused = false
-            } else {
-                self.animator?.isPaused = true
-            }
         }
         
         private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
@@ -3689,6 +3683,8 @@ public final class VoiceChatController: ViewController {
                 self.itemInteraction?.isExpanded = self.isExpanded
             }
         }
+        
+        private var animatingInsertion = false
         private var animatingExpansion = false
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
         
