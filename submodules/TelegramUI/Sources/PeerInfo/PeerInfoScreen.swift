@@ -4029,7 +4029,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     
                     let text: String
                     switch error {
-                    case .generic:
+                    case .generic, .scheduledTooLate:
                         text = strongSelf.presentationData.strings.Login_UnknownError
                     case .anonymousNotAllowed:
                         text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText

@@ -6345,6 +6345,9 @@ Sorry for the inconvenience.";
 "VoiceChat.StartsIn" = "Starts in";
 "VoiceChat.LateBy" = "Late by";
 
+"VoiceChat.StatusStartsIn" = "starts in %@";
+"VoiceChat.StatusLateBy" = "late by %@";
+
 "VoiceChat.StartNow" = "Start Now";
 "VoiceChat.SetReminder" = "Set Reminder";
 "VoiceChat.CancelReminder" = "Cancel Reminder";
