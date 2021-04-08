@@ -1086,6 +1086,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     outgoingAudioBitrateKbit = value
                 }
 
+                let enableNoiseSuppression = accountContext.sharedContext.immediateExperimentalUISettings.enableNoiseSuppression
+
                 callContext = OngoingGroupCallContext(video: self.videoCapturer, participantDescriptionsRequired: { [weak self] ssrcs in
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
@@ -1102,7 +1104,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.requestCall(movingFromBroadcastToRtc: false)
                         }
                     }
-                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideo)
+                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideo, enableNoiseSuppression: enableNoiseSuppression)
                 self.incomingVideoSourcePromise.set(callContext.videoSources
                 |> deliverOnMainQueue
                 |> map { [weak self] sources -> [PeerId: UInt32] in

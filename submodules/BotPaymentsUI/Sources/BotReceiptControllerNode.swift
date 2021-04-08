@@ -28,7 +28,7 @@ private enum BotReceiptSection: Int32 {
 
 enum BotReceiptEntry: ItemListNodeEntry {
     case header(PresentationTheme, TelegramMediaInvoice, String)
-    case price(Int, PresentationTheme, String, String, Bool)
+    case price(Int, PresentationTheme, String, String, Bool, Bool)
     case paymentMethod(PresentationTheme, String, String)
     case shippingInfo(PresentationTheme, String, String)
     case shippingMethod(PresentationTheme, String, String)
@@ -39,7 +39,7 @@ enum BotReceiptEntry: ItemListNodeEntry {
     var section: ItemListSectionId {
         switch self {
             case .header:
-                return BotReceiptSection.header.rawValue
+                return BotReceiptSection.prices.rawValue
             case .price:
                 return BotReceiptSection.prices.rawValue
             default:
@@ -51,7 +51,7 @@ enum BotReceiptEntry: ItemListNodeEntry {
         switch self {
             case .header:
                 return 0
-            case let .price(index, _, _, _, _):
+            case let .price(index, _, _, _, _, _):
                 return 1 + Int32(index)
             case .paymentMethod:
                 return 10000 + 0
@@ -85,8 +85,8 @@ enum BotReceiptEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .price(lhsIndex, lhsTheme, lhsText, lhsValue, lhsFinal):
-                if case let .price(rhsIndex, rhsTheme, rhsText, rhsValue, rhsFinal) = rhs {
+            case let .price(lhsIndex, lhsTheme, lhsText, lhsValue, lhsHasSeparator, lhsFinal):
+                if case let .price(rhsIndex, rhsTheme, rhsText, rhsValue, rhsHasSeparator, rhsFinal) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -97,6 +97,9 @@ enum BotReceiptEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsValue != rhsValue {
+                        return false
+                    }
+                    if lhsHasSeparator != rhsHasSeparator {
                         return false
                     }
                     if lhsFinal != rhsFinal {
@@ -154,8 +157,8 @@ enum BotReceiptEntry: ItemListNodeEntry {
         switch self {
             case let .header(theme, invoice, botName):
                 return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
-            case let .price(_, theme, text, value, isFinal):
-                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: false, sectionId: self.section)
+            case let .price(_, theme, text, value, hasSeparator, isFinal):
+                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, sectionId: self.section)
             case let .paymentMethod(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: nil)
             case let .shippingInfo(_, text, value):
@@ -172,21 +175,23 @@ enum BotReceiptEntry: ItemListNodeEntry {
     }
 }
 
-private func botReceiptControllerEntries(presentationData: PresentationData, invoice: TelegramMediaInvoice, formInvoice: BotPaymentInvoice?, formInfo: BotPaymentRequestedInfo?, shippingOption: BotPaymentShippingOption?, paymentMethodTitle: String?, botPeer: Peer?) -> [BotReceiptEntry] {
+private func botReceiptControllerEntries(presentationData: PresentationData, invoice: TelegramMediaInvoice?, formInvoice: BotPaymentInvoice?, formInfo: BotPaymentRequestedInfo?, shippingOption: BotPaymentShippingOption?, paymentMethodTitle: String?, botPeer: Peer?, tipAmount: Int64?) -> [BotReceiptEntry] {
     var entries: [BotReceiptEntry] = []
     
     var botName = ""
     if let botPeer = botPeer {
         botName = botPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     }
-    entries.append(.header(presentationData.theme, invoice, botName))
+    if let invoice = invoice {
+        entries.append(.header(presentationData.theme, invoice, botName))
+    }
     
     if let formInvoice = formInvoice {
         var totalPrice: Int64 = 0
         
         var index = 0
         for price in formInvoice.prices {
-            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: formInvoice.currency), false))
+            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: formInvoice.currency), index == 0, false))
             totalPrice += price.amount
             index += 1
         }
@@ -196,13 +201,20 @@ private func botReceiptControllerEntries(presentationData: PresentationData, inv
             shippingOptionString = shippingOption.title
             
             for price in shippingOption.prices {
-                entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: formInvoice.currency), false))
+                entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: formInvoice.currency), index == 0, false))
                 totalPrice += price.amount
                 index += 1
             }
         }
+
+        if let tipAmount = tipAmount, tipAmount != 0 {
+            //TODO:localize
+            entries.append(.price(index, presentationData.theme, "Tip", formatCurrencyAmount(tipAmount, currency: formInvoice.currency), index == 0, false))
+            totalPrice += tipAmount
+            index += 1
+        }
         
-        entries.append(.price(index, presentationData.theme, presentationData.strings.Checkout_TotalAmount, formatCurrencyAmount(totalPrice, currency: formInvoice.currency), true))
+        entries.append(.price(index, presentationData.theme, presentationData.strings.Checkout_TotalAmount, formatCurrencyAmount(totalPrice, currency: formInvoice.currency), true, true))
         
         if let paymentMethodTitle = paymentMethodTitle {
             entries.append(.paymentMethod(presentationData.theme, presentationData.strings.Checkout_PaymentMethod, paymentMethodTitle))
@@ -262,12 +274,12 @@ final class BotReceiptControllerNode: ItemListControllerNode {
     
     private var presentationData: PresentationData
     
-    private let receiptData = Promise<(BotPaymentInvoice, BotPaymentRequestedInfo?, BotPaymentShippingOption?, String?)?>(nil)
+    private let receiptData = Promise<(BotPaymentInvoice, BotPaymentRequestedInfo?, BotPaymentShippingOption?, String?, TelegramMediaInvoice, Int64?)?>(nil)
     private var dataRequestDisposable: Disposable?
     
     private let actionButton: BotCheckoutActionButton
     
-    init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.dismissAnimated = dismissAnimated
         
@@ -277,19 +289,19 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         
         let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, receiptData.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
         |> map { presentationData, receiptData, botPeer -> (ItemListPresentationData, (ItemListNodeState, Any)) in
-            let nodeState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botReceiptControllerEntries(presentationData: presentationData, invoice: invoice, formInvoice: receiptData?.0, formInfo: receiptData?.1, shippingOption: receiptData?.2, paymentMethodTitle: receiptData?.3, botPeer: botPeer), style: .plain, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
+            let nodeState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botReceiptControllerEntries(presentationData: presentationData, invoice: receiptData?.4, formInvoice: receiptData?.0, formInfo: receiptData?.1, shippingOption: receiptData?.2, paymentMethodTitle: receiptData?.3, botPeer: botPeer, tipAmount: receiptData?.5), style: .blocks, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
             
             return (ItemListPresentationData(presentationData), (nodeState, arguments))
         }
         
         self.actionButton = BotCheckoutActionButton(inactiveFillColor: self.presentationData.theme.list.plainBackgroundColor, activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
-        self.actionButton.setState(.inactive(self.presentationData.strings.Common_Done))
+        self.actionButton.setState(.active(self.presentationData.strings.Common_Done))
         
         super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
         self.dataRequestDisposable = (requestBotPaymentReceipt(account: context.account, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
             if let strongSelf = self {
-                strongSelf.receiptData.set(.single((receipt.invoice, receipt.info, receipt.shippingOption, receipt.credentialsTitle)))
+                strongSelf.receiptData.set(.single((receipt.invoice, receipt.info, receipt.shippingOption, receipt.credentialsTitle, receipt.invoiceMedia, receipt.tipAmount)))
             }
         })
         
@@ -303,10 +315,11 @@ final class BotReceiptControllerNode: ItemListControllerNode {
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
         var updatedInsets = layout.intrinsicInsets
-        updatedInsets.bottom += BotCheckoutActionButton.diameter + 20.0
+        updatedInsets.bottom += BotCheckoutActionButton.height + 16.0 * 2.0
+
         super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition, additionalInsets: additionalInsets)
         
-        let actionButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: layout.size.height - 10.0 - BotCheckoutActionButton.diameter - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width - 20.0, height: BotCheckoutActionButton.diameter))
+        let actionButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: layout.size.height - 16.0 - BotCheckoutActionButton.height - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width - 16.0 * 2.0, height: BotCheckoutActionButton.height))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
         self.actionButton.updateLayout(size: actionButtonFrame.size, transition: transition)
     }

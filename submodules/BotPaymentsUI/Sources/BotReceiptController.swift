@@ -20,16 +20,14 @@ public final class BotReceiptController: ViewController {
     }
     
     private let context: AccountContext
-    private let invoice: TelegramMediaInvoice
     private let messageId: MessageId
     
     private var presentationData: PresentationData
     
     private var didPlayPresentationAnimation = false
     
-    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
+    public init(context: AccountContext, messageId: MessageId) {
         self.context = context
-        self.invoice = invoice
         self.messageId = messageId
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -38,10 +36,10 @@ public final class BotReceiptController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        var title = self.presentationData.strings.Checkout_Receipt_Title
-        if invoice.flags.contains(.isTest) {
+        let title = self.presentationData.strings.Checkout_Receipt_Title
+        /*if invoice.flags.contains(.isTest) {
             title += " (Test)"
-        }
+        }*/
         self.title = title
     }
     
@@ -54,7 +52,7 @@ public final class BotReceiptController: ViewController {
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
-        }, context: self.context, invoice: self.invoice, messageId: self.messageId, dismissAnimated: { [weak self] in
+        }, context: self.context, messageId: self.messageId, dismissAnimated: { [weak self] in
             self?.dismiss()
         })
         

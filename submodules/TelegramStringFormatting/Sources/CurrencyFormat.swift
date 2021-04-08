@@ -165,7 +165,7 @@ public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
     }
 }
 
-public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (String, String) {
+public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (String, String, Bool) {
     if let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
         var result = ""
         if amount < 0 {
@@ -198,8 +198,8 @@ public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (St
             result.append(entry.symbol)
         }*/
 
-        return (result, entry.symbol)
+        return (result, entry.symbol, entry.symbolOnLeft)
     } else {
-        return ("", "")
+        return ("", "", false)
     }
 }

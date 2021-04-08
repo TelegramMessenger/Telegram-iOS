@@ -2006,17 +2006,17 @@ public final class VoiceChatController: ViewController {
                     }
                 }
 
-//                items.append(.action(ContextMenuActionItem(text: strongSelf.isNoiseSuppressionEnabled ? "Disable Noise Suppression" : "Enable Noise Suppression", textColor: .primary, icon: { theme in
-//                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
-//                }, action: { _, f in
-//                    f(.dismissWithoutContent)
-//
-//                    guard let strongSelf = self else {
-//                        return
-//                    }
-//
-//                    strongSelf.call.setIsNoiseSuppressionEnabled(!strongSelf.isNoiseSuppressionEnabled)
-//                })))
+                /*items.append(.action(ContextMenuActionItem(text: strongSelf.isNoiseSuppressionEnabled ? "Disable Noise Suppression" : "Enable Noise Suppression", textColor: .primary, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    f(.dismissWithoutContent)
+
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    strongSelf.call.setIsNoiseSuppressionEnabled(!strongSelf.isNoiseSuppressionEnabled)
+                })))*/
 
                 if let callState = strongSelf.callState, callState.canManageCall {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in

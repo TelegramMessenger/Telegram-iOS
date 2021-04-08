@@ -627,12 +627,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.presentAutoremoveSetup()
                             }
                         case .paymentSent:
-                            for attribute in message.attributes {
+                            strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            /*for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId))
+                                    //strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId))
                                     break
                                 }
-                            }
+                            }*/
                             return true
                         default:
                             break
@@ -1870,7 +1871,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let invoice = media as? TelegramMediaInvoice {
                             strongSelf.chatDisplayNode.dismissInput()
                             if let receiptMessageId = invoice.receiptMessageId {
-                                strongSelf.present(BotReceiptController(context: strongSelf.context, invoice: invoice, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             } else {
                                 strongSelf.present(BotCheckoutController(context: strongSelf.context, invoice: invoice, messageId: messageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             }
