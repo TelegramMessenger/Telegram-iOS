@@ -1712,7 +1712,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
                 if let strongSelf = self {
                     strongSelf.currentContentOffset = offset
-                    if !strongSelf.animatingExpansion {
+                    if !strongSelf.animatingExpansion && !strongSelf.animatingInsertion && strongSelf.panGestureArguments == nil {
                         strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
                     }
                 }
@@ -2880,34 +2880,19 @@ public final class VoiceChatController: ViewController {
             }
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: 24.0)
             
-            guard self.panGestureArguments == nil else {
-                return
-            }
-                        
             var bottomEdge: CGFloat = 0.0
             self.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ListViewItemNode {
-                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.view)
+                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.contentContainer.view)
                     if convertedFrame.maxY > bottomEdge {
                         bottomEdge = convertedFrame.maxY
                     }
                 }
             }
-            
+
             let listMaxY = listTopInset + listSize.height
-            var bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
-                //min(bottomEdge, listMaxY)
-                        
-//
-//            if bottomEdge.isZero {
-//                bottomEdge = listMaxY
-//            }
-//
-//            var bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
-//            if bottomEdge < listMaxY && self.isExpanded {
-//                bottomOffset = bottomEdge - listMaxY
-//            }
-//
+            let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
+
             let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
@@ -3494,11 +3479,6 @@ public final class VoiceChatController: ViewController {
             let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             
             self.topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
-//            if self.isScheduling || self.callState?.scheduleTimestamp != nil {
-//                self.topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
-//            } else {
-//                self.topInset = max(0.0, max(listSize.height - itemsHeight, listSize.height - 46.0 - floor(56.0 * 3.5)))
-//            }
             
             let targetY = listTopInset + (self.topInset ?? listSize.height)
             
@@ -3507,10 +3487,18 @@ public final class VoiceChatController: ViewController {
                 frame.origin.y = targetY
                 self.listNode.frame = frame
             }
-                        
+                
+            
+            if transition.animated {
+                self.animatingInsertion = true
+            }
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: nil, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
+                }
+                if strongSelf.animatingInsertion {
+                    strongSelf.updateFloatingHeaderOffset(offset: self?.currentContentOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    strongSelf.animatingInsertion = false
                 }
                 if !strongSelf.didSetContentsReady {
                     strongSelf.didSetContentsReady = true
@@ -3695,6 +3683,8 @@ public final class VoiceChatController: ViewController {
                 self.itemInteraction?.isExpanded = self.isExpanded
             }
         }
+        
+        private var animatingInsertion = false
         private var animatingExpansion = false
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
         
