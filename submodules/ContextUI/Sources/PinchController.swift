@@ -239,6 +239,7 @@ private final class PinchControllerNode: ViewControllerTracingNode {
     private var initialSourceFrame: CGRect?
 
     private let clippingNode: ASDisplayNode
+    private let scrollingContainer: ASDisplayNode
 
     private let sourceNode: PinchSourceContainerNode
     private let getContentAreaInScreenSpace: () -> CGRect
@@ -262,10 +263,13 @@ private final class PinchControllerNode: ViewControllerTracingNode {
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
 
+        self.scrollingContainer = ASDisplayNode()
+
         super.init()
 
         self.addSubnode(self.dimNode)
         self.addSubnode(self.clippingNode)
+        self.clippingNode.addSubnode(self.scrollingContainer)
 
         self.sourceNode.deactivate = { [weak self] in
             guard let strongSelf = self else {
@@ -312,10 +316,10 @@ private final class PinchControllerNode: ViewControllerTracingNode {
     }
 
     func animateIn() {
-        let convertedFrame = convertFrame(self.sourceNode.contentNode.frame, from: self.sourceNode.view, to: self.view)
+        let convertedFrame = convertFrame(self.sourceNode.bounds, from: self.sourceNode.view, to: self.view)
         self.sourceNode.contentNode.frame = convertedFrame
         self.initialSourceFrame = convertedFrame
-        self.clippingNode.addSubnode(self.sourceNode.contentNode)
+        self.scrollingContainer.addSubnode(self.sourceNode.contentNode)
 
         var updatedContentAreaInScreenSpace = self.getContentAreaInScreenSpace()
         updatedContentAreaInScreenSpace.origin.x = 0.0
@@ -326,16 +330,24 @@ private final class PinchControllerNode: ViewControllerTracingNode {
     }
 
     func animateOut(completion: @escaping () -> Void) {
+        self.isAnimatingOut = true
+
         let performCompletion: () -> Void = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
+
+            strongSelf.isAnimatingOut = false
 
             strongSelf.sourceNode.restoreToNaturalSize()
             strongSelf.sourceNode.addSubnode(strongSelf.sourceNode.contentNode)
 
             completion()
         }
+
+        let convertedFrame = convertFrame(self.sourceNode.bounds, from: self.sourceNode.view, to: self.view)
+        self.sourceNode.contentNode.frame = convertedFrame
+        self.initialSourceFrame = convertedFrame
 
         if let (scale, pinchLocation, offset) = self.sourceNode.gesture.currentTransform, let initialSourceFrame = self.initialSourceFrame {
             let duration = 0.3
@@ -376,6 +388,13 @@ private final class PinchControllerNode: ViewControllerTracingNode {
             dimNodeTransition.updateAlpha(node: self.dimNode, alpha: 0.0)
         } else {
             performCompletion()
+        }
+    }
+
+    func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        if self.isAnimatingOut {
+            self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: offset.y)
+            transition.animateOffsetAdditive(node: self.scrollingContainer, offset: -offset.y)
         }
     }
 
@@ -449,5 +468,9 @@ public final class PinchController: ViewController, StandalonePresentableControl
                 completion?()
             })
         }
+    }
+
+    public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        self.controllerNode.addRelativeContentOffset(offset, transition: transition)
     }
 }
