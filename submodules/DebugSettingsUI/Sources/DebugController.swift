@@ -74,6 +74,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case knockoutWallpaper(PresentationTheme, Bool)
     case demoVideoChats(Bool)
     case experimentalCompatibility(Bool)
+    case enableNoiseSuppression(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -93,7 +94,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .experimentalCompatibility, .playerEmbedding, .playlistPlayback, .voiceConference:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .experimentalCompatibility, .enableNoiseSuppression, .playerEmbedding, .playlistPlayback, .voiceConference:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -158,14 +159,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 24
         case .experimentalCompatibility:
             return 25
-        case .playerEmbedding:
+        case .enableNoiseSuppression:
             return 26
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 27
-        case .voiceConference:
+        case .playlistPlayback:
             return 28
+        case .voiceConference:
+            return 29
         case let .preferredVideoCodec(index, _, _, _):
-            return 29 + index
+            return 30 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -725,6 +728,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .enableNoiseSuppression(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Noise Suppression", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.enableNoiseSuppression = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .playerEmbedding(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -834,6 +847,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
         entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
+        entries.append(.enableNoiseSuppression(experimentalSettings.enableNoiseSuppression))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }
