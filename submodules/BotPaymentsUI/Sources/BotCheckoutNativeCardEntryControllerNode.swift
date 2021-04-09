@@ -353,10 +353,21 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
                         guard let maskedCardNumber = resultInfo["masked_card_number"] as? String else {
                             throw ReponseError.generic
                         }
+                        guard let cardType = resultInfo["card_type"] as? String else {
+                            throw ReponseError.generic
+                        }
+
+                        var last4 = maskedCardNumber
+                        if last4.count > 4 {
+                            let lastDigits = String(maskedCardNumber[maskedCardNumber.index(maskedCardNumber.endIndex, offsetBy: -4)...])
+                            if lastDigits.allSatisfy(\.isNumber) {
+                                last4 = "\(cardType) *\(lastDigits)"
+                            }
+                        }
 
                         let responseJson: [String: Any] = [
                             "type": "card",
-                            "id": "\(token)"
+                            "token": "\(token)"
                         ]
 
                         let serializedResponseJson = try JSONSerialization.data(withJSONObject: responseJson, options: [])
@@ -366,7 +377,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
                         }
 
                         strongSelf.completion(.webToken(BotCheckoutPaymentWebToken(
-                            title: maskedCardNumber,
+                            title: last4,
                             data: serializedResponseString,
                             saveOnServer: strongSelf.saveInfoItem.isOn
                         )))

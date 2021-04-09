@@ -823,6 +823,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     deinit {
+        assert(Queue.mainQueue().isCurrent())
+
         self.audioSessionShouldBeActiveDisposable?.dispose()
         self.audioSessionActiveDisposable?.dispose()
         self.summaryStateDisposable?.dispose()
@@ -1073,6 +1075,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 } else {
                     activeCallInfo = nil
                 }
+        }
+        if self.leaving {
+            shouldJoin = false
         }
         
         if shouldJoin, let callInfo = activeCallInfo {
