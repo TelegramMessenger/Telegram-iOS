@@ -144,9 +144,13 @@ class VoiceChatActionItemNode: ListViewItemNode {
         
         return { item, params, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
+            var updatedContent = false
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
+            }
+            if currentItem?.title != item.title {
+                updatedContent = true
             }
             
             let titleFont = Font.regular(17.0)
@@ -178,6 +182,8 @@ class VoiceChatActionItemNode: ListViewItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.08)
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
+                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: UIColor(rgb: 0xffffff))
+                    } else if updatedContent {
                         strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: UIColor(rgb: 0xffffff))
                     }
                     

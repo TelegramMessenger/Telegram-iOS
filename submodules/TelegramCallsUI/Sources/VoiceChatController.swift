@@ -2877,7 +2877,7 @@ public final class VoiceChatController: ViewController {
             } else if let currentTopInset = self.topInset {
                 topInset = self.isExpanded ? 0.0 : currentTopInset
             } else {
-                topInset = listSize.height
+                topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
             }
             
             var bottomEdge: CGFloat = 0.0
@@ -2895,7 +2895,7 @@ public final class VoiceChatController: ViewController {
             self.floatingHeaderOffset = offset
              
             if bottomEdge.isZero {
-                bottomEdge = self.listNode.frame.minY + 46.0 + 56.0 + 46
+                bottomEdge = self.listNode.frame.minY + 46.0 + 56.0
             }
             
             let rawPanelOffset = offset + listTopInset - topPanelHeight
@@ -2942,6 +2942,8 @@ public final class VoiceChatController: ViewController {
             let listMaxY = listTopInset + listSize.height
             let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
 
+            print("lf \(self.listNode.frame) be \(bottomEdge) bo \(bottomOffset) lmaxy \(listMaxY)")
+            
             let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
@@ -3119,10 +3121,21 @@ public final class VoiceChatController: ViewController {
                 soundTitle = self.presentationData.strings.Call_Audio
             }
             
-            if self.isScheduling || self.callState?.scheduleTimestamp != nil {
-                soundImage = .share
-                soundTitle = self.presentationData.strings.VoiceChat_ShareShort
-                soundAppearance = coloredButtonAppearance
+            //                    if !callState.canManageCall && (self.peer?.addressName?.isEmpty ?? true) {
+            //                        self.audioButton.isHidden = true
+            //                    }
+            
+            let isScheduled = self.isScheduling || self.callState?.scheduleTimestamp != nil
+            
+            var soundEnabled = true
+            if isScheduled {
+                if let callState = self.callState, let peer = self.peer, !callState.canManageCall && (peer.addressName?.isEmpty ?? true) {
+                    soundEnabled = false
+                } else {
+                    soundImage = .share
+                    soundTitle = self.presentationData.strings.VoiceChat_ShareShort
+                    soundAppearance = coloredButtonAppearance
+                }
             }
             
             let videoButtonSize: CGSize
@@ -3141,7 +3154,7 @@ public final class VoiceChatController: ViewController {
                     
             self.switchCameraButton.update(size: videoButtonSize, content: CallControllerButtonItemNode.Content(appearance: coloredButtonAppearance, image: .flipCamera), text: "", transition: transition)
             
-            self.audioButton.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage), text: soundTitle, transition: transition)
+            self.audioButton.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage, isEnabled: soundEnabled), text: soundTitle, transition: transition)
             
             self.leaveButton.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .cancel), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
             
@@ -3211,7 +3224,7 @@ public final class VoiceChatController: ViewController {
             } else if let currentTopInset = self.topInset {
                 topInset = self.isExpanded ? 0.0 : currentTopInset
             } else {
-                topInset = listSize.height
+                topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
             }
             
             transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + topInset), size: listSize))
@@ -3497,9 +3510,6 @@ public final class VoiceChatController: ViewController {
             
             if let callState = self.callState {
                 if callState.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
-//                    if !callState.canManageCall && (self.peer?.addressName?.isEmpty ?? true) {
-//                        self.audioButton.isHidden = true
-//                    }
                     self.timerNode.isHidden = false
                     self.listNode.alpha = 0.0
                     self.listNode.isUserInteractionEnabled = false
@@ -3608,7 +3618,7 @@ public final class VoiceChatController: ViewController {
                     inviteIsLink = true
                 }
             }
-            if canInvite && self.peer != nil {
+            if canInvite {
                 entries.append(.invite(self.presentationData.theme, self.presentationData.strings, inviteIsLink ? self.presentationData.strings.VoiceChat_Share : self.presentationData.strings.VoiceChat_InviteMember, inviteIsLink))
             }
             
