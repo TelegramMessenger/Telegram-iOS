@@ -21,6 +21,7 @@ import RadialStatusNode
 import TelegramUIPreferences
 import PeerInfoAvatarListNode
 import AnimationUI
+import ContextUI
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -771,6 +772,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
 
 final class PeerInfoAvatarListNode: ASDisplayNode {
     private let isSettings: Bool
+    let pinchSourceNode: PinchSourceContainerNode
     let avatarContainerNode: PeerInfoAvatarTransformContainerNode
     let listContainerTransformNode: ASDisplayNode
     let listContainerNode: PeerInfoAvatarListContainerNode
@@ -781,9 +783,12 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     var item: PeerInfoAvatarListItem?
     
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
+    var animateOverlaysFadeIn: (() -> Void)?
     
     init(context: AccountContext, readyWhenGalleryLoads: Bool, isSettings: Bool) {
         self.isSettings = isSettings
+
+        self.pinchSourceNode = PinchSourceContainerNode()
         
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
         self.listContainerTransformNode = ASDisplayNode()
@@ -792,10 +797,11 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.listContainerNode.isHidden = true
         
         super.init()
-        
-        self.addSubnode(self.avatarContainerNode)
+
+        self.addSubnode(self.pinchSourceNode)
+        self.pinchSourceNode.contentNode.addSubnode(self.avatarContainerNode)
         self.listContainerTransformNode.addSubnode(self.listContainerNode)
-        self.addSubnode(self.listContainerTransformNode)
+        self.pinchSourceNode.contentNode.addSubnode(self.listContainerTransformNode)
         
         let avatarReady = (self.avatarContainerNode.avatarNode.ready
         |> mapToSignal { _ -> Signal<Bool, NoError> in
@@ -837,10 +843,29 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
                 }
             }
         }
+
+        self.pinchSourceNode.activate = { [weak self] sourceNode in
+            guard let _ = self else {
+                return
+            }
+            let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                return UIScreen.main.bounds
+            })
+            context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
+        }
+
+        self.pinchSourceNode.animatedOut = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.animateOverlaysFadeIn?()
+        }
     }
     
     func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
         self.arguments = (peer, theme, avatarSize, isExpanded)
+        self.pinchSourceNode.update(size: size, transition: transition)
+        self.pinchSourceNode.frame = CGRect(origin: CGPoint(), size: size)
         self.avatarContainerNode.update(peer: peer, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
     }
     
@@ -1634,6 +1659,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
     var cancelUpload: (() -> Void)?
     var requestUpdateLayout: (() -> Void)?
+    var animateOverlaysFadeIn: (() -> Void)?
     
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
@@ -1747,6 +1773,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 return
             }
             strongSelf.editingContentNode.avatarNode.update(peer: peer, item: strongSelf.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
+        }
+
+        self.avatarListNode.animateOverlaysFadeIn = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.navigationButtonContainer.layer.animateAlpha(from: 0.0, to: strongSelf.navigationButtonContainer.alpha, duration: 0.25)
+            strongSelf.avatarListNode.listContainerNode.shadowNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.shadowNode.alpha, duration: 0.25)
+            strongSelf.avatarListNode.listContainerNode.controlsContainerNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.controlsContainerNode.alpha, duration: 0.25)
+
+            strongSelf.animateOverlaysFadeIn?()
         }
     }
     

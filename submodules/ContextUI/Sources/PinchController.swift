@@ -166,6 +166,7 @@ public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerD
 
     public var activate: ((PinchSourceContainerNode) -> Void)?
     public var scaleUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    public var animatedOut: (() -> Void)?
     var deactivate: (() -> Void)?
     var updated: ((CGFloat, CGPoint, CGPoint) -> Void)?
 
@@ -349,6 +350,8 @@ private final class PinchControllerNode: ViewControllerTracingNode {
 
             strongSelf.sourceNode.restoreToNaturalSize()
             strongSelf.sourceNode.addSubnode(strongSelf.sourceNode.contentNode)
+
+            strongSelf.sourceNode.animatedOut?()
 
             completion()
         }
