@@ -329,8 +329,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
 
         if let tip = paymentForm.invoice.tip {
             let tipTitle: String
-            //TODO:localize
-            tipTitle = "Tip (Optional)"
+            tipTitle = presentationData.strings.Checkout_OptionalTipItem
             entries.append(.tip(index, presentationData.theme, tipTitle, paymentForm.invoice.currency, "\(formatCurrencyAmount(currentTip ?? 0, currency: paymentForm.invoice.currency))", currentTip ?? 0, tip.max, tip.suggested.map { item -> (String, Int64) in
                 return ("\(formatCurrencyAmount(item, currency: paymentForm.invoice.currency))", item)
             }))
@@ -1090,10 +1089,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                             if let tipAmount = strongSelf.currentTipAmount {
                                 totalAmount += tipAmount
 
-                                //TODO:localize
                                 if let fractional = currencyToFractionalAmount(value: tipAmount, currency: paymentForm.invoice.currency) {
                                     let amount = NSDecimalNumber(value: fractional)
-                                    items.append(PKPaymentSummaryItem(label: "Tip", amount: amount))
+                                    items.append(PKPaymentSummaryItem(label: strongSelf.presentationData.strings.Checkout_TipItem, amount: amount))
                                 }
                             }
 

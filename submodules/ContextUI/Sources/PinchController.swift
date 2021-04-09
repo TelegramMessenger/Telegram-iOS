@@ -144,12 +144,13 @@ private func cancelContextGestures(view: UIView) {
     }
 }
 
-public final class PinchSourceContainerNode: ASDisplayNode {
+public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     public let contentNode: ASDisplayNode
     public var contentRect: CGRect = CGRect()
     private(set) var naturalContentFrame: CGRect?
 
     fileprivate let gesture: PinchSourceGesture
+    fileprivate var panGesture: UIPanGestureRecognizer?
 
     public var isPinchGestureEnabled: Bool = false {
         didSet {
@@ -215,6 +216,13 @@ public final class PinchSourceContainerNode: ASDisplayNode {
             }
             return strongSelf.isActive
         }
+    }
+
+    @objc private func panGestureRecognized(_ recognizer: UIPanGestureRecognizer) {
+    }
+
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
     }
 
     public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -290,10 +298,10 @@ private final class PinchControllerNode: ViewControllerTracingNode {
             )
 
             var transform = CATransform3DIdentity
+            transform = CATransform3DTranslate(transform, offset.x - pinchOffset.x * (scale - 1.0), offset.y - pinchOffset.y * (scale - 1.0), 0.0)
             transform = CATransform3DScale(transform, scale, scale, 0.0)
 
             strongSelf.sourceNode.contentNode.transform = transform
-            strongSelf.sourceNode.contentNode.position = CGPoint(x: initialSourceFrame.midX + offset.x - pinchOffset.x * (scale - 1.0), y: initialSourceFrame.midY + offset.y - pinchOffset.y * (scale - 1.0))
         }
     }
 

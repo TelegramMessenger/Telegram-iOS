@@ -208,8 +208,7 @@ private func botReceiptControllerEntries(presentationData: PresentationData, inv
         }
 
         if let tipAmount = tipAmount, tipAmount != 0 {
-            //TODO:localize
-            entries.append(.price(index, presentationData.theme, "Tip", formatCurrencyAmount(tipAmount, currency: formInvoice.currency), index == 0, false))
+            entries.append(.price(index, presentationData.theme, presentationData.strings.Checkout_TipItem, formatCurrencyAmount(tipAmount, currency: formInvoice.currency), index == 0, false))
             totalPrice += tipAmount
             index += 1
         }
